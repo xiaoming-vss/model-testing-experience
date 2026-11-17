@@ -1,7 +1,7 @@
 .requirements-list-heading, .requirements-list-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .requirements-list-heading > .ant-typography { overflow-wrap: anywhere; }
 .requirements-list-tools { margin-left: auto; }
-.requirements-list-page-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 56px; flex-wrap: wrap; gap: 16px; min-width: 0; padding: 0 16px; border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-list-header-bg); }
+/* 缺口、描边与背景由 shared/components/PageToolbar + surface-tokens.css 提供。 */
 .requirements-list-title-accent { width: 3px; height: 14px; flex: 0 0 auto; border-radius: 2px; background: var(--srf-accent); }
 .requirements-list-count { color: var(--srf-text-secondary); font-size: 11px; line-height: 18px; white-space: nowrap; }
 #root .requirements-page .requirements-list-panel.tp-list-panel { flex: 1 1 auto; }
@@ -9,26 +9,10 @@
 .requirements-list-scroll > .ant-empty { margin: 32px 0; }
 .requirements-page .requirements-list-scroll:has(> .ant-empty) { display: flex; align-items: center; justify-content: center; }
 .requirements-list-panel > .ant-alert { margin: 12px 16px; }
-.requirements-list-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.requirements-list-name a { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;  }
-.requirements-list-name a:focus-visible, .requirements-list-wrap:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
 .requirements-list-wrap { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.requirements-list-file { display: flex; align-items: baseline; gap: 8px; max-width: 100%; min-width: 0; }
-.requirements-list-file-type { font-size: 12px; color: var(--srf-text-secondary); flex-shrink: 0; padding: 0 6px; border-radius: 4px; background: var(--srf-chip); }
-.requirements-list-filename { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.requirements-list-wrap:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
 
-.requirements-list-name a .ant-typography { color: var(--app-list-name); font-weight: 400; }
-
-.requirements-list-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }
-
-.requirements-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 328px), 1fr)); justify-content: start; gap: 16px; }
-.requirements-card { display: flex; flex-direction: column; min-width: 0; min-height: 218px; padding: 0; overflow: hidden; border: 1px solid var(--srf-card-border); border-radius: 12px; background: var(--srf-card); color: var(--srf-text); box-shadow: none; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; cursor: pointer; }
-.requirements-card:hover { border-color: var(--app-glass-action-border-hover); box-shadow: 0 12px 28px var(--app-service-card-shadow-hover); transform: translateY(-2px); }
-.requirements-card-main { flex: 1; padding: 15px 16px 12px; }
-.requirements-card-title { margin: 0 0 6px; min-width: 0; color: var(--srf-text); font-size: 14.5px; line-height: 22px; font-weight: 650; }
-.requirements-card-title a { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: inherit; }
-.requirements-card-title a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.requirements-card-title a:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; border-radius: 2px; }
+/* 卡片表面、标题、meta 与 footer 骨架由 shared/components/EntityCard 提供。 */
 .requirements-card-doc { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 22px; margin: 0 0 10px; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 16px; }
 .requirements-card-doc-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px; background: var(--app-accent-surface); color: var(--app-action-read); font-size: 13px; }
 .requirements-card-doc-file { display: flex; align-items: center; gap: 5px; min-width: 0; }
@@ -36,15 +20,10 @@
 .requirements-card-doc-separator { flex: 0 0 auto; color: var(--srf-text-muted); }
 .requirements-card-doc-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .requirements-card-doc-empty { color: var(--srf-text-secondary); }
-.requirements-card-meta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--srf-hover); }
-.requirements-card-meta > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.requirements-card-meta dt { color: var(--srf-text-secondary); font-size: 9.5px; line-height: 14px; font-weight: 400; }
-.requirements-card-meta dd { min-width: 0; margin: 0; overflow: hidden; color: var(--srf-text); font-size: 11.5px; line-height: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
-.requirements-card-meta dd .ant-typography { color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; }
+.requirements-card .entity-card-meta dd .ant-typography { color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; }
 .requirements-card-version { display: inline-flex; align-items: center; gap: 5px; }
 .requirements-card-version-dot { width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: var(--app-action-read); }
-.requirements-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; margin-top: auto; padding: 9px 16px 10px; background: var(--srf-card); }
-.requirements-card-bindings { display: flex; align-items: center; flex: 1 1 auto; flex-wrap: wrap; gap: 10px; min-width: 0; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; }
+.requirements-card-bindings { display: flex; align-items: center; flex: 1 1 auto; flex-wrap: wrap; gap: 10px; min-width: 0; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; white-space: normal; }
 .requirements-binding-item { display: inline-flex; align-items: center; gap: 4px; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; font-weight: 500; white-space: nowrap; }
 .requirements-binding-item img { width: 13px; height: 13px; opacity: 0.4; filter: grayscale(1); }
 .requirements-binding-item.is-bound { color: var(--srf-text); }
@@ -69,14 +48,11 @@
   .app-shell:has(.requirements-page) .app-content { min-height: 0; overflow: hidden; }
   .app-shell:has(.requirements-page) .workbench-page.requirements-page { height: 100%; min-height: 0; overflow: hidden; }
   .app-shell:has(.requirements-page) .workbench-tabs { min-height: 0; overflow: hidden; }
-  .requirements-list-page-header { flex: 0 0 auto; min-height: 56px; padding: 10px 16px; }
   #root .requirements-page .requirements-list-panel.tp-list-panel { flex: 1 1 auto; }
-  .requirements-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {
-  .requirements-card-grid { grid-template-columns: minmax(0, 1fr); }
-  .requirements-card-foot { flex-wrap: wrap; }
+  .requirements-card .entity-card-foot { flex-wrap: wrap; }
   .requirements-card-bindings { flex: 1 1 100%; }
   .requirements-card-actions { margin-left: auto; }
 }

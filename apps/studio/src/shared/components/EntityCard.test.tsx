@@ -54,3 +54,20 @@ it('点卡片空白处进入，点内部操作不触发进入', async () => {
   await user.click(screen.getByRole('button', { name: '运行' }))
   expect(onOpen).toHaveBeenCalledTimes(1)
 })
+
+it('支持兼容类、标题层级与 footer/actions 类', () => {
+  render(
+    <MemoryRouter>
+      <EntityCard className="legacy-card" titleAs="h3" title="迭代对象"
+        footerNote="备注" footerNoteClassName="legacy-note"
+        actions={<button type="button">操作</button>} actionsClassName="legacy-actions">
+        <p>主体内容</p>
+      </EntityCard>
+    </MemoryRouter>,
+  )
+
+  const heading = screen.getByRole('heading', { level: 3, name: '迭代对象' })
+  expect(heading.closest('article')).toHaveClass('entity-card', 'legacy-card')
+  expect(screen.getByText('备注')).toHaveClass('entity-card-note', 'legacy-note')
+  expect(screen.getByRole('button', { name: '操作' }).parentElement).toHaveClass('entity-card-actions', 'legacy-actions')
+})

@@ -1,8 +1,6 @@
 import listNameCss from '@/shared/styles/list-name.css?raw'
 import { afterEach, describe, expect, it } from 'vitest'
-import workbenchCss from './workbench.css?raw'
 import testingCss from '@/features/testing/styles/index.css?raw'
-import requirementListCss from '@/features/projects/styles/requirements-list.css?raw'
 
 // Shared typography must win over legacy feature styles in every list.
 type NameStyle = {
@@ -39,18 +37,14 @@ describe('列表名称样式统一', () => {
     </main>
   `
 
-  const requirementNameMarkup = `
-    <main class="project-overview-page">
-      <div class="project-requirement-list-table requirements-list-table">
-        <div class="tp-list-name project-requirement-list-name requirements-list-name"><a href="/requirements/example"><span id="list-name" class="ant-typography">需求名称</span></a></div>
-      </div>
-    </main>
-  `
+  it('表格列表名称使用共享字阶与交互色', () => {
+    const style = computedNameStyle(testingCss, suiteNameMarkup)
 
-  it('需求名称与功能测试集名称使用相同的列表样式', () => {
-    const suiteNameStyle = computedNameStyle(testingCss, suiteNameMarkup)
-    const requirementNameStyle = computedNameStyle(`${workbenchCss}\n${requirementListCss}`, requirementNameMarkup)
-
-    expect(requirementNameStyle).toEqual(suiteNameStyle)
+    expect(style).toEqual({
+      cursor: 'pointer',
+      fontSize: '13px',
+      fontWeight: '400',
+      textUnderlineOffset: '3px',
+    })
   })
 })

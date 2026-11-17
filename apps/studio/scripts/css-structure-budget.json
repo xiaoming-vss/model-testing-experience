@@ -2,15 +2,17 @@
   "version": 1,
   "allowedGlobalCss": [
     "src/App.css",
+    "src/app/styles/action-buttons.css",
+    "src/app/styles/antd-overrides.css",
     "src/app/styles/asset-library.css",
     "src/app/styles/buttons.css",
     "src/app/styles/error-boundary.css",
     "src/app/styles/index.css",
     "src/app/styles/layout.css",
     "src/app/styles/shell-boundary.css",
+    "src/app/styles/shell.css",
     "src/app/styles/sidebar.css",
     "src/app/styles/theme.css",
-    "src/app/styles/workbench.css",
     "src/features/admin/styles/account-management.css",
     "src/features/admin/styles/ldap-settings.css",
     "src/features/ai-testing/components/FunctionalCaseRelationsGraph.css",
@@ -53,6 +55,7 @@
     "src/features/bugs/styles/bugs-v2.css",
     "src/features/interface-library/styles/index.css",
     "src/features/profile/pages/ProfilePage.css",
+    "src/features/projects/styles/project-overview.css",
     "src/features/projects/styles/requirements-list.css",
     "src/features/projects/styles/sprint-board.css",
     "src/features/projects/styles/sprint-overview.css",
@@ -89,10 +92,10 @@
     "src/shared/styles/github-dark-foundation.css",
     "src/shared/styles/github-dark-tokens.css",
     "src/shared/styles/indigo-amber-light-tokens.css",
+    "src/shared/styles/legacy-surface.css",
     "src/shared/styles/legacy-tokens.css",
     "src/shared/styles/list-name.css",
     "src/shared/styles/list-table.css",
-    "src/shared/styles/page-frame.css",
     "src/shared/styles/pagination.css",
     "src/shared/styles/scrollbars.css",
     "src/shared/styles/surface-tokens.css",
@@ -102,10 +105,12 @@
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
   "appCssImports": [
+    "src/app/styles/action-buttons.css",
+    "src/app/styles/antd-overrides.css",
     "src/app/styles/layout.css",
     "src/app/styles/shell-boundary.css",
-    "src/app/styles/workbench.css",
-    "src/shared/styles/page-frame.css"
+    "src/app/styles/shell.css",
+    "src/shared/styles/legacy-surface.css"
   ],
   "crossFeatureCssImports": [
     "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/pages/ProfilePage.css",
@@ -119,6 +124,16 @@
       "rules": 0,
       "declarations": 0,
       "selectors": 0
+    },
+    "src/app/styles/action-buttons.css": {
+      "rules": 11,
+      "declarations": 20,
+      "selectors": 25
+    },
+    "src/app/styles/antd-overrides.css": {
+      "rules": 9,
+      "declarations": 28,
+      "selectors": 13
     },
     "src/app/styles/asset-library.css": {
       "rules": 5,
@@ -150,6 +165,11 @@
       "declarations": 9,
       "selectors": 4
     },
+    "src/app/styles/shell.css": {
+      "rules": 168,
+      "declarations": 421,
+      "selectors": 220
+    },
     "src/app/styles/sidebar.css": {
       "rules": 22,
       "declarations": 90,
@@ -159,11 +179,6 @@
       "rules": 1,
       "declarations": 1,
       "selectors": 1
-    },
-    "src/app/styles/workbench.css": {
-      "rules": 260,
-      "declarations": 672,
-      "selectors": 350
     },
     "src/features/admin/styles/account-management.css": {
       "rules": 10,
@@ -395,25 +410,30 @@
       "declarations": 118,
       "selectors": 34
     },
+    "src/features/projects/styles/project-overview.css": {
+      "rules": 10,
+      "declarations": 31,
+      "selectors": 10
+    },
     "src/features/projects/styles/project-settings.module.css": {
       "rules": 4,
       "declarations": 8,
       "selectors": 4
     },
     "src/features/projects/styles/requirements-list.css": {
-      "rules": 67,
-      "declarations": 252,
-      "selectors": 70
+      "rules": 43,
+      "declarations": 135,
+      "selectors": 45
     },
     "src/features/projects/styles/sprint-board.css": {
-      "rules": 49,
-      "declarations": 221,
-      "selectors": 50
+      "rules": 31,
+      "declarations": 111,
+      "selectors": 32
     },
     "src/features/projects/styles/sprint-overview.css": {
-      "rules": 45,
-      "declarations": 87,
-      "selectors": 48
+      "rules": 177,
+      "declarations": 559,
+      "selectors": 190
     },
     "src/features/requirements/styles/detail.css": {
       "rules": 29,
@@ -600,6 +620,11 @@
       "declarations": 67,
       "selectors": 26
     },
+    "src/shared/styles/legacy-surface.css": {
+      "rules": 14,
+      "declarations": 49,
+      "selectors": 14
+    },
     "src/shared/styles/legacy-tokens.css": {
       "rules": 1,
       "declarations": 28,
@@ -614,11 +639,6 @@
       "rules": 9,
       "declarations": 35,
       "selectors": 12
-    },
-    "src/shared/styles/page-frame.css": {
-      "rules": 151,
-      "declarations": 527,
-      "selectors": 163
     },
     "src/shared/styles/pagination.css": {
       "rules": 14,
@@ -636,9 +656,9 @@
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 58,
-      "declarations": 264,
-      "selectors": 62
+      "rules": 62,
+      "declarations": 289,
+      "selectors": 66
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
@@ -682,10 +702,6 @@
       "count": 2,
       "sample": "min-width: 0;display: flex;flex-direction: column;gap: 8px"
     },
-    "0b7d6eb7eb05684f": {
-      "count": 2,
-      "sample": "border: 0 !important;background: transparent !important;-webkit-backdrop-filter: none;backdrop-filter: none"
-    },
     "0e471c16e76148bd": {
       "count": 2,
       "sample": "display: grid;grid-template-columns: 72px minmax(0, 1fr);gap: 8px"
@@ -714,10 +730,6 @@
       "count": 3,
       "sample": "color: var(--srf-text-secondary);font-size: 12px;font-weight: 600"
     },
-    "19a5fde8459ab58f": {
-      "count": 2,
-      "sample": "border-left: 0 !important;border-start-start-radius: 8px !important;border-end-start-radius: 8px !important;border-top-left-radius: 8px !important;border-bottom-left-radius: 8px !i"
-    },
     "1a2d0b3c887a0a79": {
       "count": 3,
       "sample": "color: var(--srf-text-muted);font-size: 11px;line-height: 16px"
@@ -725,10 +737,6 @@
     "1b55041854203af8": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 6px;margin-top: 12px"
-    },
-    "1d49319091b467df": {
-      "count": 2,
-      "sample": "flex: 1;min-width: 0;margin: 0;color: var(--srf-text);font-size: 14.5px;line-height: 22px;font-weight: 650"
     },
     "20008b75751a2534": {
       "count": 2,
@@ -773,10 +781,6 @@
     "3be4dd54c65b7d06": {
       "count": 3,
       "sample": "display: flex;align-items: center;gap: 12px"
-    },
-    "3cb36c6ec7ceb733": {
-      "count": 2,
-      "sample": "overflow: hidden;white-space: nowrap;text-overflow: ellipsis"
     },
     "3dc1af6e21ca837c": {
       "count": 4,
@@ -830,14 +834,6 @@
       "count": 2,
       "sample": "min-width: 0;overflow: hidden;border: 1px solid var(--app-review-outline);border-radius: 10px;background: linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-mute"
     },
-    "54e49fe25729e447": {
-      "count": 2,
-      "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 10px;margin: 0;padding: 10px 12px;border-radius: 8px;background: var(--srf-hover)"
-    },
-    "554c6fdf598a8adc": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px;min-height: 43px;margin-top: auto;padding: 9px 16px 10px;background: var(--srf-card)"
-    },
     "58c9a32dd9adcce7": {
       "count": 2,
       "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
@@ -861,10 +857,6 @@
     "61021ec007eb9330": {
       "count": 2,
       "sample": "padding: 0 5px;border-radius: 999px;background: var(--srf-chip);color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-"
-    },
-    "612ee0463ea9ba77": {
-      "count": 2,
-      "sample": "border-right: 0 !important;border-start-end-radius: 8px !important;border-end-end-radius: 8px !important;border-top-right-radius: 8px !important;border-bottom-right-radius: 8px !im"
     },
     "631f76b8b8be2527": {
       "count": 3,
@@ -899,12 +891,8 @@
       "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
     },
     "7c586f54a3b7d455": {
-      "count": 2,
+      "count": 3,
       "sample": "width: 100%;align-items: flex-start;flex-direction: column;gap: 10px"
-    },
-    "7c8cf60185825020": {
-      "count": 2,
-      "sample": "flex: 0 0 auto;min-height: 56px;padding: 10px 16px"
     },
     "7d5173b17126857f": {
       "count": 3,
@@ -946,10 +934,6 @@
       "count": 2,
       "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
     },
-    "9234875d2c1b0502": {
-      "count": 3,
-      "sample": "min-width: 0;margin: 0;overflow: hidden;color: var(--srf-text);font-size: 11.5px;line-height: 17px;font-weight: 600;font-variant-numeric: tabular-nums;white-space: nowrap;text-over"
-    },
     "937475e67cd60f08": {
       "count": 2,
       "sample": "width: 1px;height: 12px;background: var(--srf-card-border)"
@@ -971,7 +955,7 @@
       "sample": "display: flex;align-items: center;gap: 8px;flex-wrap: wrap"
     },
     "9f60b5ccb8682bf4": {
-      "count": 4,
+      "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 2px;min-width: 0"
     },
     "a01057c7d90be5ca": {
@@ -990,10 +974,6 @@
       "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 10px;color: var(--srf-text-muted);font-size: 11px"
     },
-    "a6c05fa49ade832c": {
-      "count": 3,
-      "sample": "outline: 2px solid var(--srf-accent);outline-offset: 2px;border-radius: 2px"
-    },
     "a71bc4fe08430bdb": {
       "count": 3,
       "sample": "flex: 1 1 auto;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
@@ -1009,10 +989,6 @@
     "b0a1c71ee6d660d1": {
       "count": 3,
       "sample": "display: flex;align-items: center;flex-wrap: wrap;gap: 8px;min-width: 0"
-    },
-    "b1ffd8837cba8faf": {
-      "count": 3,
-      "sample": "display: block;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;color: inherit"
     },
     "b36f4265bfbdde0f": {
       "count": 3,
@@ -1038,18 +1014,6 @@
       "count": 8,
       "sample": "display: flex;flex-direction: column;gap: 6px"
     },
-    "bd5c1070f7065f2f": {
-      "count": 3,
-      "sample": "color: var(--srf-text-secondary);font-size: 9.5px;line-height: 14px;font-weight: 400"
-    },
-    "c14d680043e300a8": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;justify-content: space-between;flex: 0 0 56px;flex-wrap: wrap;gap: 16px;min-width: 0;padding: 0 16px;border: 1px solid var(--srf-card-border);bord"
-    },
-    "c190dc51ee9f0a31": {
-      "count": 2,
-      "sample": "flex: 0 0 auto;font-size: 12px;line-height: 18px"
-    },
     "c3a767a35bba8500": {
       "count": 3,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
@@ -1057,10 +1021,6 @@
     "c59d73221fa11066": {
       "count": 3,
       "sample": "display: flex;flex-direction: column;overflow: hidden"
-    },
-    "c6a824ad12b4ba06": {
-      "count": 2,
-      "sample": "overflow: visible;border: 0;border-radius: 0;background: transparent"
     },
     "c6fd5c3d31cf4b69": {
       "count": 2,
@@ -1074,10 +1034,6 @@
       "count": 6,
       "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
-    "c8785aba7d8bc59b": {
-      "count": 2,
-      "sample": "display: grid;grid-template-columns: repeat(auto-fill, minmax(min(100%, 328px), 1fr));justify-content: start;gap: 16px"
-    },
     "cb8f1317a091e621": {
       "count": 2,
       "sample": "display: block;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
@@ -1085,10 +1041,6 @@
     "cc6725c9ffdaf533": {
       "count": 2,
       "sample": "flex: 0 0 auto;height: min(60vh, 600px);min-height: 380px"
-    },
-    "d02a09550bfc286f": {
-      "count": 3,
-      "sample": "border-color: var(--app-glass-action-border-hover);box-shadow: 0 12px 28px var(--app-service-card-shadow-hover);transform: translateY(-2px)"
     },
     "d0d990f7ff8b760f": {
       "count": 2,
@@ -1135,7 +1087,7 @@
       "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 14px 16px;align-items: start"
     },
     "e34a9d6e2f35a871": {
-      "count": 4,
+      "count": 2,
       "sample": "width: 28px;min-width: 28px;height: 28px"
     },
     "e38e5eb24a0f8a06": {
@@ -1178,16 +1130,12 @@
       "count": 12,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     },
-    "fcdeebb66af49795": {
-      "count": 2,
-      "sample": "display: inline-flex;align-items: center;justify-content: center;width: 22px;height: 22px;flex-shrink: 0"
-    },
     "fce376b002f77271": {
       "count": 2,
       "sample": "display: flex;flex-wrap: wrap;gap: 4px;margin-top: 8px"
     },
     "fce757ec5764ee15": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;align-items: center;gap: 8px;min-width: 0"
     },
     "fed5aa45771ec236": {

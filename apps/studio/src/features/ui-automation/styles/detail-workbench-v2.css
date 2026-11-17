@@ -16,7 +16,7 @@
 /* ===== 板面与两栏 ===== */
 
 /*
- * 板面必须是裸画布：`app/styles/workbench.css` 给 `.app-shell.app-shell-macos .workbench-panel`
+ * 板面必须是裸画布：`app/styles/shell.css` 给 `.app-shell.app-shell-macos .workbench-panel`
  * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) + !important），shared/styles/surface-tokens.css 里
  * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
  * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：

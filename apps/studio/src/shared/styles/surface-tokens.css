@@ -7,7 +7,7 @@
  * 页面根节点加上 `tp-surface` 类即可拿到这些变量；只挂在 `.case-library-page` 或
  * `.test-orders-page` 上的话，变量解析不到。
  *
- * token 前缀用 `--srf-`（surface）：`--tp-` 已被 workbench.css 的基础 token 占用。
+ * token 前缀用 `--srf-`（surface）：`--tp-` 已被 shell.css 的基础 token 占用。
  */
 
 :root {
@@ -217,7 +217,7 @@
   overflow: visible;
 }
 
-/* app/styles/workbench.css 的玻璃板面规则写成
+/* app/styles/shell.css 的玻璃板面规则写成
    `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,
 6,
 0），与上面 `.tp-board` 那条同权重——
@@ -306,6 +306,46 @@
   font-weight: 600;
   line-height: 24px;
   white-space: nowrap;
+}
+
+/* 列表页顶部工具栏唯一实现：标题块 + 操作区；页面只补内部排布。 */
+.tp-surface .tp-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 56px;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 16px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-list-header-bg);
+}
+
+.tp-surface .tp-page-toolbar-main {
+  display: flex;
+  align-items: center;
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tp-surface .tp-page-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .tp-surface .tp-page-toolbar {
+    flex: 0 0 auto;
+    min-height: 56px;
+    padding: 10px 16px;
+  }
 }
 
 /* 列表／卡片页默认布局契约：祖先 tp-surface → tp-board tp-list-panel

@@ -1,3 +1,891 @@
+/* SprintDetailPage 专用看板样式；基础布局来自 page-frame，阶段 4 起归 feature 所有。 */
+
+.sprint-overview-panel-body {
+  padding: 14px 18px 16px;
+}
+
+.sprint-overview-page {
+  overflow: hidden;
+}
+
+.sprint-overview-page .workbench-tabs {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sprint-overview-page .workbench-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sprint-overview-page .sprint-overview-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.sprint-overview-layout {
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: minmax(92px, 0.42fr) minmax(260px, 0.9fr) minmax(0, 1.18fr);
+  gap: 12px;
+}
+
+.sprint-overview-panel-unified {
+  overflow: hidden;
+}
+
+.sprint-overview-card-rich {
+  border: 1px solid var(--tp-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, var(--app-card-gradient-start) 0%, var(--app-card-gradient-end) 42%),
+    var(--app-surface);
+  box-shadow: 0 10px 28px var(--app-card-shadow);
+}
+
+.sprint-overview-card-rich .ant-card-body {
+  padding: 16px 18px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sprint-overview-toolbar-summary-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sprint-overview-toolbar-main {
+  min-width: 0;
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sprint-overview-hero-title-row {
+  display: flex;
+  width: auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.sprint-overview-hero-title-row > .ant-space {
+  display: flex;
+  width: auto;
+  justify-content: flex-start;
+}
+
+.sprint-overview-hero-status {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sprint-overview-hero-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sprint-overview-summary-metric {
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--app-info-surface);
+  border: 1px solid var(--app-info-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sprint-overview-summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--app-accent);
+  background: var(--app-accent-soft);
+}
+
+.sprint-overview-summary-copy {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.sprint-overview-summary-label {
+  color: var(--app-text-caption);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sprint-overview-summary-value {
+  color: var(--app-shell-text);
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.sprint-overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.sprint-overview-section .section-head {
+  gap: 2px;
+}
+
+.sprint-overview-section .section-head .ant-typography {
+  margin-bottom: 0;
+}
+
+.sprint-overview-section .section-head h4.ant-typography {
+  margin: 0 !important;
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.sprint-overview-section .section-head span.ant-typography {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sprint-overview-card {
+  height: 100%;
+}
+
+.sprint-overview-card-label {
+  color: var(--app-text-axis);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.sprint-overview-card-value {
+  margin: 3px 0 0 !important;
+  font-size: 22px !important;
+  line-height: 28px !important;
+}
+
+.sprint-overview-card-subtitle {
+  margin: 4px 0 0 !important;
+  font-size: 18px !important;
+  line-height: 24px !important;
+}
+
+.sprint-overview-accent-tag {
+  margin-inline-end: 0;
+  border: none;
+  border-radius: 999px;
+  padding-inline: 10px;
+  color: var(--app-badge-text);
+  background: var(--app-badge-bg);
+}
+
+.sprint-dashboard-health-band {
+  min-width: 0;
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  background: var(--app-surface);
+  box-shadow: 0 8px 22px var(--app-card-shadow-soft);
+  display: grid;
+  grid-template-columns: minmax(270px, 280px) minmax(420px, 1fr) minmax(360px, 0.58fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.sprint-dashboard-health-title {
+  min-width: 0;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.sprint-dashboard-health-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sprint-dashboard-health-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sprint-dashboard-health-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  color: var(--app-accent);
+  background: var(--app-accent-emphasis);
+  font-size: 28px;
+}
+
+.sprint-dashboard-health-title h4.ant-typography {
+  margin: 0 !important;
+  font-size: 19px;
+  line-height: 26px;
+}
+
+.sprint-dashboard-health-caption {
+  display: block;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.sprint-dashboard-health-progress {
+  min-width: 0;
+  border-left: 1px solid var(--app-frame-divider);
+  border-right: 1px solid var(--app-frame-divider);
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sprint-dashboard-health-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sprint-dashboard-health-progress-head strong {
+  color: var(--app-shell-text);
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.sprint-dashboard-health-track {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--app-progress-track);
+}
+
+.sprint-dashboard-health-fill {
+  height: 100%;
+}
+
+.sprint-dashboard-health-fill-executed {
+  background: var(--app-result-success);
+}
+
+.sprint-dashboard-health-fill-pending {
+  background: var(--app-result-pending);
+}
+
+.sprint-dashboard-health-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  color: var(--app-text-label);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sprint-dashboard-health-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sprint-dashboard-health-legend span::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--legend-color);
+}
+
+.sprint-dashboard-health-legend strong {
+  color: var(--app-shell-text);
+}
+
+.sprint-dashboard-health-defects {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sprint-dashboard-health-defects span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--app-text-caption);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sprint-dashboard-health-defects strong {
+  color: var(--app-shell-text);
+  font-size: 24px;
+  line-height: 30px;
+}
+
+.sprint-dashboard-health-green {
+  color: var(--app-result-success) !important;
+}
+
+.sprint-dashboard-health-blue {
+  color: var(--app-accent) !important;
+}
+
+.sprint-dashboard-health-red {
+  color: var(--app-result-failed) !important;
+}
+
+.sprint-dashboard-main-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.sprint-dashboard-panel {
+  min-height: 0;
+}
+
+.sprint-dashboard-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sprint-dashboard-card-head h4.ant-typography {
+  margin: 0 !important;
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.sprint-dashboard-test-table {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-rows: 30px repeat(3, minmax(0, 1fr));
+  align-content: stretch;
+  border-top: 1px solid var(--app-frame-divider-soft);
+}
+
+.sprint-dashboard-test-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) 72px repeat(4, minmax(92px, 1fr));
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+  padding: 6px 0;
+}
+
+.sprint-dashboard-test-row:last-child {
+  border-bottom: none;
+}
+
+.sprint-dashboard-test-row-head {
+  color: var(--app-text-label);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  background: var(--app-frame-row-hover);
+}
+
+.sprint-dashboard-test-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--app-shell-text);
+}
+
+.sprint-dashboard-test-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--app-accent);
+  background: var(--app-accent-selection);
+  font-size: 18px;
+}
+
+.sprint-dashboard-test-total {
+  color: var(--app-shell-text);
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* 功能测试没有平台执行记录时，说明文字占满其余指标列，避免挤在“总数”列里折行。 */
+.sprint-dashboard-test-empty {
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-shell-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprint-dashboard-progress {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sprint-dashboard-progress-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--app-text-caption);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.sprint-dashboard-progress-meta strong {
+  color: var(--app-text-strong);
+}
+
+.sprint-dashboard-progress-track,
+.sprint-dashboard-severity-track {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--app-progress-track);
+}
+
+.sprint-dashboard-progress-fill,
+.sprint-dashboard-severity-fill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: var(--progress-color, var(--app-accent));
+}
+
+.sprint-dashboard-severity-fill {
+  background: var(--severity-color, var(--app-accent));
+}
+
+.sprint-dashboard-risk-layout {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.78fr) minmax(0, 1.22fr);
+  gap: 24px;
+  align-items: stretch;
+  margin: 0;
+}
+
+.sprint-dashboard-risk-summary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sprint-dashboard-severity-list {
+  min-width: 0;
+  border-left: 1px solid var(--app-frame-divider);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.sprint-dashboard-severity-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 86px;
+  align-items: center;
+  gap: 12px;
+  color: var(--app-text-label);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.sprint-dashboard-severity-row strong {
+  color: var(--app-text-strong);
+  font-weight: 600;
+  text-align: right;
+}
+
+.sprint-overview-donut-layout {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.sprint-overview-mini-chart {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  min-width: 0;
+}
+
+.sprint-overview-donut-center {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  color: var(--app-shell-text);
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.sprint-overview-chart-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sprint-overview-chart-metrics span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--app-text-label);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.sprint-overview-chart-metrics span::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--metric-color);
+}
+
+.sprint-overview-chart-metrics strong {
+  margin-left: auto;
+  color: var(--app-shell-text);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.sprint-overview-donut-layout .recharts-default-tooltip {
+  border: 1px solid var(--tp-border-soft) !important;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px var(--app-card-shadow-floating);
+}
+
+.sprint-overview-trend-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sprint-dashboard-trend-section {
+  min-height: 0;
+}
+
+.sprint-dashboard-trend-card {
+  min-height: 0;
+}
+
+.sprint-dashboard-range-picker {
+  flex: 0 0 auto;
+  width: 244px;
+}
+
+.sprint-dashboard-range-picker.ant-picker {
+  border-radius: 8px !important;
+}
+
+.sprint-overview-chart-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.sprint-dashboard-trend-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane {
+  border-left: 1px solid var(--app-frame-divider);
+  padding-left: 12px;
+}
+
+.sprint-overview-chart-host {
+  width: 100%;
+  height: auto;
+  min-height: 138px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sprint-overview-chart-host .recharts-default-tooltip {
+  border: 1px solid var(--tp-border-soft) !important;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px var(--app-card-shadow-floating);
+}
+
+.sprint-overview-chart-host .recharts-legend-wrapper {
+  color: var(--app-text-label);
+  font-size: 12px;
+}
+
+.sprint-overview-chart-host .recharts-cartesian-axis-tick-value,
+.sprint-overview-chart-host .recharts-legend-item-text {
+  fill: var(--app-text-label);
+  color: var(--app-text-label);
+}
+
+.sprint-overview-history-state {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 1200px) {
+  .sprint-overview-toolbar-summary-row {
+    align-items: flex-start;
+  }
+
+  .sprint-overview-toolbar-main {
+    align-items: flex-start;
+  }
+
+  .sprint-overview-hero-title-row {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sprint-overview-hero-title-row > .ant-space {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sprint-overview-hero-summary {
+    justify-content: flex-start;
+  }
+
+  .sprint-overview-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sprint-dashboard-main-grid,
+  .sprint-overview-trend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sprint-dashboard-health-band {
+    grid-template-columns: 1fr;
+  }
+
+  .sprint-dashboard-health-progress {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane,
+  .sprint-dashboard-severity-list {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .sprint-overview-hero-title-row {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sprint-overview-hero-summary {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sprint-overview-donut-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .sprint-overview-chart-metrics {
+    width: 100%;
+  }
+}
+.sprint-report-drawer-empty {
+  margin: 0 0 16px;
+}
+
+.sprint-report-markdown-modal .ant-modal-body {
+  max-height: min(72vh, 760px);
+  overflow: auto;
+}
+
+.sprint-report-markdown-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.sprint-report-markdown {
+  color: var(--app-document-text);
+  font-size: 14px;
+  line-height: 1.72;
+}
+
+.sprint-report-markdown h1,
+.sprint-report-markdown h2,
+.sprint-report-markdown h3,
+.sprint-report-markdown h4 {
+  margin: 20px 0 10px;
+  color: var(--app-document-heading);
+  font-weight: 750;
+}
+
+.sprint-report-markdown h1 {
+  font-size: 24px;
+}
+
+.sprint-report-markdown h2 {
+  font-size: 20px;
+}
+
+.sprint-report-markdown h3 {
+  font-size: 17px;
+}
+
+.sprint-report-markdown h4 {
+  font-size: 15px;
+}
+
+.sprint-report-markdown p {
+  margin: 8px 0;
+}
+
+.sprint-report-markdown ul,
+.sprint-report-markdown ol {
+  margin: 8px 0 12px;
+  padding-left: 24px;
+}
+
+.sprint-report-markdown li {
+  margin: 4px 0;
+}
+
+.sprint-report-markdown blockquote {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--app-accent);
+  background: var(--app-document-quote-bg);
+  color: var(--app-document-quote-text);
+}
+
+.sprint-report-markdown code {
+  border-radius: 5px;
+  padding: 2px 5px;
+  background: var(--app-document-code-bg);
+  color: var(--app-document-code-text);
+  font-size: 12px;
+}
+
+.sprint-report-markdown pre {
+  margin: 12px 0;
+  overflow: auto;
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--app-document-code-block-bg);
+}
+
+.sprint-report-markdown pre code {
+  padding: 0;
+  background: transparent;
+  color: var(--app-document-code-block-text);
+  white-space: pre;
+}
+
+.sprint-report-markdown-table-wrap {
+  overflow: auto;
+  margin: 12px 0;
+  border: 1px solid var(--app-document-table-border);
+  border-radius: 8px;
+}
+
+.sprint-report-markdown table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+}
+
+.sprint-report-markdown th,
+.sprint-report-markdown td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-frame-divider);
+  text-align: left;
+  vertical-align: top;
+}
+
+.sprint-report-markdown th {
+  background: var(--app-document-table-heading-bg);
+  color: var(--app-text-strong);
+  font-weight: 700;
+}
+
 .sprint-overview-page { padding: var(--app-page-gutter); }
 .sprint-overview-page .sprint-overview-frame { min-height: 0; }
 .sprint-overview-page .sprint-overview-frame > .workbench-tabs { padding: 0; gap: 0; }

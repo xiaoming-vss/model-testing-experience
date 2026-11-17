@@ -7,7 +7,7 @@ const source = fileURLToPath(new URL('../src/', import.meta.url))
 // Keep this registry aligned with docs/studio/STRUCTURE.md.
 const tokenFiles = new Set([
   'index.css',
-  'app/styles/workbench.css',
+  'app/styles/shell.css',
   'app/styles/buttons.css',
   'shared/styles/foundation-tokens.css',
   'shared/styles/surface-tokens.css',

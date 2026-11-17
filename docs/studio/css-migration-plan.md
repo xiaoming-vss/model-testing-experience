@@ -2,23 +2,23 @@
 
 2026-11-17。本文是 Studio CSS 存量整改与 Tailwind CSS v4 / CSS Modules 迁移的执行顺序、阶段目标和验收口径。策略约束见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)，日常编码规则见 [STRUCTURE S16](STRUCTURE.md#四目录与样式契约)。
 
-**执行状态（2026-11-17）**：阶段 0、1、2、3 已完成；`App.css` 已移除全部 feature CSS 导入，下一步进入阶段 4 共享原语与 Shell/Projects 收口。
+**执行状态（2026-11-17）**：阶段 0、1、2、3、4 已完成；阶段 4 已把 `workbench.css` / `page-frame.css` 拆成 shell、AntD 覆盖、动作按钮和 feature 样式，预算降至 420 处 `!important` / 125 处长前缀。下一步进入阶段 5 列表/工作台迁移。
 
 ## 当前基线
 
-| 指标 | 整改前（2026-11-17） | 阶段 3 前 | 阶段 3 完成后 |
-| --- | --- | --- | --- |
-| CSS 文件 | 101 个 | 102 个 | 109 个（新增 7 个 CSS Modules，含运行结果/导入/基础服务连接/项目设置） |
-| CSS 总行数 | 23,658 行 | 22,732 行 | 22,770 行（作用域化根类前缀增加少量字符） |
-| `!important` | 582 处 | 500 处 | 493 处 |
-| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 165 处 | 163 处 |
-| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） | 134 组 |
-| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个 | 5 个，合计 6,048 行，占 26.6% |
-| `App.css` feature 导入 | 5 个 | 4 个 | 0 个 |
+| 指标 | 整改前（2026-11-17） | 阶段 3 前 | 阶段 3 完成后 | 阶段 4 第一批后 | 阶段 4 完成后 |
+| --- | --- | --- | --- | --- | --- |
+| CSS 文件 | 101 个 | 102 个 | 109 个（新增 7 个 CSS Modules，含运行结果/导入/基础服务连接/项目设置） | 109 个（`page-frame.css` 拆为 `legacy-surface.css` + Sprint feature 样式，文件数不变） | 112 个（新增 shell/antd-overrides/action-buttons/project-overview，删除 workbench/page-frame） |
+| CSS 总行数 | 23,658 行 | 22,732 行 | 22,770 行（作用域化根类前缀增加少量字符） | 22,782 行 | 22,348 行 |
+| `!important` | 582 处 | 500 处 | 493 处 | 493 处 | 420 处 |
+| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 165 处 | 163 处 | 163 处 | 125 处 |
+| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） | 134 组 | 123 组 | 116 组 |
+| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个 | 5 个，合计 6,048 行，占 26.6% | 5 个，合计 6,019 行，占 26.4% | 5 个，合计 5,288 行，占 23.6% |
+| `App.css` feature 导入 | 5 个 | 4 个 | 0 个 | 0 个 | 0 个 |
 
 历史审计的重复规则体口径更宽，不与结构门禁计数直接比较；后续 ratchet 只使用结构门禁口径。
 
-阶段 3 之前，`src/App.css` 仍聚合 API `overview.css`、UI `index.css`、API `detail.css`、base-services `index.css`；这些文件的 `.api-filter-*`、`.api-collection-*`、`json-editor-*`、`api-case-nav-*` 等类被多个 feature 共用。阶段 3 已按实际消费方拆到共享 Module、共享 surface 层或 owner 组件，`App.css` 只保留 `layout.css`、`page-frame.css`、`workbench.css`、`shell-boundary.css`。
+阶段 3 之前，`src/App.css` 仍聚合 API `overview.css`、UI `index.css`、API `detail.css`、base-services `index.css`；这些文件的 `.api-filter-*`、`.api-collection-*`、`json-editor-*`、`api-case-nav-*` 等类被多个 feature 共用。阶段 3 已按实际消费方拆到共享 Module、共享 surface 层或 owner 组件，`App.css` 只保留 `layout.css`、`legacy-surface.css`、`shell.css`、`antd-overrides.css`、`action-buttons.css`、`shell-boundary.css`。
 
 Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的普通声明优先于所有分层规则，迁移页面如果还保留旧全局规则，utility 会被覆盖，最终只能靠 `!important` 对抗。本计划因此按“先切断污染，再迁移页面”的顺序执行。
 
@@ -40,7 +40,7 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 | 1 | 整改 | 死 CSS + 安全所有权 | 删除确认死规则；确认 `auth.css` 无跨 feature 依赖 | 已完成 |
 | 2 | 迁移 | AuthPage 试点 | Tailwind 布局 + `auth.module.css`，删除 `auth.css` | 已完成 |
 | 3 | 整改 | 跨 feature 所有权拆分 | 拆 `overview.css` / `detail.css` / UI/base-services 共享部分；App.css 只剩 shell/tokens | 已完成 |
-| 4 | 迁移 | 共享原语 + Shell/Projects | `EntityCard`、`ListSurface`、`PageToolbar`、`FilterBar`；`workbench.css`、`page-frame.css` 收口 | 待执行 |
+| 4 | 迁移 | 共享原语 + Shell/Projects | `EntityCard`、`ListSurface`、`PageToolbar`；Projects 卡片迁移；`workbench.css` / `page-frame.css` 拆分与死规则清理 | 已完成 |
 | 5 | 迁移 | 列表/工作台 | Bugs、Base Services、Admin、Test Cases、Test Orders、TestingPage 包装层 | 待执行 |
 | 6 | 迁移 | 接口库 | 树、列表、编辑器、导入弹窗 | 待执行 |
 | 7 | 迁移 | API/UI 自动化详情 | 列表 → 详情壳/检查器 → 编辑器/React Flow/CodeMirror | 待执行 |
@@ -88,11 +88,28 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 
 ### 阶段 4：共享原语与 Shell
 
-- 升级 `EntityCard`，承接多 feature 的卡片皮肤。
-- 新增/收敛 `ListSurface`、`PageToolbar`、`FilterBar`、`DetailSplit`。
-- 拆分 `workbench.css`：shell / project / button / AntD override / 死选择器。
-- 迁移 `ProjectsPage`、`SprintBoard`、`SprintDetailPage`、`RequirementCards`，吸收 `page-frame.css`。
-- 统一 `@layer` 契约，移除依赖 `!important` 的按钮反向压制。
+第一批已完成（2026-11-17）：
+
+- `EntityCard` 增加 `className`、`titleAs`、`footerNoteClassName`、`actionsClassName`，继续作为卡片骨架唯一实现。
+- 新增 `shared/components/ListSurface.tsx` 与 `PageToolbar.tsx`；`ProjectsPage`、`SprintBoard` 改用共享板面和工具栏，页面只保留标题块、主体与操作。
+- `RequirementCards`、`SprintBoard` 改用 `EntityCard`；删除 `requirements-list.css`、`sprint-board.css` 中重复的卡片表面、标题、meta、footer 规则。
+- `page-frame.css` 拆分：共享的 `page-frame`、`sprint-card`、加载态和 `requirement-panel-head` 进 `shared/styles/legacy-surface.css`；Sprint 看板与报告样式归 `features/projects/styles/sprint-overview.css`；删除 `page-frame.css`。补上 `.sprint-dashboard-test-empty` 的跨列规则，修复“本迭代暂无平台执行记录”挤在总数列折行的问题。
+- 清理已不反映生产的表格测试夹具：`listSurfaceConsistency` 不再比较需求表，`listNameConsistency` 只保留共享表格名称基线。
+- 验证：`npm run verify`、185 个测试文件 / 933 个用例通过；浅色/深色与 1280/900/760 浏览器核对 Projects 列表、需求卡片、迭代卡片和迭代详情。
+
+第二批已完成（2026-11-17）：
+
+- `workbench.css` 拆分并删除：外壳/侧栏/顶栏/通用工作台 → `app/styles/shell.css`，AntD 标签状态色板 → `app/styles/antd-overrides.css`，未分层的动作按钮语言 → `app/styles/action-buttons.css`；Projects 专用变量、概览、空态 → `features/projects/styles/project-overview.css`。
+- 删除零引用规则：`.project-requirement-list-*`、`.workbench-project-toolbar*`、`.sprint-card-grid-workbench`、`.sprint-card-title/value/description`、`.requirement-card-grid-workbench`、`.requirements-list-name/-file/-icon`、`.requirement-filter-bar`、`.ui-import-conflict-*` 及旧项目概览 `sprint-card` 覆盖。
+- 删除不再反映生产的表格样式测试夹具；`listSurfaceConsistency`、`listNameConsistency` 只保留共享列表基线。
+- 指标：`!important` 493 → 420，长前缀 163 → 125，重复规则体 123 → 116，CSS 行数 22,782 → 22,348，C1 5 个文件合计 6,019 → 5,288 行。
+- 验证：构建通过；深色/浅色与 1280/900/760 浏览器核对 Projects、需求卡片、迭代看板、迭代详情、API 列表、基础服务、Skill 库和用例库。
+
+后续安排：
+
+- `FilterBar`、`DetailSplit` 跟随首个真实消费方（阶段 6/7）落地，不先建空抽象。
+- `@layer` 契约统一与按钮反向压制 `!important` 清零并入阶段 9 收口，避免在页面迁移前改动全局层序。
+- 剩余 Stage 4 目标（文件数、重复规则体）由页面迁移自然下降，不为了数字拆碎文件。
 
 ### 阶段 5-8：页面族迁移
 
@@ -107,6 +124,7 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 ### 阶段 9：收口
 
 - `App.css` 不再聚合 feature CSS。
+- 统一 `@layer` 契约，清除依赖 `!important` 的按钮反向压制。
 - feature 级 `!important` 清零，长前缀清零。
 - 5 个 C1 超标文件清零。
 - 重复规则体（结构门禁口径）降到 60 组以内。
@@ -114,15 +132,15 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 
 ## 目标指标
 
-| 指标 | 阶段 3 完成后 | 阶段 4 后 | 结束目标 |
+| 指标 | 阶段 4 完成后 | 阶段 5-8 后 | 结束目标 |
 | --- | --- | --- | --- |
-| CSS 文件 | 109 | ≤ 80 | ≤ 45 |
-| CSS 行数 | 22,770 | ≤ 21,000 | ≤ 9,000 |
-| `!important` | 493 | ≤ 300 | ≤ 100（仅 AntD Module） |
-| 长前缀 | 163 | ≤ 20 | 0 |
+| CSS 文件 | 112 | ≤ 80 | ≤ 45 |
+| CSS 行数 | 22,397 | ≤ 21,000 | ≤ 9,000 |
+| `!important` | 420 | ≤ 300 | ≤ 100（仅 AntD Module） |
+| 长前缀 | 125 | ≤ 20 | 0 |
 | C1 超标文件 | 5 | 4 | 0 |
 | `App.css` feature 导入 | 0 | 0 | 0 |
-| 重复规则体（结构门禁口径） | 134 | ≤ 100 | ≤ 60 |
+| 重复规则体（结构门禁口径） | 119 | ≤ 100 | ≤ 60 |
 
 ## 迁移单元
 
@@ -149,5 +167,5 @@ git diff --check
 - AntD 深层选择器优先用 `ConfigProvider` token 解决；仍需要时放 CSS Module，不新增页面级全局 CSS。
 - 死类扫描会把 `segment-${key}`、`is-${state}` 等动态类误判为死类；扫描器只报告，删除必须人工确认。
 - 基础服务卡片在 760–980px 仍为 3 列（历史媒体查询顺序覆盖了 980px 的 2 列规则）；阶段 3 保持原行为，阶段 5 列表迁移时一并修正。
-- 当前没有浏览器 E2E；阶段 4 前建议补核心路由截图基线。
+- 当前没有浏览器 E2E；进入阶段 5 前建议补核心路由截图基线。
 - 若 CSS WIP 尚未稳定，先确认工作树再 ratchet baseline。

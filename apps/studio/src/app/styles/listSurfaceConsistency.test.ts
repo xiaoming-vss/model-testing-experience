@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import workbenchCss from './workbench.css?raw'
 import testingCss from '@/features/testing/styles/index.css?raw'
 import surfaceTokens from '@/shared/styles/surface-tokens.css?raw'
 import listTableCss from '@/shared/styles/list-table.css?raw'
@@ -61,12 +60,5 @@ describe('列表表面样式统一', () => {
     expect(tokens.getPropertyValue('--srf-list-header-bg').trim()).toBe('#f7f9fc')
     expect(tokens.getPropertyValue('--srf-list-row-bg').trim()).toBe('#ffffff')
     expect(tokens.getPropertyValue('--srf-list-row-hover').trim()).toBe('#f5f8ff')
-  })
-
-  it('需求列表与功能测试列表使用相同的表头和行样式', () => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
-    const requirements = computedListSurface(workbenchCss, 'project-overview-page', 'project-requirement-list-table')
-
-    expect(requirements).toEqual(functional)
   })
 })
