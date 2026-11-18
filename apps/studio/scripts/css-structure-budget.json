@@ -186,9 +186,9 @@
       "selectors": 13
     },
     "src/features/projects/styles/environment-drawer.module.css": {
-      "rules": 82,
-      "declarations": 326,
-      "selectors": 86
+      "rules": 45,
+      "declarations": 166,
+      "selectors": 48
     },
     "src/features/projects/styles/projects-overview.module.css": {
       "rules": 33,
@@ -414,7 +414,7 @@
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 6px"
     },
     "2adc3dcdcc63441e": {
-      "count": 6,
+      "count": 5,
       "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "2e2e45e2d4ca13fb": {
@@ -446,7 +446,7 @@
       "sample": "display: inline-flex;align-items: center;gap: 6px"
     },
     "41ff9fcb4194ebda": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;flex-direction: column;gap: 10px"
     },
     "440644315a04af4d": {
@@ -517,10 +517,6 @@
       "count": 2,
       "sample": "width: 13px;height: 13px;opacity: 0.4;filter: grayscale(1)"
     },
-    "8b7e12d2e5fb1c19": {
-      "count": 2,
-      "sample": "flex: 1 1 auto;min-height: 0;display: flex;flex-direction: column"
-    },
     "9222d9fe65fe3f15": {
       "count": 2,
       "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
@@ -532,10 +528,6 @@
     "9f60b5ccb8682bf4": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 2px;min-width: 0"
-    },
-    "a01057c7d90be5ca": {
-      "count": 2,
-      "sample": "min-width: 0;flex: 1 1 auto;display: flex;flex-direction: column;gap: 4px"
     },
     "a4a1b7ce873e0af5": {
       "count": 3,
@@ -570,7 +562,7 @@
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
     },
     "c59d73221fa11066": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;flex-direction: column;overflow: hidden"
     },
     "c6fd5c3d31cf4b69": {

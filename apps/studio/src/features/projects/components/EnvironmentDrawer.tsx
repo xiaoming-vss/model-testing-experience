@@ -240,7 +240,7 @@ export function EnvironmentDrawer({
 
         return (
           <Tooltip title={row.isSecret ? undefined : displayValue} placement="topLeft">
-            <span className="api-environment-var-value-cell">{displayValue}</span>
+            <span className="api-environment-var-value-cell inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap align-bottom">{displayValue}</span>
           </Tooltip>
         )
       },
@@ -331,14 +331,14 @@ export function EnvironmentDrawer({
         onClose={onClose}
         className={cx('api-environment-drawer', styles.root)}
       >
-        <div className="api-environment-drawer-shell">
+        <div className="api-environment-drawer-shell flex flex-1 min-h-0 flex-col gap-4">
           {!projectId ? <Alert showIcon type="info" title="请先选择项目后再管理环境" /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
           {environmentVarsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentVarsQuery.error)} /> : null}
 
-          <div className="api-environment-split-layout">
-            <section className="api-environment-section api-environment-section-top">
-              <div className="api-environment-section-head">
+          <div className="api-environment-split-layout flex flex-1 min-h-0 flex-col">
+            <section className="api-environment-section api-environment-section-top flex min-h-0 flex-[0_0_320px] flex-col gap-[14px] overflow-hidden">
+              <div className="api-environment-section-head flex items-start justify-between gap-4 max-narrow:flex-col">
                 <div>
                   <Text strong>项目环境</Text>
                   <Paragraph type="secondary" className="api-environment-subtitle">
@@ -350,13 +350,13 @@ export function EnvironmentDrawer({
                 </ProjectActionButton>
               </div>
 
-              <div className="api-environment-section-body api-environment-section-scrollable">
+              <div className="api-environment-section-body api-environment-section-scrollable flex-1 min-h-0 overflow-auto pr-1">
                 {environments.length === 0 ? (
-                  <Card className="api-environment-empty-card">
+                  <Card className="api-environment-empty-card min-h-24">
                     <Empty description={`当前项目还没有${isPerf ? '性能环境' : ` ${kindLabel} 环境`}`} />
                   </Card>
                 ) : (
-                  <div className="api-environment-list">
+                  <div className="api-environment-list flex flex-col gap-[10px] max-narrow:gap-2">
                     {environments.map((environment) => {
                       const environmentId = normalizeEnvironmentId(environment)
                       const active = environmentId === normalizeEnvironmentId(selectedEnvironment ?? ({ environmentId: '' } as ApiEnvironment))
@@ -364,11 +364,11 @@ export function EnvironmentDrawer({
                       return (
                         <div
                           key={environmentId}
-                          className={`api-environment-item${active ? ' active' : ''}`}
+                          className={`api-environment-item flex items-center gap-3 px-3 py-2.5 ${active ? ' active' : ''}`}
                           onClick={() => onSelectEnvironment(environmentId)}
                         >
-                          <div className="api-environment-item-main">
-                            <div className="api-environment-item-top">
+                          <div className="api-environment-item-main min-w-0 flex flex-auto flex-col gap-1">
+                            <div className="api-environment-item-top flex min-w-0 items-center justify-between gap-2">
                               <Space size={8}>
                                 <Text strong>{environment.name}</Text>
                               </Space>
@@ -419,21 +419,21 @@ export function EnvironmentDrawer({
               </div>
             </section>
 
-            <section className="api-environment-section api-environment-section-bottom">
-              <div className="api-environment-section-head">
-                <div className="api-environment-section-title-block">
+            <section className="api-environment-section api-environment-section-bottom flex min-h-0 flex-auto flex-col gap-[14px] overflow-hidden">
+              <div className="api-environment-section-head flex items-start justify-between gap-4 max-narrow:flex-col">
+                <div className="api-environment-section-title-block min-w-0">
                   <Text strong>环境变量</Text>
                   <Paragraph type="secondary" className="api-environment-subtitle">
                     变量会作为{isPerf ? '性能测试' : ` ${kindLabel} 测试`}运行时的取值来源。
                   </Paragraph>
                 </div>
-                <div className="api-environment-toolbar">
+                <div className="api-environment-toolbar min-w-0 flex flex-wrap items-center justify-end gap-[10px] max-narrow:w-full max-narrow:justify-start">
                   <span className="api-environment-current-pill">
                     启用环境：{selectedEnvironment?.name ?? '未选择'}
                   </span>
                   <Input
                     allowClear
-                    className="api-environment-var-search"
+                    className="api-environment-var-search w-80 mt-0 max-narrow:w-full"
                     prefix={<SearchOutlined />}
                     placeholder="搜索变量名 / 变量值"
                     value={environmentVarSearch}
@@ -449,14 +449,14 @@ export function EnvironmentDrawer({
                 </div>
               </div>
 
-              <div className="api-environment-section-body api-environment-section-scrollable">
+              <div className="api-environment-section-body flex-1 min-h-0 flex flex-col overflow-hidden">
                 {!selectedEnvironment ? (
-                  <Card className="api-environment-empty-card">
+                  <Card className="api-environment-empty-card min-h-24">
                     <Empty description="请先选择环境" />
                   </Card>
                 ) : (
-                  <Card className="api-environment-vars-card">
-                    <div className="table-body-scroll api-environment-vars-scroll">
+                  <Card className="api-environment-vars-card min-h-0 flex-auto flex flex-col">
+                    <div className="table-body-scroll api-environment-vars-scroll min-h-0 flex-auto">
                       <Table<ApiEnvironmentVar>
                         rowKey={normalizeEnvironmentVarId}
                         loading={environmentVarsQuery.isLoading}

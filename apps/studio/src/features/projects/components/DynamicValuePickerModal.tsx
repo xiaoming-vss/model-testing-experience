@@ -124,7 +124,7 @@ export function DynamicValuePickerModal({
       mask={{ closable: false }}
       open={open}
       title={(
-        <div className="api-env-var-picker-heading">
+        <div className="api-env-var-picker-heading pr-9">
           <div className="api-env-var-picker-heading-title">插入动态值</div>
           <div className="api-env-var-picker-heading-subtitle">
             从环境变量或内置函数中选择一个值，自动插入到当前输入框
@@ -140,41 +140,41 @@ export function DynamicValuePickerModal({
       onCancel={onClose}
     >
       <div className="api-env-var-picker api-env-var-picker-modal-body">
-        <div className="api-env-var-picker-workspace">
-          <nav className="api-env-var-picker-sources" aria-label="动态值来源">
+        <div className="api-env-var-picker-workspace min-h-[330px] grid grid-cols-[168px_minmax(320px,1fr)_300px] max-narrow:grid-cols-[132px_minmax(0,1fr)]">
+          <nav className="api-env-var-picker-sources flex flex-col gap-1.5 p-3 max-narrow:p-2" aria-label="动态值来源">
             <button
               type="button"
-              className={`api-env-var-picker-source${mode === 'environment' ? ' active' : ''}`}
+              className={`api-env-var-picker-source w-full min-h-[42px] grid grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 px-2.5 py-0 max-narrow:grid-cols-[16px_minmax(0,1fr)_auto] max-narrow:gap-1.5 max-narrow:px-1.5 ${mode === 'environment' ? ' active' : ''}`}
               onClick={() => selectMode('environment')}
             >
               <CodeSandboxOutlined />
-              <span>环境变量</span>
-              <span className="api-env-var-picker-source-count">{environmentVars.length}</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">环境变量</span>
+              <span className="api-env-var-picker-source-count min-w-5 h-5 px-1.5 inline-flex items-center justify-center max-narrow:hidden">{environmentVars.length}</span>
             </button>
             <button
               type="button"
-              className={`api-env-var-picker-source${mode === 'builtin' ? ' active' : ''}`}
+              className={`api-env-var-picker-source w-full min-h-[42px] grid grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 px-2.5 py-0 max-narrow:grid-cols-[16px_minmax(0,1fr)_auto] max-narrow:gap-1.5 max-narrow:px-1.5 ${mode === 'builtin' ? ' active' : ''}`}
               onClick={() => selectMode('builtin')}
             >
               <FunctionOutlined />
-              <span>内置函数</span>
-              <span className="api-env-var-picker-source-count">{builtinFunctions.length}</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">内置函数</span>
+              <span className="api-env-var-picker-source-count min-w-5 h-5 px-1.5 inline-flex items-center justify-center max-narrow:hidden">{builtinFunctions.length}</span>
             </button>
           </nav>
 
-          <section className="api-env-var-picker-browser">
+          <section className="api-env-var-picker-browser min-w-0 px-4 pt-3 pb-4">
             <Input
               allowClear
               prefix={<SearchOutlined />}
-              className="api-env-var-picker-search"
+              className="api-env-var-picker-search h-[38px] mb-2.5"
               placeholder={mode === 'builtin' ? '搜索函数名或表达式' : '搜索变量名'}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               disabled={mode === 'environment' && !hasEnvironment}
             />
-            <div className="api-env-var-picker-list">
+            <div className="api-env-var-picker-list min-h-[266px] max-h-[266px] p-0 flex flex-col overflow-auto">
               {filteredItems.length === 0 ? (
-                <div className="api-env-var-picker-empty">{emptyText}</div>
+                <div className="api-env-var-picker-empty min-h-full grid place-items-center">{emptyText}</div>
               ) : (
                 filteredItems.map((item) => {
                   const active = item.key === activeKey
@@ -182,12 +182,12 @@ export function DynamicValuePickerModal({
                     <button
                       key={item.key}
                       type="button"
-                      className={`api-env-var-picker-item${active ? ' active' : ''}`}
+                      className={`api-env-var-picker-item w-full min-h-[50px] grid flex-none grid-cols-[8px_minmax(0,1fr)_auto_16px] items-center gap-2.5 px-2.5 py-2 ${active ? ' active' : ''}`}
                       onClick={() => setSelectedKey(item.key)}
                       onDoubleClick={() => onInsert(item.key)}
                     >
                       <span className="api-env-var-picker-item-status" />
-                      <span className="api-env-var-picker-item-main">
+                      <span className="api-env-var-picker-item-main flex min-w-0 flex-auto flex-col gap-0.5">
                         <span className="api-env-var-picker-item-key">{item.title}</span>
                         {item.description ? (
                           <span className="api-env-var-picker-item-desc">{item.description}</span>
@@ -205,22 +205,22 @@ export function DynamicValuePickerModal({
             </div>
           </section>
 
-          <aside className="api-env-var-picker-preview">
-            <div className="api-env-var-picker-preview-title">插入预览</div>
-            <code className="api-env-var-picker-preview-token">
+          <aside className="api-env-var-picker-preview min-w-0 px-[18px] py-5 max-narrow:hidden">
+            <div className="api-env-var-picker-preview-title mb-3">插入预览</div>
+            <code className="api-env-var-picker-preview-token min-h-[54px] px-3.5 py-3 flex items-center">
               {selectedItem?.key || '请选择动态值'}
             </code>
-            <dl className="api-env-var-picker-preview-meta">
-              <div>
+            <dl className="api-env-var-picker-preview-meta mt-5 mb-0 grid gap-2.5">
+              <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-2.5 text-xs leading-[18px]">
                 <dt>来源</dt>
-                <dd>{mode === 'builtin' ? '内置函数' : '当前环境'}</dd>
+                <dd className="min-w-0 m-0 overflow-hidden text-ellipsis whitespace-nowrap">{mode === 'builtin' ? '内置函数' : '当前环境'}</dd>
               </div>
-              <div>
+              <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-2.5 text-xs leading-[18px]">
                 <dt>{mode === 'builtin' ? '函数名' : '变量名'}</dt>
-                <dd>{selectedItem?.title || '-'}</dd>
+                <dd className="min-w-0 m-0 overflow-hidden text-ellipsis whitespace-nowrap">{selectedItem?.title || '-'}</dd>
               </div>
             </dl>
-            <p className="api-env-var-picker-preview-description">
+            <p className="api-env-var-picker-preview-description mt-6 mb-0">
               {selectedItem?.description || (mode === 'builtin'
                 ? '插入后将在运行时由后端生成对应值。'
                 : '将以上内容插入当前输入框后，运行时会自动替换为对应的环境变量值。')}
@@ -228,7 +228,7 @@ export function DynamicValuePickerModal({
           </aside>
         </div>
 
-        <div className="api-env-var-picker-footer">
+        <div className="api-env-var-picker-footer min-h-[62px] px-[18px] py-3 flex items-center justify-end gap-2.5">
           <Button onClick={onClose}>取消</Button>
           <Button
             type="primary"
