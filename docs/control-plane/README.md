@@ -252,7 +252,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 - [ZenTao-MCP 手动部署](zentao-mcp-deployment.md)：已发布镜像、配置示例、直接 Compose 启动、多项目端口和网络排查。
 
-需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。需求评审是提示性首阶段，不阻断材料整理，见 [ADR 0018](adr/0018-requirement-review-advisory.md)。性能运行冻结监控接入公开快照、首期只保留 Remote Write 写入链路，见 [ADR 0020](adr/0020-performance-remote-write-only.md)；性能测试集按用例顺序串行执行、复用单用例 Worker 协议，见 [ADR 0021](adr/0021-performance-suite-serial-execution.md)。
+需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。需求评审是提示性首阶段，不阻断材料整理，见 [ADR 0018](adr/0018-requirement-review-advisory.md)。性能运行冻结监控接入公开快照、首期只保留 Remote Write 写入链路，见 [ADR 0020](adr/0020-performance-remote-write-only.md)；性能测试集按用例顺序串行执行、复用单用例 Worker 协议，见 [ADR 0021](adr/0021-performance-suite-serial-execution.md)；测试集和用例不设启用状态、运行时执行全部用例，见 [ADR 0022](adr/0022-remove-performance-enabled-state.md)。
 
 需求在线图文编辑与正文文件契约见[需求富文本正文](requirement-rich-text.md)。
 

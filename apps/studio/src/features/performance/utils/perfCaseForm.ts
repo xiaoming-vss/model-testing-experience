@@ -58,7 +58,6 @@ export type PerfDataEntryFormValues = {
 }
 export type PerfCaseFormValues = {
   name: string
-  enabled: boolean
   load: PerfLoadFormValues
   steps: PerfStepFormValues[]
   data: PerfDataEntryFormValues[]
@@ -241,7 +240,7 @@ function readData(value: unknown): PerfDataEntryFormValues[] {
 
 export function readPerfCaseForm(
   yamlText: string,
-  summary: { name: string; enabled: boolean },
+  summary: { name: string },
 ): PerfCaseFormValues | null {
   const root = parseYamlRoot(yamlText)
   const caseNode = toRecord(root?.case)
@@ -249,7 +248,6 @@ export function readPerfCaseForm(
   if (!caseNode || !load) return null
   return {
     name: stringValue(caseNode.name).trim() || summary.name,
-    enabled: summary.enabled,
     load,
     steps: readSteps(caseNode.steps),
     data: readData(caseNode.data),

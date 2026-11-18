@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
-import { Alert, Button, Drawer, Form, Input, Space, Switch } from 'antd'
+import { Alert, Button, Drawer, Form, Input, Space } from 'antd'
 import type { PerfSuiteSummary } from '../types'
 
 export type PerfSuiteFormValues = {
   name: string
   description?: string
-  enabled: boolean
 }
 
 export function PerfSuiteDrawer({
@@ -28,7 +27,6 @@ export function PerfSuiteDrawer({
     form.setFieldsValue({
       name: editing?.name ?? '',
       description: editing?.description ?? '',
-      enabled: editing?.enabled ?? true,
     })
   }, [editing, form, open])
 
@@ -59,9 +57,6 @@ export function PerfSuiteDrawer({
       <Form.Item label="测试集描述" name="description">
         <Input.TextArea rows={4} maxLength={512} showCount placeholder="说明测试目标、执行顺序和观察重点" />
       </Form.Item>
-      {editing ? <Form.Item label="启用测试集" name="enabled" valuePropName="checked" extra="停用后不能发起新的测试集运行，历史运行保留">
-        <Switch />
-      </Form.Item> : null}
     </Form>
   </Drawer>
 }

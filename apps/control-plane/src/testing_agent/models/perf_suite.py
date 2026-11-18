@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
@@ -28,7 +28,6 @@ class PerfSuite(Base):
     description: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="业务描述"
     )
-    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否启用")
     created_by: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="创建者用户业务标识"
     )

@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
-    ErrPerfCaseDisabled,
     ErrPerfCaseNameAlreadyUse,
     ErrPerfCaseNotFound,
     ErrPerfDataFileMissing,
@@ -131,7 +130,6 @@ class PerfCaseService:
             name=case.name,
             description=case.description,
             version=case.version,
-            enabled=case.enabled,
             data_files=case.data_files_json or [],
             created_at=case.created_at,
             updated_at=case.updated_at,
@@ -148,7 +146,6 @@ class PerfCaseService:
             description=case.description,
             yaml=case.yaml,
             version=case.version,
-            enabled=case.enabled,
             data_files=case.data_files_json or [],
             created_by=case.created_by,
             created_at=case.created_at,
@@ -181,7 +178,6 @@ class PerfCaseService:
             description=body.description.strip(),
             yaml=body.yaml,
             version=1,
-            enabled=True,
             data_files_json=metadata,
             created_by=user_id,
         )
@@ -241,9 +237,6 @@ class PerfCaseService:
         parsed = parse_case_yaml(yaml_text)
         self._validate_sources(parsed, metadata)
         case.yaml = yaml_text
-        if "enabled" in fields and body.enabled is not None:
-            case.enabled = body.enabled
-            changed = True
         if "order_no" in fields and body.order_no is not None:
             case.order_no = body.order_no
             changed = True
@@ -268,8 +261,3 @@ class PerfCaseService:
         await self.deletion.delete(self.repository.session, case)
         await self.repository.commit()
         return {}
-
-    async def require_enabled(self, case: PerfCase) -> PerfCase:
-        if not case.enabled:
-            raise ErrPerfCaseDisabled()
-        return case

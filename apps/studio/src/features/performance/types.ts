@@ -12,7 +12,6 @@ export type PerfCaseSummary = {
   orderNo: number
   name: string
   version: number
-  enabled: boolean
   dataFiles: PerfDataFile[]
   createdAt?: string
   updatedAt?: string
@@ -39,7 +38,6 @@ export type UpdatePerfCasePayload = {
   name?: string
   yaml?: string
   dataFileIds?: string[]
-  enabled?: boolean
 }
 
 export type PerfRunStatus =
@@ -107,9 +105,7 @@ export type PerfSuiteSummary = {
   projectId: string
   name: string
   description: string
-  enabled: boolean
   caseCount: number
-  enabledCaseCount: number
   stepCount: number
   dataFileCount: number
   loadModels: string[]
@@ -127,7 +123,6 @@ export type PerfSuite = PerfSuiteSummary & {
 export type CreatePerfSuitePayload = {
   name: string
   description?: string
-  enabled?: boolean
 }
 
 export type UpdatePerfSuitePayload = Partial<CreatePerfSuitePayload>

@@ -1,5 +1,16 @@
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Input, InputNumber, Select, Tooltip } from 'antd'
+import { useMemo, useState } from 'react'
+import {
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowUpOutlined,
+  DeleteOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+  SaveOutlined,
+} from '@ant-design/icons'
+import { Button, Dropdown, Input, InputNumber, Popconfirm, Select, Space, Tabs, Tag, Tooltip } from 'antd'
+import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { message } from '@/shared/utils/feedback'
 import {
   createPerfCheckRow,
   createPerfExtractRow,
@@ -34,8 +45,29 @@ const CHECK_OP_OPTIONS: { value: PerfCheckOp; label: string }[] = [
 
 const STATUS_CHECK_OPS: PerfCheckOp[] = ['eq', 'ne', 'gte', 'lte']
 
+const METHOD_OPTIONS = (['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] satisfies PerfHttpMethod[])
+  .map(method => ({ value: method, label: method }))
+
+const HEADER_PRESETS = [
+  { label: 'Content-Type', name: 'Content-Type', value: 'application/json' },
+  { label: 'Accept', name: 'Accept', value: 'application/json' },
+  { label: 'X-Tenant', name: 'X-Tenant', value: '{{env.tenant}}' },
+]
+
+const BODY_MODES = [['none', '无'], ['json', 'JSON'], ['text', '文本']] as const
+
 function updateAt<T>(items: T[], index: number, next: T): T[] {
   return items.map((item, itemIndex) => itemIndex === index ? next : item)
+}
+
+function isJsonText(value: string) {
+  if (!value.trim()) return true
+  try {
+    JSON.parse(value)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function NumericInput({
@@ -65,7 +97,19 @@ function NumericInput({
   </label>
 }
 
-function HeaderRows({
+function CountBadge({ count }: { count: number }) {
+  return <span className="inline-grid h-4 min-w-4 place-items-center rounded-full bg-app-surface-hover px-1 font-mono text-[9px] text-app-surface-text-muted">{count}</span>
+}
+
+function TabLabel({ label, count, dot }: { label: string; count?: number; dot?: boolean }) {
+  return <span className="inline-flex items-center gap-1.5">
+    {label}
+    {count !== undefined && count > 0 ? <CountBadge count={count} /> : null}
+    {dot ? <span className="h-1 w-1 rounded-full bg-app-accent" /> : null}
+  </span>
+}
+
+function RequestHeadersPanel({
   stepIndex,
   rows,
   disabled,
@@ -76,51 +120,109 @@ function HeaderRows({
   disabled?: boolean
   onChange: (rows: PerfHeaderRow[]) => void
 }) {
-  return <div className="grid gap-2">
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-semibold text-app-surface-text">请求头</span>
-      <Button size="small" icon={<PlusOutlined />} disabled={disabled} onClick={() => onChange([...rows, createPerfHeaderRow()])}>添加</Button>
-    </div>
-    {rows.length === 0 ? <div className="text-xs text-app-surface-text-muted">暂无请求头</div> : rows.map((row, index) => (
-      <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
-        <Input
-          aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 名称`}
-          size="small"
-          placeholder="Header"
-          value={row.name}
+  const update = (index: number, patch: Partial<PerfHeaderRow>) =>
+    onChange(updateAt(rows, index, { ...rows[index], ...patch }))
+
+  function addHeader(preset?: { name: string; value: string }) {
+    onChange([...rows, { ...createPerfHeaderRow(), ...preset }])
+  }
+
+  return <div className="pt-3 pb-4">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-app-surface-text-muted">快捷注入:</span>
+        {HEADER_PRESETS.map(preset => <button
+          key={preset.label}
+          type="button"
           disabled={disabled}
-          onChange={event => onChange(updateAt(rows, index, { ...row, name: event.target.value }))}
-        />
-        <Input
-          aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 值`}
-          size="small"
-          placeholder="Value"
-          value={row.value}
-          disabled={disabled}
-          onChange={event => onChange(updateAt(rows, index, { ...row, value: event.target.value }))}
-        />
-        <Tooltip title="删除请求头">
-          <Button
-            type="text"
-            size="small"
-            danger
-            aria-label={`删除步骤 ${stepIndex + 1} 请求头 ${index + 1}`}
-            icon={<DeleteOutlined />}
-            disabled={disabled}
-            onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
-          />
-        </Tooltip>
+          className="rounded border border-app-surface-border bg-app-surface px-2 py-0.5 text-[11px] text-app-surface-text-muted transition-colors hover:border-app-accent-border hover:bg-app-accent-surface hover:text-app-accent disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => addHeader(preset)}
+        >
+          <span className="mr-1 font-bold text-app-accent">+</span>{preset.label}
+        </button>)}
       </div>
-    ))}
+      <span className="text-[11px] text-app-surface-text-muted">已配置 {rows.length} 个</span>
+    </div>
+
+    <table className="mt-2 w-full table-fixed border-collapse">
+      <colgroup>
+        <col className="w-[30%]" />
+        <col />
+        <col className="w-14" />
+      </colgroup>
+      <thead>
+        <tr className="border-b border-app-surface-border text-left text-[11px] text-app-surface-text-muted">
+          <th className="px-2 py-1.5 font-medium">请求头名称 (Header Key)</th>
+          <th className="px-2 py-1.5 font-medium">请求头值 (Header Value)</th>
+          <th className="px-2 py-1.5 text-right font-medium">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 ? <tr>
+          <td colSpan={3} className="px-2 py-5 text-center text-xs text-app-surface-text-muted">暂无请求头</td>
+        </tr> : rows.map((row, index) => <tr key={row.id} className="border-b border-[var(--app-surface-divider)]">
+          <td className="px-1 py-1">
+            <Input
+              aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 名称`}
+              variant="borderless"
+              size="small"
+              className="font-mono text-[11px]"
+              placeholder="Header"
+              value={row.name}
+              disabled={disabled}
+              onChange={event => update(index, { name: event.target.value })}
+            />
+          </td>
+          <td className="px-1 py-1">
+            <Input
+              aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 值`}
+              variant="borderless"
+              size="small"
+              className="font-mono text-[11px]"
+              placeholder="Value"
+              value={row.value}
+              disabled={disabled}
+              onChange={event => update(index, { value: event.target.value })}
+            />
+          </td>
+          <td className="px-1 py-1 text-right">
+            <Tooltip title="删除请求头">
+              <Button
+                type="text"
+                size="small"
+                danger
+                aria-label={`删除步骤 ${stepIndex + 1} 请求头 ${index + 1}`}
+                icon={<DeleteOutlined />}
+                disabled={disabled}
+                onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
+              />
+            </Tooltip>
+          </td>
+        </tr>)}
+      </tbody>
+    </table>
+
+    <Button
+      type="text"
+      size="small"
+      className="mt-2 px-1 text-app-accent"
+      icon={<PlusOutlined />}
+      disabled={disabled}
+      onClick={() => addHeader()}
+    >
+      添加请求头
+    </Button>
   </div>
 }
 
 function CheckRows({
+  title = '断言',
   stepIndex,
   rows,
   disabled,
   onChange,
 }: {
+  title?: string
   stepIndex: number
   rows: PerfCheckRow[]
   disabled?: boolean
@@ -129,10 +231,12 @@ function CheckRows({
   const update = (index: number, patch: Partial<PerfCheckRow>) => onChange(updateAt(rows, index, { ...rows[index], ...patch }))
   return <div className="grid gap-2">
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-semibold text-app-surface-text">响应校验</span>
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-app-surface-text">
+        {title}<CountBadge count={rows.length} />
+      </span>
       <Button size="small" icon={<PlusOutlined />} disabled={disabled} onClick={() => onChange([...rows, createPerfCheckRow()])}>添加</Button>
     </div>
-    {rows.length === 0 ? <div className="text-xs text-app-surface-text-muted">暂无校验</div> : rows.map((row, index) => {
+    {rows.length === 0 ? <div className="rounded-lg border border-dashed border-app-surface-border px-3 py-4 text-center text-xs text-app-surface-text-muted">暂无断言</div> : rows.map((row, index) => {
       const needsPattern = row.op === 'regex' || row.op === 'contains'
       return <div key={row.id} className="grid gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover p-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -197,7 +301,7 @@ function CheckRows({
             disabled={disabled}
             onChange={event => update(index, { value: event.target.value })}
           /> : null}
-          <Tooltip title="删除校验">
+          <Tooltip title="删除断言">
             <Button
               type="text"
               size="small"
@@ -215,11 +319,13 @@ function CheckRows({
 }
 
 function ExtractRows({
+  title = '提取规则',
   stepIndex,
   rows,
   disabled,
   onChange,
 }: {
+  title?: string
   stepIndex: number
   rows: PerfExtractRow[]
   disabled?: boolean
@@ -228,10 +334,12 @@ function ExtractRows({
   const update = (index: number, patch: Partial<PerfExtractRow>) => onChange(updateAt(rows, index, { ...rows[index], ...patch }))
   return <div className="grid gap-2">
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-semibold text-app-surface-text">提取变量</span>
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-app-surface-text">
+        {title}<CountBadge count={rows.length} />
+      </span>
       <Button size="small" icon={<PlusOutlined />} disabled={disabled} onClick={() => onChange([...rows, createPerfExtractRow()])}>添加</Button>
     </div>
-    {rows.length === 0 ? <div className="text-xs text-app-surface-text-muted">暂无提取变量</div> : rows.map((row, index) => (
+    {rows.length === 0 ? <div className="rounded-lg border border-dashed border-app-surface-border px-3 py-4 text-center text-xs text-app-surface-text-muted">暂无提取规则</div> : rows.map((row, index) => (
       <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover p-2">
         <Input
           aria-label={`步骤 ${stepIndex + 1} 提取 ${index + 1} 变量名`}
@@ -286,7 +394,7 @@ function ExtractRows({
           disabled={disabled}
           onChange={event => update(index, { path: event.target.value })}
         />}
-        <Tooltip title="删除提取变量">
+        <Tooltip title="删除提取规则">
           <Button
             type="text"
             size="small"
@@ -302,130 +410,304 @@ function ExtractRows({
   </div>
 }
 
-export function PerfStepFields({
+export function PerfStepEditor({
+  className,
   step,
   stepIndex,
+  stepCount,
   variables,
-  disabled = false,
+  projectId,
+  environmentName,
+  environmentBaseUrl,
+  canWrite,
+  dirty,
+  saving,
+  errors,
+  errorsAlert,
+  onBack,
+  onMove,
+  onDelete,
+  onCancel,
+  onSave,
   onChange,
 }: {
+  className?: string
   step: PerfStepFormValues
   stepIndex: number
+  stepCount: number
   variables: string[]
-  disabled?: boolean
+  projectId?: string
+  environmentName?: string
+  environmentBaseUrl?: string
+  canWrite: boolean
+  dirty: boolean
+  saving: boolean
+  errors: string[]
+  errorsAlert: React.ReactNode
+  onBack: () => void
+  onMove: (offset: 1 | -1) => void
+  onDelete: () => void
+  onCancel: () => void
+  onSave: () => void
   onChange: (patch: Partial<PerfStepFormValues>) => void
 }) {
-  return <div className="grid gap-4">
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-      <label className="grid gap-1 text-xs text-app-surface-text-muted md:col-span-4">
-        <span>步骤名称<span className="text-app-request-error-text"> *</span></span>
-        <Input
-          aria-label={`步骤 ${stepIndex + 1} 名称`}
-          value={step.name}
-          disabled={disabled}
-          onChange={event => onChange({ name: event.target.value })}
+  const [activeTab, setActiveTab] = useState('headers')
+  const bodyHasContent = step.bodyMode !== 'none'
+  const postCount = step.checks.length + step.extract.length
+  const jsonInvalid = useMemo(
+    () => step.bodyMode === 'json' && !isJsonText(step.bodyText),
+    [step.bodyMode, step.bodyText],
+  )
+
+  function formatBody() {
+    try {
+      onChange({ bodyText: JSON.stringify(JSON.parse(step.bodyText || '{}'), null, 2) })
+    } catch {
+      message.warning('当前请求体不是合法 JSON，无法格式化')
+    }
+  }
+
+  function compressBody() {
+    try {
+      onChange({ bodyText: JSON.stringify(JSON.parse(step.bodyText || '{}')) })
+    } catch {
+      message.warning('当前请求体不是合法 JSON，无法压缩')
+    }
+  }
+
+  const tabs = [
+    {
+      key: 'headers',
+      label: <TabLabel label="请求头" count={step.headers.length} />,
+      children: <RequestHeadersPanel
+        stepIndex={stepIndex}
+        rows={step.headers}
+        disabled={!canWrite}
+        onChange={headers => onChange({ headers })}
+      />,
+    },
+    {
+      key: 'body',
+      label: <TabLabel label="请求体" dot={bodyHasContent} />,
+      children: <div className="pt-3 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2">
+          <div className="flex flex-wrap items-center gap-1">
+            {BODY_MODES.map(([mode, label]) => <Button
+              key={mode}
+              size="small"
+              type={step.bodyMode === mode ? 'primary' : 'text'}
+              disabled={!canWrite}
+              onClick={() => onChange({ bodyMode: mode })}
+            >{label}</Button>)}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button size="small" disabled={!canWrite || step.bodyMode !== 'json'} onClick={formatBody}>格式化</Button>
+            <Button size="small" disabled={!canWrite || step.bodyMode !== 'json'} onClick={compressBody}>压缩</Button>
+            <Dropdown
+              disabled={!canWrite || variables.length === 0}
+              trigger={['click']}
+              menu={{
+                items: variables.map(name => ({ key: name, label: `{{var.${name}}}` })),
+                onClick: ({ key }) => onChange({ bodyText: `${step.bodyText}{{var.${key}}}` }),
+              }}
+            >
+              <Button size="small" disabled={!canWrite || variables.length === 0}>插入变量</Button>
+            </Dropdown>
+            {step.bodyMode === 'json' ? <Tag color={jsonInvalid ? 'error' : 'success'} className="m-0">
+              {jsonInvalid ? 'JSON 语法错误' : 'JSON 合法'}
+            </Tag> : null}
+          </div>
+        </div>
+        {step.bodyMode === 'none' ? <div className="mt-3 rounded-lg border border-dashed border-app-surface-border px-3 py-8 text-center text-xs text-app-surface-text-muted">
+          当前请求没有请求体
+        </div> : <Input.TextArea
+          aria-label={`步骤 ${stepIndex + 1} 请求体`}
+          className="mt-3 font-mono text-xs"
+          autoSize={{ minRows: 8, maxRows: 18 }}
+          value={step.bodyText}
+          disabled={!canWrite}
+          onChange={event => onChange({ bodyText: event.target.value })}
+        />}
+        {step.bodyMode !== 'none' ? <div className="mt-1 text-[11px] text-app-surface-text-muted">
+          Content-Type: {step.bodyMode === 'json' ? 'application/json' : 'text/plain'} · {step.bodyText.length} 字符
+        </div> : null}
+      </div>,
+    },
+    {
+      key: 'post',
+      label: <TabLabel label="后置操作" count={postCount} />,
+      children: <div className="grid gap-4 pt-3 pb-4">
+        <div>
+          <div className="text-xs font-bold text-app-surface-text">后置操作</div>
+          <div className="mt-0.5 text-[11px] text-app-surface-text-muted">统一管理断言与提取规则，提取结果供后续步骤使用。</div>
+        </div>
+        <CheckRows
+          title="断言"
+          stepIndex={stepIndex}
+          rows={step.checks}
+          disabled={!canWrite}
+          onChange={checks => onChange({ checks })}
         />
-      </label>
-      <label className="grid gap-1 text-xs text-app-surface-text-muted md:col-span-3">
-        <span>请求方法</span>
-        <Select
-          aria-label={`步骤 ${stepIndex + 1} 请求方法`}
-          value={step.method}
-          disabled={disabled}
-          options={(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] satisfies PerfHttpMethod[]).map(method => ({ value: method, label: method }))}
-          onChange={method => onChange({ method })}
+        <ExtractRows
+          title="提取规则"
+          stepIndex={stepIndex}
+          rows={step.extract}
+          disabled={!canWrite}
+          onChange={extract => onChange({ extract })}
         />
-      </label>
-      <label className="grid gap-1 text-xs text-app-surface-text-muted md:col-span-5">
-        <span>请求路径<span className="text-app-request-error-text"> *</span></span>
-        <Input
-          aria-label={`步骤 ${stepIndex + 1} 请求路径`}
-          value={step.path}
-          disabled={disabled}
-          onChange={event => onChange({ path: event.target.value })}
-        />
-      </label>
-      <label className="grid gap-1 text-xs text-app-surface-text-muted md:col-span-4">
-        <span>失败后</span>
-        <Select
-          aria-label={`步骤 ${stepIndex + 1} 失败后`}
-          value={step.onFailure}
-          disabled={disabled}
-          options={[
-            { value: 'abort_iteration', label: '终止本次迭代' },
-            { value: 'continue', label: '继续下一步' },
-            { value: 'abort_test', label: '终止整个测试' },
-          ]}
-          onChange={onFailure => onChange({ onFailure })}
-        />
-      </label>
-      <div className="md:col-span-2">
+      </div>,
+    },
+    {
+      key: 'settings',
+      label: '设置',
+      children: <div className="grid gap-3 pt-3 pb-4 md:grid-cols-2">
+        <label className="grid gap-1 text-xs text-app-surface-text-muted">
+          <span>失败后</span>
+          <Select
+            aria-label={`步骤 ${stepIndex + 1} 失败后`}
+            value={step.onFailure}
+            disabled={!canWrite}
+            options={[
+              { value: 'abort_iteration', label: '终止本次迭代' },
+              { value: 'continue', label: '继续下一步' },
+              { value: 'abort_test', label: '终止整个测试' },
+            ]}
+            onChange={onFailure => onChange({ onFailure })}
+          />
+        </label>
         <NumericInput
           label="思考时间（ms）"
           value={step.thinkTimeMs}
-          disabled={disabled}
+          disabled={!canWrite}
           onChange={thinkTimeMs => onChange({ thinkTimeMs })}
         />
+        <div className="text-[11px] text-app-surface-text-muted md:col-span-2">
+          失败策略只影响当前步骤；思考时间作用于本步骤结束后、下一步骤开始前。
+        </div>
+      </div>,
+    },
+  ]
+
+  const tabBarExtraContent = activeTab === 'headers'
+    ? <span className="text-[11px] text-app-surface-text-muted">已配置 {step.headers.length} 个</span>
+    : activeTab === 'body'
+      ? <span className="text-[11px] text-app-surface-text-muted">Content-Type: <span className="font-mono">{step.bodyMode === 'json' ? 'application/json' : step.bodyMode === 'text' ? 'text/plain' : '—'}</span></span>
+      : activeTab === 'post'
+        ? <span className="text-[11px] text-app-surface-text-muted">断言 {step.checks.length} · 提取 {step.extract.length}</span>
+        : null
+
+  return <div className={`flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--app-panel-radius)] border border-app-surface-border bg-app-surface ${className ?? ''}`}>
+    <div className="flex-none">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+        <Button type="text" size="small" icon={<ArrowLeftOutlined />} aria-label="返回用例" onClick={onBack} />
+        <label className="flex items-center gap-2 text-xs text-app-surface-text-muted">
+          <span className="shrink-0 whitespace-nowrap">步骤名称<span className="text-app-request-error-text"> *</span></span>
+          <Input
+            className="w-[260px]"
+            aria-label={`步骤 ${stepIndex + 1} 名称`}
+            value={step.name}
+            status={step.name.trim() ? undefined : 'error'}
+            disabled={!canWrite}
+            onChange={event => onChange({ name: event.target.value })}
+          />
+        </label>
+        {dirty ? <Tag color="warning" className="m-0">有未保存修改</Tag> : null}
+        <Space size={4} className="ml-auto" wrap>
+          <Tooltip title="上移接口">
+            <Button size="small" type="text" icon={<ArrowUpOutlined />} aria-label="上移接口" disabled={!canWrite || stepIndex === 0} onClick={() => onMove(-1)} />
+          </Tooltip>
+          <Tooltip title="下移接口">
+            <Button size="small" type="text" icon={<ArrowDownOutlined />} aria-label="下移接口" disabled={!canWrite || stepIndex === stepCount - 1} onClick={() => onMove(1)} />
+          </Tooltip>
+          <Popconfirm
+            title="删除这个接口？"
+            okText="删除"
+            cancelText="取消"
+            disabled={!canWrite}
+            onConfirm={onDelete}
+          >
+            <Tooltip title="删除接口">
+              <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除接口" disabled={!canWrite} />
+            </Tooltip>
+          </Popconfirm>
+          <Button size="small" onClick={onCancel} disabled={!dirty}>取消</Button>
+        </Space>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 bg-app-surface-hover px-4 py-2.5">
+        <Select
+          aria-label={`步骤 ${stepIndex + 1} 请求方法`}
+          className="w-[108px] shrink-0"
+          value={step.method}
+          disabled={!canWrite}
+          options={METHOD_OPTIONS}
+          onChange={method => onChange({ method })}
+        />
+        <div className="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-lg border border-app-surface-border bg-app-surface focus-within:border-app-accent-border focus-within:shadow-[0_0_0_3px_var(--app-accent-surface)]">
+          <span
+            className="inline-flex max-w-[240px] shrink-0 items-center gap-1.5 border-r border-app-surface-border bg-app-surface-hover px-2.5 font-mono text-[11px] text-app-surface-text-muted"
+            title={environmentBaseUrl ? `运行环境：${environmentName ?? ''} ${environmentBaseUrl}` : '未选择运行环境'}
+          >
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${environmentBaseUrl ? 'bg-[var(--srf-result-passed)]' : 'bg-[var(--srf-result-skipped)]'}`} aria-hidden="true" />
+            <span className="truncate">{environmentBaseUrl || '未选择运行环境'}</span>
+          </span>
+          <Input
+            variant="borderless"
+            aria-label={`步骤 ${stepIndex + 1} 请求路径`}
+            className="min-w-0 flex-1 font-mono text-[11.5px]"
+            value={step.path}
+            disabled={!canWrite}
+            onChange={event => onChange({ path: event.target.value })}
+          />
+          <Tooltip title="相对路径会拼接运行环境的 baseUrl；支持 {{env.变量}} 和 {{var.变量}} 占位符">
+            <span className="grid w-8 shrink-0 cursor-help place-items-center text-app-surface-text-muted"><InfoCircleOutlined /></span>
+          </Tooltip>
+          <Dropdown
+            disabled={!canWrite || variables.length === 0}
+            trigger={['click']}
+            menu={{
+              items: variables.map(name => ({ key: name, label: `{{var.${name}}}` })),
+              onClick: ({ key }) => onChange({ path: `${step.path}{{var.${key}}}` }),
+            }}
+          >
+            <Button
+              type="text"
+              size="small"
+              aria-label="插入提取变量"
+              title={variables.length
+                ? '插入前序步骤提取的变量；仅当前用例 / 当前 VU / 当前迭代内有效'
+                : '前面步骤还没有提取变量'}
+              disabled={!canWrite || variables.length === 0}
+              className="mx-1 shrink-0 px-1 font-mono text-[10px] text-app-surface-text-muted"
+            >
+              {'{ }'}
+            </Button>
+          </Dropdown>
+        </div>
+        <ProjectActionButton
+          action="write"
+          projectId={projectId}
+          type="primary"
+          className="shrink-0"
+          operation="save"
+          icon={<SaveOutlined />}
+          disabled={!dirty || errors.length > 0 || saving || !canWrite}
+          loading={saving}
+          onClick={onSave}
+        >
+          保存用例
+        </ProjectActionButton>
       </div>
     </div>
 
-    <div className="flex flex-wrap items-center gap-1.5 text-xs text-app-surface-text-muted">
-      <span>可用变量：</span>
-      {variables.length === 0
-        ? <span>前面步骤提取的变量会在这里出现</span>
-        : variables.map(name => <button
-          key={name}
-          type="button"
-          className="rounded-md border border-app-accent-border bg-app-accent-surface px-1.5 py-0.5 font-mono text-[11px] text-app-accent"
-          title="插入到请求路径"
-          disabled={disabled}
-          onClick={() => onChange({ path: `${step.path}{{var.${name}}}` })}
-        >{`{{var.${name}}}`}</button>)}
-      <span>· 仅当前用例 / 当前 VU / 当前迭代内有效</span>
-    </div>
+    {errorsAlert ? <div className="flex-none border-b border-[var(--app-surface-divider)] px-4 py-3">{errorsAlert}</div> : null}
 
-    <HeaderRows
-      stepIndex={stepIndex}
-      rows={step.headers}
-      disabled={disabled}
-      onChange={headers => onChange({ headers })}
-    />
-
-    <div className="grid gap-2">
-      <span className="text-xs font-semibold text-app-surface-text">请求体</span>
-      <div className="flex flex-wrap gap-1">
-        {([['none', '无'], ['json', 'JSON'], ['text', '文本']] as const).map(([mode, label]) => (
-          <Button
-            key={mode}
-            size="small"
-            type={step.bodyMode === mode ? 'primary' : 'default'}
-            disabled={disabled}
-            onClick={() => onChange({ bodyMode: mode })}
-          >{label}</Button>
-        ))}
-      </div>
-      {step.bodyMode !== 'none' ? <Input.TextArea
-        aria-label={`步骤 ${stepIndex + 1} 请求体`}
-        className="font-mono text-xs"
-        autoSize={{ minRows: 4, maxRows: 10 }}
-        value={step.bodyText}
-        disabled={disabled}
-        onChange={event => onChange({ bodyText: event.target.value })}
-      /> : null}
-    </div>
-
-    <CheckRows
-      stepIndex={stepIndex}
-      rows={step.checks}
-      disabled={disabled}
-      onChange={checks => onChange({ checks })}
-    />
-
-    <ExtractRows
-      stepIndex={stepIndex}
-      rows={step.extract}
-      disabled={disabled}
-      onChange={extract => onChange({ extract })}
+    <Tabs
+      className="flex min-h-0 flex-1 flex-col px-4 pt-1 [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content-holder]:overflow-auto [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav]:flex-none [&_.shared-tab-motion-indicator]:[clip-path:inset(7px_0_round_8px)]"
+      activeKey={activeTab}
+      onChange={setActiveTab}
+      tabBarExtraContent={tabBarExtraContent}
+      items={tabs}
     />
   </div>
 }

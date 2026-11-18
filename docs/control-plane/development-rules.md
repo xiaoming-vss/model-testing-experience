@@ -90,7 +90,7 @@ Ruff 配置以应用 `pyproject.toml` 为准，当前行宽为 100，检查规�
 
 登录注销、撤销记录和错误行为见[登录与服务端注销](authentication.md)。集成 Worker 和性能 Worker 使用各自的独立专属令牌；Worker Token 验证不能替代业务资源授权。
 
-性能运行沿 `perf_cases → perf_runs → worker_tasks(domain=perf)` 流转。运行创建必须同时校验用例启用、项目 `execute` 权限、环境 `kind="perf"`、监控接入同项目且启用，并在同一事务写入运行和队列行。RunSpec 公开部分脱敏，完整规格和秘密只放加密 `private_payload`；`/internal/perf-worker` 快照和数据文件只对当前租约持有者开放。用户停止只允许运行触发人；停止后迟到的完成事件不能覆盖 `canceled/stopped`。停止超时、租约回收和 Worker 回传状态映射见 [ADR 0002](../perf-worker/adr/0002-control-plane-poll-mode.md)。
+性能运行沿 `perf_cases → perf_runs → worker_tasks(domain=perf)` 流转。运行创建必须同时校验项目 `execute` 权限、环境 `kind="perf"`、监控接入同项目且启用，并在同一事务写入运行和队列行。RunSpec 公开部分脱敏，完整规格和秘密只放加密 `private_payload`；`/internal/perf-worker` 快照和数据文件只对当前租约持有者开放。用户停止只允许运行触发人；停止后迟到的完成事件不能覆盖 `canceled/stopped`。停止超时、租约回收和 Worker 回传状态映射见 [ADR 0002](../perf-worker/adr/0002-control-plane-poll-mode.md)。
 
 ## 数据模型与数据库迁移
 

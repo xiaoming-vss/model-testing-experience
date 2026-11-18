@@ -17,7 +17,6 @@ from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
     ErrForbidden,
-    ErrPerfCaseDisabled,
     ErrPerfCaseNotFound,
     ErrPerfDataFileMissing,
     ErrPerfRunEnvironmentMismatch,
@@ -180,8 +179,6 @@ class PerfRunService:
         body: PerfRunCreate | PerfSuiteRunCreate,
         run_id: str,
     ) -> tuple[dict[str, Any], dict[str, Any], str, list[str], list[dict[str, Any]]]:
-        if not case.enabled:
-            raise ErrPerfCaseDisabled()
         parsed = parse_case_yaml(case.yaml)
         environment = await self.environments.get_environment(body.environment_id)
         if environment is None or environment.project_id != case.project_id:

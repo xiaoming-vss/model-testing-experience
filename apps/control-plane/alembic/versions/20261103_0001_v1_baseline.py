@@ -4034,7 +4034,6 @@ def upgrade() -> None:
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
         sa.Column("name", sa.String(length=120), nullable=False, comment="测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
-        sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
@@ -4081,7 +4080,6 @@ def upgrade() -> None:
             comment="YAML 用例正文；平台字段在发起运行时注入",
         ),
         sa.Column("version", sa.Integer(), nullable=False, comment="用例版本号，更新时递增"),
-        sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column(
             "data_files_json",
             mysql.JSON(),

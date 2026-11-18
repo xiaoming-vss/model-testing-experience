@@ -2,21 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ApiOutlined,
   AppstoreOutlined,
-  ArrowDownOutlined,
   ArrowLeftOutlined,
-  ArrowUpOutlined,
-  CodeOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
   DownOutlined,
   EditOutlined,
   HistoryOutlined,
-  KeyOutlined,
-  PlayCircleOutlined,
   PlusOutlined,
   SaveOutlined,
+  SlidersOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
@@ -26,9 +19,8 @@ import {
   Form,
   Input,
   Modal,
-  Popconfirm,
+  Select,
   Space,
-  Switch,
   Tag,
   Tooltip,
   Typography,
@@ -62,8 +54,9 @@ import {
   setPerfCaseDraft,
 } from '../utils/perfDraftStore'
 import { PerfCaseDataSection } from '../components/PerfCaseWorkbench'
+import { PerfContractToggle, type PerfContractView } from '../components/PerfContractToggle'
 import { PerfLoadModelForm } from '../components/PerfLoadModelForm'
-import { PerfStepFields } from '../components/PerfStepsEditor'
+import { PerfStepEditor } from '../components/PerfStepsEditor'
 import { PerfSuiteDrawer, type PerfSuiteFormValues } from '../components/PerfSuiteDrawer'
 import { StartPerfSuiteRunModal } from '../components/StartPerfSuiteRunModal'
 
@@ -96,7 +89,7 @@ export function PerformanceSuiteDetailPage() {
   const [dataFiles, setDataFiles] = useState<PerfDataFile[]>([])
   const [hydratedCaseId, setHydratedCaseId] = useState('')
   const [collapsedCaseIds, setCollapsedCaseIds] = useState<Set<string>>(() => new Set())
-  const [internalDataOpen, setInternalDataOpen] = useState(false)
+  const [contractView, setContractView] = useState<PerfContractView>('visual')
   const [runOpen, setRunOpen] = useState(false)
   const [suiteDrawerOpen, setSuiteDrawerOpen] = useState(false)
   const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
@@ -115,6 +108,10 @@ export function PerformanceSuiteDetailPage() {
     ?? environments.find((environment) => environment.isDefault)
     ?? environments[0]
   const resolvedEnvironmentId = selectedEnvironment ? normalizeEnvironmentId(selectedEnvironment) : undefined
+  const environmentOptions = environments.map((environment) => ({
+    label: `${environment.name}${environment.isDefault ? '（默认）' : ''}`,
+    value: normalizeEnvironmentId(environment),
+  }))
 
   useEffect(() => {
     if (!activeCase || hydratedCaseId === activeCase.caseId) return
@@ -123,7 +120,6 @@ export function PerformanceSuiteDetailPage() {
     setYaml(nextYaml)
     setCaseForm(draft?.form ?? readPerfCaseForm(nextYaml, {
       name: activeCase.name,
-      enabled: activeCase.enabled,
     }))
     setDataFiles(draft?.dataFiles ?? activeCase.dataFiles)
     setHydratedCaseId(activeCase.caseId)
@@ -144,7 +140,6 @@ export function PerformanceSuiteDetailPage() {
     for (const item of suite?.cases ?? []) {
       forms.set(item.caseId, readPerfCaseForm(item.yaml, {
         name: item.name,
-        enabled: item.enabled,
       }))
     }
     return forms
@@ -163,29 +158,7 @@ export function PerformanceSuiteDetailPage() {
   const dirty = Boolean(activeCase && activeForm && (
     yaml !== activeCase.yaml
     || activeForm.name !== activeCase.name
-    || activeForm.enabled !== activeCase.enabled
   ))
-  const extractVariables = activeForm
-    ? Array.from(new Set(activeForm.steps.flatMap(step => step.extract.map(item => item.name.trim()).filter(Boolean))))
-    : []
-  const variables = useMemo(() => {
-    if (!suite) return []
-    return suite.cases.flatMap((item) => {
-      const form = item.caseId === activeCaseId && activeForm
-        ? activeForm
-        : parsedCaseForms.get(item.caseId)
-      if (!form) return []
-      return form.steps.flatMap((step, stepIndex) => step.extract
-        .filter((extract) => extract.name.trim())
-        .map((extract) => ({
-          name: extract.name.trim(),
-          caseName: item.name,
-          caseId: item.caseId,
-          stepIndex,
-          stepName: step.name,
-        })))
-    })
-  }, [suite, activeCaseId, activeForm, parsedCaseForms])
   const activeDataFiles = caseHydrated ? dataFiles : []
 
   function applyForm(next: PerfCaseFormValues) {
@@ -297,7 +270,6 @@ export function PerformanceSuiteDetailPage() {
         name: updated.name,
         yaml: updated.yaml,
         version: updated.version,
-        enabled: updated.enabled,
         dataFiles: updated.dataFiles,
         updatedAt: updated.updatedAt,
       } : item),
@@ -313,7 +285,6 @@ export function PerformanceSuiteDetailPage() {
       return api.updatePerfCase(activeCase.caseId, {
         name: activeForm.name.trim(),
         yaml,
-        enabled: activeForm.enabled,
       })
     },
     onSuccess: (updated) => {
@@ -327,7 +298,6 @@ export function PerformanceSuiteDetailPage() {
     mutationFn: (values: PerfSuiteFormValues) => api.updatePerfSuite(suiteId, {
       name: values.name.trim(),
       description: values.description?.trim() ?? '',
-      enabled: values.enabled,
     }),
     onSuccess: (updated) => {
       queryClient.setQueryData(['perfSuite', suiteId], updated)
@@ -420,18 +390,16 @@ export function PerformanceSuiteDetailPage() {
     }
   }
 
-  const enabledCases = suite?.cases.filter((item) => item.enabled) ?? []
-  const runBlockedReason = !suite?.enabled
-    ? '测试集已停用'
-    : enabledCases.length === 0
-      ? '测试集没有启用的用例'
+  const runBlockedReason = !suite
+    ? '测试集加载中'
+    : suite.cases.length === 0
+      ? '测试集没有用例'
       : !resolvedEnvironmentId
         ? '请先选择性能环境'
         : ''
   const formErrorsAlert = errors.length > 0 ? <Alert
     type="error"
     showIcon
-    className="mt-3"
     title={`还有 ${errors.length} 个问题`}
     description={<ul className="m-0 grid gap-0.5 pl-4 text-xs">
       {errors.slice(0, 6).map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}
@@ -443,52 +411,77 @@ export function PerformanceSuiteDetailPage() {
     {suiteQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
-          <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" onClick={() => navigate('/testing?tab=perf')} />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="tp-list-title">{suite?.name ?? '性能测试集'}</h1>
-                  {suite ? <Tag color={suite.enabled ? 'success' : 'default'}>{suite.enabled ? '已启用' : '已停用'}</Tag> : null}
-                  <Tag color="blue">串行执行</Tag>
-                  {suite ? <Tag>{suite.cases.length} 个用例</Tag> : null}
-                </div>
-                <div className="mt-1 text-xs text-app-surface-text-muted">
+        <section className="tp-board flex min-h-0 flex-1 flex-col">
+          <div className="tp-list-toolbar lg:flex-nowrap">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" className="shrink-0" onClick={() => navigate('/testing?tab=perf')} />
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <h1 className="tp-list-title max-w-[280px] shrink-0 truncate" title={suite?.name ?? '性能测试集'}>
+                  {suite?.name ?? '性能测试集'}
+                </h1>
+                {suite ? <Tag className="m-0 shrink-0">{suite.cases.length} 个用例</Tag> : null}
+                <span
+                  className="min-w-0 truncate text-xs text-app-surface-text-muted"
+                  title={suite ? `${suite.description || '暂无测试集描述'} · 最近更新 ${formatTime(suite.updatedAt)}` : undefined}
+                >
                   {suite?.description || '暂无测试集描述'} · 最近更新 {formatTime(suite?.updatedAt)}
-                </div>
+                </span>
               </div>
             </div>
-            <Space size={8} wrap>
-              <Button icon={<HistoryOutlined />} onClick={() => navigate(`/performance/runs?suiteId=${suiteId}`)}>
-                运行记录
+            <div className="flex shrink-0 flex-nowrap items-center gap-2">
+              <Select
+                className="min-w-[140px] max-w-[200px]"
+                size="small"
+                value={resolvedEnvironmentId}
+                options={environmentOptions}
+                loading={environmentsQuery.isLoading}
+                placeholder="选择性能环境"
+                popupMatchSelectWidth={false}
+                disabled={!projectId || environments.length === 0}
+                onChange={setSelectedEnvironmentId}
+              />
+              <Button
+                size="small"
+                icon={<SlidersOutlined />}
+                title="环境"
+                aria-label="环境"
+                onClick={() => setEnvironmentDrawerOpen(true)}
+              >
+                环境
               </Button>
-              <Button icon={<EditOutlined />} disabled={!suite || !canWrite} onClick={() => setSuiteDrawerOpen(true)}>
-                编辑信息
-              </Button>
-              <Tooltip title={runBlockedReason}>
-                <ProjectActionButton
-                  action="execute"
-                  projectId={projectId}
-                  type="primary"
-                  operation="run"
-                  disabled={Boolean(runBlockedReason)}
-                  onClick={() => setRunOpen(true)}
-                >
-                  运行测试集
-                </ProjectActionButton>
-              </Tooltip>
-            </Space>
+              <Space size={8} className="shrink-0">
+                <Button icon={<HistoryOutlined />} onClick={() => navigate(`/performance/runs?suiteId=${suiteId}`)}>
+                  运行记录
+                </Button>
+                <Button icon={<EditOutlined />} disabled={!suite || !canWrite} onClick={() => setSuiteDrawerOpen(true)}>
+                  编辑信息
+                </Button>
+                <Tooltip title={runBlockedReason}>
+                  <ProjectActionButton
+                    action="execute"
+                    projectId={projectId}
+                    type="primary"
+                    operation="run"
+                    disabled={Boolean(runBlockedReason)}
+                    onClick={() => setRunOpen(true)}
+                  >
+                    运行测试集
+                  </ProjectActionButton>
+                </Tooltip>
+              </Space>
+            </div>
           </div>
 
-          {suiteQuery.isPending ? <div className="p-10"><Empty description="性能测试集加载中..." /></div> : suite ? <>
-            <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[304px_minmax(0,1fr)_320px]">
+          {suiteQuery.isPending ? <div className="grid min-h-[220px] flex-1 place-items-center"><Empty description="性能测试集加载中..." /></div> : suite ? <>
+            <div className="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-3 xl:grid-cols-[304px_minmax(0,1fr)]">
               <Card
                 size="small"
-                className="self-start xl:sticky xl:top-4"
+                className="flex h-full min-h-0 flex-col"
+                styles={{ body: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 } }}
                 title={<span className="inline-flex items-center gap-2"><AppstoreOutlined />用例与接口</span>}
                 extra={<Tooltip title="新增用例"><Button type="text" size="small" icon={<PlusOutlined />} aria-label="新增用例" disabled={!canWrite} onClick={() => setCreateCaseOpen(true)} /></Tooltip>}
               >
+                <div className="min-h-0 flex-1 overflow-auto pr-1">
                 <div className="grid gap-2">
                   {suite.cases.map((item, index) => {
                     const form = formForCase(item)
@@ -503,7 +496,7 @@ export function PerformanceSuiteDetailPage() {
                             ? 'border-transparent'
                             : 'border-app-accent-border bg-app-accent-surface'
                           : 'border-transparent hover:bg-app-surface-hover'
-                      } ${item.enabled ? '' : 'opacity-60'}`}>
+                      }`}>
                         <button
                           type="button"
                           className="grid h-6 w-5 shrink-0 place-items-center rounded border-0 bg-transparent p-0 text-app-surface-text-muted hover:bg-app-surface-hover"
@@ -526,16 +519,17 @@ export function PerformanceSuiteDetailPage() {
                         </button>
                       </div>
                       {collapsed ? null : <div className="ml-4 mt-1 grid gap-0.5 border-l border-app-surface-border pl-2">
-                        {steps.length === 0 ? <div className="px-2 py-1.5 text-[11px] text-app-surface-text-muted">还没有接口</div> : steps.map((step, stepIndex) => {
+                        {steps.length === 0 ? <div className="px-2 py-1.5 text-[11px] text-app-surface-text-muted">还没有步骤</div> : steps.map((step, stepIndex) => {
                           const activeStep = selected && selectedStepIndex === stepIndex
                           return <button
                             key={`${item.caseId}-${stepIndex}`}
                             type="button"
+                            disabled={contractView === 'yaml'}
                             onClick={() => selectStep(item.caseId, stepIndex)}
-                            className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors ${
+                            className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors disabled:cursor-default disabled:opacity-60 ${
                               activeStep
                                 ? 'border-app-accent-border bg-app-accent-surface'
-                                : 'border-transparent bg-transparent hover:bg-app-surface-hover'
+                                : 'border-transparent bg-transparent hover:bg-app-surface-hover disabled:hover:bg-transparent'
                             }`}
                           >
                             <Tag color={PERF_METHOD_COLORS[step.method]} className="m-0 shrink-0">{step.method}</Tag>
@@ -545,10 +539,19 @@ export function PerformanceSuiteDetailPage() {
                             </span>
                           </button>
                         })}
+                        {selected ? <button
+                          type="button"
+                          disabled={!canWrite || contractView === 'yaml'}
+                          onClick={addStep}
+                          className="mt-0.5 inline-flex items-center gap-1 rounded-md border-0 bg-transparent px-2 py-1 text-left text-[11px] text-app-surface-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <PlusOutlined className="text-[10px]" /> 添加步骤
+                        </button> : null}
                       </div>}
                     </div>
                   })}
                   {suite.cases.length === 0 ? <div className="rounded-lg border border-dashed border-app-surface-border px-3 py-5 text-center text-xs text-app-surface-text-muted">还没有用例。</div> : null}
+                </div>
                 </div>
                 <ProjectActionButton
                   action="write"
@@ -562,7 +565,7 @@ export function PerformanceSuiteDetailPage() {
                 </ProjectActionButton>
               </Card>
 
-              <div className="grid min-w-0 content-start gap-4">
+              <div className="flex min-h-0 min-w-0 flex-col">
                 {!activeCase ? <Card size="small">
                   <Empty
                     image={<AppstoreOutlined />}
@@ -575,87 +578,48 @@ export function PerformanceSuiteDetailPage() {
                       新增用例
                     </ProjectActionButton>
                   </Empty>
-                </Card> : !caseHydrated ? <Card size="small"><Empty description="用例加载中..." /></Card> : activeForm && selectedStep && selectedStepIndex !== null ? <>
-                  <Card size="small">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button type="text" size="small" icon={<ArrowLeftOutlined />} aria-label="返回用例" onClick={backToCase} />
-                          <Tag color={PERF_METHOD_COLORS[selectedStep.method]} className="m-0">{selectedStep.method}</Tag>
-                          <span className="truncate text-base font-semibold text-app-surface-text">{selectedStep.name || '未命名接口'}</span>
-                          <Tag className="max-w-[180px] truncate">{activeCase.name}</Tag>
-                          <Tag>接口 {selectedStepIndex + 1} / {activeForm.steps.length}</Tag>
-                          {dirty ? <Tag color="warning">有未保存修改</Tag> : null}
-                        </div>
-                        <div className="mt-1 truncate font-mono text-xs text-app-surface-text-muted">{selectedStep.path || '/'}</div>
-                      </div>
-                      <Space size={6} wrap>
-                        <Tooltip title="上移接口">
-                          <Button size="small" type="text" icon={<ArrowUpOutlined />} aria-label="上移接口" disabled={!canWrite || selectedStepIndex === 0} onClick={() => moveSelectedStep(-1)} />
-                        </Tooltip>
-                        <Tooltip title="下移接口">
-                          <Button size="small" type="text" icon={<ArrowDownOutlined />} aria-label="下移接口" disabled={!canWrite || selectedStepIndex === activeForm.steps.length - 1} onClick={() => moveSelectedStep(1)} />
-                        </Tooltip>
-                        <Popconfirm
-                          title="删除这个接口？"
-                          okText="删除"
-                          cancelText="取消"
-                          disabled={!canWrite}
-                          onConfirm={removeSelectedStep}
-                        >
-                          <Tooltip title="删除接口">
-                            <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除接口" disabled={!canWrite} />
-                          </Tooltip>
-                        </Popconfirm>
-                        <Button size="small" icon={<CodeOutlined />} onClick={() => setInternalDataOpen(true)}>内部数据</Button>
-                        <Button
-                          size="small"
-                          onClick={() => {
-                            clearPerfCaseDraft(activeCase.caseId)
-                            setHydratedCaseId('')
-                          }}
-                          disabled={!dirty}
-                        >
-                          取消
-                        </Button>
-                        <ProjectActionButton
-                          action="write"
-                          projectId={projectId}
-                          size="small"
-                          type="primary"
-                          operation="save"
-                          icon={<SaveOutlined />}
-                          disabled={!dirty || errors.length > 0 || saveMutation.isPending}
-                          loading={saveMutation.isPending}
-                          onClick={() => saveMutation.mutate()}
-                        >
-                          保存用例
-                        </ProjectActionButton>
-                      </Space>
-                    </div>
-                    {formErrorsAlert}
-                  </Card>
-
-                  <Card
-                    size="small"
-                    title={<span className="inline-flex items-center gap-2"><ApiOutlined />接口内容</span>}
-                  >
-                    <PerfStepFields
-                      step={selectedStep}
-                      stepIndex={selectedStepIndex}
-                      variables={variablesBeforeStep(activeForm.steps, selectedStepIndex)}
-                      disabled={!canWrite}
-                      onChange={updateSelectedStep}
-                    />
-                  </Card>
-                </> : activeForm ? <>
-                  <Card size="small">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
-                        <label className="grid min-w-[180px] flex-1 gap-1 text-xs text-app-surface-text-muted">
-                          <span>用例名称<span className="text-app-request-error-text"> *</span></span>
+                </Card> : !caseHydrated ? <Card size="small"><Empty description="用例加载中..." /></Card> : contractView === 'yaml' ? <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--app-panel-radius)] border border-app-surface-border bg-app-surface">
+                  <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-[var(--app-surface-divider)] px-4 py-3">
+                    <span className="inline-flex min-w-0 items-center gap-2 text-xs">
+                      <span className="font-semibold text-app-surface-text">运行契约</span>
+                      <span className="truncate text-app-surface-text-muted">{activeCase.name} · 只读，用于排查与 Worker 契约对照</span>
+                    </span>
+                    <PerfContractToggle value={contractView} onChange={setContractView} />
+                  </div>
+                  <div className="min-h-0 flex-1 p-4 [&_.json-editor-shell]:h-full [&_.json-editor-shell]:rounded-none [&_.json-editor-shell]:border-0 [&_.json-editor-shell]:bg-transparent [&_.json-editor-shell]:focus-within:shadow-none [&_.json-editor-wrap]:h-full">
+                    <TextCodeEditor value={yaml} readOnly language="yaml" height="100%" ariaLabel="内部运行契约" />
+                  </div>
+                </div> : activeForm && selectedStep && selectedStepIndex !== null ? <>
+                  <PerfStepEditor
+                    step={selectedStep}
+                    stepIndex={selectedStepIndex}
+                    stepCount={activeForm.steps.length}
+                    variables={variablesBeforeStep(activeForm.steps, selectedStepIndex)}
+                    projectId={projectId}
+                    environmentName={selectedEnvironment?.name}
+                    environmentBaseUrl={selectedEnvironment?.baseUrl}
+                    canWrite={canWrite}
+                    dirty={dirty}
+                    saving={saveMutation.isPending}
+                    errors={errors}
+                    errorsAlert={formErrorsAlert}
+                    onBack={backToCase}
+                    onMove={moveSelectedStep}
+                    onDelete={removeSelectedStep}
+                    onCancel={() => {
+                      clearPerfCaseDraft(activeCase.caseId)
+                      setHydratedCaseId('')
+                    }}
+                    onSave={() => saveMutation.mutate()}
+                    onChange={updateSelectedStep}
+                  />
+                </> : activeForm ? <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--app-panel-radius)] border border-app-surface-border bg-app-surface">
+                  <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-[var(--app-surface-divider)] px-4 py-3">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                        <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-app-surface-text-muted">
+                          <span className="shrink-0 whitespace-nowrap">用例名称<span className="text-app-request-error-text"> *</span></span>
                           <Input
-                            size="small"
+                            className="min-w-[240px] flex-1"
                             aria-label="用例名称"
                             value={activeForm.name}
                             status={activeForm.name.trim() ? undefined : 'error'}
@@ -663,27 +627,10 @@ export function PerformanceSuiteDetailPage() {
                             onChange={(event) => applyForm({ ...activeForm, name: event.target.value })}
                           />
                         </label>
-                        <Tooltip title="停用后仍保留历史运行">
-                          <label className="flex items-center gap-2 pb-1 text-xs text-app-surface-text-muted">
-                            <span>启用</span>
-                            <Switch
-                              size="small"
-                              aria-label="启用用例"
-                              checked={activeForm.enabled}
-                              disabled={!canWrite}
-                              onChange={(enabled) => applyForm({ ...activeForm, enabled })}
-                            />
-                          </label>
-                        </Tooltip>
-                        <div className="flex items-center gap-2 pb-1">
-                          <Tag>v{activeCase.version}</Tag>
-                          <Tag>{activeForm.steps.length} 个接口</Tag>
-                          {dirty ? <Tag color="warning">有未保存修改</Tag> : null}
-                        </div>
+                        {dirty ? <Tag color="warning" className="m-0">有未保存修改</Tag> : null}
                       </div>
                       <Space size={6} wrap>
-                        <Button size="small" icon={<PlusOutlined />} disabled={!canWrite} onClick={addStep}>添加接口</Button>
-                        <Button size="small" icon={<CodeOutlined />} onClick={() => setInternalDataOpen(true)}>内部数据</Button>
+                        <PerfContractToggle value={contractView} onChange={setContractView} />
                         <Button
                           size="small"
                           onClick={() => {
@@ -709,123 +656,43 @@ export function PerformanceSuiteDetailPage() {
                         </ProjectActionButton>
                       </Space>
                     </div>
-                    {formErrorsAlert}
-                  </Card>
-
-                  <PerfLoadModelForm
-                    value={activeForm.load}
-                    stepCount={activeForm.steps.length}
-                    disabled={!canWrite}
-                    onChange={load => applyForm({ ...activeForm, load })}
-                  />
-                  <PerfCaseDataSection
-                    value={activeForm}
-                    dataFiles={activeDataFiles}
-                    disabled={!canWrite}
-                    uploading={uploading}
-                    uploadProps={uploadProps}
-                    removingFileId={removeDataFileMutation.isPending ? removeDataFileMutation.variables : undefined}
-                    onChange={applyForm}
-                    onDownload={file => void downloadFile(file)}
-                    onRemoveFile={file => removeDataFileMutation.mutate(file.fileId)}
-                  />
-                </> : <Card size="small" title="无法进入表单编辑">
+                  {formErrorsAlert ? <div className="flex-none border-b border-[var(--app-surface-divider)] px-4 py-3">{formErrorsAlert}</div> : null}
+                  <div className="min-h-0 flex-1 overflow-auto">
+                    <PerfLoadModelForm
+                      value={activeForm.load}
+                      stepCount={activeForm.steps.length}
+                      disabled={!canWrite}
+                      onChange={load => applyForm({ ...activeForm, load })}
+                    />
+                    <div className="border-t border-[var(--app-surface-divider)]" />
+                    <PerfCaseDataSection
+                      value={activeForm}
+                      dataFiles={activeDataFiles}
+                      disabled={!canWrite}
+                      uploading={uploading}
+                      uploadProps={uploadProps}
+                      removingFileId={removeDataFileMutation.isPending ? removeDataFileMutation.variables : undefined}
+                      onChange={applyForm}
+                      onDownload={file => void downloadFile(file)}
+                      onRemoveFile={file => removeDataFileMutation.mutate(file.fileId)}
+                    />
+                  </div>
+                </div> : <Card size="small" title="无法进入表单编辑">
                   <Alert
                     showIcon
                     type="error"
                     title="当前性能用例 YAML 无法解析"
-                    description="表单无法读取 steps / load / data。请查看内部数据排查用例内容。"
+                    description="表单无法读取 steps / load / data。请切换到 YAML 查看运行契约。"
                     className="mb-3"
                   />
-                  <Button icon={<CodeOutlined />} onClick={() => setInternalDataOpen(true)}>查看内部数据</Button>
+                  <PerfContractToggle value={contractView} onChange={setContractView} />
                 </Card>}
               </div>
 
-              <Space orientation="vertical" size={12} className="w-full self-start xl:sticky xl:top-4">
-                <Card size="small" title={<span className="inline-flex items-center gap-2"><PlayCircleOutlined />运行</span>} extra={<Tag>串行</Tag>}>
-                  <div className="grid gap-1.5">
-                    {suite.cases.map((item, index) => <div key={item.caseId} className={`flex items-center gap-2 text-xs ${item.enabled ? '' : 'opacity-50'}`}>
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-app-surface-border bg-app-surface text-[11px]">{index + 1}</span>
-                      <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                      {item.enabled ? null : <Tag>停用</Tag>}
-                    </div>)}
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    <Tooltip title={runBlockedReason}>
-                      <ProjectActionButton
-                        action="execute"
-                        projectId={projectId}
-                        type="primary"
-                        block
-                        operation="run"
-                        icon={<PlayCircleOutlined />}
-                        disabled={Boolean(runBlockedReason)}
-                        onClick={() => setRunOpen(true)}
-                      >
-                        运行测试集
-                      </ProjectActionButton>
-                    </Tooltip>
-                    <Button block icon={<HistoryOutlined />} onClick={() => navigate(`/performance/runs?suiteId=${suiteId}`)}>运行记录</Button>
-                  </div>
-                  {activeForm ? <div className="mt-3 grid gap-1.5 border-t border-app-surface-border pt-3 text-xs">
-                    <div className="flex justify-between gap-3"><span className="text-app-surface-text-muted">当前用例负载</span><span className="text-right font-semibold text-app-surface-text">{formatPerfLoadSummary(activeForm.load)}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-app-surface-text-muted">接口数</span><span className="font-semibold text-app-surface-text">{activeForm.steps.length} 个</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-app-surface-text-muted">提取变量</span><span className="font-semibold text-app-surface-text">{extractVariables.length} 个</span></div>
-                  </div> : null}
-                  {dirty ? <div className="mt-3 rounded-lg border border-app-warning-border bg-app-warning-surface px-2.5 py-2 text-[11px] text-app-surface-text-muted">
-                    当前用例有未保存修改；运行时会使用已保存版本。
-                  </div> : null}
-                  <div className="mt-3 rounded-lg border border-app-surface-border bg-app-surface-hover px-2.5 py-2 text-[11px] text-app-surface-text-muted">
-                    平台只展示执行数据，不判定是否达标。
-                  </div>
-                </Card>
-
-                <Card size="small" title={<span className="inline-flex items-center gap-2"><KeyOutlined />变量作用域</span>} extra={<Tag>用例内</Tag>}>
-                  <div className="text-[11px] text-app-surface-text-muted">提取变量只在当前用例的当前 VU / 当前迭代内有效；下一个用例不会继承。</div>
-                  {variables.length === 0 ? <div className="mt-2 text-xs text-app-surface-text-muted">还没有配置提取变量。</div> : <div className="mt-2 grid gap-1.5">
-                    {variables.slice(0, 6).map((item) => <div key={`${item.caseId}-${item.stepIndex}-${item.name}`} className="min-w-0 rounded-md border border-app-surface-border px-2 py-1.5">
-                      <div className="truncate font-mono text-[11px] text-app-accent">{`{{var.${item.name}}}`}</div>
-                      <div className="truncate text-[11px] text-app-surface-text-muted">{item.caseName} · 步骤 {item.stepIndex + 1} {item.stepName}</div>
-                    </div>)}
-                    {variables.length > 6 ? <div className="text-[11px] text-app-surface-text-muted">还有 {variables.length - 6} 个变量，进入用例查看。</div> : null}
-                  </div>}
-                </Card>
-
-                <Card size="small" title={<span className="inline-flex items-center gap-2"><DatabaseOutlined />当前用例数据</span>} extra={<Tag>{activeDataFiles.length} 个</Tag>}>
-                  {activeDataFiles.length === 0 ? <div className="text-xs text-app-surface-text-muted">还没有数据文件。</div> : <div className="grid gap-1.5">
-                    {activeDataFiles.map((file) => <div key={file.fileId} className="flex items-center gap-2 rounded-md border border-app-surface-border px-2 py-1.5">
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs" title={file.filename}>{file.filename}</span>
-                        <span className="block text-[11px] text-app-surface-text-muted">{file.size} B</span>
-                      </span>
-                      <Button type="text" size="small" aria-label={`下载 ${file.filename}`} onClick={() => void downloadFile(file)}>下载</Button>
-                    </div>)}
-                  </div>}
-                  <div className="mt-2 text-[11px] text-app-surface-text-muted">数据文件只在当前用例内使用，不会跨用例共享。</div>
-                </Card>
-              </Space>
             </div>
           </> : null}
         </section>
       </div>
-
-      <Modal
-        title="内部数据"
-        open={internalDataOpen}
-        onCancel={() => setInternalDataOpen(false)}
-        destroyOnHidden
-        width={900}
-        footer={<Button onClick={() => setInternalDataOpen(false)}>关闭</Button>}
-      >
-        <Alert
-          showIcon
-          type="info"
-          title="这是表单生成的运行契约"
-          description="普通用户在页面上只编辑表单；YAML 仅用于排查和与 Worker 契约对照。"
-          className="mb-3"
-        />
-        <TextCodeEditor value={yaml} readOnly language="yaml" height={520} ariaLabel="内部运行契约" />
-      </Modal>
 
       <Modal
         title="新增性能用例"

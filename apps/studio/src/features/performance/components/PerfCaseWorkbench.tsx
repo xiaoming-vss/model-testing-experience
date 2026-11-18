@@ -4,7 +4,7 @@ import {
   DownloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
-import { Button, Card, Input, Popconfirm, Select, Tag, Tooltip, Upload } from 'antd'
+import { Button, Input, Popconfirm, Select, Tag, Tooltip, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import type { PerfDataFile } from '../types'
 import {
@@ -148,12 +148,12 @@ export function PerfCaseDataSection({
     })
   }
 
-  return <Card
-    size="small"
-    title={<span className="inline-flex items-center gap-2"><DatabaseOutlined />数据文件</span>}
-    extra={<Upload {...uploadProps}><Button size="small" icon={<UploadOutlined />} loading={uploading} disabled={disabled}>上传文件</Button></Upload>}
-  >
-    <div className="grid gap-4">
+  return <section className="px-4 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <span className="inline-flex items-center gap-2 text-xs font-semibold text-app-surface-text"><DatabaseOutlined />数据文件</span>
+      <Upload {...uploadProps}><Button size="small" icon={<UploadOutlined />} loading={uploading} disabled={disabled}>上传文件</Button></Upload>
+    </div>
+    <div className="mt-3 grid gap-4">
       <div className="grid gap-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-app-surface-text">数据引用</span>
@@ -214,7 +214,7 @@ export function PerfCaseDataSection({
         <div className="text-[11px] text-app-surface-text-muted">仅支持 CSV / JSON；上传或移除会同时保存当前用例。单个用例最多 20 个文件、总计 100 MB。</div>
       </div>
     </div>
-  </Card>
+  </section>
 }
 
 function formatFileSize(size: number) {

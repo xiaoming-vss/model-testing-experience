@@ -4,6 +4,8 @@
 - 状态：已接受
 - 关联：[ADR 0014](0014-pre-release-single-baseline.md)、[ADR 0020](0020-performance-remote-write-only.md)、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
 
+> 本决策中关于“启用用例”的表述已由 [ADR 0022](0022-remove-performance-enabled-state.md) 取代：测试集和用例不再保存启用状态，运行时执行测试集内的全部用例。
+
 ## 背景
 
 性能测试首期只有单条用例运行。产品层级调整为「测试集 → 多条用例 → 每条用例一个负载模型 + 多个 API 步骤」，并明确用例之间串行执行，类似 JMeter Thread Group 的顺序执行，而不是多个 k6 scenario 并行、共同产出一份结果。

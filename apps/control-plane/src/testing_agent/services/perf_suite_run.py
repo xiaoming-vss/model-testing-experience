@@ -221,17 +221,14 @@ class PerfSuiteRunService:
         if self.perf_runs is None:
             raise RuntimeError("PerfSuiteRunService.run requires PerfRunService")
         suite = await self._accessible_suite(user_id, suite_id, action="execute", for_update=True)
-        if not suite.enabled:
-            raise ErrBadRequest()
         if await self.repository.get_active_by_suite(suite_id) is not None:
             raise ErrBadRequest()
         cases = await self.cases.list_by_suite(suite_id)
-        enabled_cases = [case for case in cases if case.enabled]
-        if not enabled_cases:
+        if not cases:
             raise ErrBadRequest()
 
         prepared: list[tuple[PerfCase, PerfRun]] = []
-        for case in enabled_cases:
+        for case in cases:
             child = await self.perf_runs.prepare(user_id, case, body, new_id())
             child.trigger_type = "suite"
             prepared.append((case, child))

@@ -28,7 +28,7 @@
 .top-navigation-indicator {
   position: absolute;
   left: 0;
-  height: 36px;
+  height: 28px;
   border-radius: 8px;
   background: var(--app-accent-surface);
   opacity: 0;

@@ -59,7 +59,7 @@ case:
       http_req_failed: ["rate<0.01"]
 `
 
-const SUMMARY = { name: '登录并校验', enabled: true }
+const SUMMARY = { name: '登录并校验' }
 
 describe('performance case form', () => {
   it('reads steps, headers, body, checks, extract, data, and load', () => {
@@ -67,7 +67,6 @@ describe('performance case form', () => {
     expect(form).not.toBeNull()
     expect(form).toMatchObject({
       name: '登录并校验',
-      enabled: true,
       load: { model: 'vus', vus: 20, durationSeconds: 60 },
     })
     expect(form!.steps).toHaveLength(2)

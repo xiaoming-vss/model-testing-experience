@@ -1,14 +1,12 @@
 import {
   DashboardOutlined,
-  FieldTimeOutlined,
   LineChartOutlined,
   RiseOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { Card, Select } from 'antd'
+import { Select } from 'antd'
 import type { ReactNode } from 'react'
 import {
-  formatPerfLoadSummary,
   perfLoadFormError,
   type PerfLoadFormValues,
   type PerfLoadModel,
@@ -37,14 +35,12 @@ export function PerfLoadModelForm({
   const error = perfLoadFormError(value, stepCount)
   const patch = (next: Partial<PerfLoadFormValues>) => onChange({ ...value, ...next })
 
-  return <Card
-    size="small"
-    className="overflow-hidden"
-    title={<span className="inline-flex items-center gap-2"><DashboardOutlined />性能参数</span>}
-    extra={<span className="text-xs font-normal text-app-surface-text-muted">每条用例一个 k6 负载模型</span>}
-    styles={{ body: { padding: 16 } }}
-  >
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+  return <section className="px-4 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <span className="inline-flex items-center gap-2 text-xs font-semibold text-app-surface-text"><DashboardOutlined />性能参数</span>
+      <span className="text-xs text-app-surface-text-muted">每条用例一个 k6 负载模型</span>
+    </div>
+    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
       {LOAD_OPTIONS.map(option => {
         const selected = value.model === option.model
         return <button
@@ -102,11 +98,6 @@ export function PerfLoadModelForm({
       <PerfNumericField label="最大 VUs" value={value.maxVUs} disabled={disabled} onChange={maxVUs => patch({ maxVUs })} />
     </div>}
 
-    <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-app-accent-border bg-app-accent-surface px-3 py-2 text-xs text-app-surface-text-muted">
-      <FieldTimeOutlined className="text-app-accent" />
-      <span>当前负载：<strong className="text-app-surface-text">{formatPerfLoadSummary(value)}</strong></span>
-      <span>· 用例保存后生效</span>
-    </div>
     {error ? <div className="mt-2 text-xs text-app-request-error-text">{error}</div> : null}
-  </Card>
+  </section>
 }

@@ -30,7 +30,6 @@ export function PerformancePage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [keyword, setKeyword] = useState('')
-  const [status, setStatus] = useState<'all' | 'enabled' | 'disabled'>('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingSuite, setEditingSuite] = useState<PerfSuiteSummary | null>(null)
   const [runSuite, setRunSuite] = useState<PerfSuiteSummary | null>(null)
@@ -64,16 +63,14 @@ export function PerformancePage() {
 
   useEffect(() => {
     setPage(1)
-  }, [activeProjectId, keyword, status])
+  }, [activeProjectId, keyword])
 
   const filteredSuites = useMemo(() => {
     const text = keyword.trim().toLowerCase()
-    return listItems(suitesQuery.data).filter((suite) => {
-      const matchesKeyword = !text || `${suite.name} ${suite.description}`.toLowerCase().includes(text)
-      const matchesStatus = status === 'all' || (status === 'enabled' ? suite.enabled : !suite.enabled)
-      return matchesKeyword && matchesStatus
-    })
-  }, [suitesQuery.data, keyword, status])
+    return listItems(suitesQuery.data).filter((suite) => (
+      !text || `${suite.name} ${suite.description}`.toLowerCase().includes(text)
+    ))
+  }, [suitesQuery.data, keyword])
   const pagedSuites = useMemo(
     () => filteredSuites.slice((page - 1) * pageSize, page * pageSize),
     [filteredSuites, page, pageSize],
@@ -90,7 +87,6 @@ export function PerformancePage() {
       const body = {
         name: values.name.trim(),
         description: values.description?.trim() ?? '',
-        enabled: values.enabled,
       }
       return editing ? api.updatePerfSuite(editing.suiteId, body) : api.createPerfSuite(activeProjectId, body)
     },
@@ -126,9 +122,8 @@ export function PerformancePage() {
     return <EntityCard
       key={suite.suiteId}
       title={title}
-      status={<Tag color={suite.enabled ? 'success' : 'default'}>{suite.enabled ? '已启用' : '已停用'}</Tag>}
       meta={[
-        { label: '用例', value: `${suite.enabledCaseCount}/${suite.caseCount} 启用` },
+        { label: '用例', value: `${suite.caseCount} 个` },
         { label: 'API 步骤', value: `${suite.stepCount} 个` },
       ]}
       footerNote={<div className="flex flex-wrap items-center gap-2">
@@ -140,7 +135,7 @@ export function PerformancePage() {
         </> : <span className="text-app-surface-text-muted">· 尚未运行</span>}
       </div>}
       actions={<>
-        <Tooltip title={suite.enabledCaseCount > 0 ? '运行测试集' : '测试集没有启用的用例'}>
+        <Tooltip title={suite.caseCount > 0 ? '运行测试集' : '测试集没有用例'}>
           <ProjectActionButton
             action="execute"
             projectId={activeProjectId}
@@ -150,7 +145,7 @@ export function PerformancePage() {
             operation="run"
             iconOnly
             aria-label="运行测试集"
-            disabled={suite.enabledCaseCount === 0}
+            disabled={suite.caseCount === 0}
             onClick={() => setRunSuite(suite)}
           />
         </Tooltip>
@@ -219,19 +214,6 @@ export function PerformancePage() {
                       placeholder="选择性能环境"
                       onChange={setSelectedEnvironmentId}
                       disabled={!activeProjectId || environments.length === 0}
-                    />
-                  </div>
-                  <div className="api-filter-field">
-                    <span className="api-filter-field-label">状态</span>
-                    <Select
-                      className="api-filter-select business-filter-select"
-                      value={status}
-                      options={[
-                        { value: 'all', label: '全部状态' },
-                        { value: 'enabled', label: '已启用' },
-                        { value: 'disabled', label: '已停用' },
-                      ]}
-                      onChange={setStatus}
                     />
                   </div>
                 </div>

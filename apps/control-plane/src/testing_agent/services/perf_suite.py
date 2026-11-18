@@ -64,7 +64,6 @@ class PerfSuiteService:
             name=case.name,
             description=case.description,
             version=case.version,
-            enabled=case.enabled,
             data_files=case.data_files_json or [],
             yaml=case.yaml,
             created_at=case.created_at,
@@ -99,9 +98,7 @@ class PerfSuiteService:
             project_id=suite.project_id,
             name=suite.name,
             description=suite.description,
-            enabled=suite.enabled,
             case_count=len(cases),
-            enabled_case_count=sum(1 for case in cases if case.enabled),
             step_count=step_count,
             data_file_count=data_file_count,
             load_models=load_models,
@@ -132,7 +129,6 @@ class PerfSuiteService:
             project_id=project_id,
             name=name,
             description=body.description.strip(),
-            enabled=body.enabled,
             created_by=user_id,
         )
         self.repository.add(suite)
@@ -178,9 +174,6 @@ class PerfSuiteService:
         if "description" in fields and body.description is not None:
             suite.description = body.description.strip()
             changed = True
-        if "enabled" in fields and body.enabled is not None:
-            suite.enabled = body.enabled
-            changed = True
         if changed:
             suite.updated_at = datetime.now(UTC)
         try:
@@ -218,8 +211,3 @@ class PerfSuiteService:
         await self.deletion.delete(self.repository.session, suite)
         await self.repository.commit()
         return {}
-
-    async def require_enabled(self, suite: PerfSuite) -> PerfSuite:
-        if not suite.enabled:
-            raise ErrBadRequest()
-        return suite

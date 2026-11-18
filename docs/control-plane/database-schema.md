@@ -48,8 +48,8 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 性能资产和执行账本与功能执行分开：
 
-- `perf_suites`：项目级性能测试集，保存名称、描述和启用状态。`(project_id, name)` 唯一。
-- `perf_cases`：测试集内的性能用例，保存 YAML 正文、版本、启用状态、测试集内顺序 `order_no` 和当前数据文件元数据 `data_files_json`。`(project_id, name)` 唯一；`suite_id` 可空以兼容尚未归入测试集的历史数据，归入测试集后按 `(suite_id, order_no)` 排序；更新正文时版本递增，运行冻结 `case_version` 与 `case_yaml`。
+- `perf_suites`：项目级性能测试集，保存名称和描述。`(project_id, name)` 唯一。
+- `perf_cases`：测试集内的性能用例，保存 YAML 正文、版本、测试集内顺序 `order_no` 和当前数据文件元数据 `data_files_json`。`(project_id, name)` 唯一；`suite_id` 可空以兼容尚未归入测试集的历史数据，归入测试集后按 `(suite_id, order_no)` 排序；更新正文时版本递增，运行冻结 `case_version` 与 `case_yaml`。
 - `perf_suite_runs`：一次性能测试集运行的父记录。冻结测试集名称、环境、监控接入快照和 `total/completed/failed/skipped` 计数；状态与 `perf_runs` 一致，本期父运行 `outcome` 固定为 `inconclusive`，不合并子运行结果做验收判定。
 - `perf_suite_run_items`：父运行中的有序用例条目，保存冻结用例名称、`order_no`、条目状态和 `child_run_id`。条目状态为 `pending/queued/running/completed/failed/stopped/canceled/skipped`。
 - `perf_runs`：单条用例的子运行。冻结用例、环境、监控接入和数据文件；`monitoring_snapshot_json` 保存发起时的接入名称和 Remote Write 地址，不含凭据，接入后续修改或删除不影响历史运行；`spec_json` 是脱敏公开规格，`private_payload` 是加密的完整 RunSpec（含环境秘密和 Remote Write 写凭据），`summary_json`/`result_json`/`log_tail` 保存 Worker 回传事实。状态为 `queued/running/stopping/completed/failed/stopped/canceled`，`outcome` 为 `passed/threshold_failed/inconclusive/execution_error/stopped`。索引覆盖用例最近运行、项目最近运行和按状态回收。
@@ -57,7 +57,7 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 - `stored_files` 新增代码级用途 `perf_case_data`，对象目录 `perf-case-data`，只允许 CSV/JSON，单文件上限 50 MiB。文件正文只存在 S3；`perf_runs.data_files_json` 与 `perf_cases.data_files_json` 只保存 `fileId/filename/size/sha256`。
 - `worker_tasks.domain` 扩展 `perf`；子运行使用 `task_type="perf_run"` 和 60 秒租约。通用状态列仍为 `pending/claimed/running/stopping/success/failed/canceled`。
 
-测试集运行时，控制面在同一事务中预创建所有启用用例的子 `perf_runs`、父 `perf_suite_runs` 和有序条目，但只给第一条子运行写入 `worker_tasks`。子运行完成后在同一/后续事务中推进下一条，失败继续，用户停止则跳过剩余条目。父运行推进有租约扫描兜底，避免完成事件丢失导致长期挂起。停止只允许触发人操作；停止单条子运行会级联停止父测试集。Worker 结果映射、停止优先和终态幂等见 [ADR 0002](../perf-worker/adr/0002-control-plane-poll-mode.md)。项目删除前必须没有性能测试集和监控接入；删除测试集会级联删除用例、子运行、父运行和任务，并把当前及历史数据文件标记为 `deleting` 交给统一存储清理。
+测试集运行时，控制面在同一事务中预创建所有用例的子 `perf_runs`、父 `perf_suite_runs` 和有序条目，但只给第一条子运行写入 `worker_tasks`。子运行完成后在同一/后续事务中推进下一条，失败继续，用户停止则跳过剩余条目。父运行推进有租约扫描兜底，避免完成事件丢失导致长期挂起。停止只允许触发人操作；停止单条子运行会级联停止父测试集。Worker 结果映射、停止优先和终态幂等见 [ADR 0002](../perf-worker/adr/0002-control-plane-poll-mode.md)。项目删除前必须没有性能测试集和监控接入；删除测试集会级联删除用例、子运行、父运行和任务，并把当前及历史数据文件标记为 `deleting` 交给统一存储清理。
 
 ## 接口库与软件仓库
 

@@ -162,7 +162,6 @@ ErrApiInterfaceGroupNotFound = AppError(3818, "接口分组不存在", HTTPStatu
 ErrApiInterfaceGroupNameAlreadyUse = AppError(3819, "目标接口分组已存在", HTTPStatus.CONFLICT)
 ErrPerfCaseNotFound = AppError(3901, "性能用例不存在", HTTPStatus.NOT_FOUND)
 ErrPerfCaseNameAlreadyUse = AppError(3902, "该性能用例名称已存在", HTTPStatus.CONFLICT)
-ErrPerfCaseDisabled = AppError(3903, "性能用例已停用", HTTPStatus.CONFLICT)
 ErrPerfRunNotFound = AppError(3904, "性能运行记录不存在", HTTPStatus.NOT_FOUND)
 ErrPerfRunEnvironmentMismatch = AppError(
     3905, "性能运行与环境不属于同一项目或环境类型不匹配", HTTPStatus.BAD_REQUEST

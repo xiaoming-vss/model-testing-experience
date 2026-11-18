@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,7 +49,6 @@ class PerfCase(Base):
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, comment="用例版本号，更新时递增"
     )
-    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否启用")
     data_files_json: Mapped[list[Any] | None] = mapped_column(
         JSON, nullable=True, comment="当前数据文件元数据 JSON，不含文件内容"
     )

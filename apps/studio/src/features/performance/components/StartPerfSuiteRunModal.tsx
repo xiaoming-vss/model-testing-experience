@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Alert, Button, Form, Modal, Select, Space, Tag, Typography } from 'antd'
+import { Alert, Button, Form, Modal, Select, Space, Typography } from 'antd'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage, normalizeEnvironmentId } from '@/utils/format'
@@ -55,7 +55,7 @@ export function StartPerfSuiteRunModal({
     label: connection.name,
     value: connection.connectionId,
   }))
-  const enabledCases = suite?.cases.filter((item) => item.enabled) ?? []
+  const cases = suite?.cases ?? []
 
   useEffect(() => {
     if (!open) {
@@ -83,7 +83,7 @@ export function StartPerfSuiteRunModal({
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const unavailable = environments.length === 0 || connections.length === 0 || enabledCases.length === 0
+  const unavailable = environments.length === 0 || connections.length === 0 || cases.length === 0
 
   return <Modal
     title="运行测试集"
@@ -104,21 +104,20 @@ export function StartPerfSuiteRunModal({
     <div className="mb-4 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2.5">
       <Typography.Text strong>{suite?.name}</Typography.Text>
       <div className="mt-1 text-xs text-app-surface-text-muted">
-        {enabledCases.length} 条启用用例 · 串行执行 · 前一条结束后才启动下一条
+        {cases.length} 条用例 · 串行执行 · 前一条结束后才启动下一条
       </div>
       <div className="mt-2 grid gap-1">
-        {suite?.cases.map((item, index) => <div key={item.caseId} className="flex items-center gap-2 text-xs">
+        {cases.map((item, index) => <div key={item.caseId} className="flex items-center gap-2 text-xs">
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-app-surface-border bg-app-surface text-[11px]">{index + 1}</span>
-          <span className={item.enabled ? 'text-app-surface-text' : 'text-app-surface-text-muted line-through'}>{item.name}</span>
-          {item.enabled ? null : <Tag>已停用</Tag>}
+          <span className="text-app-surface-text">{item.name}</span>
         </div>)}
       </div>
     </div>
-    {enabledCases.length === 0 ? <Alert
+    {cases.length === 0 ? <Alert
       type="warning"
       showIcon
-      title="测试集没有启用的用例"
-      description="先添加用例或启用已有用例，再发起运行。"
+      title="测试集没有用例"
+      description="先添加用例，再发起运行。"
       className="mb-4"
     /> : null}
     {environments.length === 0 ? <Alert
