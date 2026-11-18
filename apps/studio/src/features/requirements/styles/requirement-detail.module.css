@@ -1,24 +1,11 @@
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: var(--app-page-gutter) var(--app-page-gutter) 16px;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-  color: var(--srf-text);
-  background: transparent;
-}
+/* 需求详情页皮肤（阶段 17 后收缩）。
+ * 页面高度链、面包屑排版、主/侧栏骨架与窄屏堆叠由 RequirementDetailPage 和
+ * RequirementDetailHeader 的 Tailwind utility 负责；这里保留链接/工具栏表面、
+ * 侧栏动画、画布与文档容器的 AntD/React Flow 深层结构。 */
 
 /* 面包屑：整条路径保持同一字阶，当前项只加字重；状态用圆点收轻。 */
-.root :global(.requirement-detail-crumbs) {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-  flex: 1 1 360px;
+.root :global(.requirement-detail-crumbs) :global(.tp-list-title) {
+  flex: 0 1 auto;
 }
 
 .root :global(.requirement-crumb-link) {
@@ -41,23 +28,6 @@
   background: var(--app-accent-surface);
   color: var(--app-accent-hover);
   text-decoration: underline;
-}
-
-.root :global(.requirement-crumb-sep) {
-  flex: 0 0 auto;
-  color: var(--app-surface-text-muted);
-  font-size: 10px;
-}
-
-.root :global(.requirement-detail-title) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.root :global(.requirement-detail-crumbs) :global(.tp-list-title) {
-  flex: 0 1 auto;
 }
 
 /* 阅读态的「需求名」一级可点，退回生成流程。 */
@@ -86,26 +56,9 @@
   text-decoration: underline;
 }
 
-.root :global(.requirement-detail-title--current) {
-  max-width: 240px;
-  margin: 0;
-  color: var(--app-surface-text);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
 .root :global(.requirement-detail-crumbs) :global(.ant-tag) {
   flex-shrink: 0;
   margin: 0;
-}
-
-.root :global(.requirement-detail-actions) {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
 }
 
 .root :global(.requirement-detail-header) {
@@ -114,33 +67,7 @@
   gap: 12px 16px;
 }
 
-.root :global(.requirement-detail-layout) {
-  display: flex;
-  flex: 1 1 auto;
-  gap: 12px;
-  min-height: 0;
-  min-width: 0;
-}
-
-.root :global(.requirement-detail-main) {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--app-surface-border);
-  border-radius: 12px;
-  background: var(--srf-card);
-}
-
-/* 阶段侧栏独立成卡片，不并入画布容器；没有选中阶段时不占位。 */
 .root :global(.requirement-detail-side) {
-  display: flex;
-  flex: 0 0 304px;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
   transition: flex-basis 420ms cubic-bezier(.22, 1, .36, 1);
 }
 
@@ -162,16 +89,6 @@
   }
 }
 
-@media (max-width: 840px) {
-  .root :global(.requirement-detail-crumbs) {
-    flex-basis: 100%;
-  }
-
-  .root :global(.requirement-detail-actions) {
-    margin-left: auto;
-  }
-}
-
 /* 标题栏并入容器后不再自带卡片边框，改为容器内的工具栏与分隔线。 */
 .root :global(.requirement-detail-main) > :global(.requirement-detail-header) {
   border: 0;
@@ -190,19 +107,6 @@
 .root :global(.requirement-detail-main) :global(.gc-canvas-stage) > :global(.gc-embedded-artifact) {
   border: 0;
   border-radius: 0;
-}
-
-/* 窄屏时侧栏落到画布下方。 */
-@media (max-width: 900px) {
-  .root :global(.requirement-detail-layout) {
-    flex-direction: column;
-    overflow: auto;
-  }
-
-  .root :global(.requirement-detail-main),
-  .root :global(.requirement-detail-side) {
-    flex: 0 0 auto;
-  }
 }
 
 .root :global(.requirement-detail-workspace-actions):empty,

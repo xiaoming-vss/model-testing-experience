@@ -263,32 +263,27 @@
   backdrop-filter: none;
 }
 
-/* 全站列表筛选控件共用尺寸；页面不得重复定义同类控件的几何规则。 */
-.tp-surface .tp-list-toolbar :is(.api-filter-field, .ai-task-sprint-filter) {
+/* 全站列表筛选控件共用尺寸；页面不得重复定义同类控件的几何规则。
+   搜索框宽度由各页面 utility 的 w-72 决定，这里只保留输入框铺满与筛选项排布。 */
+.tp-surface .tp-list-toolbar .api-filter-field {
   gap: 8px;
 }
 
-.tp-surface .tp-list-toolbar :is(.api-filter-field-label, .ai-task-sprint-filter-label) {
+.tp-surface .tp-list-toolbar .api-filter-field-label {
   margin: 0;
   padding: 0;
   line-height: 18px;
 }
 
-.tp-surface .tp-list-toolbar :is(.business-filter-select, .ai-task-sprint-filter-select) {
+.tp-surface .tp-list-toolbar .business-filter-select {
   width: 180px;
 }
 
-.tp-surface .tp-list-toolbar :is(.test-orders-search-field, .ai-task-search-field, .api-test-search-field, .ui-suite-list-search-field, .case-library-search-field) {
-  width: 288px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.tp-surface .tp-list-toolbar :is(.api-filter-input, .ai-task-search-input) {
+.tp-surface .tp-list-toolbar .api-filter-input {
   width: 100%;
 }
 
-.tp-surface .tp-list-toolbar :is(.api-filter-group, .api-panel-head-main, .ui-suite-list-toolbar-filters, .ai-task-panel-tools) {
+.tp-surface .tp-list-toolbar :is(.api-filter-group, .api-panel-head-main, .ui-suite-list-toolbar-filters) {
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -469,10 +464,6 @@
 .tp-surface .api-test-header-actions {
   flex: 0 0 auto;
   align-items: center;
-}
-
-.tp-surface .api-test-search-field {
-  min-width: 240px;
 }
 
 .tp-surface .api-test-header .api-inline-environment {

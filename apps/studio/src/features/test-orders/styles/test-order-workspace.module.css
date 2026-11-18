@@ -1,4 +1,6 @@
-/* 测试单执行工作台：页面高度链、详情卡片、前置条件与步骤内容（阶段 10 迁移）。
+/* 测试单执行工作台：页面高度链、详情卡片与步骤表皮肤（阶段 10 迁移，阶段 17 收缩）。
+ * 详情骨架、前置条件/步骤排版已迁到 TestOrderWorkspacePage 与 TestOrderCaseContent 的
+ * Tailwind utility；这里只保留高度链、表格表面、等宽编号与 AntD 深层结构。
  * 列表工具栏、条目表格与批量条在 test-order-workspace-list.module.css；
  * 判定与底部操作条在 test-order-verdict.module.css。颜色消费 surface-tokens.css。 */
 :global(.app-shell):has(.root) {
@@ -13,19 +15,18 @@
   min-height: 0;
   overflow: hidden;
 }
+
 .root:global(.workbench-page) {
   flex: 1 1 auto;
   height: 100%;
   min-height: 0;
   overflow: hidden;
 }
+
 .root:global(.tp-surface) :global(.test-order-workspace),
 .root :global(.api-automation-content) {
-  display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  gap: 12px;
   overflow: hidden;
 }
 
@@ -33,207 +34,45 @@
 :global(.app-shell.app-shell-macos) .root :global(.api-automation-content) {
   padding: 12px var(--app-page-gutter) 16px;
 }
-.root :global(.test-order-editor-body) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  overflow: auto;
-  gap: 0;
-  padding: 0;
-}
-.root :global(.test-order-case-summary) {
-  flex: 0 0 auto;
-  padding: 20px;
-  border-bottom: 1px solid var(--srf-card-border);
-}
-.root :global(.test-order-editor-head) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 4px;
-}
+
 .root :global(.test-order-case-no) {
-  flex: 0 1 auto;
-  max-width: 300px;
-  min-width: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
 }
+
 .root :global(.test-order-case-no) :global(.ant-btn-content) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.root :global(.test-order-case-title) {
-  flex: 1 1 320px;
-  min-width: 0;
-  color: var(--srf-text);
-  font-size: 15px;
-  line-height: 24px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.root :global(.test-order-execution-meta) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding-top: 12px;
-}
-.root :global(.test-order-meta-pill) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  line-height: 16px;
-}
+
 .root :global(.test-order-meta-pill) strong {
   font-weight: 500;
   overflow-wrap: anywhere;
 }
+
 .root :global(.test-order-meta-pill):nth-last-child(-n + 2) strong {
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--srf-text-secondary);
 }
+
 .root :global(.test-order-case-no):focus-visible {
   outline: 2px solid var(--srf-accent);
   outline-offset: -2px;
 }
 
-@media (max-width: 900px) {
-  .root :global(.test-order-case-summary) {
-    padding: 12px;
-  }
-}
-
-.root :global(.test-order-inline-graph) { flex: 1; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
-.root :global(.test-order-inline-graph) > :global(.test-order-graph-viewer) { flex: 1; min-width: 0; min-height: 0; }
-
 /* ===== 前置条件与步骤内容 ===== */
 /* Confirmed comparison layout inside the single detail surface. */
-.root :global(.test-order-case-content) {
-  flex: 0 0 auto;
-  min-width: 0;
-  padding: 24px;
-  color: var(--srf-text);
-  font-size: 14px;
-  line-height: 24px;
-}
-
-.root :global(.test-order-section) {
-  min-width: 0;
-}
-
 .root :global(.test-order-content-conditions) {
-  padding: 16px 20px;
   border: 1px solid var(--srf-card-border);
   border-left: 3px solid var(--srf-accent-border);
   border-radius: var(--srf-radius-control);
   background: var(--srf-hover);
 }
 
-.root :global(.test-order-content-conditions-head),
-.root :global(.test-order-content-steps-head) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  margin-bottom: 12px;
-}
-
-.root :global(.test-order-content-conditions-head) h2,
-.root :global(.test-order-content-steps-head) h2 {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--srf-text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 24px;
-}
-
 .root :global(.test-order-content-conditions-head) :global(.anticon) {
   color: var(--srf-text-secondary);
-}
-
-.root :global(.test-order-content-conditions-head) > span,
-.root :global(.test-order-content-steps-head) > span {
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.root :global(.test-order-content-preconditions) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.root :global(.test-order-content-preconditions) li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: var(--srf-card);
-  font-size: 13px;
-  line-height: 22px;
-}
-
-.root :global(.test-order-content-preconditions) p {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.root :global(.test-order-content-condition-no),
-.root :global(.test-order-content-step-no) {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.root :global(.test-order-content-steps) {
-  margin-top: 24px;
-}
-
-.root :global(.test-order-content-steps-head) {
-  margin-bottom: 16px;
-}
-
-.root :global(.test-order-content-steps-head) h2 {
-  gap: 10px;
-  font-size: 15px;
-}
-
-.root :global(.test-order-content-steps-icon) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent);
 }
 
 .root :global(.test-order-content-table) {
@@ -294,15 +133,6 @@
   border-bottom: 0;
 }
 
-.root :global(.test-order-content-step-no) {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent);
-  font-size: 15px;
-}
-
 .root :global(.test-order-content-expected-icon) {
   position: absolute;
   left: 18px;
@@ -317,28 +147,9 @@
   font-size: 12px;
 }
 
-/* 切换执行条目时只有步骤内容区等待详情，摘要与面板外框保持不动。 */
-.root :global(.test-order-case-content-status) {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 24px;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-}
-
 .root :global(.test-order-content-table) td:global(.test-order-content-empty) {
   padding: 22px 18px;
   background: var(--srf-card);
-}
-
-@media (max-width: 900px) {
-  .root :global(.test-order-case-content) {
-    padding: 16px;
-  }
-  .root :global(.test-order-content-conditions) {
-    padding: 12px;
-  }
 }
 
 @media (max-width: 480px) {

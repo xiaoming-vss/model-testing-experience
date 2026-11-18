@@ -1306,8 +1306,8 @@ export function UiTestSuiteCasePage() {
               onImport={openCaseImportModal}
             />
 
-          <div className="ui-wb-cols">
-            <div className="ui-wb-main ui-suite-case-editor-panel">
+          <div className="ui-wb-cols grid min-h-[min(520px,calc(100vh-320px))] flex-auto grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-stretch gap-3 max-[1180.01px]:min-h-0 max-[1180.01px]:flex-none max-[1180.01px]:grid-cols-1 max-[1180.01px]:grid-rows-[auto_auto]">
+            <div className="ui-wb-main ui-suite-case-editor-panel flex min-h-0 min-w-0 flex-col gap-3">
               {flowLevel === 'cases' ? <UiExecutionFlow
                 ref={caseFlowRef} inlineSave
                 key={`cases:${suiteId}:${caseFlowItems.map((item) => item.id).join('|')}`}
@@ -1459,10 +1459,10 @@ export function UiTestSuiteCasePage() {
         {missingEnvironmentNames.length > 0 ? (
           <>
             <Text type="secondary">以下变量在所选 UI 环境中不存在，填写后保存到环境并重新运行。</Text>
-            <div className="ui-missing-variables">
+            <div className="ui-missing-variables mt-2 flex flex-col gap-2">
               {missingEnvironmentNames.map((name) => (
-                <label key={name} className="ui-missing-variable-row">
-                  <span className="ui-missing-variable-name">{name}</span>
+                <label key={name} className="ui-missing-variable-row flex items-center gap-3">
+                  <span className="ui-missing-variable-name font-mono flex-[0_0_180px] overflow-hidden text-ellipsis whitespace-nowrap text-[12px]">{name}</span>
                   <Input
                     size="small"
                     placeholder={`请输入 ${name} 的值`}
@@ -1476,7 +1476,7 @@ export function UiTestSuiteCasePage() {
             </div>
           </>
         ) : null}
-        <div className="ui-missing-variable-locations">
+        <div className="ui-missing-variable-locations mt-4 text-[12px]">
           <Text strong>缺失位置</Text>
           <ul>
             {missingVariables.map((item, index) => (

@@ -106,10 +106,10 @@ export function RequirementDetailPage() {
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
-    <div className={`requirement-detail-page tp-surface ${detailStyles.root} ${designStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope} ${viewSwitchStyles.scope}`}>
-      <div className="requirement-detail-layout">
+    <div className={`requirement-detail-page tp-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-transparent p-[var(--app-page-gutter)] pb-4 text-[var(--srf-text)] ${detailStyles.root} ${designStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope} ${viewSwitchStyles.scope}`}>
+      <div className="requirement-detail-layout flex min-h-0 min-w-0 flex-1 gap-3 max-narrow:flex-col max-narrow:overflow-auto">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
-        <section className="requirement-detail-main">
+        <section className="requirement-detail-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--srf-card)] max-narrow:flex-none">
           <RequirementDetailHeader showDownload={readingDocument} showEdit={readingDocument} requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading} readingActionsRef={setReadingActionsHost}
             canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
               setDocumentError(undefined)
@@ -125,7 +125,7 @@ export function RequirementDetailPage() {
             documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
         </section>
         {/* 阶段侧栏独立成卡片，挂在画布大容器外侧。 */}
-        <div className="requirement-detail-side" ref={setInspectorHost} />
+        <div className="requirement-detail-side flex min-h-0 min-w-0 flex-col flex-[0_0_304px] max-narrow:flex-none" ref={setInspectorHost} />
       </div>
       <RequirementDrawer title="编辑需求" open={editing} mode="edit" form={form} loading={save.isPending} error={save.error}
         projectId={canonicalProjectId} documentLoading={documentLoading} documentError={documentError}

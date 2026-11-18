@@ -107,7 +107,7 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
     onOk={() => { if (!items) form.submit(); else submit() }}
     mask={{ closable: false }} destroyOnHidden
   >
-    <div className="case-push-body">
+    <div className="case-push-body flex max-h-[62vh] flex-col gap-4 overflow-auto">
       {error && <Alert showIcon type="error" title="操作未完成" description={error} />}
       {feedback && <Alert showIcon type={blocked ? 'warning' : 'info'} title={blocked ? '推送未全部完成' : '推送结果'} description={feedback} />}
       {!items ? <>
@@ -119,7 +119,7 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
           <Form.Item name="moduleId" label="禅道模块 ID"><InputNumber min={0} precision={0} disabled={busy} /></Form.Item>
         </Form>
       </> : <>
-        <div className="case-push-toolbar">
+        <div className="case-push-toolbar flex flex-wrap items-center justify-between gap-3">
           <Typography.Text>产品 {values?.productId} · 模块 {values?.moduleId} · {items.length} 条用例</Typography.Text>
           <Space wrap>
             <Button disabled={busy} onClick={() => { setItems(null); setFeedback(''); setError('') }}>修改目标</Button>
@@ -129,10 +129,10 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
         {restoreRequired && <Alert showIcon type="warning" title="数据库恢复后的远端核对" description={<Checkbox checked={restoreConfirmed} disabled={busy || attempted || !owner} onChange={event => setRestoreConfirmed(event.target.checked)}>项目所有者确认：已核对这些用例在恢复前的远端写入及当前选择。</Checkbox>} />}
         {blocked && <Alert showIcon type="warning" title="存在未决写入，暂不能推送" description="关闭或刷新页面不会解除锁定。请在对应行核对原操作结果。" />}
         <Table<CasePushPreviewItem> tableLayout="fixed" rowKey="caseId" pagination={false} dataSource={items.slice((page - 1) * pageSize, page * pageSize)} scroll={{ x: 720 }} columns={[
-          { title: '平台用例', key: 'title', width: 260, ellipsis: true, render: (_, item) => <Typography.Text className="case-push-title" ellipsis={{ tooltip: item.title }}>{item.title}</Typography.Text> },
+          { title: '平台用例', key: 'title', width: 260, ellipsis: true, render: (_, item) => <Typography.Text className="case-push-title block max-w-full" ellipsis={{ tooltip: item.title }}>{item.title}</Typography.Text> },
           { title: '推送方式', key: 'choice', width: 260, render: (_, item) => item.mappedRemoteCaseId
             ? <Typography.Text>更新已绑定用例 #{item.mappedRemoteCaseId}</Typography.Text>
-            : <Select aria-label={`推送方式：${item.title}`} className="case-push-choice" placeholder="请选择绑定已有用例或新建" value={choices[item.caseId]} disabled={busy || attempted || unresolved(item.operation)} onChange={value => setChoices(current => ({ ...current, [item.caseId]: value }))} options={[
+            : <Select aria-label={`推送方式：${item.title}`} className="case-push-choice w-full" placeholder="请选择绑定已有用例或新建" value={choices[item.caseId]} disabled={busy || attempted || unresolved(item.operation)} onChange={value => setChoices(current => ({ ...current, [item.caseId]: value }))} options={[
               { value: 0, label: '新建独立用例' }, ...item.candidates.map(candidate => ({ value: candidate.id, label: `绑定 #${candidate.id} · ${candidate.title}` })),
             ]} /> },
           { title: '结果', key: 'result', render: (_, item) => <Space orientation="vertical" size={4}>

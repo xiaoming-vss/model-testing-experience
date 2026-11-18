@@ -30,7 +30,7 @@ export function TestOrderDetailHeader({
   onNext,
 }: Props) {
   return <div className="tp-list-toolbar test-order-workspace-toolbar test-order-detail-header">
-    <nav className="test-order-workspace-breadcrumb" aria-label="面包屑">
+    <nav className="test-order-workspace-breadcrumb flex min-w-0 flex-[0_1_auto] items-center gap-[7px]" aria-label="面包屑">
       <button
         type="button"
         className="test-order-workspace-crumb-link"
@@ -39,7 +39,7 @@ export function TestOrderDetailHeader({
       >
         测试单
       </button>
-      <span className="test-order-workspace-crumb-sep" aria-hidden="true"><RightOutlined /></span>
+      <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
       <button
         type="button"
         className="test-order-workspace-crumb-link"
@@ -49,12 +49,12 @@ export function TestOrderDetailHeader({
       >
         {order?.name ?? '测试单'}
       </button>
-      <span className="test-order-workspace-crumb-sep" aria-hidden="true"><RightOutlined /></span>
+      <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
       <h1 className="test-order-workspace-crumb-current" title={caseTitle ?? '用例详情'}>
         {caseTitle ?? '用例详情'}
       </h1>
     </nav>
-    {narrowNav ? <div className="test-order-detail-inline-nav">
+    {narrowNav ? <div className="test-order-detail-inline-nav flex flex-none items-center gap-0.5 ml-auto">
       <Tooltip title="上一条（↑）">
         <Button
           type="text"

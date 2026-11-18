@@ -31,7 +31,7 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
   const ordered = groups.flatMap(group => sprints.filter(sprint => groupKey(sprint.status) === group.key))
   const current = Math.min(page, Math.max(1, Math.ceil(ordered.length / pageSize)))
   const visible = ordered.slice((current - 1) * pageSize, current * pageSize)
-  return <ListSurface className="sprint-board-shell tp-surface" bodyClassName="sprint-board"
+  return <ListSurface className="sprint-board-shell tp-surface" bodyClassName="sprint-board text-[var(--srf-text)]"
     scrollClassName="sprint-board-scroll" scrollAriaBusy={loading}
     footer={<ListPagination current={page} pageSize={pageSize} total={ordered.length}
       loading={refreshing || Boolean(error)} onChange={(next, size) => { setPage(size === pageSize ? next : 1); setPageSize(size) }} />}>
@@ -41,17 +41,17 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
     {!loading ? <div className="entity-card-grid sprint-board-grid" aria-label="迭代列表">{visible.map(sprint => {
       const group = groups.find(item => item.key === groupKey(sprint.status))!
       const sprintId = normalizeSprintId(sprint)
-      return <EntityCard key={sprintId} className={`sprint-board-card sprint-board-card-${group.key}`}
+      return <EntityCard key={sprintId} className={`sprint-board-card sprint-board-card-${group.key} max-[680.01px]:[&_.entity-card-foot]:flex-wrap`}
         titleAs="h3" titleId={`sprint-title-${sprintId}`}
         title={<Link to={`/projects/${projectId}/sprints/${sprintId}`} title={sprint.name}>{sprint.name}</Link>}
-        status={<span className={`sprint-board-status sprint-board-status-${group.key}`}>
+        status={<span className={`sprint-board-status sprint-board-status-${group.key} inline-flex flex-none items-center gap-[5px] whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]`}>
           {group.key === 'other' ? sprint.status || '未知状态' : group.label}
         </span>}
         meta={[
           { label: '开始时间', value: <time>{displayTime(pickStartTime(sprint))}</time> },
           { label: '结束时间', value: <time>{displayTime(pickEndTime(sprint))}</time> },
         ]}
-        footerNote={renderBinding(sprint)} footerNoteClassName="sprint-board-binding"
+        footerNote={renderBinding(sprint)} footerNoteClassName="sprint-board-binding flex min-w-0 flex-[1_1_auto] items-center whitespace-normal text-[10.5px] leading-[18px] text-[var(--srf-text-secondary)] max-[680.01px]:flex-[1_1_100%]"
         actions={<>
           <ProjectActionButton action="write" operation="edit" iconOnly onClick={() => onEdit(sprint)}>编辑</ProjectActionButton>
           <ProjectActionButton action="manage" operation="bind" iconOnly onClick={() => onBind(sprint)}>禅道绑定</ProjectActionButton>
@@ -59,11 +59,11 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
             <ProjectActionButton action="write" operation="delete" iconOnly loading={deletingId === normalizeSprintId(sprint)}>删除</ProjectActionButton>
           </Popconfirm>
         </>}
-        actionsClassName="sprint-board-actions"
+        actionsClassName="sprint-board-actions flex flex-none items-center justify-end text-[var(--app-action-read)] max-[680.01px]:ml-auto"
         onOpen={() => { if (sprintId && projectId) navigate(`/projects/${projectId}/sprints/${sprintId}`) }}>
-        <div className="sprint-board-doc">
-          <span className="sprint-board-doc-icon" aria-hidden="true"><AppIcon name="sprint" size={13} /></span>
-          <span className="sprint-board-doc-text" title={sprint.description || '暂无迭代描述'}>{sprint.description || '暂无迭代描述'}</span>
+        <div className="sprint-board-doc m-0 mb-2.5 flex min-w-0 items-start gap-2 text-[10.5px] leading-4 text-[var(--srf-text-secondary)]">
+          <span className="sprint-board-doc-icon inline-flex h-[22px] w-[22px] flex-none items-center justify-center rounded-[6px] bg-[var(--app-accent-surface)] text-[var(--app-action-read)] [&_svg]:h-[13px] [&_svg]:w-[13px]" aria-hidden="true"><AppIcon name="sprint" size={13} /></span>
+          <span className="sprint-board-doc-text line-clamp-2 max-h-8 min-w-0 overflow-hidden [overflow-wrap:anywhere]" title={sprint.description || '暂无迭代描述'}>{sprint.description || '暂无迭代描述'}</span>
         </div>
       </EntityCard>
     })}</div> : null}

@@ -558,7 +558,7 @@ export function CaseLibraryPage() {
         render: (_, item) => {
           const caseId = normalizeFunctionTestCaseId(item)
           return (
-            <Space size={8} className="tp-list-name functional-suite-list-name case-library-title-cell">
+            <Space size={8} className="tp-list-name functional-suite-list-name case-library-title-cell w-full min-w-0">
               {/* 用例编号是 UUID，标题里放全值太长，按运行历史的既有做法只显示前 8 位。 */}
               {caseId ? (
                 <span className="case-library-id-chip" title={caseId}>
@@ -721,14 +721,14 @@ export function CaseLibraryPage() {
   const canCreateCase = Boolean(selectedSuite?.suiteId)
 
   return (
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface ${caseLibraryStyles.root}`}>
-      <div className="api-automation-content">
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface h-full ${caseLibraryStyles.root}`}>
+      <div className="api-automation-content h-full">
         <section className="workbench-panel workbench-board-panel tp-board">
           <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">
-            <div className="api-filter-group case-library-filters">
+            <div className="api-filter-group case-library-filters flex flex-wrap items-center gap-2">
               <h1 className="tp-list-title">用例库</h1>
               <div className="api-filter-field">
-                <span className="api-filter-field-label">需求</span>
+                <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">需求</span>
                 <Select
                   className="api-filter-select business-filter-select"
                   aria-label="筛选需求"
@@ -747,7 +747,7 @@ export function CaseLibraryPage() {
                 />
               </div>
               <div className="api-filter-field">
-                <span className="api-filter-field-label">用例类型</span>
+                <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">用例类型</span>
                 <Select
                   className="api-filter-select business-filter-select"
                   aria-label="筛选用例类型"
@@ -759,7 +759,7 @@ export function CaseLibraryPage() {
                   }}
                 />
               </div>
-              <div className="api-filter-field case-library-search-field">
+              <div className="api-filter-field case-library-search-field w-72 min-w-0 max-w-full">
                 <DebouncedSearchInput
                   className="api-filter-input case-library-search-input"
                   inputRef={keywordInputRef}
@@ -773,7 +773,7 @@ export function CaseLibraryPage() {
               </div>
             </div>
 
-            <Space size={8} className="case-library-toolbar-actions tp-refresh-actions">
+            <Space size={8} className="case-library-toolbar-actions tp-refresh-actions flex-none items-center">
               <Tooltip title="刷新用例列表">
                 <ProjectActionButton
                   action="read"
@@ -872,15 +872,15 @@ export function CaseLibraryPage() {
               <Empty description="当前项目下暂无迭代" />
             </div>
           ) : (
-            <div className="case-library-layout">
-              <aside className="api-case-sidebar case-library-tree">
-                <div className="case-library-tree-head">
-                  <span className="case-library-tree-title">
+            <div className="case-library-layout grid min-h-0 flex-1 grid-cols-[var(--app-sidebar-width)_minmax(0,1fr)] gap-4 overflow-hidden max-[1180.01px]:grid-cols-1">
+              <aside className="api-case-sidebar case-library-tree flex min-h-0 flex-col overflow-hidden">
+                <div className="case-library-tree-head flex flex-none items-center justify-between gap-2 p-3">
+                  <span className="case-library-tree-title inline-flex items-center gap-1.5 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">
                     <FolderOpenOutlined />
                     测试集导航
                   </span>
                 </div>
-                <div className="api-case-sidebar-toolbar case-library-tree-search">
+                <div className="api-case-sidebar-toolbar case-library-tree-search flex items-center gap-2.5 px-5 pt-4">
                   <Input
                     allowClear
                     prefix={<SearchOutlined />}
@@ -890,11 +890,11 @@ export function CaseLibraryPage() {
                     onChange={(event) => setSuiteFilter(event.target.value)}
                   />
                 </div>
-                <div className="api-case-sidebar-scroll case-library-tree-scroll">
-                  <div className="api-case-nav-list case-library-nav-list">
+                <div className="api-case-sidebar-scroll case-library-tree-scroll min-h-0 flex-1 overflow-auto px-3 pt-2.5 pb-3 max-[1180.01px]:max-h-[420px]">
+                  <div className="api-case-nav-list case-library-nav-list flex flex-col gap-0.5">
                     <button
                       type="button"
-                      className={`api-case-nav-item case-library-nav-item${suiteId ? '' : ' active'
+                      className={`api-case-nav-item case-library-nav-item flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left${suiteId ? '' : ' active'
                       }`}
                       aria-current={!suiteId}
                       onClick={() => {
@@ -902,11 +902,11 @@ export function CaseLibraryPage() {
                         setPage(1)
                       }}
                     >
-                      <span className="case-library-nav-main">
-                        <AppstoreOutlined className="case-library-tree-icon" />
-                        <span className="case-library-nav-name">全部用例</span>
+                      <span className="case-library-nav-main flex min-w-0 items-center gap-2">
+                        <AppstoreOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
+                        <span className="case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-[18px] text-[var(--srf-text-secondary)]">全部用例</span>
                       </span>
-                      <span className="case-library-nav-count">{hasSuiteData ? allCaseCount : '—'}</span>
+                      <span className="case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] text-[var(--srf-text-muted)]">{hasSuiteData ? allCaseCount : '—'}</span>
                     </button>
                     {suitesQuery.error ? (
                       <Alert showIcon type="error" title="测试集加载失败"
@@ -915,11 +915,11 @@ export function CaseLibraryPage() {
                           onClick={() => suitesQuery.refetch()}>重试测试集</ProjectActionButton>} />
                     ) : null}
                     {suitesQuery.isLoading ? (
-                      <div className="sprint-card-loading">
+                      <div className="sprint-card-loading max-[1180.01px]:min-h-24">
                         <Empty description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       </div>
                     ) : suitesQuery.error && suites.length === 0 ? null : visibleSuites.length === 0 ? (
-                      <div className="sprint-card-loading">
+                      <div className="sprint-card-loading max-[1180.01px]:min-h-24">
                         <Empty description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
                           {suiteFilter.trim() ? (
                             <ProjectActionButton action="read" onClick={() => setSuiteFilter('')}>清除测试集搜索</ProjectActionButton>
@@ -934,7 +934,7 @@ export function CaseLibraryPage() {
                           <button
                             key={id ?? suite.name}
                             type="button"
-                            className={`api-case-nav-item case-library-nav-item${active ? ' active' : ''
+                            className={`api-case-nav-item case-library-nav-item flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left${active ? ' active' : ''
                             }`}
                             aria-current={active}
                             onClick={() => {
@@ -942,15 +942,15 @@ export function CaseLibraryPage() {
                               setPage(1)
                             }}
                           >
-                            <span className="case-library-nav-main">
+                            <span className="case-library-nav-main flex min-w-0 items-center gap-2">
                               {active ? (
-                                <FolderOpenOutlined className="case-library-tree-icon" />
+                                <FolderOpenOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
                               ) : (
-                                <FolderOutlined className="case-library-tree-icon" />
+                                <FolderOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
                               )}
-                              <span className="case-library-nav-name">{suite.name}</span>
+                              <span className="case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-[18px] text-[var(--srf-text-secondary)]">{suite.name}</span>
                             </span>
-                            <span className="case-library-nav-count">{suiteCaseCount(suite)}</span>
+                            <span className="case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] text-[var(--srf-text-muted)]">{suiteCaseCount(suite)}</span>
                           </button>
                         )
                       })
@@ -958,12 +958,12 @@ export function CaseLibraryPage() {
                   </div>
                 </div>
                 {/* 三个动作排一行：新建常驻且带文字，编辑 / 删除要靠选中测试集，收成图标按钮。 */}
-                <div className="case-library-sidebar-foot">
+                <div className="case-library-sidebar-foot flex flex-none items-center gap-2 px-3 py-2.5">
                   <Tooltip title="新建测试集">
                     <ProjectActionButton
                       action="write"
                       type="text"
-                      className="action-btn-create case-library-foot-create"
+                      className="action-btn-create case-library-foot-create mr-auto flex-none"
                       operation="create"
                       icon={<PlusOutlined />}
                       disabled={!activeProjectId || sprints.length === 0}
@@ -1012,9 +1012,9 @@ export function CaseLibraryPage() {
                 </div>
               </aside>
 
-              <div className="case-library-main">
+              <div className="case-library-main flex min-h-0 flex-col">
                 {/* 优先级不进筛选下拉：档位只有四档，摊平成一排比藏在二级菜单里快。 */}
-                <div className="tp-quickbar case-library-quickbar">
+                <div className="tp-quickbar case-library-quickbar flex-none px-4 py-2.5">
                   <div className="tp-quick-filters">
                     <span className="tp-quick-label">快速过滤:</span>
                     <button
@@ -1032,7 +1032,7 @@ export function CaseLibraryPage() {
                       <button
                         key={level}
                         type="button"
-                        className={`tp-chip case-library-chip-priority${priority === level ? ' active' : ''}`}
+                        className={`tp-chip case-library-chip-priority font-mono${priority === level ? ' active' : ''}`}
                         aria-pressed={priority === level}
                         onClick={() => {
                           setPriority(priority === level ? null : level)
@@ -1043,10 +1043,10 @@ export function CaseLibraryPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="tp-selection case-library-selection" aria-live="polite">
+                  <div className="tp-selection case-library-selection flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 whitespace-normal" aria-live="polite">
                     {selectedCaseIds.length > 0 ? (
                       <>
-                        <span className="case-library-selection-scope" title={selectedSuite?.name ?? '全部用例'}>
+                        <span className="case-library-selection-scope max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap" title={selectedSuite?.name ?? '全部用例'}>
                           {selectedSuite?.name ?? '全部用例'}
                         </span>
                         <span>已选 <strong>{selectedCaseIds.length}</strong> 项</span>

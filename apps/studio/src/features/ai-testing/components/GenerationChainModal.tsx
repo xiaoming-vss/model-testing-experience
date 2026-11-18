@@ -123,7 +123,7 @@ function useModalHeaderSlot() {
     const header = anchor.current?.closest('.ant-modal')?.querySelector('.ant-modal-header')
     if (!header) return
     const slot = document.createElement('div')
-    slot.className = 'gc-header-tools-slot'
+    slot.className = 'gc-header-tools-slot flex min-w-0 items-center'
     header.append(slot)
     setTarget(slot)
     return () => { slot.remove() }
@@ -171,7 +171,7 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   const upstreamSummary = upstreamFields.map(field => `${field.label} ${field.selectedLabel}`).join(' · ')
   const upstreamMissing = upstreamFields.some(field => field.missing)
 
-  const controls = <div className="gc-title-tools">
+  const controls = <div className="gc-title-tools flex min-w-0 flex-wrap items-center gap-1.5">
     {!inline && versionOptions.length ? <div className="gc-version-buttons" role="group" aria-label="选择版本">
       {versionOptions.map(option => <button key={option.key} type="button"
         className={`gc-version-button${versionKey === option.key ? ' is-active' : ''}`}
@@ -416,10 +416,10 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     destroyOnHidden
     rootClassName={artifactScopes}
     className={`generation-chain-modal${revisionOpen ? ' is-revising' : ''}${embedded ? ' gc-inspector-reading' : ''}`}
-    title={embedded ? stage.label : <div className="gc-modal-title">
-      <div className="gc-title-main">
+    title={embedded ? stage.label : <div className="gc-modal-title flex min-w-0 flex-wrap items-center gap-3">
+      <div className="gc-title-main flex min-w-0 flex-col gap-px">
         <span className="gc-kicker">{chain.label} / 第 {stage.order + 1} 阶段</span>
-        <div className="gc-title-name">
+        <div className="gc-title-name flex flex-wrap items-center gap-2">
           <strong>{stage.label}</strong>
           <span className={`gc-state ${rejected ? 'is-danger' : stateClass(stage.state)}`}>{rejected ? '已退回' : stateCopy[stage.state] ?? stage.state}</span>
         </div>

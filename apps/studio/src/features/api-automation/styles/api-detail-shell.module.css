@@ -1,72 +1,18 @@
-/* API 测试集详情：板面、顶栏与用例列表。根节点挂 .scope。 */
+/* API 测试集详情：板面与用例列表皮肤。
+ * 两栏网格、顶栏/用例行排版与窄屏堆叠已迁到 ApiCollectionDetailPage、
+ * ApiCollectionToolbar 与 ApiCaseExplorer 的 Tailwind utility；这里保留卡片表面、
+ * 环境 chip、方法徽标、悬停/选中态与 AntD 深层结构。根节点挂 .scope。 */
 
 .scope {
   --api-shell-scope: 1;
 }
 
-/*
- * API 测试集详情页（测试集列表点名称进来的页面）按设计稿重做的表面层：板面、顶栏、左栏用例列表。
- *
- * 结构：顶栏（返回 / 测试集名 / 环境 / 运行记录 / 运行测试集）+ 两栏（用例列表卡片、请求编辑与运行结果卡片）。
- * token 与色盘来自 shared/styles/surface-tokens.css，页面根节点带 `tp-surface`、板面带 `tp-board`（见 STRUCTURE.md §三）。
- * 颜色只引用 `--srf-*` / `.tone-*`，不写裸色值与主题分支。
- *
- * 编辑区与控制台的规则在 api-detail-editor.module.css（按职责拆文件，两处选择器互不重叠）。
- */
-
-/* ===== 板面与两栏 ===== */
-
-.scope :global(.api-collection-workbench) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  gap: 12px;
-}
-
-.scope :global(.api-wb-cols) {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
-}
-
 /* ===== 顶栏 ===== */
 
 .scope :global(.api-wb-toolbar) {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 16px;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
-}
-
-.scope :global(.api-wb-toolbar-main) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.scope :global(.api-wb-toolbar-title) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  margin: 0;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 22px;
-  color: var(--srf-text);
 }
 
 .scope :global(.api-wb-toolbar-label) {
@@ -119,18 +65,9 @@
   font-size: 12px;
 }
 
-.scope :global(.api-wb-toolbar-actions) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 /* ===== 左栏：用例列表 ===== */
 
 .scope :global(.api-wb-explorer) {
-  display: flex;
-  flex-direction: column;
   min-height: 0;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
@@ -139,22 +76,7 @@
 }
 
 .scope :global(.api-wb-explorer-head) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
   border-bottom: 1px solid var(--srf-divider);
-}
-
-.scope :global(.api-wb-explorer-title) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--srf-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 700;
 }
 
 .scope :global(.api-wb-explorer-count) {
@@ -168,14 +90,7 @@
   line-height: 18px;
 }
 
-.scope :global(.api-wb-explorer-actions) {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
 .scope :global(.api-wb-explorer-search) {
-  padding: 10px 12px;
   border-bottom: 1px solid var(--srf-divider);
 }
 
@@ -184,36 +99,7 @@
   border-color: var(--srf-card-border);
 }
 
-.scope :global(.api-wb-explorer-scroll) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 8px;
-}
-
-.scope :global(.api-wb-explorer-placeholder) {
-  padding: 24px 8px;
-}
-
-.scope :global(.api-wb-case-list) {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.scope :global(.api-wb-case-list-more) {
-  display: flex;
-  justify-content: center;
-  padding: 6px 0 2px;
-}
-
 .scope :global(.api-wb-case-item) {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
   border: 1px solid transparent;
   border-radius: var(--srf-radius-control);
   cursor: pointer;
@@ -251,15 +137,6 @@
   opacity: 0.5;
 }
 
-/* 方法徽标与用例名同一行；路径不再占第二行，完整路径见 title / aria-label。 */
-.scope :global(.api-wb-case-item-head) {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
 .scope :global(.api-wb-case-item-head .api-wb-case-method) {
   flex: 0 0 auto;
 }
@@ -286,18 +163,6 @@
   line-height: 16px;
 }
 
-.scope :global(.api-wb-case-item-name) {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--srf-text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .scope :global(.api-wb-case-item-actions) {
   flex: 0 0 auto;
   opacity: 0;
@@ -308,18 +173,4 @@
 .scope :global(.api-wb-case-item.selected .api-wb-case-item-actions),
 .scope :global(.api-wb-case-item:focus-within .api-wb-case-item-actions) {
   opacity: 1;
-}
-
-/* ===== 窄屏 ===== */
-
-@media (max-width: 1180px) {
-  .scope :global(.api-wb-cols) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(180px, 460px) minmax(400px, 1fr);
-    overflow-y: auto;
-  }
-
-  .scope :global(.api-wb-explorer) {
-    max-height: 460px;
-  }
 }

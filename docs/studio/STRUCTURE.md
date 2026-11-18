@@ -127,14 +127,14 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 | 页面 | 页面样式文件 |
 | --- | --- |
-| 用例库 | `features/test-cases/styles/case-library.module.css` + `case-editor.module.css` |
-| 项目 / 迭代看板 | `features/projects/styles/projects-overview.module.css` + `sprint-overview.module.css` / `sprint-dashboard.module.css` |
+| 用例库 | `features/test-cases/styles/case-library.module.css` + `case-editor.module.css`；页面骨架与导航布局在 `CaseLibraryPage` utility |
+| 项目 / 迭代看板 | `features/projects/styles/projects-overview.module.css` + `sprint-overview.module.css` / `sprint-dashboard.module.css`；页面网格与断点在 Projects/Sprint 页面 utility |
 | 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-method.module.css` / `interface-openapi.module.css` / `interface-detail.module.css` / `interface-editor.module.css` |
-| 测试单 | `features/test-orders/styles/test-orders-list.module.css` + `test-order-workspace.module.css` / `test-order-workspace-list.module.css` / `test-order-verdict.module.css` / `add-cases-modal.module.css` |
-| API 测试 | `features/api-automation/styles/api-list.module.css` + `api-detail-shell.module.css` / `api-detail-editor.module.css` / `api-detail-request.module.css` / `api-detail-rules.module.css` |
+| 测试单 | `features/test-orders/styles/test-orders-list.module.css` + `test-order-workspace.module.css` / `test-order-workspace-list.module.css` / `test-order-verdict.module.css` / `add-cases-modal.module.css`；工作台骨架与判定区排版在页面/组件 utility |
+| API 测试 | `features/api-automation/styles/api-list.module.css` + `api-detail-shell.module.css` / `api-detail-editor.module.css` / `api-detail-request.module.css` / `api-detail-rules.module.css`；详情两栏/顶栏/用例行布局在页面与组件 utility |
 | UI 测试 | `features/ui-automation/styles/ui-list.module.css` + `ui-suite.module.css` / `ui-detail-topbar.module.css` / `ui-detail-shell.module.css` / `ui-detail-pipeline.module.css` / `ui-detail-inspector.module.css` / `ui-execution-flow.module.css` |
 | 性能测试 | 复用 `tp-*` 与 `shared/styles/entity-card.css`；新样式使用 Tailwind utility，不新增页面级全局 CSS |
-| TestingPage 外壳 | `features/testing/styles/testing-page.module.css` |
+| TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
 
 `shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与快速过滤条组件（`.tp-quickbar`、
 `.tp-chip`、`.tp-selection`）——这些页面的这几个部件必须完全一致，所以放在共用层而不是各写一份。
@@ -359,7 +359,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 ### 测试单执行工作台（`test-order-workspace.module.css` / `test-order-workspace-list.module.css`）
 
-测试单列表点名称进来的页面参考两栏布局：执行清单 / 单一详情卡片，视觉沿用平台公共边距、工具栏、圆角卡片和胶囊标签。用例摘要、前置条件与步骤在详情区一起滚动，执行判定、缺陷关联与条目位置常驻详情底部，操作条不覆盖步骤。用例 ID 通过公共按钮提供复制入口，摘要由 `components/TestOrderCaseSummary.tsx` 渲染。顶栏直接使用 `tp-list-toolbar`，状态及筛选标签复用 `tp-tone-tag`／`tp-chip`。尺寸及换行规则见 UI-GUIDELINES.md。样式按职责拆为四个 Module：`test-order-workspace.module.css` 负责页面高度链、详情外壳、摘要与前置条件/步骤内容，`test-order-workspace-list.module.css` 负责工具栏、执行条目表格与批量条，`test-order-verdict.module.css` 负责底栏及图谱执行面板共用的判定控件，`add-cases-modal.module.css` 负责加入用例弹窗。页面根节点同时挂前三个 Module 的 `.root`；加入用例 Modal 与外层详情 Modal 通过 `rootClassName` 挂弹窗 Module 的 `.root`；`TestOrderGraphExecutionPanel` 根节点挂判定 Module 的 `.root`。旧类名全部保留为 `:global()` 测试与兼容钩子，工作台规则限定在 `.test-order-workspace-page` 或对应面板根下。
+测试单列表点名称进来的页面参考两栏布局：执行清单 / 单一详情卡片，视觉沿用平台公共边距、工具栏、圆角卡片和胶囊标签。用例摘要、前置条件与步骤在详情区一起滚动，执行判定、缺陷关联与条目位置常驻详情底部，操作条不覆盖步骤。用例 ID 通过公共按钮提供复制入口，摘要由 `components/TestOrderCaseSummary.tsx` 渲染。顶栏直接使用 `tp-list-toolbar`，状态及筛选标签复用 `tp-tone-tag`／`tp-chip`。尺寸及换行规则见 UI-GUIDELINES.md。样式按职责拆为四个 Module：`test-order-workspace.module.css` 保留页面高度链、步骤表表面与 AntD 深层结构，`test-order-workspace-list.module.css` 保留工具栏边界、条目表格/编号/状态皮肤与进度段，`test-order-verdict.module.css` 保留判定控件色调与底栏网格，`add-cases-modal.module.css` 负责加入用例弹窗；摘要、前置条件、步骤、工具栏、批量条与判定区的排版由组件 utility 负责。页面根节点同时挂前三个 Module 的 `.root`；加入用例 Modal 与外层详情 Modal 通过 `rootClassName` 挂弹窗 Module 的 `.root`；`TestOrderGraphExecutionPanel` 根节点挂判定 Module 的 `.root`。旧类名全部保留为 `:global()` 测试与兼容钩子，工作台规则限定在 `.test-order-workspace-page` 或对应面板根下。
 `features/test-orders/styles/index.css`、`workspace-v2.css`、`workspace-list-v2.css`、`workspace-verdict-v2.css`、`workspace-content-v3.css` 已删除；图谱页壳与查看器在 `test-order-graph.module.css`，图谱执行面板在 `test-order-graph-execution.module.css`，用例可视化在 `test-order-visualization.module.css`。
 
 右侧 `.test-order-panel` 承担 A 版单一详情卡片的表面与布局，不能挂 `workbench-panel`：全局 macOS 工作台规则会以 `!important` 附加半透明背景与阴影，导致边缘出现高光竖边。摘要、内容和底部操作共用这一表面；内容区按确认的分色对照样式渲染，前置条件为浅中性色带并纵向排列，步骤与预期保持逐行对应。详情卡片的阴影、模糊与内部区块圆角由浏览器检查；页面测试覆盖执行与条目切换行为。
@@ -406,7 +406,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 - 存量 CSS 冻结，只减不增；改到哪个页面就迁哪个页面，迁完删除原 CSS 文件，不做“先留着”的兼容层。
 - Tailwind 工具链接入前，新增样式只能写 CSS Modules；不得以等待接入为由继续新增页面级全局 CSS。
 
-接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
+接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, reset, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；`antd/dist/reset.css` 用 `layer(reset)` 导入，reset 位于 antd 之后、utilities 之前，既保留旧页面 reset 压过组件库默认字重的行为，又允许 utility 覆盖 reset。初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
 
 度量以声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体为准，不以行数判断，避免压缩/展开格式造成的误判。
 

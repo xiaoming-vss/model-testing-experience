@@ -13,14 +13,6 @@
   --gc-panel: var(--app-surface-raised);
   --gc-text: var(--app-surface-text);
   --gc-muted: var(--app-surface-text-muted);
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-  min-width: 0;
-  overflow: auto;
-  padding: 16px;
   color: var(--gc-text);
   background-color: var(--app-surface);
   background-image:
@@ -28,8 +20,6 @@
     linear-gradient(90deg, var(--app-accent-soft) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-
-.scope :global(.gc-panorama.gc-loading) { align-items: center; justify-content: center; }
 
 .scope :global(.gc-kicker) {
   display: block;
@@ -128,17 +118,11 @@
 .scope :global(.generation-chain-modal .ant-modal-footer) { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
 .scope :global(.generation-chain-modal .ant-modal-close) { top: 16px; right: 20px; }
 
-.scope :global(.gc-modal-title) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.scope :global(.gc-title-main) { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.scope :global(.gc-title-name) { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .scope :global(.gc-modal-title strong) { font-size: 16px; line-height: 1.35; }
 .scope :global(.gc-modal-title .gc-kicker) { margin: 0; }
 /* 阶段操作挂在标题栏：标题保持原样，版本/上游/对比/历史和显示模式开关同排。 */
 .scope :global(.generation-chain-modal .ant-modal-header.ai-artifact-mode-heading) { flex-wrap: wrap; gap: 8px 16px; }
-.scope :global(.gc-header-tools-slot) { display: flex; align-items: center; min-width: 0; order: 1; }
 .scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 2; }
-.scope :global(.gc-title-tools) { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
-
 .scope :global(.gc-state) {
   display: inline-flex;
   align-items: center;
@@ -318,7 +302,7 @@
 }
 
 @media (max-width: 760px) {
-  .scope :global(.gc-panorama) { padding: 12px; }
+  .scope :global(.gc-panorama:not(.gc-canvas-panorama)) { padding: 12px; }
   .scope :global(.gc-node) { flex-basis: 176px; }
   .scope :global(.generation-chain-modal) { max-width: calc(100vw - 16px); margin: 8px auto; }
   .scope :global(.generation-chain-modal .ant-modal-content) { height: calc(100dvh - 16px); }

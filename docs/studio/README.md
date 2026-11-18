@@ -79,32 +79,35 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ### 测试单样式归属
 
-文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。工作台页面根同时挂 `test-order-workspace` / `test-order-workspace-list` / `test-order-verdict` 三个 Module 的 `.root`；加入用例 Modal 通过 `rootClassName` 挂 `add-cases-modal` 的 `.root`；图谱执行面板根挂判定 Module 的 `.root`。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS。
+文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。工作台页面根同时挂 `test-order-workspace` / `test-order-workspace-list` / `test-order-verdict` 三个 Module 的 `.root`；加入用例 Modal 通过 `rootClassName` 挂 `add-cases-modal` 的 `.root`；图谱执行面板根挂判定 Module 的 `.root`。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS。阶段 17 起工作台列表/详情骨架、工具栏、进度筛选、批量条与判定区排版迁入组件 utility，三个 Module 只保留高度链、表格表面、状态色调与 AntD 深层结构。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
-| `test-orders-list.module.css` | 测试单列表页进度条、状态胶囊与搜索按钮皮肤 |
-| `test-order-workspace.module.css` | 工作台高度链、详情外壳、摘要、前置条件与步骤内容 |
-| `test-order-workspace-list.module.css` | 工作台工具栏、执行条目表格、筛选弹层与批量条 |
-| `test-order-verdict.module.css` | 执行判定、缺陷关联与底部操作条；工作台与图谱执行面板共用 |
-| `add-cases-modal.module.css` | 加入用例弹窗的筛选行、用例预览与步骤快照 |
+| `test-orders-list.module.css` | 测试单列表页进度条、状态胶囊与搜索按钮皮肤；搜索框宽度与 900px 断点由 `TestOrderPage` utility 负责 |
+| `test-order-workspace.module.css` | 工作台高度链、步骤表表面、等宽编号与 AntD 深层结构；摘要/前置条件/步骤排版由组件 utility 负责 |
+| `test-order-workspace-list.module.css` | 工作台工具栏边界、条目表格/编号/状态皮肤、进度段与详情面板表面；布局由组件 utility 负责 |
+| `test-order-verdict.module.css` | 判定按钮色调/选中态、快捷键键帽与底部操作条网格契约；工作台与图谱执行面板共用 |
+| `add-cases-modal.module.css` | 加入用例弹窗的文字与步骤圆点皮肤；筛选/详情/步骤布局由组件 utility 负责 |
 | `test-order-graph.module.css` | 测试单图谱页壳与查看器 |
 | `test-order-graph-execution.module.css` | 图谱分栏里的用例执行面板；独立文件保持原有级联顺序 |
 | `test-order-visualization.module.css` | 用例可视化面板与批量图解按钮 |
 
 ### 测试用例样式归属
 
-- `case-library.module.css` 承载用例库页面骨架、测试集侧栏与列表皮肤；原 `index.css` 已合并进该文件。
+- `case-library.module.css` 承载用例库侧栏渐变、选中态、等宽徽标与优先级色块皮肤；两栏骨架、导航与筛选布局由 `CaseLibraryPage` utility 负责。原 `index.css` 已合并进该文件。
 - `case-editor.module.css` 承载用例编辑弹窗；Modal 的 `className` 同时带 `case-library-case-modal tp-surface` 与 Module `.root`。
-- `case-push.module.css` 承载导入禅道弹窗；`ProjectActionModal` 通过 `rootClassName` 挂 Module `.root`。
+- `case-push.module.css` 只保留 AntD 深层结构与未决核对区分隔线；body/toolbar/选择宽度/标题布局由弹窗组件 utility 负责。`ProjectActionModal` 通过 `rootClassName` 挂 Module `.root`。
 - 原 `case-editor-v2.css`、`index.css`、`case-push.css` 已删除，`features/test-cases` 下不再有非 Module CSS。
 
 ### 需求详情、个人设置与基础服务样式归属
 
-- 需求详情页的页面骨架、面包屑、主画布与阶段侧栏在 `requirements/styles/requirement-detail.module.css`，根节点挂 `.root`；`RequirementDetailHeader` 不再直接引入页面 CSS。
-- 个人设置页与独立修改密码页共用 `profile/styles/profile-settings.module.css`，两页根节点都挂 `.root`；修改密码页的单栏覆盖在 `auth/styles/change-password.module.css`。`ChangePasswordPage` 对 profile Module 的跨 feature 导入是结构门禁的显式豁免。
-- 禅道 MCP 卡片的标题、状态与实例省略规则在 `base-services/styles/zentao-mcp-service.module.css`，卡片根挂 `.root`。
+- 需求详情页的页面高度链、面包屑、主/侧栏骨架与窄屏堆叠由 `RequirementDetailPage` / `RequirementDetailHeader` 的 utility 负责；`requirements/styles/requirement-detail.module.css` 只保留链接表面、侧栏动画、画布与文档容器深层结构，根节点挂 `.root`。
+- 个人设置页与独立修改密码页共用 `profile/styles/profile-settings.module.css`，该 Module 只保留渐变、卡片表面与 AntD 深层结构；布局、间距和排版由两页的 Tailwind utility 负责，修改密码页不再有单独 Module。`ChangePasswordPage` 对 profile Module 的跨 feature 导入是结构门禁的显式豁免。
+- 禅道 MCP 卡片不再有独立 Module；标题、状态、实例省略与间距均由 `ZentaoMcpServiceCard.tsx` 的 utility 表达。
+- `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。
 - 阶段 14 后 `src/features` 下不再有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
+- TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责，两个原 Module 已删除。
+- 共享 `tp-list-toolbar` 的搜索框宽度已迁到页面 `w-72` utility；工具栏表面与最小高度仍由未分层共享规则提供。`.api-filter-field { min-width: 0 }` 仍会压过 utility，UI 列表的 256px 下限因此保留在 feature Module。
 
 ### 公共表格与按钮
 
@@ -114,7 +117,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`shell-boundary.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表与软件仓库管理在 `interface-library.module.css`；方法签、OpenAPI 导入、详情顶栏/编辑器壳、编辑器内容区分别在同目录 `interface-method` / `interface-openapi` / `interface-detail` / `interface-editor` Module。页面根与 Modal/Drawer 根同时挂五个 `.scope`，保持原单文件内的规则顺序。
 - UI 测试集详情顶栏归 `ui-detail-topbar.module.css`，板面/控制条/窄屏归 `ui-detail-shell.module.css`；页面根同时挂五个详情 Module 的作用域。步骤编辑器和测试集抽屉的窄屏规则仍归 `ui-suite.module.css`，阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
-- Sprint 详情页的页面骨架在 `sprint-overview.module.css`，看板指标、图表、报告与响应式在 `sprint-dashboard.module.css`，两者按顺序导入；报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的需求卡片、迭代看板与项目概览在 `projects-overview.module.css`。
+- Sprint 详情页只保留卡片/健康带表面、图表色块与报告 Markdown 在 `sprint-overview.module.css` / `sprint-dashboard.module.css`，两者按顺序导入；页面网格、工具栏、指标与断点由 `SprintDetailPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的 `projects-overview.module.css` 保留空态、状态色、焦点与 macOS 皮肤，需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对，jsdom 尚不能模拟 CSS layer 的完整级联。
 

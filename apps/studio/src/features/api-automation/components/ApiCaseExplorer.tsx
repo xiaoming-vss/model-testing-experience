@@ -65,13 +65,13 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
   const remainingCount = cases.length - visibleCases.length
 
   return (
-    <section className="api-wb-explorer" aria-label="用例列表">
-      <div className="api-wb-explorer-head">
-        <span className="api-wb-explorer-title">
+    <section className="api-wb-explorer flex flex-col max-[1180.01px]:max-h-[460px]" aria-label="用例列表">
+      <div className="api-wb-explorer-head flex items-center justify-between gap-2 px-3 py-2.5">
+        <span className="api-wb-explorer-title inline-flex items-center gap-1.5 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">
           用例列表
           <span className="api-wb-explorer-count">{cases.length}</span>
         </span>
-        <span className="api-wb-explorer-actions">
+        <span className="api-wb-explorer-actions inline-flex items-center gap-0.5">
           <ProjectActionButton
             action="write"
             type="text"
@@ -95,7 +95,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
         </span>
       </div>
 
-      <div className="api-wb-explorer-search">
+      <div className="api-wb-explorer-search px-3 py-2.5">
         <Input
           allowClear
           value={search}
@@ -105,13 +105,13 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
         />
       </div>
 
-      <div className="api-wb-explorer-scroll">
+      <div className="api-wb-explorer-scroll min-h-0 flex-auto overflow-auto p-2">
         {loading ? (
-          <div className="api-wb-explorer-placeholder">
+          <div className="api-wb-explorer-placeholder px-2 py-6">
             <Empty description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
         ) : cases.length === 0 ? (
-          <div className="api-wb-explorer-placeholder">
+          <div className="api-wb-explorer-placeholder px-2 py-6">
             <Empty description={totalCaseCount === 0 ? '当前还没有用例' : '没有匹配到用例'}>
               <ProjectActionButton
                 action="write"
@@ -125,7 +125,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
             </Empty>
           </div>
         ) : (
-          <div className="api-wb-case-list">
+          <div className="api-wb-case-list flex flex-col gap-1">
             {visibleCases.map((item) => {
               const caseId = getCaseId(item)
               const isDraft = caseId === DRAFT_CASE_ID
@@ -136,7 +136,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
               return (
                 <div
                   key={caseId}
-                  className={`api-wb-case-item tone-${tone}${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
+                  className={`api-wb-case-item relative flex items-center justify-between gap-2 px-2 py-1.5 tone-${tone}${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
                   role="button"
                   tabIndex={0}
                   title={path}
@@ -161,9 +161,9 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                     }
                   }}
                 >
-                  <span className="api-wb-case-item-head">
+                  <span className="api-wb-case-item-head flex min-w-0 flex-auto items-center gap-1.5">
                     <span className="api-wb-case-method">{item.method}</span>
-                    <span className="api-wb-case-item-name">{item.name}</span>
+                    <span className="api-wb-case-item-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-[18px] text-[var(--srf-text)]">{item.name}</span>
                     {isDraft ? <span className="api-wb-case-draft">草稿</span> : null}
                   </span>
                   <span className="api-wb-case-item-actions">
@@ -197,7 +197,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
               )
             })}
             {remainingCount > 0 ? (
-              <div className="api-wb-case-list-more">
+              <div className="api-wb-case-list-more flex justify-center px-0 pt-1.5 pb-0.5">
                 <Button size="small" onClick={() => setVisibleCount(sliceCount + CASE_PAGE_SIZE)}>
                   显示更多（还剩 {remainingCount} 个）
                 </Button>

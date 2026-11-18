@@ -251,9 +251,9 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
     }),
     [profileLatestVersion, profileModel?.statusTone, profileRunning],
   )
-  if (initializationError) return <div className="gc-panorama"><Alert type="error" showIcon title={`初始化生成流程失败：${getErrorMessage(initializationError)}`} action={<Button onClick={() => setInitializationAttempt(value => value + 1)}>重试</Button>} /></div>
-  if (overview.isPending || initializing) return <div className="gc-panorama gc-loading"><Spin /></div>
-  if (overview.error) return <div className="gc-panorama"><Alert type="error" showIcon title={getErrorMessage(overview.error)} action={<Button onClick={refresh}>重试读取</Button>} /></div>
+  if (initializationError) return <div className="gc-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-auto p-4"><Alert type="error" showIcon title={`初始化生成流程失败：${getErrorMessage(initializationError)}`} action={<Button onClick={() => setInitializationAttempt(value => value + 1)}>重试</Button>} /></div>
+  if (overview.isPending || initializing) return <div className="gc-panorama gc-loading flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3.5 overflow-auto p-4"><Spin /></div>
+  if (overview.error) return <div className="gc-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-auto p-4"><Alert type="error" showIcon title={getErrorMessage(overview.error)} action={<Button onClick={refresh}>重试读取</Button>} /></div>
   const activeStage = special || sourceSelected ? undefined : stage
   const activeChain = sourceSelected ? sourceChain : special === 'relations' ? functionChain : special ? undefined : chain
   const selectedMaterialVersion = profileWorkspace.materialVersions.find(
@@ -294,7 +294,7 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
           ? activeStage?.draft?.runId
           : workspace.selectedVersion?.sourceRunId
   const inspectorSelection = sourceSelected ? `${sourceSelected}-source` : special ?? `${selected?.kind}:${selected?.stage}`
-  return <div className="gc-panorama gc-canvas-panorama">
+  return <div className="gc-panorama gc-canvas-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden p-0">
     {workspace.personalLlm.dialog}
     <div className="gc-canvas-workspace"><div ref={stageRef} className={`gc-canvas-stage${modalOpen || relationsOpen || documentOpen || profileReadingOpen ? ' is-reading' : ''}`}><div className="gc-canvas-map" inert={modalOpen || relationsOpen || documentOpen || profileReadingOpen}><RequirementGenerationCanvas canWrite={canWrite} chains={visibleChains} filter={filter} selected={inspectorOpen && !sourceSelected ? selected : undefined} special={inspectorOpen ? special : null} profile={profileCard} relations={relations}
       sourceSelected={inspectorOpen ? sourceSelected : null} onSelectSource={kind => { if (!workspace.guardUnsaved()) return; setInspectorOpen(true); setSourceSelected(kind); setSpecial(null); setModalOpen(false); setDocumentOpen(false); setRelationsOpen(false); workspace.setRevisionOpen(false) }}

@@ -213,8 +213,10 @@ const globalCss = cssFiles
   .sort()
 
 const tailwind = cssText.get(join(srcRoot, 'shared', 'styles', 'tailwind.css')) ?? ''
-const layerOk = /@layer\s+theme,\s*base,\s*antd,\s*components,\s*utilities;/.test(tailwind)
+const entryCss = cssText.get(join(srcRoot, 'index.css')) ?? ''
+const layerOk = /@layer\s+theme,\s*base,\s*antd,\s*reset,\s*components,\s*utilities;/.test(tailwind)
   && /@import\s+["']tailwindcss\/utilities\.css["']\s+layer\(utilities\)/.test(tailwind)
+  && /@import\s+["']antd\/dist\/reset\.css["']\s+layer\(reset\)/.test(entryCss)
 
 const current = {
   version: 1,
@@ -242,7 +244,7 @@ try {
 
 const errors = []
 if (!layerOk) {
-  errors.push('shared/styles/tailwind.css 缺少 layer 声明或 utilities 层级导入')
+  errors.push('shared/styles/tailwind.css 缺少 layer 声明或 utilities 层级导入，或 index.css 的 AntD reset 未进入 reset layer')
 }
 const MAX_CSS_LINES = 600
 for (const file of cssFiles) {

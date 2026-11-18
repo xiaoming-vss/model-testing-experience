@@ -75,9 +75,9 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
   }))
 
   return (
-    <div className={cx('api-wb-console', styles.root)} data-tab-motion-scope>
-      <div className="api-wb-console-banner">
-        <div className="api-wb-console-banner-main">
+    <div className={cx('api-wb-console flex h-full flex-col overflow-hidden bg-[var(--srf-hover)]', styles.root)} data-tab-motion-scope>
+      <div className="api-wb-console-banner flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-divider)] bg-[var(--srf-card)] px-4 py-2">
+        <div className="api-wb-console-banner-main flex min-w-0 flex-wrap items-center gap-2.5">
           <span className="api-wb-console-title">请求结果</span>
           <span className={`api-wb-status tone-${tone}`}>
             <span className="api-wb-status-dot" aria-hidden="true" />
@@ -85,7 +85,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
             {statusMeta.label}
           </span>
           <RunWaitingReason status={status} />
-          <span className="api-wb-console-meta">
+          <span className="api-wb-console-meta flex flex-wrap items-center gap-2.5 text-[11px] text-[var(--srf-text-muted)]">
             <span>耗时 <strong>{result.durationMs ?? 0} ms</strong></span>
             <span>大小 <strong>{responseSize}</strong></span>
             <span>环境 <strong>{environmentName}</strong></span>
@@ -112,7 +112,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
         <Alert showIcon type="error" title={result.errorMessage} className="api-wb-console-alert" />
       ) : null}
 
-      <div className="api-wb-console-tabs" role="tablist" data-tab-motion-scoped>
+      <div className="api-wb-console-tabs flex flex-wrap items-center gap-4 border-b border-[var(--srf-divider)] bg-[var(--srf-card)] px-4" role="tablist" data-tab-motion-scoped>
         {viewTabs.map((tab) => (
           <button
             key={tab.value}
@@ -128,11 +128,11 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
         ))}
       </div>
 
-      <div className="api-wb-console-body" data-tab-motion-panel>
+      <div className="api-wb-console-body min-h-0 flex-auto overflow-auto px-4 py-3" data-tab-motion-panel>
         {resultContent}
       </div>
 
-      <div className="api-wb-console-foot">
+      <div className="api-wb-console-foot flex flex-wrap items-center gap-3.5 border-t border-[var(--srf-divider)] bg-[var(--srf-card)] px-4 py-2">
         {assertResults.length === 0 ? (
           <span className="api-wb-console-foot-empty">没有断言结果</span>
         ) : (

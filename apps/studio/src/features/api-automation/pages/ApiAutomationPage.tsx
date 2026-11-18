@@ -407,7 +407,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                     />
                   </div>
                 </div>
-                <div className="api-test-search-field">
+                <div className="api-test-search-field w-72 min-w-[240px] max-w-full">
                   <Input
                     ref={keywordInputRef}
                     className="api-filter-input api-test-search-input"

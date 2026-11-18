@@ -19,9 +19,9 @@ export function TestOrderProgressFilter({ counts, value, onChange }: Props) {
   const total = TEST_ORDER_RESULT_ORDER.reduce((sum, status) => sum + (counts[status] ?? 0), 0)
   const activeStatus = value === 'all' ? null : value
 
-  return <div className="test-order-progress-filter">
+  return <div className="test-order-progress-filter flex min-w-[170px] max-w-[560px] flex-[1_1_320px] items-center max-[1100.01px]:max-w-none max-[1100.01px]:flex-[1_1_100%]">
     <div
-      className="test-order-progress-track"
+      className="test-order-progress-track relative flex min-w-[140px] flex-auto items-center gap-0.5 h-[18px]"
       role="group"
       aria-label="按执行状态筛选"
       title="点击色块按执行状态筛选"

@@ -1,31 +1,6 @@
 /* 测试单列表：进度、状态与搜索框皮肤。
-   外框、工具栏、滚动区与分页由 ListSurface / surface-tokens 提供。 */
-
-.root {
-  min-width: 0;
-}
-
-.searchField {
-  width: 300px;
-  min-width: 0;
-}
-
-.progressCell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 2px 0 12px;
-  min-width: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.progressLine {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
+   外框、工具栏、滚动区与分页由 ListSurface / surface-tokens 提供；
+   搜索框宽度与进度行布局由 TestOrderPage 的 Tailwind utility 负责。 */
 
 .progressExecuted {
   min-width: 0;
@@ -147,10 +122,4 @@
 
 .searchSubmit:focus-visible {
   outline: 2px solid var(--app-accent);
-}
-
-@media (max-width: 900px) {
-  .searchField {
-    width: 100%;
-  }
 }

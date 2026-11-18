@@ -55,7 +55,7 @@ export function TestOrderWorkspaceToolbar({
   const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
   const activeFilterCount = Number(Boolean(keyword.trim())) + Number(onlyMine)
 
-  const filterContent = <div className="test-order-workspace-filter-popover">
+  const filterContent = <div className="test-order-workspace-filter-popover flex w-[300px] max-w-[76vw] flex-col gap-3">
     <Input
       allowClear
       prefix={<SearchOutlined aria-hidden="true" />}
@@ -70,7 +70,7 @@ export function TestOrderWorkspaceToolbar({
     >
       只看我负责的
     </Checkbox>
-    <div className="test-order-workspace-filter-footer">
+    <div className="test-order-workspace-filter-footer flex items-center justify-between gap-2.5 border-t border-[var(--srf-divider)] pt-2.5 text-[11px] text-[var(--srf-text-muted)]">
       <span>与执行状态筛选叠加</span>
       <Button type="link" size="small" onClick={onClearFilters} disabled={!hasFilters}>
         清除全部筛选
@@ -79,7 +79,7 @@ export function TestOrderWorkspaceToolbar({
   </div>
 
   return <div className="tp-list-toolbar test-order-workspace-toolbar">
-    <nav className="test-order-workspace-breadcrumb" aria-label="面包屑">
+    <nav className="test-order-workspace-breadcrumb flex min-w-0 flex-[0_1_auto] items-center gap-[7px]" aria-label="面包屑">
       <button
         type="button"
         className="test-order-workspace-crumb-link"
@@ -88,19 +88,19 @@ export function TestOrderWorkspaceToolbar({
       >
         测试单
       </button>
-      <span className="test-order-workspace-crumb-sep" aria-hidden="true"><RightOutlined /></span>
+      <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
       <h1 className="test-order-workspace-crumb-current" title={order?.name ?? '测试单'}>
         {order?.name ?? '测试单'}
       </h1>
     </nav>
 
     {order?.testedVersion ? (
-      <span className="test-order-workspace-chip tp-tone-tag">
+      <span className="test-order-workspace-chip tp-tone-tag flex-none">
         被测版本 {order.testedVersion}
       </span>
     ) : null}
     {orderStatusMeta ? (
-      <span className={`test-order-workspace-chip tp-tone-tag tone-${getTestOrderStatusTone(order?.status)}`}>
+      <span className={`test-order-workspace-chip tp-tone-tag flex-none tone-${getTestOrderStatusTone(order?.status)}`}>
         {orderStatusMeta.label}
       </span>
     ) : null}
@@ -111,7 +111,7 @@ export function TestOrderWorkspaceToolbar({
       onChange={onStatusFilterChange}
     />
 
-    <span className="test-order-workspace-toolbar-spacer" />
+    <span className="test-order-workspace-toolbar-spacer min-w-0 flex-auto" />
 
     <ActionButton
       operation="refresh"
@@ -129,7 +129,7 @@ export function TestOrderWorkspaceToolbar({
         (trigger.closest('.test-order-workspace-page') as HTMLElement | null) ?? document.body}
     >
       <Button
-        className={`test-order-workspace-filter-btn${activeFilterCount ? ' is-active' : ''}`}
+        className={`test-order-workspace-filter-btn flex-none${activeFilterCount ? ' is-active' : ''}`}
         icon={<FilterOutlined aria-hidden="true" />}
         aria-label={activeFilterCount
           ? `筛选执行用例，已启用 ${activeFilterCount} 项`

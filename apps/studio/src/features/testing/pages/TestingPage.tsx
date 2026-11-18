@@ -11,7 +11,6 @@ import {
 } from '@/features/testing/components/testingTab'
 import { UiAutomationPage } from '@/features/ui-automation/pages/UiAutomationPage'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
-import styles from '../styles/testing-page.module.css'
 
 const TESTING_TAB_PAGES = [
   { key: 'api', Page: ApiAutomationPage },
@@ -43,11 +42,11 @@ export function TestingPage() {
 
   return (
     <div className="workbench-page testing-page">
-      <div className={`testing-tab-panel ${styles.panel}`}>
+      <div className="testing-tab-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-[680.01px]:overflow-visible">
         {TESTING_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (
-            <div key={key} className={`testing-tab-pane ${styles.pane}`} id={`testing-panel-${key}`} hidden={activeTab !== key}>
+            <div key={key} className={`testing-tab-pane min-h-0 min-w-0 flex-1 flex-col [&>.workbench-page]:min-h-0 [&>.workbench-page]:flex-1 [&>.workbench-page]:p-0 [&>.api-automation-page]:h-full [&>.api-automation-page]:min-h-0 [&>.api-automation-page]:overflow-hidden ${activeTab === key ? 'flex' : 'hidden'}`} id={`testing-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
                 <Page />
               </PaneActivityProvider>

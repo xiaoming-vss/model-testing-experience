@@ -143,18 +143,18 @@
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
       "rules": 207,
-      "declarations": 642,
+      "declarations": 639,
       "selectors": 235
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 260,
-      "declarations": 888,
-      "selectors": 268
+      "rules": 254,
+      "declarations": 856,
+      "selectors": 262
     },
     "src/features/ai-testing/styles/relations.module.css": {
-      "rules": 88,
-      "declarations": 369,
-      "selectors": 91
+      "rules": 79,
+      "declarations": 330,
+      "selectors": 82
     },
     "src/features/ai-testing/styles/requirement-design.module.css": {
       "rules": 12,
@@ -172,9 +172,9 @@
       "selectors": 539
     },
     "src/features/api-automation/styles/api-detail-editor.module.css": {
-      "rules": 82,
-      "declarations": 312,
-      "selectors": 86
+      "rules": 57,
+      "declarations": 197,
+      "selectors": 61
     },
     "src/features/api-automation/styles/api-detail-request.module.css": {
       "rules": 62,
@@ -187,9 +187,9 @@
       "selectors": 63
     },
     "src/features/api-automation/styles/api-detail-shell.module.css": {
-      "rules": 40,
-      "declarations": 179,
-      "selectors": 43
+      "rules": 25,
+      "declarations": 89,
+      "selectors": 28
     },
     "src/features/api-automation/styles/api-list.module.css": {
       "rules": 9,
@@ -201,11 +201,6 @@
       "declarations": 66,
       "selectors": 35
     },
-    "src/features/auth/styles/change-password.module.css": {
-      "rules": 2,
-      "declarations": 2,
-      "selectors": 2
-    },
     "src/features/base-services/styles/requirement-code-binding.module.css": {
       "rules": 7,
       "declarations": 29,
@@ -215,11 +210,6 @@
       "rules": 31,
       "declarations": 104,
       "selectors": 36
-    },
-    "src/features/base-services/styles/zentao-mcp-service.module.css": {
-      "rules": 5,
-      "declarations": 16,
-      "selectors": 5
     },
     "src/features/bugs/styles/bug-form.module.css": {
       "rules": 56,
@@ -262,9 +252,9 @@
       "selectors": 33
     },
     "src/features/profile/styles/profile-settings.module.css": {
-      "rules": 34,
-      "declarations": 80,
-      "selectors": 36
+      "rules": 12,
+      "declarations": 26,
+      "selectors": 13
     },
     "src/features/projects/styles/dynamic-value-picker.module.css": {
       "rules": 48,
@@ -276,25 +266,20 @@
       "declarations": 118,
       "selectors": 34
     },
-    "src/features/projects/styles/project-settings.module.css": {
-      "rules": 4,
-      "declarations": 8,
-      "selectors": 4
-    },
     "src/features/projects/styles/projects-overview.module.css": {
-      "rules": 84,
-      "declarations": 277,
-      "selectors": 87
+      "rules": 34,
+      "declarations": 83,
+      "selectors": 35
     },
     "src/features/projects/styles/sprint-dashboard.module.css": {
-      "rules": 112,
-      "declarations": 302,
-      "selectors": 125
+      "rules": 31,
+      "declarations": 80,
+      "selectors": 37
     },
     "src/features/projects/styles/sprint-overview.module.css": {
-      "rules": 65,
-      "declarations": 257,
-      "selectors": 65
+      "rules": 16,
+      "declarations": 39,
+      "selectors": 17
     },
     "src/features/requirements/styles/document-preview.module.css": {
       "rules": 43,
@@ -302,9 +287,9 @@
       "selectors": 54
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
-      "rules": 29,
-      "declarations": 116,
-      "selectors": 31
+      "rules": 17,
+      "declarations": 58,
+      "selectors": 18
     },
     "src/features/test-cases/styles/case-editor.module.css": {
       "rules": 44,
@@ -312,19 +297,19 @@
       "selectors": 48
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 62,
-      "declarations": 204,
-      "selectors": 64
+      "rules": 25,
+      "declarations": 73,
+      "selectors": 27
     },
     "src/features/test-cases/styles/case-push.module.css": {
-      "rules": 9,
-      "declarations": 20,
-      "selectors": 9
+      "rules": 5,
+      "declarations": 6,
+      "selectors": 5
     },
     "src/features/test-orders/styles/add-cases-modal.module.css": {
-      "rules": 10,
-      "declarations": 35,
-      "selectors": 10
+      "rules": 4,
+      "declarations": 5,
+      "selectors": 4
     },
     "src/features/test-orders/styles/test-order-graph-execution.module.css": {
       "rules": 9,
@@ -337,9 +322,9 @@
       "selectors": 23
     },
     "src/features/test-orders/styles/test-order-verdict.module.css": {
-      "rules": 38,
-      "declarations": 160,
-      "selectors": 38
+      "rules": 21,
+      "declarations": 76,
+      "selectors": 21
     },
     "src/features/test-orders/styles/test-order-visualization.module.css": {
       "rules": 116,
@@ -347,24 +332,19 @@
       "selectors": 127
     },
     "src/features/test-orders/styles/test-order-workspace-list.module.css": {
-      "rules": 72,
-      "declarations": 271,
-      "selectors": 77
+      "rules": 50,
+      "declarations": 183,
+      "selectors": 55
     },
     "src/features/test-orders/styles/test-order-workspace.module.css": {
-      "rules": 53,
-      "declarations": 210,
-      "selectors": 59
+      "rules": 27,
+      "declarations": 81,
+      "selectors": 29
     },
     "src/features/test-orders/styles/test-orders-list.module.css": {
-      "rules": 24,
-      "declarations": 71,
-      "selectors": 25
-    },
-    "src/features/testing/styles/testing-page.module.css": {
-      "rules": 6,
-      "declarations": 19,
-      "selectors": 6
+      "rules": 19,
+      "declarations": 56,
+      "selectors": 20
     },
     "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
       "rules": 72,
@@ -377,9 +357,9 @@
       "selectors": 53
     },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
-      "rules": 50,
-      "declarations": 140,
-      "selectors": 53
+      "rules": 39,
+      "declarations": 82,
+      "selectors": 42
     },
     "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
       "rules": 52,
@@ -502,9 +482,9 @@
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 71,
-      "declarations": 313,
-      "selectors": 75
+      "rules": 69,
+      "declarations": 309,
+      "selectors": 73
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
@@ -531,10 +511,6 @@
     "00c0a148a01d254e": {
       "count": 2,
       "sample": "display: flex;flex: 1 1 auto;min-width: 0;min-height: 0"
-    },
-    "018f4cfefc32ecef": {
-      "count": 2,
-      "sample": "display: flex;flex: 1 1 auto;gap: 12px;min-height: 0;min-width: 0"
     },
     "07c0f4cdaa7aa123": {
       "count": 2,
@@ -569,7 +545,7 @@
       "sample": "display: flex;flex-direction: column;align-items: stretch"
     },
     "168eee1f679a9977": {
-      "count": 6,
+      "count": 5,
       "sample": "display: flex;flex-direction: column;gap: 8px"
     },
     "17f98caa4f0174b9": {
@@ -577,7 +553,7 @@
       "sample": "color: var(--srf-text-secondary);font-size: 12px;font-weight: 600"
     },
     "1a2d0b3c887a0a79": {
-      "count": 3,
+      "count": 2,
       "sample": "color: var(--srf-text-muted);font-size: 11px;line-height: 16px"
     },
     "1b55041854203af8": {
@@ -605,7 +581,7 @@
       "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "2e2e45e2d4ca13fb": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;align-items: center;gap: 10px"
     },
     "2ea85dd40793deee": {
@@ -625,16 +601,12 @@
       "sample": "display: flex;flex-direction: column;gap: 14px"
     },
     "3be4dd54c65b7d06": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;align-items: center;gap: 12px"
     },
     "3dc1af6e21ca837c": {
       "count": 4,
       "sample": "display: inline-flex;align-items: center;gap: 6px"
-    },
-    "3f9212d108008775": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 16px"
     },
     "41ff9fcb4194ebda": {
       "count": 5,
@@ -677,7 +649,7 @@
       "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
     },
     "5da36abee4ca0183": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;align-items: center;gap: 10px;flex-wrap: wrap"
     },
     "5f375a2bdb1ba064": {
@@ -696,10 +668,6 @@
       "count": 2,
       "sample": "padding: 0 5px;border-radius: 999px;background: var(--srf-chip);color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-"
     },
-    "631f76b8b8be2527": {
-      "count": 3,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 10px;min-width: 0"
-    },
     "6747dfd794ecfb61": {
       "count": 2,
       "sample": "border-color: var(--app-accent-border);background: var(--app-accent-surface);color: var(--app-accent);font-weight: 600"
@@ -708,37 +676,21 @@
       "count": 2,
       "sample": "display: flex;flex-direction: column;min-width: 0;gap: 1px"
     },
-    "6ca8e0c8c93b0e71": {
-      "count": 2,
-      "sample": "display: grid;gap: 2px;font-size: 12px;line-height: 18px"
-    },
     "73ddbd769bdeddf9": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 1px"
-    },
-    "78ccff32e9ca739f": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 8px;margin-top: 8px"
     },
     "790b1e6d62087b78": {
       "count": 4,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
     },
     "7c586f54a3b7d455": {
-      "count": 3,
+      "count": 2,
       "sample": "width: 100%;align-items: flex-start;flex-direction: column;gap: 10px"
-    },
-    "7d5173b17126857f": {
-      "count": 3,
-      "sample": "display: flex;flex-direction: column;gap: 4px"
     },
     "81379a756b80e635": {
       "count": 2,
       "sample": "display: flex;flex: 1 1 auto;flex-direction: column;min-height: 0;min-width: 0"
-    },
-    "82273705a9eba3b7": {
-      "count": 2,
-      "sample": "flex: 0 0 auto;display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 10px;padding: 10px 16px;border: 1px solid var(--srf-card-border);border-radius:"
     },
     "8286808fdc44ffaa": {
       "count": 4,
@@ -757,12 +709,8 @@
       "sample": "overflow: hidden;color: var(--srf-text-muted);font-size: 11px;text-overflow: ellipsis;white-space: nowrap"
     },
     "8b7e12d2e5fb1c19": {
-      "count": 5,
-      "sample": "flex: 1 1 auto;min-height: 0;display: flex;flex-direction: column"
-    },
-    "8f1b716dbcdd3971": {
       "count": 2,
-      "sample": "margin: 0 !important;font-size: 17px;line-height: 24px"
+      "sample": "flex: 1 1 auto;min-height: 0;display: flex;flex-direction: column"
     },
     "9222d9fe65fe3f15": {
       "count": 2,
@@ -784,10 +732,6 @@
       "count": 2,
       "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 10px;margin-top: 12px"
     },
-    "9b93b41483a7e8a4": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 8px;flex-wrap: wrap"
-    },
     "9f60b5ccb8682bf4": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 2px;min-width: 0"
@@ -804,10 +748,6 @@
       "count": 3,
       "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px"
     },
-    "a628d528c7b902a0": {
-      "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 10px;color: var(--srf-text-muted);font-size: 11px"
-    },
     "a71bc4fe08430bdb": {
       "count": 3,
       "sample": "flex: 1 1 auto;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
@@ -820,10 +760,6 @@
       "count": 2,
       "sample": "color: var(--srf-text-muted);font-size: 12px;white-space: nowrap"
     },
-    "b0a1c71ee6d660d1": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;flex-wrap: wrap;gap: 8px;min-width: 0"
-    },
     "b36f4265bfbdde0f": {
       "count": 3,
       "sample": "color: var(--tp-text-secondary);font-size: 12px;line-height: 18px"
@@ -833,7 +769,7 @@
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px;min-width: 0"
     },
     "b9c0f9c571daf401": {
-      "count": 3,
+      "count": 2,
       "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
     },
     "bc6e8b9708a2352a": {
@@ -845,7 +781,7 @@
       "sample": "border: 1px solid var(--tp-border-soft) !important;border-radius: 10px;box-shadow: 0 10px 24px var(--app-card-shadow-floating)"
     },
     "bd53bc74855fdf05": {
-      "count": 8,
+      "count": 6,
       "sample": "display: flex;flex-direction: column;gap: 6px"
     },
     "c3a767a35bba8500": {
@@ -865,16 +801,12 @@
       "sample": "min-width: 0;overflow: hidden;font-size: 12px;text-overflow: ellipsis;white-space: nowrap"
     },
     "c7777c6e868d5ddd": {
-      "count": 6,
+      "count": 4,
       "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "cc6725c9ffdaf533": {
       "count": 2,
       "sample": "flex: 0 0 auto;height: min(60vh, 600px);min-height: 380px"
-    },
-    "d0d990f7ff8b760f": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 6px;flex-wrap: wrap;min-width: 0"
     },
     "d13bcc173a94fcdb": {
       "count": 2,
@@ -884,17 +816,9 @@
       "count": 2,
       "sample": "max-width: 100%;border-radius: 6px;border: 1px solid var(--srf-card-border)"
     },
-    "d5f707205537bf02": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;justify-content: center"
-    },
     "df916f8b90e4cac1": {
       "count": 2,
       "sample": "padding: 1px 8px;border: 1px solid var(--srf-tone-border);border-radius: 999px;background: var(--srf-tone-bg);color: var(--srf-tone-text);font-size: 11px;font-weight: 600;line-heig"
-    },
-    "e0330ed8f9029dda": {
-      "count": 2,
-      "sample": "display: inline-flex;align-items: center;gap: 5px"
     },
     "e03d0e3def70bf87": {
       "count": 2,
@@ -908,16 +832,12 @@
       "count": 2,
       "sample": "flex: 1;min-width: 0;display: flex;flex-direction: column;gap: 1px"
     },
-    "e1de6a40d3b1ed7a": {
-      "count": 2,
-      "sample": "width: 288px;min-width: 0;max-width: 100%"
-    },
     "e22f970c81eb4724": {
       "count": 2,
       "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 14px 16px;align-items: start"
     },
     "e38e5eb24a0f8a06": {
-      "count": 5,
+      "count": 2,
       "sample": "height: 100%;min-height: 0;overflow: hidden"
     },
     "e5b6bf9b5b1696ce": {
@@ -945,24 +865,12 @@
       "sample": "color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-weight: 600"
     },
     "fbbb9331ecfd8380": {
-      "count": 11,
+      "count": 6,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     },
     "fce376b002f77271": {
       "count": 2,
       "sample": "display: flex;flex-wrap: wrap;gap: 4px;margin-top: 8px"
-    },
-    "fce757ec5764ee15": {
-      "count": 3,
-      "sample": "display: flex;align-items: center;gap: 8px;min-width: 0"
-    },
-    "fed5aa45771ec236": {
-      "count": 2,
-      "sample": "flex: 1 1 auto;min-height: 0;overflow: auto"
-    },
-    "ff490fdf4a422061": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 1px;min-width: 0"
     }
   }
 }

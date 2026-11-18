@@ -66,7 +66,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
       form={caseForm}
       layout="vertical"
       requiredMark={false}
-      className="api-wb-form"
+      className="api-wb-form flex flex-col"
       onValuesChange={(_changedValues, allValues) => {
         if (isCreatingCase) {
           setDraftCaseValues(allValues as ApiCaseFormValues)
@@ -99,14 +99,14 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
         updateCaseMutation.mutate(completeValues)
       }}
     >
-      <div className="api-wb-editor-head">
-        <div className="api-wb-case-head">
-          <div className="api-wb-case-name">
+      <div className="api-wb-editor-head flex-none border-b border-[var(--srf-divider)]">
+        <div className="api-wb-case-head flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+          <div className="api-wb-case-name flex min-w-0 flex-[1_1_320px] items-center gap-2.5">
             <Form.Item name="name" label="用例名称" className="api-wb-case-name-item" rules={[{ required: true, message: '请输入用例名称' }]}>
               <Input maxLength={120} placeholder="请输入用例名称" />
             </Form.Item>
           </div>
-          <div className="api-wb-case-meta">
+          <div className="api-wb-case-meta flex flex-wrap items-center gap-2.5 text-[11px] text-[var(--srf-text-muted)]">
             <span className="api-wb-case-meta-item">
               请求方式 <strong>{watchedMethod ?? editingCase?.method ?? '-'}</strong>
             </span>
@@ -122,8 +122,8 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
           </div>
         </div>
 
-        <div className={`api-wb-request tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
-          <div className="api-wb-request-bar">
+        <div className={`api-wb-request border-t border-[var(--srf-divider)] bg-[var(--srf-hover)] px-4 py-2.5 tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
+          <div className="api-wb-request-bar flex flex-wrap items-center gap-2">
             <Form.Item name="method" className="api-wb-method" rules={[{ required: true, message: '请选择请求方式' }]}>
               <Select options={methodOptions} classNames={{ popup: { root: `api-method-dropdown ${styles.scope}` } }} />
             </Form.Item>
@@ -196,7 +196,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 <InfoCircleOutlined className="api-wb-url-info" />
               </Tooltip>
             </div>
-            <div className="api-wb-request-actions">
+            <div className="api-wb-request-actions flex flex-wrap items-center gap-2">
               <Button
                 type="primary"
                 className="api-wb-send"
@@ -244,16 +244,16 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
               <>
                 <Form.List name="query">
                   {(fields, { remove }) => (
-                    <div className="api-wb-kv-block">
-                      <div className="api-wb-kv-toolbar">
+                    <div className="api-wb-kv-block flex flex-col gap-1.5">
+                      <div className="api-wb-kv-toolbar flex items-center justify-between text-[12px] text-[var(--srf-text)]">
                         <Text strong>Query 参数</Text>
                       </div>
                       {fields.map((field) => {
                         const { key: fieldKey, ...fieldProps } = field
 
                         return (
-                          <div key={fieldKey} className="api-wb-kv-row">
-                            <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-wb-kv-check">
+                          <div key={fieldKey} className="api-wb-kv-row grid grid-cols-[18px_minmax(0,1fr)_minmax(0,1fr)_32px] items-center gap-2">
+                            <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-wb-kv-check flex justify-center">
                               <Checkbox aria-label="启用该参数" />
                             </Form.Item>
                             <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-wb-kv-item">

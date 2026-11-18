@@ -7,8 +7,6 @@ import projectsOverviewStyles from '../styles/projects-overview.module.css'
 import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import { cx } from '@/shared/utils/cx'
-import styles from '../styles/project-settings.module.css'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -399,27 +397,27 @@ export function ProjectsPage() {
           <div className="workbench-tabs">
             {activeBoard === 'requirements' ? (
               <PageToolbar ariaLabel="需求列表标题" className="requirements-list-page-header"
-                title={<div className="requirements-list-heading">
-                  <span className="requirements-list-title-accent" aria-hidden="true"></span>
+                title={<div className="requirements-list-heading flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="requirements-list-title-accent h-[14px] w-[3px] flex-none rounded-[2px] bg-[var(--srf-accent)]" aria-hidden="true"></span>
                   <h1 className="tp-list-title">需求</h1>
-                  <span className="requirements-list-count">共 {listTotal(requirementsQuery.data)} 条</span>
+                  <span className="requirements-list-count whitespace-nowrap text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">共 {listTotal(requirementsQuery.data)} 条</span>
                 </div>}
-                actions={<div className="requirements-list-tools tp-refresh-actions">
+                actions={<div className="requirements-list-tools tp-refresh-actions ml-auto">
                   <ActionButton operation="refresh" loading={requirementsQuery.isFetching || sprintsQuery.isFetching} onClick={refreshRequirements}>刷新</ActionButton>
                   <ProjectActionButton action="write" type="primary" operation="create" disabled={!activeProjectId || !sprints.length} onClick={() => openRequirementDrawer()}>新建需求</ProjectActionButton>
                 </div>} />
             ) : null}
             {activeBoard === 'sprints' ? (
               <PageToolbar ariaLabel="迭代列表标题" className="sprint-board-page-header"
-                title={<div className="project-overview-summary">
+                title={<div className="project-overview-summary flex min-w-0 flex-1 items-center gap-3 max-narrow:max-w-full max-narrow:flex-wrap max-narrow:gap-x-3 max-narrow:gap-y-1 [&>.ant-space]:shrink-0">
                   <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{projectRoleLabel(accessProject) ? <Tag>{projectRoleLabel(accessProject)}</Tag> : null}</Space>
-                  <div className="project-overview-description">
+                  <div className="project-overview-description min-w-0">
                     <Text type="secondary" className="project-description-text" title={activeProject?.description || '暂无描述'}>
                       项目描述：{activeProject?.description || '暂无描述'}
                     </Text>
                   </div>
                 </div>}
-                actions={<div className="sprint-board-tools tp-refresh-actions">
+                actions={<div className="sprint-board-tools tp-refresh-actions ml-auto flex flex-wrap gap-2">
                   <ActionButton operation="refresh" loading={sprintsQuery.isFetching} onClick={() => { void sprintsQuery.refetch() }}>刷新</ActionButton>
                   <ProjectActionButton action="write" operation="create" type="primary" disabled={!activeProjectId} onClick={() => openSprintDrawer()}>新建迭代</ProjectActionButton>
                 </div>} />
@@ -435,15 +433,15 @@ export function ProjectsPage() {
                   const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
                   const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
                   const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
-                  return <Tooltip title={binding ? <div className="sprint-board-binding-tooltip">
+                  return <Tooltip title={binding ? <div className="sprint-board-binding-tooltip grid gap-0.5 text-[12px] leading-[18px] [&_span]:opacity-[0.68]">
                     <div>{remoteName || remoteId || '-'}</div>
                     <div><span>ID </span>{remoteId || '-'}</div>
                     <div><span>状态 </span>{statusText}</div>
                   </div> : undefined}>
-                    <span className={`sprint-board-binding-status${binding ? pending ? ' is-pending' : ' is-bound' : ''}`} tabIndex={binding ? 0 : undefined}>
+                    <span className={`sprint-board-binding-status inline-flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]${binding ? pending ? ' is-pending' : ' is-bound' : ''}`} tabIndex={binding ? 0 : undefined}>
                       <AppIcon name="zentao" size={13} />
                       <span>禅道 {binding ? pending ? '待确认' : '已绑定' : '未绑定'}</span>
-                      {binding && remoteName ? <><span className="sprint-board-binding-separator" aria-hidden="true">·</span><span className="sprint-board-binding-name" title={remoteName}>{remoteName}</span></> : null}
+                      {binding && remoteName ? <><span className="sprint-board-binding-separator text-[var(--srf-text-muted)] opacity-[0.55]" aria-hidden="true">·</span><span className="sprint-board-binding-name max-w-[100px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[var(--srf-text)]" title={remoteName}>{remoteName}</span></> : null}
                     </span>
                   </Tooltip>
                 }}
@@ -486,11 +484,11 @@ export function ProjectsPage() {
                     renderBinding={requirement => {
                       const binding = requirement.zentaoBinding
                       const pending = Boolean(binding?.status && binding.status !== 'active')
-                      const className = `requirements-binding-item${binding ? pending ? ' is-pending' : ' is-bound' : ''}`
+                      const className = `requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]${binding ? pending ? ' is-pending' : ' is-bound' : ''}`
                       const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
                       const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
                       const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
-                      return <Tooltip title={binding ? <div className="requirements-binding-tooltip">
+                      return <Tooltip title={binding ? <div className="requirements-binding-tooltip grid gap-0.5 text-[12px] leading-[18px] [&_span]:opacity-[0.68]">
                         <div>{remoteName || remoteId || '-'}</div>
                         <div><span>ID </span>{remoteId || '-'}</div>
                         <div><span>状态 </span>{statusText}</div>
@@ -508,28 +506,28 @@ export function ProjectsPage() {
         </>
       )}
 
-      <Drawer title="项目设置" className={cx('project-settings-drawer', styles.root)} size={480} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => closeProjectPanel()}>
+      <Drawer title="项目设置" className="project-settings-drawer" size={480} styles={{ body: { padding: 24 } }} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => closeProjectPanel()}>
         {activeProject && settingsProjectId === activeProjectId && can('manage') ? <>
           <Title level={5}>基本信息</Title>
           <Card size="small">
-            <div className="project-settings-row">
-              <div className="project-settings-copy"><Text type="secondary">项目名称</Text><div><Text strong>{activeProject.name}</Text></div></div>
-              <ProjectActionButton action="manage" operation="edit" onClick={() => { closeProjectPanel(); openProjectModal(activeProject) }}>编辑</ProjectActionButton>
+            <div className="project-settings-row flex items-center justify-between gap-4">
+              <div className="project-settings-copy min-w-0 [overflow-wrap:anywhere]"><Text type="secondary">项目名称</Text><div><Text strong>{activeProject.name}</Text></div></div>
+              <ProjectActionButton action="manage" operation="edit" className="shrink-0" onClick={() => { closeProjectPanel(); openProjectModal(activeProject) }}>编辑</ProjectActionButton>
             </div>
             <div style={{ marginTop: 12 }}><Text type="secondary">{activeProject.description || '暂无描述'}</Text></div>
           </Card>
           <Title level={5} style={{ marginTop: 24 }}>外部绑定</Title>
           <Card size="small">
-            <div className="project-settings-row">
+            <div className="project-settings-row flex items-center justify-between gap-4">
               <Space size={10}><AppIcon name="zentao" size={32} /><Text strong>禅道</Text></Space>
-              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { closeProjectPanel(); if (activeProjectId) openZentaoBinding({ targetType: 'project', resourceId: activeProjectId, depth: 'project', title: `绑定禅道项目 · ${activeProject.name}` }) }}>配置</ProjectActionButton>
+              <ProjectActionButton action="manage" icon={<LinkOutlined />} className="shrink-0" onClick={() => { closeProjectPanel(); if (activeProjectId) openZentaoBinding({ targetType: 'project', resourceId: activeProjectId, depth: 'project', title: `绑定禅道项目 · ${activeProject.name}` }) }}>配置</ProjectActionButton>
             </div>
             {activeProjectId ? <ZentaoBindingSummary targetType="project" resourceId={activeProjectId} variant="settings" /> : null}
           </Card>
           <Divider style={{ margin: '32px 0 20px' }} />
-          <div className="project-settings-row">
+          <div className="project-settings-row flex items-center justify-between gap-4">
             <Text type="secondary">项目操作</Text>
-            <ProjectActionButton action="manage" danger operation="delete" onClick={() => { closeProjectPanel(); if (activeProjectId) setDeleteProjectId(activeProjectId) }}>删除项目</ProjectActionButton>
+            <ProjectActionButton action="manage" danger operation="delete" className="shrink-0" onClick={() => { closeProjectPanel(); if (activeProjectId) setDeleteProjectId(activeProjectId) }}>删除项目</ProjectActionButton>
           </div>
         </> : null}
       </Drawer>

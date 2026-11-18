@@ -232,7 +232,7 @@ export function AddCasesFromLibraryModal({
       render: (_, item) => (
         <Tooltip title={`查看用例详情：${item.title}`}>
           <Typography.Link
-            className="add-cases-title-link"
+            className="add-cases-title-link max-w-full"
             onClick={(event) => {
               event.preventDefault()
               setDetailItem(item)
@@ -292,7 +292,7 @@ export function AddCasesFromLibraryModal({
         <Text type="secondary">
           已选择 {selectedCaseIds.length} 条用例，加入后会在测试单里生成执行条目并保存当前内容快照。
         </Text>
-        <div className="test-order-add-cases-filters">
+        <div className="test-order-add-cases-filters flex flex-wrap items-center gap-2.5">
           <div className="api-filter-field">
             <span className="api-filter-field-label">迭代</span>
             <Select
@@ -384,17 +384,17 @@ export function AddCasesFromLibraryModal({
         onCancel={() => setDetailItem(null)}
         destroyOnHidden
       >
-        <div className="add-cases-detail">
-          <div className="add-cases-detail-meta">
+        <div className="add-cases-detail flex max-w-[640px] flex-col gap-3">
+          <div className="add-cases-detail-meta flex flex-wrap items-center gap-2">
             {detailItem?.priority ? (
               <Tag color={priorityColor(detailItem.priority)}>{detailItem.priority}</Tag>
             ) : null}
             {detailItem?.caseType ? <Tag>{detailItem.caseType}</Tag> : null}
             <Text type="secondary">{detailScopeText || '-'}</Text>
           </div>
-          <div className="test-order-block">
+          <div className="test-order-block flex flex-col gap-1">
             <Text type="secondary">前置条件</Text>
-            <div className="test-order-preconditions">
+            <div className="test-order-preconditions text-[13px] leading-[1.7]">
               {detailContent.preconditions.length === 0
                 ? '暂无前置条件'
                 : detailContent.preconditions.map((item, index) => (
@@ -408,10 +408,10 @@ export function AddCasesFromLibraryModal({
             detailContent.steps.map((step, index) => (
               <div key={index} className="api-case-run-result-row test-order-step">
                 <div className="api-case-run-result-row-title">
-                  <span className="test-order-step-no">{index + 1}</span>
-                  <span className="test-order-step-action">{step.action}</span>
+                  <span className="test-order-step-no inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold">{index + 1}</span>
+                  <span className="test-order-step-action flex-1 text-[13px]">{step.action}</span>
                 </div>
-                <div className="test-order-step-expect">预期：{step.expected}</div>
+                <div className="test-order-step-expect mt-1.5 text-[12.5px]">预期：{step.expected}</div>
               </div>
             ))
           )}

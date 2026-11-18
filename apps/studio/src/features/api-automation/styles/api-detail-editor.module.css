@@ -15,70 +15,11 @@
 
 /* ===== 右栏：请求编辑与运行结果 ===== */
 
-.scope :global(.api-wb-editor-panel) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  overflow: hidden;
-}
-
-.scope :global(.api-wb-editor-shell) {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.scope :global(.api-wb-editor-main) {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.scope :global(.api-wb-editor-main-scroll) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  container-type: size;
-}
-
-.scope :global(.api-wb-form) {
-  display: flex;
-  flex-direction: column;
-}
-
 .scope :global(.api-wb-form .ant-form-item) {
   margin-bottom: 0;
 }
 
 /* 用例名称行：标签在左、只读元信息在右。 */
-.scope :global(.api-wb-editor-head) {
-  flex: 0 0 auto;
-  border-bottom: 1px solid var(--srf-divider);
-}
-
-.scope :global(.api-wb-case-head) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 16px;
-}
-
-.scope :global(.api-wb-case-name) {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1 1 320px;
-}
-
 /* 名称行的标签与输入框同排：设计稿里标签是左侧一枚弱化小字。
    antd 垂直布局默认把 label 与 control 叠成两行，这里把行改成横排。 */
 .scope :global(.api-wb-case-name-item) {
@@ -120,15 +61,6 @@
   font-weight: 600;
 }
 
-.scope :global(.api-wb-case-meta) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-}
-
 .scope :global(.api-wb-case-meta-item strong) {
   color: var(--srf-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -147,19 +79,6 @@
 }
 
 /* 请求地址条：方式（按请求方式着色）+ Base URL + 路径 + 发送 / 保存。 */
-.scope :global(.api-wb-request) {
-  padding: 10px 16px;
-  border-top: 1px solid var(--srf-divider);
-  background: var(--srf-hover);
-}
-
-.scope :global(.api-wb-request-bar) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 .scope :global(.api-wb-method) {
   flex: 0 0 auto;
   width: 110px;
@@ -268,13 +187,6 @@
   cursor: help;
 }
 
-.scope :global(.api-wb-request-actions) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 /* ===== 请求配置页签 ===== */
 
 .scope :global(.api-wb-tabs) {
@@ -333,32 +245,6 @@
 
 /* ===== 键值行（Query 参数 / 请求头） ===== */
 
-.scope :global(.api-wb-kv-block) {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.scope :global(.api-wb-kv-toolbar) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--srf-text);
-  font-size: 12px;
-}
-
-.scope :global(.api-wb-kv-row) {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 32px;
-  align-items: center;
-  gap: 8px;
-}
-
-.scope :global(.api-wb-kv-check) {
-  display: flex;
-  justify-content: center;
-}
-
 .scope :global(.api-wb-kv-item .ant-input) {
   background: var(--srf-hover);
   border-color: var(--srf-card-border);
@@ -403,47 +289,6 @@
   background: var(--srf-accent);
 }
 
-.scope :global(.api-wb-console-pane) {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.scope :global(.api-wb-console-scroll) {
-  flex: 1 1 auto;
-  min-height: 0;
-  /* 控制台整体不滚：状态横幅、页签条与底部断言条各占一行，只有内容区滚动。 */
-  overflow: hidden;
-}
-
-.scope :global(.api-wb-console) {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  background: var(--srf-hover);
-}
-
-.scope :global(.api-wb-console-banner) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--srf-divider);
-  background: var(--srf-card);
-}
-
-.scope :global(.api-wb-console-banner-main) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 .scope :global(.api-wb-console-title) {
   color: var(--srf-text);
   font-size: 12px;
@@ -471,15 +316,6 @@
   background: currentColor;
 }
 
-.scope :global(.api-wb-console-meta) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-}
-
 .scope :global(.api-wb-console-meta strong) {
   color: var(--srf-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -499,16 +335,6 @@
 
 .scope :global(.api-wb-console-alert) {
   margin: 10px 16px 0;
-}
-
-.scope :global(.api-wb-console-tabs) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--srf-divider);
-  background: var(--srf-card);
 }
 
 .scope :global(.api-wb-console-tab) {
@@ -545,29 +371,12 @@
   line-height: 16px;
 }
 
-.scope :global(.api-wb-console-body) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 12px 16px;
-}
-
 .scope :global(.api-wb-console-body > .api-case-run-result-pre),
 .scope :global(.api-wb-console-body > .ant-empty),
 .scope :global(.api-wb-console-body > .api-case-run-result-subsection) {
   margin: 0;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-control);
-  background: var(--srf-card);
-}
-
-.scope :global(.api-wb-console-foot) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 16px;
-  border-top: 1px solid var(--srf-divider);
   background: var(--srf-card);
 }
 

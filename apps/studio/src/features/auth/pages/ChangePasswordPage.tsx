@@ -7,7 +7,6 @@ import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import profileStyles from '@/features/profile/styles/profile-settings.module.css'
-import changePasswordStyles from '../styles/change-password.module.css'
 
 const { Title, Paragraph } = Typography
 
@@ -32,23 +31,23 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <main className={`profile-settings profile-settings-change-password ${profileStyles.root} ${changePasswordStyles.root}`}>
-      <div className="profile-settings-container">
-        <header className="profile-settings-heading">
-          <Title level={2}>{forced ? '首次登录请修改密码' : '修改密码'}</Title>
+    <main className={`profile-settings profile-settings-change-password ${profileStyles.root} min-h-[calc(100dvh_-_64px)] px-[var(--app-page-gutter)] pt-12 pb-16 max-narrow-md:pt-8 max-narrow-md:pb-8 max-narrow-sm:pt-6 max-narrow-sm:pb-10`}>
+      <div className="profile-settings-container mx-auto max-w-[720px]">
+        <header className="profile-settings-heading mb-7">
+          <Title level={2} className="m-0 text-[30px] [font-weight:650] max-narrow-sm:text-[26px]">{forced ? '首次登录请修改密码' : '修改密码'}</Title>
           <Paragraph type="secondary">
             {forced
               ? '系统管理员账号首次登录必须修改初始密码，修改成功后需要重新登录。'
               : '修改成功后所有已登录会话都会失效，需要使用新密码重新登录。'}
           </Paragraph>
         </header>
-        <div className="profile-settings-grid">
+        <div className="profile-settings-grid grid grid-cols-1 gap-6 max-narrow-md:gap-5">
           <section className="profile-settings-panel" aria-labelledby="change-password-heading">
-            <header className="profile-settings-panel-heading">
-              <Title level={3} id="change-password-heading">密码</Title>
-              <Paragraph type="secondary">新密码至少 10 个字符，不能与当前密码相同。</Paragraph>
+            <header className="profile-settings-panel-heading mx-8 border-b pt-7 pb-6 max-narrow-md:mx-6">
+              <Title level={3} id="change-password-heading" className="mt-0 mb-2.5 text-[24px]">密码</Title>
+              <Paragraph type="secondary" className="m-0 leading-[1.7]">新密码至少 10 个字符，不能与当前密码相同。</Paragraph>
             </header>
-            {mutation.error ? <Alert className="profile-settings-error" showIcon type="error" title={getErrorMessage(mutation.error)} /> : null}
+            {mutation.error ? <Alert className="profile-settings-error mx-8 mt-5" showIcon type="error" title={getErrorMessage(mutation.error)} /> : null}
             <Form
               form={form}
               layout="vertical"
@@ -56,7 +55,7 @@ export function ChangePasswordPage() {
               requiredMark={false}
               className="profile-settings-form"
             >
-              <div className="profile-settings-fields">
+              <div className="profile-settings-fields px-8 pt-[26px] pb-2 max-narrow-md:px-6">
                 <Form.Item name="oldPassword" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
                   <Input.Password placeholder="请输入当前密码" autoComplete="current-password" prefix={<LockOutlined />} />
                 </Form.Item>
@@ -80,7 +79,7 @@ export function ChangePasswordPage() {
                   <Input.Password placeholder="请再次输入新密码" autoComplete="new-password" prefix={<LockOutlined />} />
                 </Form.Item>
               </div>
-              <div className="profile-settings-actions">
+              <div className="profile-settings-actions flex justify-end gap-3 px-8 py-5 max-narrow-md:px-6 max-narrow-sm:flex-wrap">
                 <Button type="primary" htmlType="submit" loading={mutation.isPending}>修改密码并重新登录</Button>
               </div>
             </Form>

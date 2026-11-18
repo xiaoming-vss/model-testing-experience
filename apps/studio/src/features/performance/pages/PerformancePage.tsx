@@ -234,7 +234,7 @@ export function PerformancePage() {
                     />
                   </div>
                 </div>
-                <div className="api-test-search-field">
+                <div className="api-test-search-field w-72 min-w-[240px] max-w-full">
                   <Input
                     className="api-filter-input api-test-search-input"
                     allowClear

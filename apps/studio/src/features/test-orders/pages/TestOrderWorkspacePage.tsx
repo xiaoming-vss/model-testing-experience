@@ -363,7 +363,7 @@ export function TestOrderWorkspacePage() {
 
   return (
     <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root} ${workspaceListStyles.root} ${verdictStyles.root}`}>
-      <div className="api-automation-content">
+      <div className="api-automation-content gap-3">
         <div className="page-frame test-order-workspace tp-board">
           {orderQuery.error ? (
             <Alert showIcon type="error" title={getErrorMessage(orderQuery.error)} />
@@ -372,8 +372,8 @@ export function TestOrderWorkspacePage() {
             <Alert showIcon type="error" title={getErrorMessage(entriesQuery.error)} />
           ) : null}
 
-          {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} toolbar={workspaceView === 'graph' ? workspaceToolbar : undefined} /></div>}
-          <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-execution-view" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
+          {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph flex min-h-0 min-w-0 flex-1 overflow-hidden [&>.test-order-graph-viewer]:min-h-0 [&>.test-order-graph-viewer]:min-w-0 [&>.test-order-graph-viewer]:flex-1" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} toolbar={workspaceView === 'graph' ? workspaceToolbar : undefined} /></div>}
+          <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-execution-view flex min-h-0 min-w-0 flex-auto flex-col" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
             <div className="test-order-list-view" hidden={Boolean(selectedEntryId)}>
               <TestOrderEntryList
                 toolbar={workspaceView === 'execution' && !selectedEntryId ? workspaceToolbar : null}
@@ -421,7 +421,7 @@ export function TestOrderWorkspacePage() {
                 onNext={() => void moveDetail(1)}
               />
 
-              <div className="test-order-detail-stage">
+              <div className="test-order-detail-stage relative flex min-h-0 min-w-0 flex-auto flex-col">
                 {!detailNarrowNav ? <>
                   <Tooltip title="上一条（↑）" placement="right">
                     <Button
@@ -444,8 +444,8 @@ export function TestOrderWorkspacePage() {
                     />
                   </Tooltip>
                 </> : null}
-                <div className="test-order-editor-body test-order-detail-body">
-                  <div className="test-order-detail-inner">
+                <div className="test-order-editor-body test-order-detail-body flex min-h-0 flex-auto flex-col overflow-auto gap-0 p-0">
+                  <div className="test-order-detail-inner mx-auto w-full max-w-[1200px] pb-6 max-narrow:max-w-none">
                     {entryView ? <TestOrderCaseSummary
                       entry={entryView}
                       assigneeName={personName(entryView.assigneeUserId)}
@@ -453,10 +453,10 @@ export function TestOrderWorkspacePage() {
                       lockedByAssignee={lockedByAssignee}
                     /> : null}
                     {detailReady && selected ? <CaseVisualizationPanel key={`${orderId}:${selected.entryId}`} orderId={orderId!} entryId={selected.entryId!} projectId={order?.projectId} snapshot={selected.snapshot} caseTitle={selected.caseTitle} canGenerate={can('execute')} preferredMode={visualizationMode} onMode={setVisualizationMode} />
-                      : detailQuery.error ? <div className="test-order-case-content-status">
+                      : detailQuery.error ? <div className="test-order-case-content-status flex items-center gap-2.5 p-6 text-[12px] text-[var(--srf-text-muted)]">
                         <Alert showIcon type="error" title={getErrorMessage(detailQuery.error)} action={<Button onClick={() => void detailQuery.refetch()}>重试</Button>} />
                       </div>
-                      : <div className="test-order-case-content-status" role="status" aria-live="polite">
+                      : <div className="test-order-case-content-status flex items-center gap-2.5 p-6 text-[12px] text-[var(--srf-text-muted)]" role="status" aria-live="polite">
                         <Spin size="small" /><span>加载执行详情…</span>
                       </div>}
                   </div>
@@ -464,8 +464,8 @@ export function TestOrderWorkspacePage() {
               </div>
 
               <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
-                <div className="test-order-execution-actions">
-                  <span className="test-order-verdict-title">执行判定结果</span>
+                <div className="test-order-execution-actions flex flex-wrap items-center justify-end gap-3">
+                  <span className="test-order-verdict-title flex items-baseline justify-between gap-2 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">执行判定结果</span>
                   <TestOrderVerdictButtons
                     status={entryView?.status}
                     disabled={!canJudge || saveMutation.isPending}
@@ -474,7 +474,7 @@ export function TestOrderWorkspacePage() {
                     onJudge={(status) => save({ status })}
                   />
                   {detailReady && selected?.status === 'failed' ? (
-                    <div className="test-order-defect-controls">
+                    <div className="test-order-defect-controls flex min-w-0 flex-none items-center">
                       <ProjectActionButton
                         action="write"
                         size="small"
@@ -502,13 +502,13 @@ export function TestOrderWorkspacePage() {
                   ) : null}
                 </div>
                 {detailReady && selected && (selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0) ? (
-                  <div className="test-order-defect-section">
+                  <div className="test-order-defect-section flex flex-col gap-2">
                     {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
-                      <div className="test-order-linked-bugs">
+                      <div className="test-order-linked-bugs flex flex-wrap gap-2">
                         {listItems(linkedBugsQuery.data).map((bug) => (
                           <a
                             key={bug.bugId}
-                            className="test-order-linked-bug-chip"
+                            className="test-order-linked-bug-chip text-[var(--srf-accent)] [overflow-wrap:anywhere]"
                             href={`/bugs/${bug.bugId}`}
                             onClick={(event) => {
                               event.preventDefault()
@@ -538,7 +538,7 @@ export function TestOrderWorkspacePage() {
                     ) : null}
                   </div>
                 ) : null}
-                <footer className="test-order-execution-footer" aria-label="用例执行操作">
+                <footer className="test-order-execution-footer mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--srf-divider)] pt-2.5" aria-label="用例执行操作">
                   <Tooltip
                     title={`快捷键：${TEST_ORDER_VERDICTS.map(({ key, label }) => `${key} ${label}`).join(' · ')}；↑ 上一条，↓ 下一条`}
                     trigger={['hover', 'focus']}
@@ -548,7 +548,7 @@ export function TestOrderWorkspacePage() {
                       icon={<QuestionCircleOutlined />} />
                   </Tooltip>
                   <Checkbox
-                    className="test-order-autoadvance"
+                    className="test-order-autoadvance w-full text-[11px] text-[var(--srf-text-secondary)]"
                     checked={autoAdvance}
                     onChange={(event) => setAutoAdvance(event.target.checked)}
                   >
@@ -556,14 +556,14 @@ export function TestOrderWorkspacePage() {
                   </Checkbox>
                   {saveStateText ? (
                     <Text
-                      className="test-order-save-state"
+                      className="test-order-save-state text-[11px] text-[var(--srf-text-muted)]"
                       type={saveMutation.isError ? 'danger' : 'secondary'}
                     >
                       {saveStateText}
                     </Text>
                   ) : null}
                 </footer>
-                <Text className="test-order-entry-position" type="secondary">
+                <Text className="test-order-entry-position tabular-nums text-[11px] text-[var(--srf-text-secondary)]" type="secondary">
                   {detailPosition}
                 </Text>
               </section>

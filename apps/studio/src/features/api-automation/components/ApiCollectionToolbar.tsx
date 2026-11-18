@@ -37,8 +37,8 @@ export function ApiCollectionToolbar({
   onRunCollection,
 }: Props) {
   return (
-    <div className="api-wb-toolbar">
-      <div className="api-wb-toolbar-main">
+    <div className="api-wb-toolbar flex flex-none flex-wrap items-center justify-between gap-2.5 px-4 py-2.5">
+      <div className="api-wb-toolbar-main flex min-w-0 flex-wrap items-center gap-2.5">
         <Button
           type="text"
           className="api-wb-toolbar-back"
@@ -47,7 +47,7 @@ export function ApiCollectionToolbar({
           title="返回API测试集列表"
           onClick={onBack}
         />
-        <h1 className="api-wb-toolbar-title">
+        <h1 className="api-wb-toolbar-title m-0 flex min-w-0 flex-wrap items-baseline gap-1.5 text-[14px] font-bold leading-[22px] text-[var(--srf-text)]">
           <span className="api-wb-toolbar-label">Collection 详情:</span>
           <span className="api-wb-toolbar-name">{collectionName}</span>
           <span className="api-wb-toolbar-path">/ {requirementName} / {sprintName}</span>
@@ -62,7 +62,7 @@ export function ApiCollectionToolbar({
         <span className="api-wb-toolbar-updated">更新 {updatedAt}</span>
       </div>
 
-      <div className="api-wb-toolbar-actions">
+      <div className="api-wb-toolbar-actions flex flex-wrap items-center gap-2">
         <Button className="api-wb-toolbar-history" icon={<HistoryOutlined />} onClick={onOpenRunHistory}>
           运行记录{runHistoryCount > 0 ? ` (${runHistoryCount})` : ''}
         </Button>

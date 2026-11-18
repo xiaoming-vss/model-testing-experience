@@ -937,7 +937,7 @@ export function ApiCollectionDetailPage() {
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
     <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface ${shellStyles.scope} ${editorStyles.scope} ${requestStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
       <div className="api-automation-content">
-        <div className="page-frame api-collection-workbench tp-board">
+        <div className="page-frame api-collection-workbench tp-board min-h-0 flex-auto">
           {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}
           {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
           {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}
@@ -960,7 +960,7 @@ export function ApiCollectionDetailPage() {
             onRunCollection={handleRunCollection}
           />
 
-          <div className="api-wb-cols">
+          <div className="api-wb-cols grid min-h-0 flex-auto grid-cols-[var(--app-sidebar-width)_minmax(0,1fr)] items-stretch gap-3 max-[1180.01px]:grid-cols-1 max-[1180.01px]:grid-rows-[minmax(180px,460px)_minmax(400px,1fr)] max-[1180.01px]:overflow-y-auto">
             <ApiCaseExplorer
               cases={sidebarCases}
               selectedCaseId={selectedCaseId}
@@ -980,10 +980,10 @@ export function ApiCollectionDetailPage() {
               onDragEnd={handleCaseDragEnd}
             />
 
-            <section className="api-wb-editor-panel">
-              <div className="api-wb-editor-shell" ref={editorLayoutRef}>
-                <div className="api-wb-editor-main" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
-                  <div className="api-wb-editor-main-scroll">
+            <section className="api-wb-editor-panel flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
+              <div className="api-wb-editor-shell flex min-h-0 flex-auto flex-col" ref={editorLayoutRef}>
+                <div className="api-wb-editor-main flex min-h-0 flex-auto flex-col" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
+                  <div className="api-wb-editor-main-scroll min-h-0 flex-auto overflow-auto [container-type:size]">
                     <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} ensureQueryTrailingRow={ensureQueryTrailingRow} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
                   </div>
                 </div>
@@ -999,8 +999,8 @@ export function ApiCollectionDetailPage() {
                       <span className="api-wb-splitter-line" />
                       <span className="api-wb-splitter-grip">⋯</span>
                     </div>
-                    <div className="api-wb-console-pane">
-                      <div className="api-wb-console-scroll">
+                    <div className="api-wb-console-pane flex min-h-0 flex-auto flex-col">
+                      <div className="api-wb-console-scroll min-h-0 flex-auto overflow-hidden">
                         <ApiCaseRunConsole
                           result={runResult}
                           canStop={can('execute')}

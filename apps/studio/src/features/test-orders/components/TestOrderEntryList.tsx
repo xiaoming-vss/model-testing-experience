@@ -201,7 +201,7 @@ export function TestOrderEntryList({
       render: (_, entry) => {
         const title = entry.caseTitle || '未命名用例'
         return (
-          <div className="tp-list-name test-order-entry-name-cell" title={title}>
+          <div className="tp-list-name test-order-entry-name-cell flex min-w-0 items-center gap-2" title={title}>
             <Text className="test-order-entry-name" ellipsis>{title}</Text>
           </div>
         )
@@ -272,9 +272,9 @@ export function TestOrderEntryList({
       title: '',
       key: 'actions',
       width: 56,
-      className: 'test-order-entry-actions-cell',
+      className: 'test-order-entry-actions-cell text-right',
       render: (_, entry) => canWrite ? (
-        <span className="test-order-entry-actions" onClick={(event) => event.stopPropagation()}>
+        <span className="test-order-entry-actions flex w-full items-center justify-end" onClick={(event) => event.stopPropagation()}>
           <Popconfirm
             title="确认移除该执行条目？"
             description="移除后条目及其结果不再保留，用例本身不受影响。"
@@ -326,10 +326,10 @@ export function TestOrderEntryList({
         />
       </div>
 
-      {checkedCount > 0 ? <div className="test-order-entry-batch" role="region" aria-label="已选条目的批量操作">
+      {checkedCount > 0 ? <div className="test-order-entry-batch flex flex-none flex-wrap items-center gap-2.5 border-t border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] px-4 py-2 text-[12px] text-[var(--srf-accent-strong)]" role="region" aria-label="已选条目的批量操作">
         <span className="test-order-entry-batch-count">已选 {checkedCount} 条</span>
         <span className="test-order-entry-batch-note">支持跨页选择</span>
-        <div className="test-order-entry-batch-actions">
+        <div className="test-order-entry-batch-actions flex flex-wrap items-center gap-2 ml-auto max-[1100.01px]:ml-0 max-[1100.01px]:w-full">
           {canExecute && orderId ? <VisualizationBatchButton
             key={orderId}
             orderId={orderId}

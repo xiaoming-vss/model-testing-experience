@@ -1,65 +1,16 @@
-/* 加入用例弹窗：执行条目快照、筛选行、用例预览与步骤快照（阶段 10 迁移）。
- * Modal 通过 rootClassName 携带本 Module 的 `.root`。 */
-.root :global(.test-order-block) {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+/* 加入用例弹窗：只保留文字与步骤圆点的皮肤；
+   布局、间距与排版由 AddCasesFromLibraryModal 的 Tailwind utility 负责。 */
 .root :global(.test-order-preconditions) {
   color: var(--tp-text-secondary, var(--app-shell-text-secondary));
-  font-size: 13px;
-  line-height: 1.7;
 }
 
 .root :global(.test-order-step-no) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
   background: var(--app-glass-table-divider);
   color: var(--tp-text-secondary, var(--app-shell-text-secondary));
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.root :global(.test-order-step-action) {
-  flex: 1;
-  font-size: 13px;
 }
 
 .root :global(.test-order-step-expect) {
-  margin-top: 6px;
   color: var(--tp-text-muted, var(--app-shell-text-muted));
-  font-size: 12.5px;
-}
-
-/* 加入用例弹窗：筛选行与用例详情预览 */
-.root :global(.test-order-add-cases-filters) {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.root :global(.add-cases-title-link) {
-  max-width: 100%;
-}
-
-.root :global(.add-cases-detail) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 640px;
-}
-
-.root :global(.add-cases-detail-meta) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .root :global(.add-cases-detail-meta) :global(.ant-tag) {

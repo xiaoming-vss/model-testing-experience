@@ -74,7 +74,7 @@ function TestOrderGraphExecutionContent({ orderId, entry, canExecute, currentUse
     {!canJudge ? <Alert type="info" showIcon title={locked ? '该用例已分配给其他执行人，仅执行人或项目所有者可修改' : '当前仅可查看，没有执行权限'} /> : null}
     <strong>执行判定结果</strong>
     <TestOrderVerdictButtons status={entry.status} disabled={!canJudge || mutation.isPending} onJudge={(value) => save({ status: value })} />
-    <div className="test-order-defect-section">
+    <div className="test-order-defect-section flex flex-col gap-2">
       {hasReason ? <label>
         {entry.status === 'blocked' ? '阻塞原因' : '失败原因'}
         <Input.TextArea

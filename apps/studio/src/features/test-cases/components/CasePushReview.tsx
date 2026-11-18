@@ -12,7 +12,7 @@ export function CasePushReview({ item, owner, busy, onConfirm, onClose }: {
   const [remoteId, setRemoteId] = useState<number | null>(item.operation?.remoteCaseId || null)
   const [reason, setReason] = useState('')
   const [confirmed, setConfirmed] = useState(false)
-  return <section className="case-push-review" aria-label="核对未决推送">
+  return <section className="case-push-review py-4" aria-label="核对未决推送">
     <Typography.Title level={5}>核对：{item.title}</Typography.Title>
     <Alert showIcon type="warning" title="请先在禅道核对原操作" description="系统会检查远端归属和完整内容。在途写入需等待核对窗口，核对不会重新发送用例。" />
     <Form layout="vertical">

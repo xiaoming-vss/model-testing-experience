@@ -1,5 +1,5 @@
 {
-  "important": 262,
+  "important": 253,
   "importantByFile": {
     "src/app/styles/action-buttons.css": 15,
     "src/app/styles/antd-overrides.css": 27,
@@ -22,7 +22,7 @@
     "src/features/interface-library/styles/interface-editor.module.css": 2,
     "src/features/projects/styles/projects-overview.module.css": 8,
     "src/features/projects/styles/sprint-dashboard.module.css": 6,
-    "src/features/projects/styles/sprint-overview.module.css": 12,
+    "src/features/projects/styles/sprint-overview.module.css": 3,
     "src/features/requirements/styles/document-preview.module.css": 2,
     "src/features/test-cases/styles/case-editor.module.css": 24,
     "src/features/test-cases/styles/case-library.module.css": 1,

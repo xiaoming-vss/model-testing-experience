@@ -3,7 +3,7 @@
 .scope { --ai-generation-canvas-scope: 1; }
 
 /* 需求生成画布：布局独立，配色沿用平台语义 token。 */
-.scope :global(.gc-canvas-panorama) { gap: 12px; padding: 0; overflow: hidden; background: transparent; background-image: none; }
+.scope :global(.gc-canvas-panorama) { background: transparent; background-image: none; }
 .scope :global(.gc-canvas-workspace) { display: flex; flex: 1 1 auto; gap: 12px; min-height: 0; min-width: 0; }
 .scope :global(.gc-canvas-frame) { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .scope :global(.gc-canvas-frame) { overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-bg); }

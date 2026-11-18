@@ -1,9 +1,10 @@
 /*
  * Tailwind v4 入口：只做布局/间距/排版 utility。
  * 颜色只暴露已登记的语义 token，默认色盘被禁用；复杂皮肤仍在 CSS Modules。
- * Ant Design 通过 StyleProvider layer 注入 @layer antd，utilities 位于其后。
+ * Ant Design 通过 StyleProvider layer 注入 @layer antd；AntD reset 单独进入 reset layer，
+ * 保持它压过组件库默认样式、但让 utilities 能覆盖它的既有优先级。
  */
-@layer theme, base, antd, components, utilities;
+@layer theme, base, antd, reset, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
@@ -17,6 +18,9 @@
 
   /* 旧页面 CSS 的 max-width: 900px；max-narrow 在正好 900px 时仍命中。 */
   --breakpoint-narrow: 900.01px;
+  /* 个人设置/修改密码的 1000px 与 760px 旧断点；+0.01 保证边界仍命中。 */
+  --breakpoint-narrow-md: 1000.01px;
+  --breakpoint-narrow-sm: 760.01px;
 
   --color-*: initial;
 

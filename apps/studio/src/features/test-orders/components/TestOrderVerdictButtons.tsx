@@ -10,7 +10,7 @@ type Props = {
 
 export function TestOrderVerdictButtons({ status, disabled, showShortcuts = false, reverseOrder = false, onJudge }: Props) {
   const verdicts = reverseOrder ? [...TEST_ORDER_VERDICTS].reverse() : TEST_ORDER_VERDICTS
-  return <div className="test-order-verdict-grid">
+  return <div className="test-order-verdict-grid grid grid-cols-2 gap-2">
     {verdicts.map((option) => <button
       key={option.value}
       type="button"

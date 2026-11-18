@@ -1,44 +1,15 @@
-/* 测试单执行判定、缺陷关联与底部操作条；工作台与图谱执行面板共用（阶段 10 迁移）。
- * 两个入口根节点都挂本 Module 的 `.root`，判定按钮与缺陷区块在两侧保持一致。
- * token 见 shared/styles/surface-tokens.css。 */
+/* 测试单执行判定、缺陷关联与底部操作条；工作台与图谱执行面板共用（阶段 10 迁移，
+ * 阶段 17 收缩）。判定按钮/缺陷区块在两侧保持一致，这里保留色调、选中态、快捷键键帽
+ * 与底部操作条的网格契约；通用排版由组件 Tailwind utility 负责。
+ * 两个入口根节点都挂本 Module 的 `.root`。token 见 shared/styles/surface-tokens.css。 */
 
 /* ===== 执行判定与缺陷 ===== */
-
-.root :global(.test-order-verdict-panel) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  min-width: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 12px;
-  background: var(--srf-card);
-  overflow: auto;
-  padding: 12px;
-}
-
-.root :global(.test-order-verdict-title) {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--srf-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 700;
-}
 
 .root :global(.test-order-shortcut-help) {
   color: var(--srf-text-muted);
 }
 
 /* 四个判定按钮：两列表格，各自带色调。 */
-.root :global(.test-order-verdict-grid) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .root :global(.test-order-judge-btn) {
   display: flex;
   align-items: center;
@@ -87,85 +58,6 @@
   text-align: center;
 }
 
-.root :global(.test-order-defect-section) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.root :global(.test-order-defect-head) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--srf-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 700;
-}
-
-.root :global(.test-order-defect-card) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-hover);
-}
-
-.root :global(.test-order-defect-id) {
-  flex: 0 0 auto;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--srf-chip);
-  color: var(--srf-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  line-height: 16px;
-}
-
-.root :global(.test-order-defect-untie):global(.ant-btn) {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding-inline: 4px;
-  font-size: 11px;
-}
-
-.root :global(.test-order-defect-hint) {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 16px;
-}
-
-/* 条目位置与保存状态贴底。 */
-.root :global(.test-order-execution-footer) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--srf-divider);
-}
-
-.root :global(.test-order-entry-position) {
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.root :global(.test-order-autoadvance) {
-  width: 100%;
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-}
-
-.root :global(.test-order-save-state) {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-}
-
 /* 工作台底部操作条：在详情滚动区域之外，不影响图谱的两列判定按钮。 */
 .root :global(.test-order-execution-bar) {
   display: grid;
@@ -178,15 +70,6 @@
   padding: 14px 20px;
   border-top: 1px solid var(--srf-card-border);
   background: var(--srf-card);
-}
-
-.root :global(.test-order-execution-actions) {
-  grid-area: actions;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
 }
 
 .root :global(.test-order-execution-actions) :global(.test-order-verdict-title) {
@@ -207,32 +90,14 @@
   border-radius: var(--srf-radius-control);
 }
 
-.root :global(.test-order-defect-controls) {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
 .root :global(.test-order-defect-controls) :global(.ant-btn) {
   flex: 0 0 auto;
-}
-
-.root :global(.test-order-linked-bugs) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .root :global(.test-order-execution-bar) :global(.test-order-defect-section) {
   grid-column: 1 / -1;
   max-height: min(20vh, 180px);
   overflow: auto;
-}
-
-.root :global(.test-order-linked-bug-chip) {
-  color: var(--srf-accent);
-  overflow-wrap: anywhere;
 }
 
 .root :global(.test-order-execution-bar) :global(.test-order-execution-footer) {
@@ -257,7 +122,6 @@
 .root :global(.test-order-execution-bar) :global(.test-order-autoadvance) > span:last-child {
   font-size: 11px;
 }
-
 
 .root :global(.test-order-judge-btn):focus-visible {
   outline: 2px solid var(--srf-tone-text, var(--srf-accent));

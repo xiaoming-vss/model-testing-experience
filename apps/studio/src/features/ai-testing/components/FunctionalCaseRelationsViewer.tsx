@@ -92,7 +92,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
             </>
           ) : null}
           {activeTab === 'json' ? <div className="ai-relations-json-actions" ref={setJsonToolbar} /> : null}
-          {activeTab === 'graph' ? <span className="ai-relations-page-legend">
+          {activeTab === 'graph' ? <span className="ai-relations-page-legend ml-1 inline-flex items-center gap-3.5 text-[12px] text-[var(--ant-color-text-secondary)]">
             <span className="legend-item"><i className="legend-line solid" aria-hidden />主线 / 后续</span>
             <span className="legend-item"><i className="legend-line dashed" aria-hidden />分支</span>
           </span> : null}
@@ -106,31 +106,31 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
 
   return (
     <ProjectAccessScope resourceError={taskQuery.error} projectId={taskQuery.data?.projectId ?? ''}>
-      <div className={`ai-relations-page${embedded ? " is-embedded" : ""}`}>
+      <div className={`ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-[var(--ant-color-bg-layout)]${embedded ? " is-embedded" : ""}`}>
         {sidebarTools}
-        {!embedded ? <div className="ai-relations-page-bar">
+        {!embedded ? <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2.5 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-[9px]">
           {onBack ? (
             <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={onBack}>返回任务</Button>
           ) : null}
-          <div className="ai-relations-page-heading">
+          <div className="ai-relations-page-heading flex min-w-0 flex-col gap-px">
             <span className="t1">{taskQuery.data?.name || '功能测试用例生成'} · 用例图谱</span>
             <span className="t2">
               {stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线 · ` : ''}
               运行 {runId ? runId.slice(0, 8) : '-'}
             </span>
           </div>
-          <span className="ai-relations-page-spacer" />
+          <span className="ai-relations-page-spacer min-w-2 flex-1" />
           {tools}
         </div> : null}
 
         {failed ? <Alert type="error" showIcon title={run?.status === 'canceled' ? '图谱生成已取消' : '图谱生成失败'} description={run?.errorMessage || '本次图谱未生成成功，请重试。'} /> : null}
-        <div ref={viewRef} className="ai-relations-page-body">
+        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 [&>*]:min-w-0 [&>*]:flex-1">
           {loading ? (
-            <div className="ai-relations-page-loading"><Spin /></div>
+            <div className="ai-relations-page-loading flex items-center justify-center"><Spin /></div>
           ) : runQuery.error ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载失败，请返回任务页重试" />
           ) : !relationsContent ? (
-            generating ? <div className="ai-relations-page-loading"><Spin /></div>
+            generating ? <div className="ai-relations-page-loading flex items-center justify-center"><Spin /></div>
               : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={failed ? '本次未产生图谱，可重新生成' : '当前运行尚未生成用例图谱'} />
           ) : activeTab === 'graph' ? (
             <FunctionalCaseRelationsGraph
@@ -142,7 +142,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
               onSelectionChange={handleSelectionChange}
             />
           ) : (
-            <div className="ai-relations-page-json">
+            <div className="ai-relations-page-json h-full min-h-0 overflow-hidden">
               {relationsContent ? (
                 <JsonEditor value={relationsContent} readOnly foldable minHeight={0} toolbarContainer={jsonToolbar} downloadFileName={`case-relations-${runId}.json`} />
               ) : (

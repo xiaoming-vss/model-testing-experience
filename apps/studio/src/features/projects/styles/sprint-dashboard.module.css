@@ -1,54 +1,12 @@
-/* Sprint 详情页指标、图表、报告弹窗与响应式（阶段 12 迁移）。 */
-/* SprintDetailPage 看板指标、图表、报告与响应式；与 sprint-overview.css 按导入顺序叠加。 */
-
-/* 功能测试没有平台执行记录时，说明文字占满其余指标列，避免挤在“总数”列里折行。 */
-.root :global(.sprint-dashboard-test-empty) {
-  grid-column: 2 / -1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--app-shell-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.root :global(.sprint-dashboard-progress) {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.root :global(.sprint-dashboard-progress-meta) {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  color: var(--app-text-caption);
-  font-size: 12px;
-  line-height: 16px;
-}
+/* Sprint 详情页图表、指标与报告皮肤（阶段 12 迁移，阶段 17 收缩）。
+ * 看板网格、工具栏、卡片排版与断点已迁到 SprintDetailPage 的 Tailwind utility；
+ * 这里保留图表色块、Recharts/AntD 深层结构、报告 Markdown 排版与 macOS 表面。 */
 
 .root :global(.sprint-dashboard-progress-meta) strong {
   color: var(--app-text-strong);
 }
 
-.root :global(.sprint-dashboard-progress-track),
-.root :global(.sprint-dashboard-severity-track) {
-  display: block;
-  width: 100%;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--app-progress-track);
-}
-
-.root :global(.sprint-dashboard-progress-fill),
-.root :global(.sprint-dashboard-severity-fill) {
-  display: block;
-  height: 100%;
-  min-width: 4px;
-  border-radius: inherit;
+.root :global(.sprint-dashboard-progress-fill) {
   background: var(--progress-color, var(--app-accent));
 }
 
@@ -56,91 +14,10 @@
   background: var(--severity-color, var(--app-accent));
 }
 
-.root :global(.sprint-dashboard-risk-layout) {
-  min-height: 0;
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: minmax(220px, 0.78fr) minmax(0, 1.22fr);
-  gap: 24px;
-  align-items: stretch;
-  margin: 0;
-}
-
-.root :global(.sprint-dashboard-risk-summary) {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.root :global(.sprint-dashboard-severity-list) {
-  min-width: 0;
-  border-left: 1px solid var(--app-frame-divider);
-  padding-left: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-}
-
-.root :global(.sprint-dashboard-severity-row) {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 86px;
-  align-items: center;
-  gap: 12px;
-  color: var(--app-text-label);
-  font-size: 13px;
-  line-height: 20px;
-}
-
 .root :global(.sprint-dashboard-severity-row) strong {
   color: var(--app-text-strong);
   font-weight: 600;
   text-align: right;
-}
-
-.root :global(.sprint-overview-donut-layout) {
-  display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
-  align-items: center;
-  gap: 18px;
-  flex: 0 0 auto;
-  min-height: 0;
-}
-
-.root :global(.sprint-overview-mini-chart) {
-  position: relative;
-  width: 140px;
-  height: 140px;
-  min-width: 0;
-}
-
-.root :global(.sprint-overview-donut-center) {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  color: var(--app-shell-text);
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 700;
-  pointer-events: none;
-}
-
-.root :global(.sprint-overview-chart-metrics) {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  min-width: 0;
-}
-
-.root :global(.sprint-overview-chart-metrics) span {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--app-text-label);
-  font-size: 14px;
-  line-height: 22px;
 }
 
 .root :global(.sprint-overview-chart-metrics) span::before {
@@ -152,70 +29,10 @@
   background: var(--metric-color);
 }
 
-.root :global(.sprint-overview-chart-metrics) strong {
-  margin-left: auto;
-  color: var(--app-shell-text);
-  font-size: 16px;
-  line-height: 24px;
-}
-
 .root :global(.sprint-overview-donut-layout) :global(.recharts-default-tooltip) {
   border: 1px solid var(--tp-border-soft) !important;
   border-radius: 10px;
   box-shadow: 0 10px 24px var(--app-card-shadow-floating);
-}
-
-.root :global(.sprint-overview-trend-grid) {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.root :global(.sprint-dashboard-trend-section) {
-  min-height: 0;
-}
-
-.root :global(.sprint-dashboard-trend-card) {
-  min-height: 0;
-}
-
-.root :global(.sprint-dashboard-range-picker) {
-  flex: 0 0 auto;
-  width: 244px;
-}
-
-.root :global(.sprint-dashboard-range-picker):global(.ant-picker) {
-  border-radius: 8px !important;
-}
-
-.root :global(.sprint-overview-chart-card-head) {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 4px;
-}
-
-.root :global(.sprint-dashboard-trend-pane) {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.root :global(.sprint-dashboard-trend-pane) + :global(.sprint-dashboard-trend-pane) {
-  border-left: 1px solid var(--app-frame-divider);
-  padding-left: 12px;
-}
-
-.root :global(.sprint-overview-chart-host) {
-  width: 100%;
-  height: auto;
-  min-height: 138px;
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .root :global(.sprint-overview-chart-host) :global(.recharts-default-tooltip) {
@@ -235,99 +52,11 @@
   color: var(--app-text-label);
 }
 
-.root :global(.sprint-overview-history-state) {
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-}
-
-@media (max-width: 1200px) {
-  .root :global(.sprint-overview-toolbar-summary-row) {
-    align-items: flex-start;
-  }
-
-  .root :global(.sprint-overview-toolbar-main) {
-    align-items: flex-start;
-  }
-
-  .root :global(.sprint-overview-hero-title-row) {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .root :global(.sprint-overview-hero-title-row) > :global(.ant-space) {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .root :global(.sprint-overview-hero-summary) {
-    justify-content: flex-start;
-  }
-
-  .root :global(.sprint-overview-layout) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .root :global(.sprint-dashboard-main-grid),
-  .root :global(.sprint-overview-trend-grid) {
-    grid-template-columns: 1fr;
-  }
-
-  .root :global(.sprint-dashboard-health-band) {
-    grid-template-columns: 1fr;
-  }
-
-  .root :global(.sprint-dashboard-health-progress) {
-    border-right: none;
-    padding-right: 0;
-  }
-
-  .root :global(.sprint-dashboard-trend-pane) + :global(.sprint-dashboard-trend-pane),
-  .root :global(.sprint-dashboard-severity-list) {
-    border-left: none;
-    padding-left: 0;
-  }
-}
-
-@media (max-width: 900px) {
-  .root :global(.sprint-overview-hero-title-row) {
-    width: 100%;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-}
-
-@media (max-width: 768px) {
-  .root :global(.sprint-overview-hero-summary) {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .root :global(.sprint-overview-donut-layout) {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
-
-  .root :global(.sprint-overview-chart-metrics) {
-    width: 100%;
-  }
-}
-.root :global(.sprint-report-drawer-empty) {
-  margin: 0 0 16px;
-}
+/* ===== 报告 Markdown ===== */
 
 .root :global(.sprint-report-markdown-modal) :global(.ant-modal-body) {
   max-height: min(72vh, 760px);
   overflow: auto;
-}
-
-.root :global(.sprint-report-markdown-state) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
 }
 
 .root :global(.sprint-report-markdown) {
@@ -433,90 +162,27 @@
   font-weight: 700;
 }
 
-.root { padding: var(--app-page-gutter); }
-.root :global(.sprint-overview-frame) { min-height: 0; }
-.root :global(.sprint-overview-frame) > :global(.workbench-tabs) { padding: 0; gap: 0; }
+/* ===== 看板表面 ===== */
+
+.root :global(.sprint-overview-frame) > :global(.workbench-tabs) {
+  padding: 0;
+  gap: 0;
+}
+
 :root:root :global(.app-shell.app-shell-macos) .root :global(.sprint-overview-panel-unified) {
   border: 0 !important;
   border-radius: 0;
   background: transparent !important;
   box-shadow: none !important;
 }
-.root :global(.sprint-overview-panel-body) { padding: 16px; overflow: auto; }
-.root :global(.sprint-overview-layout) { min-height: 0; grid-template-rows: auto; align-content: start; gap: 16px; }
-.root :global(.sprint-overview-card-rich),
-.root :global(.sprint-dashboard-health-band) {
-  border: 1px solid var(--srf-card-border);
-  border-radius: 12px;
-  background: var(--srf-card);
-  box-shadow: none;
-}
-.root :global(.sprint-overview-card-rich) :global(.ant-card-body) { padding: 16px; height: auto; }
-.root :global(.sprint-dashboard-health-band) { padding: 16px; gap: 16px; grid-template-columns: minmax(200px, .7fr) minmax(280px, 1fr) minmax(300px, 1fr); }
-.root :global(.sprint-dashboard-health-title) { gap: 12px; min-height: 56px; }
-.root :global(.sprint-dashboard-health-icon) { width: 36px; height: 36px; font-size: 20px; border-radius: 8px; }
-.root :global(.sprint-dashboard-health-title-row) h4:global(.ant-typography),
-.root :global(.sprint-dashboard-card-head) h4:global(.ant-typography) { font-size: 15px; line-height: 24px; font-weight: 600; }
-.root :global(.sprint-dashboard-health-defects) strong { font-size: 20px; line-height: 28px; }
-.root :global(.sprint-dashboard-test-table) { grid-template-rows: 32px repeat(3, 56px); }
-.root :global(.sprint-dashboard-test-row) { border-bottom: 1px solid var(--app-list-row-border); gap: 10px; }
-.root :global(.sprint-dashboard-main-grid) { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
-.root :global(.sprint-code-overview-card) :global(.ant-empty) { margin: 20px 0; }
-.root :global(.sprint-overview-chart-host) { height: 210px; min-height: 210px; }
-.root :global(.sprint-overview-toolbar-summary-row) { gap: 12px; flex-wrap: wrap; }
-.root :global(.sprint-overview-hero-summary) { flex-wrap: wrap; }
-.root :global(.sprint-dashboard-card-head) { flex-wrap: wrap; }
-@media (max-width: 1280px) {
-  .root :global(.sprint-dashboard-main-grid) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.sprint-dashboard-health-band) { grid-template-columns: 1fr 1fr; }
-  .root :global(.sprint-dashboard-health-defects) { grid-column: 1 / -1; }
-}
-@media (max-width: 768px) {
-  .root :global(.sprint-dashboard-health-band),
-  .root :global(.sprint-overview-trend-grid) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.sprint-dashboard-panel) { overflow-x: auto; }
-  .root :global(.sprint-dashboard-test-table) { min-width: 640px; }
-  .root :global(.sprint-dashboard-trend-pane) + :global(.sprint-dashboard-trend-pane) { border-left: 0; padding-left: 0; }
+
+.root :global(.sprint-dashboard-range-picker):global(.ant-picker) {
+  border-radius: 8px !important;
 }
 
-/* 宽屏下让现有三段布局吃满容器高度；窄屏仍按内容高度排列并滚动。
-   高度不足时布局内容最小高度会撑开面板，由 panel-body 滚动兜底。 */
 @media (min-width: 1281px) {
-  .root :global(.sprint-overview-panel-body) {
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-  }
-  .root :global(.sprint-overview-layout) {
-    flex: 1 1 auto;
-    min-height: 0;
-    grid-template-rows: auto minmax(260px, 1fr) minmax(0, 1.18fr);
-    align-content: stretch;
-  }
   .root :global(.sprint-overview-card-rich) :global(.ant-card-body) {
     height: 100%;
     min-height: 0;
   }
-  .root :global(.sprint-dashboard-test-table) {
-    grid-template-rows: 32px repeat(3, minmax(56px, 1fr));
-  }
-  .root :global(.sprint-overview-chart-host) {
-    height: auto;
-    min-height: 210px;
-  }
-}
-
-.root :global(.sprint-dashboard-health-progress-head) strong { font-size: 14px; }
-.root :global(.sprint-dashboard-health-caption) { font-size: 13px; }
-.root :global(.sprint-dashboard-risk-layout) { grid-template-columns: minmax(240px, 1fr) minmax(0, 1fr); gap: 16px; }
-.root :global(.sprint-overview-donut-layout) { grid-template-columns: 100px minmax(0, 1fr); gap: 10px; }
-.root :global(.sprint-overview-mini-chart) { width: 100px; height: 100px; }
-.root :global(.sprint-overview-donut-center) { font-size: 20px; }
-.root :global(.sprint-overview-chart-metrics) span { gap: 6px; font-size: 12px; white-space: nowrap; }
-.root :global(.sprint-overview-chart-metrics) strong { font-size: 12px; }
-.root :global(.sprint-dashboard-severity-list) { padding-left: 16px; gap: 12px; }
-.root :global(.sprint-dashboard-severity-row) { grid-template-columns: 32px minmax(0, 1fr) 62px; gap: 8px; font-size: 12px; }
-@media (max-width: 600px) {
-  .root :global(.sprint-dashboard-risk-layout) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.sprint-dashboard-severity-list) { border-left: 0; padding-left: 0; }
 }

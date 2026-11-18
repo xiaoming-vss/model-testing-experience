@@ -164,19 +164,19 @@ export function TestOrderGraphViewer({
   let body
   if (graphQuery.isLoading || (selectedRunId && selectedRunQuery.isLoading)) {
     body = (
-      <div className="ai-relations-page-loading">
+      <div className="ai-relations-page-loading flex items-center justify-center">
         <Spin />
       </div>
     )
   } else if (graphQuery.error || (selectedRunId && selectedRunQuery.error)) {
     body = (
-      <div className="ai-relations-page-loading">
+      <div className="ai-relations-page-loading flex items-center justify-center">
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="图谱记录加载失败，请刷新重试" />
       </div>
     )
   } else if (!run) {
     body = (
-      <div className="ai-relations-page-loading">
+      <div className="ai-relations-page-loading flex items-center justify-center">
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="这张测试单还没有生成过图谱" />
       </div>
     )
@@ -189,7 +189,7 @@ export function TestOrderGraphViewer({
     )
   } else if (!graphContent) {
     body = (
-      <div className="ai-relations-page-loading">
+      <div className="ai-relations-page-loading flex items-center justify-center">
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前运行还没有图谱数据" />
       </div>
     )
@@ -209,7 +209,7 @@ export function TestOrderGraphViewer({
     )
   } else {
     body = (
-      <div className="ai-relations-page-json">
+      <div className="ai-relations-page-json h-full min-h-0 overflow-hidden">
         <JsonEditor
           value={graphContent}
           readOnly
@@ -225,9 +225,9 @@ export function TestOrderGraphViewer({
 
   return (
     <>
-      <div className={`test-order-graph-viewer ai-relations-page ${relationsStyles.scope} ${graphStyles.viewer}`}>
+      <div className={`test-order-graph-viewer ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-[var(--ant-color-bg-layout)] ${relationsStyles.scope} ${graphStyles.viewer}`}>
         {toolbar}
-        <div className="ai-relations-page-bar">
+        <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2.5 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-[9px]">
           <div className="test-order-graph-status">
             {run ? <Tag color={statusMeta.color}>{statusMeta.label}</Tag> : null}
             {inProgress ? <Text type="secondary">每 5 秒自动刷新</Text> : null}
@@ -235,7 +235,7 @@ export function TestOrderGraphViewer({
               {stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线` : ''}
             </Text>
           </div>
-          <span className="ai-relations-page-spacer" />
+          <span className="ai-relations-page-spacer min-w-2 flex-1" />
           <ActionButton operation="refresh" size="small" onClick={() => void graphQuery.refetch()}>刷新</ActionButton>
           <Segmented
             className="tab-view-switch"
@@ -261,7 +261,7 @@ export function TestOrderGraphViewer({
             <div className="ai-relations-json-actions" ref={setJsonToolbar} />
           ) : null}
           {activeTab === 'graph' && graphContent ? (
-            <span className="ai-relations-page-legend">
+            <span className="ai-relations-page-legend ml-1 inline-flex items-center gap-3.5 text-[12px] text-[var(--ant-color-text-secondary)]">
               <span className="legend-item">
                 <i className="legend-line solid" aria-hidden />主线 / 后续
               </span>
@@ -290,7 +290,7 @@ export function TestOrderGraphViewer({
           <Alert showIcon type="error" title={run.errorMessage} />
         ) : null}
 
-        <div ref={viewRef} className="ai-relations-page-body">{body}</div>
+        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 [&>*]:min-w-0 [&>*]:flex-1">{body}</div>
       </div>
       <TestOrderGraphHistoryDrawer key={orderId} open={historyOpen} orderId={orderId} projectId={projectId}
         onClose={() => setHistoryOpen(false)} onSelect={runId => { setSelectedRunId(runId); setHistoryOpen(false) }}

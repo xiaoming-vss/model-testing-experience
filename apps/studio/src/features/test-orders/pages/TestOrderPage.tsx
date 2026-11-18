@@ -197,8 +197,8 @@ export function TestOrderPage() {
           navigate(`/test-orders/${orderId}`)
         }}
       >
-        <div className={styles.progressCell}>
-          <div className={styles.progressLine}>
+        <div className="progressCell mt-0.5 mb-3 flex min-w-0 flex-col gap-1.5 tabular-nums">
+          <div className="progressLine flex min-w-0 items-baseline justify-between gap-3">
             <span className={styles.progressExecuted}>
               已执行{' '}
               <strong>
@@ -245,7 +245,7 @@ export function TestOrderPage() {
   const hasLocalFilters = Boolean(searchKeyword.trim())
 
   return (
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface ${styles.root}`}>
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface min-w-0">
       <div className="api-automation-content">
         <ListSurface
           className="test-orders-list-panel"
@@ -255,7 +255,7 @@ export function TestOrderPage() {
             <div className="panel-header api-panel-header tp-list-toolbar">
               <div className="api-filter-group flex flex-wrap items-center gap-2">
                 <h1 className="tp-list-title">测试单</h1>
-                <div className={`api-filter-field ${styles.searchField}`}>
+                <div className="api-filter-field searchField min-w-0 w-[300px] max-narrow:w-full">
                   <DebouncedSearchInput
                     inputRef={keywordInputRef}
                     className="api-filter-input test-orders-search-input"
