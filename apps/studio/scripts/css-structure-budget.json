@@ -16,13 +16,11 @@
     "src/shared/styles/github-dark-foundation.css",
     "src/shared/styles/github-dark-tokens.css",
     "src/shared/styles/indigo-amber-light-tokens.css",
-    "src/shared/styles/list-name.css",
     "src/shared/styles/list-table.css",
     "src/shared/styles/pagination.css",
     "src/shared/styles/scrollbars.css",
     "src/shared/styles/surface-tokens.css",
     "src/shared/styles/tab-motion.css",
-    "src/shared/styles/table-row-dividers.css",
     "src/shared/styles/tailwind.css",
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
@@ -33,9 +31,9 @@
   "sharedModuleViolations": [],
   "files": {
     "src/app/styles/action-buttons.css": {
-      "rules": 10,
-      "declarations": 18,
-      "selectors": 24
+      "rules": 7,
+      "declarations": 11,
+      "selectors": 19
     },
     "src/app/styles/antd-overrides.css": {
       "rules": 9,
@@ -45,22 +43,22 @@
     "src/app/styles/buttons.css": {
       "rules": 27,
       "declarations": 113,
-      "selectors": 38
+      "selectors": 37
     },
     "src/app/styles/layout.css": {
-      "rules": 31,
-      "declarations": 106,
-      "selectors": 31
+      "rules": 22,
+      "declarations": 76,
+      "selectors": 22
     },
     "src/app/styles/shell-header.css": {
-      "rules": 46,
-      "declarations": 107,
-      "selectors": 63
+      "rules": 40,
+      "declarations": 99,
+      "selectors": 49
     },
     "src/app/styles/shell.css": {
-      "rules": 71,
-      "declarations": 171,
-      "selectors": 87
+      "rules": 62,
+      "declarations": 166,
+      "selectors": 77
     },
     "src/app/styles/sidebar.css": {
       "rules": 21,
@@ -68,9 +66,9 @@
       "selectors": 22
     },
     "src/app/styles/theme.css": {
-      "rules": 5,
-      "declarations": 11,
-      "selectors": 5
+      "rules": 6,
+      "declarations": 12,
+      "selectors": 6
     },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
       "rules": 50,
@@ -175,7 +173,7 @@
     "src/index.css": {
       "rules": 8,
       "declarations": 24,
-      "selectors": 21
+      "selectors": 20
     },
     "src/shared/components/RichTextEditor/rich-text-editor.css": {
       "rules": 32,
@@ -212,15 +210,10 @@
       "declarations": 288,
       "selectors": 6
     },
-    "src/shared/styles/list-name.css": {
-      "rules": 3,
-      "declarations": 12,
-      "selectors": 3
-    },
     "src/shared/styles/list-table.css": {
-      "rules": 23,
-      "declarations": 67,
-      "selectors": 33
+      "rules": 26,
+      "declarations": 79,
+      "selectors": 36
     },
     "src/shared/styles/pagination.css": {
       "rules": 14,
@@ -238,19 +231,14 @@
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 65,
-      "declarations": 303,
-      "selectors": 68
+      "rules": 40,
+      "declarations": 210,
+      "selectors": 43
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
       "declarations": 24,
       "selectors": 13
-    },
-    "src/shared/styles/table-row-dividers.css": {
-      "rules": 1,
-      "declarations": 1,
-      "selectors": 1
     },
     "src/shared/styles/tailwind.css": {
       "rules": 0,
@@ -280,9 +268,9 @@
       "count": 2,
       "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
     },
-    "790b1e6d62087b78": {
+    "63d0e61df4f78735": {
       "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
+      "sample": "height: 100%;min-height: 0;display: flex;flex-direction: column;overflow: hidden"
     },
     "9222d9fe65fe3f15": {
       "count": 2,
@@ -301,7 +289,7 @@
       "sample": "height: 100%;min-height: 0;overflow: hidden"
     },
     "fbbb9331ecfd8380": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     }
   }

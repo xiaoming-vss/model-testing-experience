@@ -367,9 +367,9 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
-          <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
-            <div className="api-test-header-main">
-              <div className="flex min-w-0 items-center gap-2.5 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5 api-panel-head-main">
+          <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
+            <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
+              <div className="api-panel-head-main flex min-w-0 flex-wrap items-center gap-2 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5">
                 <h1 className="tp-list-title">API测试</h1>
                 {!isRequirementLocked ? (
                   <div className="api-filter-group">
@@ -390,9 +390,9 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                     </div>
                   </div>
                 ) : null}
-                <div className="api-inline-environment flex flex-wrap items-center gap-[18px] pl-1.5 max-[1200px]:w-full max-[1200px]:pl-0 max-narrow:flex-col max-narrow:items-start max-narrow:gap-2.5">
-                  <div className="api-environment-selector flex items-center gap-2.5 max-narrow:w-full max-narrow:flex-col max-narrow:items-start">
-                    <span className="api-environment-label whitespace-nowrap text-[13px] leading-5 text-[var(--app-shell-text-muted)]">当前环境</span>
+                <div className="api-inline-environment flex flex-wrap items-center gap-3 pl-0 max-[1200px]:w-full max-[1200px]:pl-0 max-narrow:flex-col max-narrow:items-start max-narrow:gap-2.5">
+                  <div className="api-environment-selector flex items-center gap-2 max-narrow:w-full max-narrow:flex-col max-narrow:items-start">
+                    <span className="api-environment-label whitespace-nowrap text-[12px] leading-[18px] text-[var(--app-glass-text-caption)]">当前环境</span>
                     <Select
                       className="api-filter-select business-filter-select"
                       value={resolvedEnvironmentId}
@@ -423,7 +423,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                   />
                 </div>
               </div>
-              <Space size={8} className="api-test-header-actions">
+              <Space size={8} className="api-test-header-actions flex-none items-center">
                 <Button
                   icon={<SettingOutlined />}
                   disabled={!activeProjectId}

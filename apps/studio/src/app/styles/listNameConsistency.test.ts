@@ -1,4 +1,4 @@
-import listNameCss from '@/shared/styles/list-name.css?raw'
+import listNameCss from '@/shared/styles/list-table.css?raw'
 import { afterEach, describe, expect, it } from 'vitest'
 
 // Shared typography must win over legacy feature styles in every list.

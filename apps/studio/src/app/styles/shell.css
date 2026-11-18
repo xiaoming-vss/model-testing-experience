@@ -1,11 +1,6 @@
 /* 应用外壳：顶栏、项目选择器、侧栏、通用工作台板和列表承载层。
    按钮语言在 action-buttons.css，AntD 标签覆盖在 antd-overrides.css。 */
 
-.compact-header {
-  justify-content: flex-end;
-  background: var(--app-surface);
-}
-
 .compact-header .app-header-actions .ant-btn-circle {
   width: 32px;
   height: 32px;
@@ -41,9 +36,11 @@
 }
 
 .compact-header {
+  justify-content: flex-end;
   height: 56px;
   padding: 0 24px;
   gap: 16px;
+  background: var(--app-surface);
 }
 
 .app-header-main {
@@ -61,14 +58,6 @@
 
 .project-header-bar .project-selector-wrap {
   min-width: 0;
-}
-
-.workbench-page {
-  min-height: calc(100vh - 56px);
-}
-
-.workbench-tabs {
-  padding-top: 18px;
 }
 
 @media (max-width: 900px) {
@@ -138,11 +127,6 @@
   font-size: 11px;
 }
 
-.workbench-panel {
-  overflow: hidden;
-}
-
-
 .workbench-empty {
   border-radius: 6px;
 }
@@ -192,37 +176,14 @@ body,
 .workbench-panel {
   height: 100%;
   min-height: 0;
-}
-
-.workbench-panel {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .workbench-board-panel {
   flex: 1 1 auto;
 }
-
-.panel-header:not(:where(.tp-list-toolbar)) {
-  flex: 0 0 auto;
-}
-
-.workbench-panel .ant-table-wrapper {
-  min-height: 0;
-  flex-direction: column;
-}
-
-.workbench-panel .ant-spin-nested-loading,
-.workbench-panel .ant-spin-container {
-  min-height: 0;
-  flex-direction: column;
-}
-
-.workbench-panel .ant-table-tbody > tr > td {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
 
 @media (max-width: 900px) {
   body {
@@ -279,6 +240,7 @@ body,
 }
 
 .panel-header:not(:where(.tp-list-toolbar)) {
+  flex: 0 0 auto;
   min-height: 56px;
   padding: 12px 18px;
   border-bottom-color: var(--tp-border-soft);
@@ -290,13 +252,14 @@ body,
 }
 
 .workbench-panel .ant-table-tbody > tr > td {
+  padding-top: 10px;
+  padding-bottom: 10px;
   border-bottom-color: var(--tp-border-soft);
 }
 
 .workbench-panel .ant-spin-container {
   height: 100%;
 }
-
 
 .workbench-panel .ant-table-cell::before {
   background-color: var(--tp-border-soft) !important;
@@ -333,6 +296,7 @@ body,
 .workbench-panel .ant-spin-container {
   display: block;
   flex: none;
+  min-height: 0;
 }
 
 .workbench-panel .ant-table {
@@ -342,10 +306,6 @@ body,
 .workbench-panel .ant-table-container {
   height: auto;
 }
-
-
-
-
 
 .workbench-panel .ant-table-placeholder .ant-table-cell {
   border-bottom: 0;

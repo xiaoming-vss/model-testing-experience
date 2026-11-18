@@ -53,62 +53,9 @@
   stroke-linejoin: round;
 }
 
-.app-header {
-  height: 64px;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--app-surface);
-  border-bottom: 1px solid var(--app-shell-border);
-}
-
-.app-header h2.ant-typography {
-  margin: 0;
-  min-width: 190px;
-  color: var(--app-shell-text);
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 700;
-}
-
-.app-header-actions .ant-btn-circle {
-  font-size: 20px;
-}
-
 .app-content {
   padding: 0;
   background: var(--app-shell-bg);
-}
-
-.workbench-page {
-  min-height: calc(100vh - 64px);
-}
-
-.project-selector-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--app-shell-text);
-  font-size: 14px;
-}
-
-.project-select {
-  min-width: 210px;
-}
-
-.project-select .ant-select-selector {
-  padding-inline: 0 !important;
-  color: var(--app-shell-text-secondary);
-}
-
-.panel-header .ant-btn-primary {
-  border-radius: 2px;
-}
-
-.workbench-tabs {
-  padding: 24px var(--app-page-gutter) 24px;
 }
 
 .workbench-tabs > .ant-tabs-nav {
@@ -131,14 +78,10 @@
 }
 
 .workbench-panel {
-  background: var(--app-surface);
   border: 1px solid var(--app-shell-border);
-  border-radius: 2px;
 }
 
 .panel-header:not(:where(.tp-list-toolbar)) {
-  min-height: 64px;
-  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;

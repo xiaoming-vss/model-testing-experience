@@ -204,9 +204,9 @@ export function PerformancePage() {
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
-          <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
-            <div className="api-test-header-main">
-              <div className="flex min-w-0 items-center gap-2.5 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5 api-panel-head-main">
+          <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
+            <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
+              <div className="api-panel-head-main flex min-w-0 flex-wrap items-center gap-2 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5">
                 <h1 className="tp-list-title">性能测试</h1>
                 <div className="api-filter-group">
                   <div className="api-filter-field">
@@ -246,7 +246,7 @@ export function PerformancePage() {
                   />
                 </div>
               </div>
-              <Space size={8} className="api-test-header-actions">
+              <Space size={8} className="api-test-header-actions flex-none items-center">
                 <Button icon={<SettingOutlined />} disabled={!activeProjectId} onClick={() => setEnvironmentDrawerOpen(true)}>
                   环境管理
                 </Button>

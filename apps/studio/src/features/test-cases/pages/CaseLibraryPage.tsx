@@ -1010,9 +1010,9 @@ export function CaseLibraryPage() {
 
               <div className="case-library-main flex min-h-0 flex-col rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
                 {/* 优先级不进筛选下拉：档位只有四档，摊平成一排比藏在二级菜单里快。 */}
-                <div className="tp-quickbar case-library-quickbar flex-none border-b border-[var(--srf-divider)] px-4 py-2.5">
-                  <div className="tp-quick-filters">
-                    <span className="tp-quick-label">快速过滤:</span>
+                <div className="tp-quickbar case-library-quickbar flex flex-none flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-divider)] px-4 py-2.5">
+                  <div className="tp-quick-filters flex flex-wrap items-center gap-2">
+                    <span className="tp-quick-label text-[12px] text-[var(--srf-text-secondary)]">快速过滤:</span>
                     <button
                       type="button"
                       className={`tp-chip${priority ? '' : ' active'}`}
@@ -1039,7 +1039,7 @@ export function CaseLibraryPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="tp-selection case-library-selection flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 whitespace-normal" aria-live="polite">
+                  <div className="tp-selection case-library-selection flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 whitespace-normal text-[12px] text-[var(--srf-text-muted)] [&_strong]:font-semibold [&_strong]:text-[var(--srf-text-secondary)]" aria-live="polite">
                     {selectedCaseIds.length > 0 ? (
                       <>
                         <span className="case-library-selection-scope max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap" title={selectedSuite?.name ?? '全部用例'}>

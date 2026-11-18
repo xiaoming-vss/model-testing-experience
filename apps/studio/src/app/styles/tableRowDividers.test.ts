@@ -1,9 +1,10 @@
 import { afterEach, expect, it } from 'vitest'
-import css from '@/shared/styles/table-row-dividers.css?raw'
+import css from '@/app/styles/theme.css?raw'
 import entry from '@/index.css?raw'
 afterEach(() => { document.head.innerHTML = ''; document.body.innerHTML = '' })
 it('全局横线覆盖数据行，跳过测量和展开行', () => {
-  expect(entry).toContain("@import './shared/styles/table-row-dividers.css'")
+  expect(entry).not.toContain('table-row-dividers.css')
+  expect(css).toContain('.ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td.ant-table-cell')
   document.head.innerHTML = `<style>${css.replaceAll('var(--app-list-row-border)', 'rgb(220, 224, 239)')}</style>`
   document.body.innerHTML = `<div class="ant-table-wrapper"><table><tbody class="ant-table-tbody">${['ant-table-row', 'ant-table-measure-row', 'ant-table-expanded-row'].map((name, i) => `<tr class="${name}"><td class="ant-table-cell" id="cell${i}">内容</td></tr>`).join('')}</tbody></table></div>`
   expect(getComputedStyle(document.querySelector('#cell0')!).borderBottomWidth).toBe('1px')

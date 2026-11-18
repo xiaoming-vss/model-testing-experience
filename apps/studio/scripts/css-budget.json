@@ -1,20 +1,17 @@
 {
-  "important": 95,
+  "important": 93,
   "importantByFile": {
     "src/app/styles/buttons.css": 31,
-    "src/app/styles/layout.css": 2,
-    "src/app/styles/shell-header.css": 1,
+    "src/app/styles/layout.css": 1,
     "src/app/styles/shell.css": 3,
-    "src/app/styles/theme.css": 4,
+    "src/app/styles/theme.css": 5,
     "src/features/projects/styles/sprint-overview.module.css": 4,
     "src/features/ui-automation/styles/ui-detail-shell.module.css": 6,
     "src/index.css": 2,
-    "src/shared/styles/list-name.css": 6,
-    "src/shared/styles/list-table.css": 16,
+    "src/shared/styles/list-table.css": 22,
     "src/shared/styles/pagination.css": 1,
     "src/shared/styles/surface-tokens.css": 12,
-    "src/shared/styles/tab-motion.css": 6,
-    "src/shared/styles/table-row-dividers.css": 1
+    "src/shared/styles/tab-motion.css": 6
   },
   "longPrefix": 0,
   "longPrefixByFile": {},

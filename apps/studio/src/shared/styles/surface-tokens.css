@@ -114,28 +114,8 @@
 }
 
 /*
- * 共用小组件：快速过滤条与里面的胶囊，两个列表页完全一致。
- * 只提供布局与外观，边框之类的差异（例如用例库的过滤条要一条分隔线）留在页面级样式里补。
+ * 共用小组件：快速过滤条的布局已迁到用例库 utility。
  */
-.tp-surface .tp-quickbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.tp-surface .tp-quick-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.tp-surface .tp-quick-label {
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-}
 
 @layer components {
   .tp-surface .tp-chip {
@@ -167,16 +147,6 @@
     font-weight: 600;
   }
 
-}
-
-.tp-surface .tp-selection {
-  color: var(--srf-text-muted);
-  font-size: 12px;
-}
-
-.tp-surface .tp-selection strong {
-  color: var(--srf-text-secondary);
-  font-weight: 600;
 }
 
 /** 色调胶囊：用例类型标签与测试单状态胶囊共用同一套底色 / 描边 / 文字色。 */
@@ -290,46 +260,6 @@
   white-space: nowrap;
 }
 
-/* 列表页顶部工具栏唯一实现：标题块 + 操作区；页面只补内部排布。 */
-.tp-surface .tp-page-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: 0 0 56px;
-  flex-wrap: wrap;
-  gap: 16px;
-  min-width: 0;
-  padding: 0 16px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-list-header-bg);
-}
-
-.tp-surface .tp-page-toolbar-main {
-  display: flex;
-  align-items: center;
-  flex: 1 1 320px;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.tp-surface .tp-page-toolbar-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-
-@media (max-width: 900px) {
-  .tp-surface .tp-page-toolbar {
-    flex: 0 0 auto;
-    min-height: 56px;
-    padding: 10px 16px;
-  }
-}
-
 /* 列表／卡片页默认布局契约：祖先 tp-surface → tp-board tp-list-panel
    → tp-list-toolbar + 可选 tp-list-body → tp-list-scroll 与其后的 table-footer。
    Tab 在外框外，滚动区内收 16px，分页不参与滚动。
@@ -424,49 +354,6 @@
   flex-wrap: wrap;
 }
 
-/* API / 性能列表共用同一行工具栏内部排布；页面只保留业务筛选项。 */
-.tp-surface .tp-list-toolbar.api-test-header {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.tp-surface .api-test-header-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0;
-}
-
-.tp-surface .api-test-header-main .api-panel-head-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.tp-surface .api-test-header-actions {
-  flex: 0 0 auto;
-  align-items: center;
-}
-
-.tp-surface .api-test-header .api-inline-environment {
-  gap: 12px;
-  padding-left: 0;
-}
-
-.tp-surface .api-test-header .api-environment-selector {
-  gap: 8px;
-}
-
-.tp-surface .api-test-header .api-environment-label {
-  color: var(--app-glass-text-caption);
-  font-size: 12px;
-  line-height: 18px;
-}
-
 @layer components {
   .api-filter-group {
     display: flex;
@@ -495,61 +382,6 @@
   }
 }
 
-.api-collection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.api-collection-card .ant-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.api-collection-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.api-collection-description {
-  margin-bottom: 0;
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 400;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.api-collection-inline-value {
-  font-size: 14px;
-  line-height: 22px;
-  font-weight: 500;
-  text-align: right;
-  word-break: break-word;
-}
-
-.api-collection-meta-inline .api-collection-inline-value {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.api-collection-card .sprint-card-actions {
-  gap: 6px;
-}
-
-.api-collection-card .sprint-card-actions .ant-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-}
-
 @media (max-width: 900px) {
   .api-automation-content {
     padding: 12px var(--app-page-gutter) 16px;
@@ -564,10 +396,6 @@
     width: 100%;
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .api-collection-grid {
-    grid-template-columns: 1fr;
   }
 
   .tp-surface .api-test-search-field {

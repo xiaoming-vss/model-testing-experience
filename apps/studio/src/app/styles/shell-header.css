@@ -36,8 +36,6 @@
 
 .app-shell-macos .project-selector-wrap,
 .app-shell-macos .workbench-panel,
-.app-shell-macos .api-collection-card,
-.app-shell-macos .sprint-card,
 .app-shell-macos .ant-card {
   -webkit-backdrop-filter: saturate(180%) blur(22px);
   backdrop-filter: saturate(180%) blur(22px);
@@ -63,8 +61,7 @@
 
 .app-shell-macos .project-select .ant-select-selector,
 .app-shell-macos .panel-header .ant-typography,
-.app-shell-macos .workbench-panel .ant-typography,
-.app-shell-macos .api-collection-inline-value {
+.app-shell-macos .workbench-panel .ant-typography {
   color: var(--mac-glass-text);
 }
 
@@ -81,8 +78,6 @@
   backdrop-filter: saturate(180%) blur(20px);
 }
 
-.app-shell-macos .api-collection-card,
-.app-shell-macos .sprint-card,
 .app-shell-macos .ant-card {
   border-color: var(--mac-glass-border);
   background: var(--mac-glass-card);
@@ -91,8 +86,6 @@
     0 10px 24px var(--app-glass-shadow-card);
 }
 
-.app-shell-macos .api-collection-card:hover,
-.app-shell-macos .sprint-card:hover,
 .app-shell-macos .ant-card-hoverable:hover {
   border-color: var(--app-glass-action-border);
   background: var(--mac-glass-panel-strong);
@@ -100,11 +93,6 @@
     inset 0 1px 0 var(--app-glass-highlight-90),
     0 14px 30px var(--app-glass-shadow-floating);
 }
-.app-shell-macos .sprint-card-label,
-.app-shell-macos .api-collection-description {
-  color: var(--mac-glass-muted) !important;
-}
-
 .app-shell-macos .action-btn-create.ant-btn-primary,
 .app-shell-macos .panel-header .ant-btn-primary {
   border: 1px solid var(--app-glass-action-border-hover);
@@ -123,24 +111,6 @@
 .app-shell-macos .workbench-board-panel {
   overflow: hidden;
   min-height: calc(100vh - 214px);
-}
-.app-shell-macos .sprint-card-scroll {
-  background: transparent;
-}
-.app-shell-macos .sprint-card .ant-card-body {
-  height: 100%;
-}
-.app-shell-macos .sprint-card-meta {
-  border-bottom-color: var(--mac-glass-border-soft);
-}
-.app-shell-macos .sprint-card-actions .ant-btn {
-  border-radius: 10px;
-  color: var(--mac-glass-muted);
-}
-
-.app-shell-macos .sprint-card-actions .ant-btn:hover {
-  color: var(--mac-glass-blue);
-  background: var(--app-glass-surface-68);
 }
 .app-shell-macos .workbench-empty {
   border-color: var(--mac-glass-border);

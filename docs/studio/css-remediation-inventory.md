@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–36 已完成；本文件是阶段 37 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **46 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
+> 2026-11-18。阶段 0–37 已完成；本文件是阶段 38 起的收口台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **44 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,31 +8,31 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 46 | ≤ 45 | **-1** |
-| CSS 行数 | 8,493 | ≤ 9,000 | 已达标（余 507 行） |
-| `!important` | 95 | ≤ 100 | 已达标（数值） |
+| CSS 文件 | 44 | ≤ 45 | 已达标（余 1 个） |
+| CSS 行数 | 8,047 | ≤ 9,000 | 已达标（余 953 行） |
+| `!important` | 93 | ≤ 100 | 已达标（数值） |
 | 长前缀 | 0 | 0 | 已达标 |
 | 重复规则体 | 10 | ≤ 60 | 已达标 |
 | 单文件 > 600 行 | 0 | 0 | 已达标 |
 
 **先看结论，避免继续“一个模块一个模块”地漏：**
 
-1. **剩余缺口只有 1 个文件；行数已低于目标。** 95 处 `!important` 中 85 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。后面不应为了数字机械去 `!important`。
-2. **阶段 36 的共享组件迁移已把行数压到目标以下。** 7 个共享组件文件 1,448 行 → 2 个 304 行，删除 `base-services-connection`、`case-import`、`entity-card`、`legacy-surface`、`json-editor`；这是行数达标的主要来源。
-3. **按当前文件边界，保留底座占 23 个文件 / 4,316 行：**
+1. **文件数、行数、`!important`、长前缀与重复体均已达标。** 93 处 `!important` 中 83 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。阶段 38 不再为了数字机械删规则。
+2. **阶段 37 完成了全局契约收缩。** 把 `list-name` 并入 `list-table`、`table-row-dividers` 并入 `theme.css`，删除已无消费方的 `api-collection-*` / `sprint-card-*` 规则，并把页面工具栏、快速过滤条、API/性能工具栏与 Shell 重复块迁入 utility 或合并；16 个文件 2,469 → 14 个 2,022 行。
+3. **当前底座占 21 个文件 / 4,144 行：**
    - 7 个 token 文件：1,847 行；
-   - 9 个外壳/全局基础文件：1,565 行；
-   - 7 个共享全局契约：904 行。
-4. 其余 **23 个页面/共享组件文件（4,178 行）** 已低于原 ≤22 文件、≤4,684 行的行数目标；文件数差 1，由阶段 37 把 `table-row-dividers` / `list-name` 并入 `list-table` 后达到总数 ≤45，不再为了 B 类单独制造合并。
-5. 10 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随批次顺手合并。完整列表见附录 B。
+   - 9 个外壳/全局基础文件：1,571 行；
+   - 5 个共享全局契约：726 行。
+4. 其余 **23 个页面/共享组件文件（3,903 行）** 已低于阶段 37 前的文件与行数上限；总数的 44 个文件也已低于 ≤45 目标。
+5. 10 组重复规则体已在目标内，且多为跨页面同构皮肤；阶段 38 只做复测与基线 ratchet，不为了清零合并语义不同的选择器。完整列表见附录 B。
 
 ## 二、动作分类
 
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
 | **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 0 | 0 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 23 | 4,178 |
-| **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 16 | 2,469 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 23 | 3,903 |
+| **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 14 | 2,022 |
 | **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
 
 > A 类已清零。B 类剩余文件均已只保留深层皮肤或跨页面共享结构；阶段 37 只收缩 C 类，不再新增页面迁移。
@@ -41,9 +41,9 @@
 
 `shared/styles/base-services-connection.module.css`（195）、`shared/styles/case-import.module.css`（63）、`shared/styles/legacy-surface.css`（102）已随阶段 36 删除；`entity-card.css`、`json-editor.module.css` 也已并入共享 utility / 富文本编辑器深层样式。
 
-### C 类：16 个全局契约（2,469 行）
+### C 类：14 个全局契约（2,022 行）
 
-`app/styles/*` 8 个、`index.css`、`shared/styles/` 下的 `list-name`、`list-table`、`pagination`、`surface-tokens`、`tab-motion`、`table-row-dividers`、`scrollbars`。这些规则服务于多个页面，且多数是在压 AntD/旧层叠；只允许在完整浏览器对照下删死规则、合并同体规则、减少可替代的 `!important`。**不要把这些文件当页面 Module 迁走。**
+`app/styles/*` 8 个、`index.css`、`shared/styles/` 下的 `list-table`、`pagination`、`surface-tokens`、`tab-motion`、`scrollbars`。这些规则服务于多个页面，且多数是在压 AntD/旧层叠；只允许在完整浏览器对照下删死规则、合并同体规则、减少可替代的 `!important`。**不要把这些文件当页面 Module 迁走。**
 
 ### D 类：7 个 Token 文件（1,847 行）
 
@@ -51,7 +51,7 @@
 
 ## 三、完整文件清单（按页面族）
 
-> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 46 个文件均已列入，没有省略项；阶段 29–36 删除的 20 个文件不再保留条目。
+> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 44 个文件均已列入，没有省略项；阶段 29–37 删除或并入的 22 个文件不再保留条目。
 
 
 ### 一、外壳与全局基础
@@ -169,19 +169,17 @@
 
 ### 十、共享全局契约
 
-列表名称、表格、分页、表面、Tab 动效、分隔线与滚动条；只收缩，不整体 utility 化。
+列表名称（已并入表格契约）、表格、分页、表面、Tab 动效与滚动条；只收缩，不整体 utility 化。
 
-**7 个文件 / 904 行 / 213 条布局声明 / 252 条皮肤声明**
+**5 个文件 / 726 行 / 全局契约与共享行为**
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/styles/list-name.css` | 19 | 0 / 0 | 12 | 2 | 6 | 0 | **C** | 全局列表名称契约；6 处 `!important`，只收缩 |
-| `shared/styles/list-table.css` | 152 | 7 / 10 | 50 | 5 | 16 | 0 | **C** | 全局表格契约；16 处 `!important`，最高风险 |
-| `shared/styles/pagination.css` | 87 | 4 / 25 | 19 | 1 | 1 | 0 | **C** | 全局分页契约；只收缩 |
-| `shared/styles/surface-tokens.css` | 577 | 97 / 60 | 146 | 2 | 12 | 7 | **C** | 全局表面契约；12 处 `!important`，只收缩 |
-| `shared/styles/tab-motion.css` | 33 | 4 / 4 | 16 | 4 | 6 | 0 | **C** | 全局 Tab 动效；6 处 `!important`，行为契约 |
-| `shared/styles/table-row-dividers.css` | 7 | 0 / 0 | 1 | 0 | 1 | 0 | **C** | 1 条全局表格分隔线契约；可并入 list-table |
-| `shared/styles/scrollbars.css` | 29 | 2 / 0 | 8 | 0 | 0 | 0 | **C** | 全局滚动条行为；保留，最多合并 |
+| `shared/styles/list-table.css` | 172 | — | — | 多 | 22 | 0 | **C** | 表格几何、名称排版与兼容钩子；合并原 `list-name` |
+| `shared/styles/pagination.css` | 87 | 4 / 25 | 19 | 1 | 1 | 0 | **C** | 全局分页契约；已收缩 |
+| `shared/styles/surface-tokens.css` | 405 | — | — | 多 | 12 | 7 | **C** | 表面 token、板面与列表面板契约；已删除无消费方规则 |
+| `shared/styles/tab-motion.css` | 33 | 4 / 4 | 16 | 4 | 6 | 0 | **C** | 全局 Tab 动效；行为契约 |
+| `shared/styles/scrollbars.css` | 29 | 2 / 0 | 8 | 0 | 0 | 0 | **C** | 全局滚动条行为；保留 |
 
 ### 十一、Token / 主题 / Tailwind 基础
 
@@ -214,10 +212,10 @@
 | 34 | 用例 / Bug / 需求 3 个 Module | 1,465 | ≤ 650 | 3 → 3 | **已完成（527 行）**：表格、筛选、详情、活动流、表单骨架、文档预览布局迁 utility；保留 AntD / DOCX 深层结构与高度链 | 高 |
 | 35 | 基础服务 / Auth / 个人设置 / Projects 6 个 Module | 1,142 | ≤ 450 | 6 → 4 | **已完成（449 行）**：登录/个人设置合并为共享 `account` Module，删除 `profile-settings`；项目概览并入 Sprint 看板，删除 `projects-overview`；环境抽屉、动态值选择与禅道绑定只留 AntD 深层规则 | 中 |
 | 36 | 共享组件 7 个文件 | 1,448 | ≤ 450 | 7 → 2 | **已完成（304 行）**：基础服务连接、导入弹窗、实体卡片、遗留表面与 JSON 编辑器 Module 删除，布局/皮肤进共享 utility；保留富文本与运行报告深层结构 | 高 |
-| 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | 只做死规则、重复体、可替代 `!important`；把 `table-row-dividers` 与 `list-name` 并入 `list-table` | 高 |
+| 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | **已完成（2,022 行）**：`list-name` 并入 `list-table`、`table-row-dividers` 并入 `theme.css`；删除无消费方 API/卡片规则，合并 Shell 重复块，页面工具栏/快速过滤/API 工具栏迁 utility；`!important` 95 → 93 | 高 |
 | 38 | 收口 | — | ≤ 9,000 / ≤ 45 | 44 | 全量复测、ratchet 两个基线、清理无消费者 token、更新本文与迁移计划 | 低 |
 
-**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 304（阶段 36 实际）+ 2,100 + 1,847（token）= **8,125 行**；文件目标 **44**（≤45，留 1 个文件余量）。阶段 36 后行数已提前低于 9,000，剩余只差 1 个文件由阶段 37 的 C 类合并补足；最终以实际数字为准。
+**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 304（阶段 36 实际）+ 2,022（阶段 37 实际）+ 1,847（token）= **8,047 行**；文件 **44 个**，均低于 ≤9,000 / ≤45 目标。阶段 38 只做复测、基线 ratchet 与文档收口。
 
 ### 各阶段完成口径
 
@@ -231,30 +229,27 @@
 
 ## 五、`!important` 全量清单
 
-当前 95 处，分布在 14 个文件。**85 处在全局契约，10 处在页面 Module**；后者只有 `sprint-overview`（4）和 `ui-detail-shell`（6）。因此它不是当前主矛盾，但下列文件仍是高风险区：
+当前 93 处，分布在 11 个文件。**83 处在全局契约，10 处在页面 Module**；后者只有 `sprint-overview`（4）和 `ui-detail-shell`（6）。因此它不是当前主矛盾，但下列文件仍是高风险区：
 
 | 文件 | 数量 | 风险点 |
 | --- | ---: | --- |
 | `app/styles/buttons.css` | 31 | AntD 按钮所有状态；反向压制基础按钮层，牵一发动全身 |
-| `shared/styles/list-table.css` | 16 | 表格表头/行/圆角/分隔线；列表一致性测试依赖 |
+| `shared/styles/list-table.css` | 23 | 表格表头/行/圆角/分隔线与列表名称；列表一致性测试依赖 |
 | `shared/styles/surface-tokens.css` | 12 | 列表板面、macOS 玻璃面、过滤组 |
 | `features/ui-automation/styles/ui-detail-shell.module.css` | 6 | macOS 详情板面透明化 |
-| `shared/styles/list-name.css` | 6 | 列表名称字体/颜色；跨所有列表 |
 | `shared/styles/tab-motion.css` | 6 | Tab 指示器透明与动效关闭 |
-| `app/styles/theme.css` | 4 | 浅色主题控件表面 |
+| `app/styles/theme.css` | 5 | 浅色主题控件表面与全局行分隔线 |
 | `features/projects/styles/sprint-overview.module.css` | 4 | macOS Sprint 看板板面 |
 | `app/styles/shell.css` | 3 | 紧凑头部、表格单元格伪元素、项目选择 |
-| `app/styles/layout.css` | 2 | 项目选择器内距、Tab 激活色 |
-| `src/index.css` | 2 | 描述文字颜色 |
-| `app/styles/shell-header.css` | 1 | macOS 弱化文字 |
+| `src/index.css` | 1 | 描述文字颜色 |
 | `shared/styles/pagination.css` | 1 | 表格页脚背景 |
-| `shared/styles/table-row-dividers.css` | 1 | 全局行分隔线 |
+| `app/styles/layout.css` | 1 | Tab 激活色 |
 
 完整规则与声明见附录 A。处理原则：
 
 - 先确认是否有同权重替代规则或 `@layer` 可覆盖；只有确认无替代才保留 `!important`。
 - 全局按钮/表格/表面契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
-- 页面 Module 剩余 10 处随阶段 35/38 处理；全局 85 处随阶段 37 处理，优先合并同体规则和删死规则，而不是硬去 `!important`。
+- 页面 Module 剩余 10 处保留；全局 83 处已在阶段 37 完成死规则合并与收缩（总数 95 → 93），阶段 38 不再硬去 `!important`。
 
 ## 六、重复规则体（10 组）
 
@@ -283,20 +278,15 @@
   - `color: var(--button-disabled-text) !important`; `background: var(--button-disabled-bg) !important`; `border-color: var(--button-disabled-border) !important`; `cursor: not-allowed !important`
 - `:is(.ant-btn-text, .ant-btn-link):is(:disabled, .ant-btn-disabled)`
   - `background: transparent !important`; `border-color: transparent !important`
-- `.ant-btn.app-action-icon, .ant-table .ant-btn.ant-btn-icon-only:is(.ant-btn-text, .ant-btn-link), .sprint-card-actions .ant-btn.ant-btn-icon-only`
+- `.ant-btn.app-action-icon, .ant-table .ant-btn.ant-btn-icon-only:is(.ant-btn-text, .ant-btn-link)`
   - `width: 28px !important`; `min-width: 28px !important`; `height: 28px !important`; `padding: 0 !important`; `border-radius: 6px !important`; `font-size: 14px !important`
 - `.ant-btn.app-action-icon > .ant-btn-icon, .ant-table .ant-btn.ant-btn-icon-only > .ant-btn-icon`
   - `font-size: 14px !important`
 - `.ant-table .ant-btn.app-action-run`
   - `height: 28px !important`; `font-size: 12px !important`; `gap: 4px !important`
 #### `app/styles/layout.css`
-- `.project-select .ant-select-selector`
-  - `padding-inline: 0 !important`
 - `.workbench-tabs .ant-tabs-tab-active .ant-tabs-tab-btn`
   - `color: var(--app-accent-hover) !important`
-#### `app/styles/shell-header.css`
-- `.app-shell-macos .sprint-card-label, .app-shell-macos .api-collection-description`
-  - `color: var(--mac-glass-muted) !important`
 #### `app/styles/shell.css`
 - `.compact-header .project-select .ant-select-selector`
   - `padding-inline: 0 !important`
@@ -305,10 +295,14 @@
 - `.app-shell .project-select .ant-select-selector`
   - `color: var(--app-glass-text) !important`
 #### `app/styles/theme.css`
+- `.app-shell-macos > .ant-layout`
+  - `background: var(--mac-glass-header) !important`
 - `:root:root:not([data-theme='dark']) .app-shell :is(.ant-input-affix-wrapper, .ant-select-selector, .ant-select:not(.ant-select-borderless):not(.ant-select-disabled) .ant-select-content)`
   - `background: var(--app-control-surface) !important`; `border-color: var(--button-border) !important`
 - `:root:root:not([data-theme='dark']) .app-shell .ant-input-affix-wrapper input`
   - `background: transparent !important`
+- `:root:root .ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td.ant-table-cell`
+  - `border-bottom: 1px solid var(--app-list-row-border) !important`
 #### `features/projects/styles/sprint-overview.module.css`
 - `:root:root :global(.app-shell-macos) .root :global(.sprint-overview-panel-unified)`
   - `border: 0 !important`; `border-radius: 0 !important`; `background: transparent !important`; `box-shadow: none !important`
@@ -316,16 +310,15 @@
 - `:global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`
   - `border: 0 !important`; `border-radius: 0 !important`; `background: transparent !important`; `box-shadow: none !important`; `-webkit-backdrop-filter: none !important`; `backdrop-filter: none !important`
 #### `index.css`
-- `.ant-empty-description, .ant-form-item-extra, .project-description-text, .api-collection-description, .api-env-var-picker-item-desc`
+- `.ant-empty-description, .ant-form-item-extra, .project-description-text, .api-env-var-picker-item-desc`
   - `color: var(--description-text) !important`
 - `.ant-empty-description, .ant-form-item-extra`
   - `color: var(--description-text-muted) !important`
-#### `shared/styles/list-name.css`
+#### `shared/styles/list-table.css`
 - `:root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name .ant-typography`
   - `color: var(--app-list-name) !important`; `font-family: Arial, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important`; `font-size: 13px !important`; `font-weight: 400 !important`; `line-height: 24px !important`
 - `:root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(.ant-typography:hover, .ant-typography:focus-visible, a:focus-visible .ant-typography)`
   - `color: var(--app-list-name-hover) !important`
-#### `shared/styles/list-table.css`
 - `:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell, :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell`
   - `padding: 0 16px !important`; `border: 0 !important`; `border-bottom: 1px solid var(--app-list-header-border) !important`; `border-radius: 0 !important`; `color: var(--srf-list-header-text) !important`; `background: var(--srf-list-header-bg) !important`; `box-shadow: none !important`
 - `:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td, :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td`
@@ -355,9 +348,6 @@
   - `background: transparent !important`; `box-shadow: none !important`
 - `.shared-tab-motion-indicator, .ant-segmented-thumb`
   - `transition: none !important`
-#### `shared/styles/table-row-dividers.css`
-- `:root:root .ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td.ant-table-cell`
-  - `border-bottom: 1px solid var(--app-list-row-border) !important`
 
 
 ### 附录 B：全部 10 组重复规则体
@@ -376,6 +366,6 @@
 10. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
 ## 八、执行顺序建议
 
-1. **阶段 29–36（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件）已完成**，当前 46 文件 / 8,493 行；继续 37（全局契约）。
-2. **37（全局契约）**：16 个文件 2,469 → ≤2,100、16 → 14；把 `table-row-dividers` 与 `list-name` 并入 `list-table`，只删死规则、合并同体规则、减少可替代的 `!important`。
-3. **最后 38（收口）**：全量复测、ratchet 基线、清理无消费者 token、更新文档；不整体迁移全局契约。
+1. **阶段 29–37（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件、全局契约）已完成**，当前 44 文件 / 8,047 行；进入 38（收口）。
+2. **38（收口）**：全量复测、ratchet 两个基线、清理无消费者 token、更新本文与迁移计划；不再整体迁移全局契约。
+3. **最终目标已达成**：44 ≤ 45 文件、8,047 ≤ 9,000 行、93 ≤ 100 处 `!important`、0 长前缀、10 ≤ 60 组重复体。

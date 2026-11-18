@@ -1,6 +1,5 @@
 @import './shared/styles/tailwind.css';
 @import 'antd/dist/reset.css' layer(reset);
-@import './shared/styles/table-row-dividers.css';
 @import './shared/styles/pagination.css';
 @import './shared/styles/foundation-tokens.css';
 @import './shared/styles/chart-tokens.css';
@@ -9,7 +8,6 @@
 @import './shared/styles/github-dark-foundation.css';
 @import './shared/styles/indigo-amber-light-tokens.css';
 @import './shared/styles/scrollbars.css';
-@import './shared/styles/list-name.css';
 :root {
   --app-panel-radius: 12px;
   --app-font-sans: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -59,7 +57,6 @@ a {
 .ant-empty-description,
 .ant-form-item-extra,
 .project-description-text,
-.api-collection-description,
 .api-env-var-picker-item-desc {
   color: var(--description-text) !important;
   font-family: var(--description-font);

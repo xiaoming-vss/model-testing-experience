@@ -85,7 +85,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 23 后长前缀已归零、`!important` 95 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
 | S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
 
-数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
+数据表行分隔由 `app/styles/theme.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查数据行覆盖及变量归属。
 
 已登记的 token 文件（新增或改名需评审）：
 
@@ -135,8 +135,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 性能测试 | 复用 `tp-*` 与 `shared/components/EntityCard.tsx` 内置卡片 utility；新样式使用 Tailwind utility，不新增页面级全局 CSS |
 | TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
 
-`shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与快速过滤条组件（`.tp-quickbar`、
-`.tp-chip`、`.tp-selection`）——这些页面的这几个部件必须完全一致，所以放在共用层而不是各写一份。
+`shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与列表面板契约；快速过滤条、页面工具栏与 API/性能工具栏的布局已迁到组件 utility。
 
 设计稿与既有约定冲突时以既有约定为准：设计稿的表格规格是表头 32px / 行高 36–40px，与 §7.5 锁定的列表指纹冲突，
 用例库 / 应用仍保持 42 / 48px；测试单 / API / UI 测试已改为卡片，不再有表头与行高。卡片共用
