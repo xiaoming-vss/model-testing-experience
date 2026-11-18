@@ -21,13 +21,17 @@
 .scope :global(.uisv-page-glyph) { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: var(--uisv-f1f5f9); color: var(--uisv-64748b); font-size: 11px; flex: 0 0 24px; }
 .scope :global(.uisv-page-item.active .uisv-page-glyph) { background: var(--uisv-dbeafe); color: var(--uisv-1d4ed8); }
 .scope :global(.uisv-page-copy),
-.scope :global(.uisv-case-copy) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.scope :global(.uisv-case-copy),
+.scope :global(.uisv-trace-copy) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .scope :global(.uisv-page-copy strong),
 .scope :global(.uisv-case-copy strong) { overflow: hidden; color: var(--uisv-1e293b); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-page-copy small),
-.scope :global(.uisv-case-copy small) { overflow: hidden; color: var(--uisv-94a3b8); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.uisv-case-copy small),
+.scope :global(.uisv-control-cell code),
+.scope :global(.uisv-trace-copy span) { overflow: hidden; color: var(--uisv-94a3b8); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-page-count) { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 17px; padding: 0 4px; border-radius: 4px; background: var(--uisv-f1f5f9); color: var(--uisv-64748b); font-size: 8px; }
-.scope :global(.uisv-page-located) { color: var(--uisv-94a3b8); font-size: 8px; font-variant-numeric: tabular-nums; }
+.scope :global(.uisv-page-located),
+.scope :global(.uisv-step-no) { color: var(--uisv-94a3b8); font-size: 8px; font-variant-numeric: tabular-nums; }
 .scope :global(.uisv-nav-foot) { flex: 0 0 auto; margin: 8px; padding: 8px; border-radius: 8px; background: var(--uisv-f8fafc); }
 .scope :global(.uisv-nav-foot-title) { margin-bottom: 5px; color: var(--uisv-64748b); font-size: 9px; font-weight: 600; }
 .scope :global(.uisv-cover-row) { display: grid; grid-template-columns: 52px minmax(0, 1fr) 36px; align-items: center; gap: 5px; color: var(--uisv-64748b); font-size: 8px; }
@@ -70,13 +74,12 @@
 .scope :global(.uisv-type-icon) { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; background: var(--uisv-f1f5f9); color: var(--uisv-64748b); font-size: 9px; flex: 0 0 20px; }
 .scope :global(.uisv-control-cell > span:last-child) { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .scope :global(.uisv-control-cell strong) { overflow: hidden; color: var(--uisv-1e293b); font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-control-cell code) { overflow: hidden; color: var(--uisv-94a3b8); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-muted) { color: var(--uisv-94a3b8); }
 .scope :global(.uisv-locator-cell) { min-width: 0; overflow: hidden; }
 .scope :global(.uisv-locator-cell code) { display: block; overflow: hidden; color: var(--uisv-475569); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-locator-cell em) { color: var(--uisv-b45309); font-size: 8px; font-style: normal; }
-.scope :global(.uisv-condition-cell) { overflow: hidden; color: var(--uisv-64748b); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-step-no) { color: var(--uisv-94a3b8); font-size: 8px; font-variant-numeric: tabular-nums; }
+.scope :global(.uisv-condition-cell),
+.scope :global(.uisv-yaml-locator code) { overflow: hidden; color: var(--uisv-64748b); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-step-source) { display: -webkit-box; overflow: hidden; color: var(--uisv-475569); font-size: 8px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .scope :global(.uisv-step-count) { color: var(--uisv-94a3b8); font-size: 8px; }
 .scope :global(.uisv-step-count strong) { color: var(--uisv-334155); font-size: 10px; }
@@ -111,7 +114,6 @@
 .scope :global(.uisv-kw-input) { background: var(--uisv-f1f5f9); color: var(--uisv-475569); }
 .scope :global(.uisv-yaml-locator) { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
 .scope :global(.uisv-yaml-locator .ant-tag) { margin: 0; font-size: 8px; line-height: 16px; }
-.scope :global(.uisv-yaml-locator code) { overflow: hidden; color: var(--uisv-64748b); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-yaml-locator em) { color: var(--uisv-94a3b8); font-size: 8px; font-style: normal; }
 
 .scope :global(.uisv-inspector) { overflow: hidden; }
@@ -152,9 +154,7 @@
 .scope :global(.uisv-trace-item.excluded) { border-color: var(--uisv-fde8c3); background: var(--uisv-fffaf0); }
 .scope :global(.uisv-trace-index) { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; background: var(--uisv-eff6ff); color: var(--uisv-1d4ed8); font-size: 8px; font-weight: 700; flex: 0 0 16px; }
 .scope :global(.uisv-trace-index.assert) { background: var(--uisv-ecfeff); color: var(--uisv-0e7490); }
-.scope :global(.uisv-trace-copy) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .scope :global(.uisv-trace-copy strong) { color: var(--uisv-334155); font-size: 8px; }
-.scope :global(.uisv-trace-copy span) { overflow: hidden; color: var(--uisv-94a3b8); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.uisv-trace-copy em) { color: var(--uisv-b45309); font-size: 8px; font-style: normal; line-height: 1.4; }
 .scope :global(.uisv-trace-item .uisv-pill) { height: 16px; padding: 0 4px; font-size: 7px; }
 .scope :global(.uisv-value-grid) { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }

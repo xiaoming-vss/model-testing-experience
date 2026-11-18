@@ -297,7 +297,8 @@
   font-size: 14px;
 }
 
-.root :global(.case-editor-section-hint) {
+.root :global(.case-editor-section-hint),
+.root :global(.case-editor-name-meta) {
   color: var(--srf-text-muted);
   font-size: 11px;
   line-height: 16px;
@@ -345,12 +346,6 @@
 .root :global(.case-editor-required) {
   color: var(--srf-danger);
   font-style: normal;
-}
-
-.root :global(.case-editor-name-meta) {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 16px;
 }
 
 .root :global(.case-editor-title-input):global(.ant-input) {

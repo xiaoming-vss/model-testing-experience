@@ -22,7 +22,8 @@
   background: var(--srf-card);
 }
 
-.scope :global(.if-detail-topbar-main) {
+.scope :global(.if-detail-topbar-main),
+.scope :global(.if-detail-title-row) {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -34,13 +35,6 @@
   flex-direction: column;
   min-width: 0;
   gap: 2px;
-}
-
-.scope :global(.if-detail-title-row) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
 }
 
 .scope :global(.if-detail-title-row h1) {
@@ -329,7 +323,9 @@
   gap: 6px;
 }
 
-.scope :global(.if-app-form > label > span) {
+.scope :global(.if-app-form > label > span),
+.scope :global(.if-import-field > span),
+.scope :global(.if-import-groups-title) {
   color: var(--srf-text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -401,12 +397,6 @@
   gap: 6px;
 }
 
-.scope :global(.if-import-field > span) {
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .scope :global(.if-import-mode) {
   align-self: flex-start;
 }
@@ -452,12 +442,6 @@
   border: 1px dashed var(--srf-accent-border);
   border-radius: var(--srf-radius-control);
   background: var(--srf-accent-soft);
-}
-
-.scope :global(.if-import-groups-title) {
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .scope :global(.if-import-groups .ant-tag) {
@@ -530,7 +514,8 @@
   gap: 1px;
 }
 
-.scope :global(.if-import-item-group) {
+.scope :global(.if-import-item-group),
+.scope :global(.if-import-changed) {
   overflow: hidden;
   color: var(--srf-text-muted);
   font-size: 11px;
@@ -555,14 +540,6 @@
 
 .scope :global(.if-import-item .ant-tag) {
   margin: 0;
-}
-
-.scope :global(.if-import-changed) {
-  overflow: hidden;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .scope :global(.if-import-note) {

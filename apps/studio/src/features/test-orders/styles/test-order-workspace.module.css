@@ -454,14 +454,7 @@
 
 /* ===== 全宽详情 ===== */
 
-.root :global(.test-order-execution-view) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-}
-
+.root :global(.test-order-execution-view),
 .root :global(.test-order-list-view) {
   display: flex;
   flex: 1 1 auto;

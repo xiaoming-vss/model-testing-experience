@@ -347,7 +347,8 @@
   gap: 6px;
 }
 
-.scope :global(.ui-wb-case-status) {
+.scope :global(.ui-wb-case-status),
+.scope :global(.ui-wb-case-count) {
   color: var(--srf-text-muted);
   font-size: 12px;
   white-space: nowrap;
@@ -355,12 +356,6 @@
 
 .scope :global(.ui-wb-case-status.tone-green) {
   color: var(--srf-tone-text);
-}
-
-.scope :global(.ui-wb-case-count) {
-  color: var(--srf-text-muted);
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 /* 桌面宽度保持单行：动作组不换行，面包屑在剩余空间里截断。 */

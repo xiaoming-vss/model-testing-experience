@@ -282,7 +282,8 @@
   gap: 16px;
 }
 
-.scope :global(.ui-test-case-step-grid) {
+.scope :global(.ui-test-case-step-grid),
+.scope :global(.ui-test-case-step-detail-grid) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
@@ -342,13 +343,6 @@
 .scope :global(.ui-test-case-step-footer-grid .ant-select-single .ant-select-selection-item),
 .scope :global(.ui-test-case-step-footer-grid .ant-select-single .ant-select-selection-placeholder) {
   line-height: 34px;
-}
-
-.scope :global(.ui-test-case-step-detail-grid) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 16px;
-  align-items: start;
 }
 
 .scope :global(.ui-test-case-step-field) {

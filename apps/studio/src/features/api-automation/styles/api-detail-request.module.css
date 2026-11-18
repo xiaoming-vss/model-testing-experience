@@ -131,7 +131,8 @@
   color: var(--srf-danger);
 }
 
-.scope :global(.api-wb-hdr-tool-divider) {
+.scope :global(.api-wb-hdr-tool-divider),
+.scope :global(.api-wb-body-action-divider) {
   width: 1px;
   height: 12px;
   background: var(--srf-card-border);
@@ -336,12 +337,6 @@
 .scope :global(.api-wb-body-action:disabled) {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.scope :global(.api-wb-body-action-divider) {
-  width: 1px;
-  height: 12px;
-  background: var(--srf-card-border);
 }
 
 .scope :global(.api-wb-body-validity) {

@@ -32,7 +32,8 @@
   align-items: stretch;
 }
 
-.scope :global(.api-config-visual-card) {
+.scope :global(.api-config-visual-card),
+.scope :global(.api-design-visual-interface) {
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--app-review-outline);
@@ -125,7 +126,8 @@
   margin-inline-end: 0;
 }
 
-.scope :global(.api-config-visual-grid) {
+.scope :global(.api-config-visual-grid),
+.scope :global(.api-config-visual-rules) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -158,13 +160,6 @@
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12px;
   line-height: 18px;
-}
-
-.scope :global(.api-config-visual-rules) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
 }
 
 .scope :global(.api-config-visual-rule-group) {
@@ -274,17 +269,6 @@
   flex-direction: column;
   gap: 14px;
   padding-bottom: 4px;
-}
-
-.scope :global(.api-design-visual-interface) {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--app-review-outline);
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-muted-bg)),
-    var(--ai-card);
-  box-shadow: 0 10px 24px var(--app-glass-request-shadow-selected);
 }
 
 .scope :global(.api-design-visual-interface-head) {

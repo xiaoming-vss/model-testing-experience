@@ -184,7 +184,7 @@
 .scope :global(.gc-inspector-run-meta > span:first-child) { flex: none; }
 .scope :global(.gc-inspector-run-id) { min-width: 0; font-size: 12px; white-space: nowrap; }
 .scope :global(.gc-failure-meta) { margin: 0; color: var(--app-surface-text-muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
-@media (max-width: 900px) { .scope :global(.gc-canvas-workspace) { flex-direction: column; overflow: auto; } .scope :global(.gc-canvas-frame) { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; } .scope :global(.gc-inspector-drawer) { flex: 0 0 auto; min-height: 220px; } .scope :global(.gc-inspector-drawer.is-collapsed) { min-height: 48px; height: 48px; } .scope :global(.gc-inspector) { width: 100%; min-height: 220px; } .scope :global(.gc-inspector-toggle),
+@media (max-width: 900px) { .scope :global(.gc-canvas-workspace) { flex-direction: column; overflow: auto; } .scope :global(.gc-inspector-drawer) { flex: 0 0 auto; min-height: 220px; } .scope :global(.gc-inspector-drawer.is-collapsed) { min-height: 48px; height: 48px; } .scope :global(.gc-inspector) { width: 100%; min-height: 220px; } .scope :global(.gc-inspector-toggle),
  .scope :global(.gc-inspector-drawer.is-collapsed .gc-inspector-toggle) { left: 50%; top: 0; transform: translate(-50%, -50%); width: 68px; height: 30px; } .scope :global(.gc-inspector-toggle::before) { left: 23px; top: 6px; width: 20px; height: 3px; } }
 @media (max-width: 900px) { .scope :global(.gc-inspector-rail) { flex-direction: row; justify-content: center; padding: 0; } }
 
@@ -203,6 +203,7 @@
 .scope :global(.gc-embedded-artifact .gc-return-canvas) { position: absolute; top: 16px; right: 16px; }
 .scope :global(.gc-embedded-artifact .ant-modal-body) { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 @media (max-width: 900px) {
+  .scope :global(.gc-canvas-frame),
   .scope :global(.gc-canvas-stage) { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; }
   .scope :global(.gc-canvas-stage.is-reading) { height: max(600px, 75dvh); }
   .scope :global(.gc-canvas-stage .gc-canvas-frame) { flex: 1 1 auto; height: auto; min-height: 0; }

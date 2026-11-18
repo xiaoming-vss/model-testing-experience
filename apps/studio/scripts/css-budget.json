@@ -1,5 +1,5 @@
 {
-  "important": 236,
+  "important": 235,
   "importantByFile": {
     "src/app/styles/action-buttons.css": 15,
     "src/app/styles/antd-overrides.css": 27,
@@ -20,7 +20,7 @@
     "src/features/api-automation/styles/api-detail-shell.module.css": 2,
     "src/features/interface-library/styles/interface-editor.module.css": 2,
     "src/features/projects/styles/projects-overview.module.css": 8,
-    "src/features/projects/styles/sprint-overview.module.css": 9,
+    "src/features/projects/styles/sprint-overview.module.css": 8,
     "src/features/requirements/styles/requirement-detail.module.css": 2,
     "src/features/test-cases/styles/case-library.module.css": 25,
     "src/features/ui-automation/styles/ui-detail-shell.module.css": 7,

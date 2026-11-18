@@ -256,7 +256,8 @@
   margin: 0;
 }
 
-.scope :global(.ui-source-existing-list > div) {
+.scope :global(.ui-source-existing-list > div),
+.scope :global(.gc-ui-source-repository > div) {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
@@ -280,7 +281,8 @@
   }
 }
 
-.scope :global(.gc-ui-input-modal :is(.ant-modal-container, .ant-modal-content)) {
+.scope :global(.gc-ui-input-modal :is(.ant-modal-container, .ant-modal-content)),
+.scope:global(.llm-connection-select-modal-expanded) :global(:is(.ant-modal-container, .ant-modal-content)) {
   display: flex;
   flex-direction: column;
   max-height: calc(100dvh - 48px);
@@ -324,12 +326,6 @@
   flex-direction: column;
   gap: 4px;
   margin: 0 0 12px;
-}
-
-.scope :global(.gc-ui-source-repository > div) {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 8px;
 }
 
 .scope :global(.gc-ui-source-repository dt) {
@@ -396,12 +392,6 @@
 .scope :global(.ui-generation-case-filters > *) {
   min-width: 0;
   width: 100%;
-}
-
-.scope:global(.llm-connection-select-modal-expanded) :global(:is(.ant-modal-container, .ant-modal-content)) {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100dvh - 48px);
 }
 
 .scope:global(.llm-connection-select-modal-expanded) :global(.ant-modal-body) {

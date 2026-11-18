@@ -189,12 +189,7 @@
   --srf-tone-border: var(--gh-blue-border);
 }
 
-:root[data-theme="dark"] .tp-surface .tone-indigo {
-  --srf-tone-text: var(--gh-purple);
-  --srf-tone-bg: var(--gh-purple-soft);
-  --srf-tone-border: var(--gh-purple-border);
-}
-
+:root[data-theme="dark"] .tp-surface .tone-indigo,
 :root[data-theme="dark"] .tp-surface .tone-purple {
   --srf-tone-text: var(--gh-purple);
   --srf-tone-bg: var(--gh-purple-soft);

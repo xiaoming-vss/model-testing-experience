@@ -298,7 +298,8 @@
 .root :global(.bug-context-list) dt { padding: 12px 12px 4px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-bottom: 0; border-radius: 6px 6px 0 0; font-size: 11px; }
 .root :global(.bug-context-list) dd { padding: 0 12px 12px; margin-bottom: 12px; text-align: left; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-top: 0; border-radius: 0 0 6px 6px; }
 .root :global(.bug-context-list) dd:last-child { margin-bottom: 0; }
-.root :global(.bug-attachment-list) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.root :global(.bug-attachment-list),
+.root :global(.bug-evidence-upload) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .root :global(.bug-attachment-item) { min-width: 0; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 8px; gap: 8px; }
 .root :global(.bug-evidence-icon) { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 6px; color: var(--srf-accent); background: var(--srf-accent-soft); }
 .root :global(.bug-attachment-item) :global(.ant-btn) { min-width: 0; flex: 1; }
@@ -434,7 +435,6 @@
   --button-current-active: var(--srf-accent-strong);
   min-width: 160px;
 }
-.root :global(.bug-evidence-upload) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .root :global(.bug-evidence-upload) :global(.ant-upload-drag) { background: var(--srf-hover); border-color: var(--srf-accent-border); border-radius: 6px; }
 .root :global(.bug-evidence-upload) :global(.ant-upload-drag-container) { display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; text-align: left; }
 .root :global(.bug-evidence-upload) p:global(.ant-upload-drag-icon) { grid-row: span 2; display: flex; align-items: center; justify-content: center; background: var(--srf-count-badge); border-radius: 5px; }

@@ -123,12 +123,7 @@
   background: var(--metric-color);
 }
 
-.root :global(.sprint-overview-donut-layout) :global(.recharts-default-tooltip) {
-  border: 1px solid var(--tp-border-soft) !important;
-  border-radius: 10px;
-  box-shadow: 0 10px 24px var(--app-card-shadow-floating);
-}
-
+.root :global(.sprint-overview-donut-layout) :global(.recharts-default-tooltip),
 .root :global(.sprint-overview-chart-host) :global(.recharts-default-tooltip) {
   border: 1px solid var(--tp-border-soft) !important;
   border-radius: 10px;

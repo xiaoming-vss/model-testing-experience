@@ -48,7 +48,8 @@
   white-space: nowrap;
 }
 
-.scope :global(.api-wb-toolbar-env-dot) {
+.scope :global(.api-wb-toolbar-env-dot),
+.scope :global(.api-wb-base-url-dot) {
   flex: 0 0 auto;
   width: 6px;
   height: 6px;
@@ -240,13 +241,15 @@
   font-weight: 600;
 }
 
-.scope :global(.api-wb-case-meta-item strong) {
+.scope :global(.api-wb-case-meta-item strong),
+.scope :global(.api-wb-console-meta strong) {
   color: var(--srf-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 600;
 }
 
-.scope :global(.api-wb-case-state) {
+.scope :global(.api-wb-case-state),
+.scope :global(.api-wb-assert-summary) {
   padding: 1px 8px;
   border: 1px solid var(--srf-tone-border);
   border-radius: 999px;
@@ -316,14 +319,6 @@
 .scope :global(.api-wb-base-url:disabled) {
   cursor: not-allowed;
   opacity: 0.7;
-}
-
-.scope :global(.api-wb-base-url-dot) {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--srf-result-passed);
 }
 
 .scope :global(.api-wb-base-url-text) {
@@ -400,7 +395,8 @@
   gap: 6px;
 }
 
-.scope :global(.api-wb-tab-count) {
+.scope :global(.api-wb-tab-count),
+.scope :global(.api-wb-console-tab-count) {
   padding: 0 5px;
   border-radius: 999px;
   background: var(--srf-chip);
@@ -495,23 +491,6 @@
   background: currentColor;
 }
 
-.scope :global(.api-wb-console-meta strong) {
-  color: var(--srf-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 600;
-}
-
-.scope :global(.api-wb-assert-summary) {
-  padding: 1px 8px;
-  border: 1px solid var(--srf-tone-border);
-  border-radius: 999px;
-  background: var(--srf-tone-bg);
-  color: var(--srf-tone-text);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-}
-
 .scope :global(.api-wb-console-alert) {
   margin: 10px 16px 0;
 }
@@ -538,16 +517,6 @@
   border-bottom-color: var(--srf-accent);
   color: var(--srf-accent);
   font-weight: 600;
-}
-
-.scope :global(.api-wb-console-tab-count) {
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
-  line-height: 16px;
 }
 
 .scope :global(.api-wb-console-body > .api-case-run-result-pre),

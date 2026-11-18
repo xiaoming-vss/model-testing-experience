@@ -76,7 +76,8 @@
 .scope :global(.ui-flow-edge-delete) { position:absolute; pointer-events:all; width:24px; height:24px; padding:0; border:1px solid var(--srf-card-border); border-radius:50%; background:var(--srf-card); color:var(--srf-text); font-size:18px; line-height:20px; cursor:pointer; }
 .scope :global(.ui-flow-edge-delete:hover),
 .scope :global(.ui-flow-edge-delete:focus-visible) { border-color:var(--srf-accent); color:var(--srf-accent); }
-.scope :global(.ui-flow-header-combined) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.scope :global(.ui-flow-header-combined),
+.scope :global(.ui-flow-toolbar-title) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
 .scope :global(.ui-flow-header-combined .ui-wb-ribbon.is-compact) { flex:0 0 auto; padding:0; border:0; border-radius:0; background:transparent; }
 .scope :global(.ui-flow-header-combined .ui-flow-case-meta) { flex:1 1 420px; min-width:0; }
 .scope :global(.ui-step-header-switches) { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-right:8px; }
@@ -85,7 +86,6 @@
 .scope :global(.ui-step-config-tabs button) { padding:7px 2px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--srf-text-secondary); cursor:pointer; }
 .scope :global(.ui-step-config-tabs button[aria-selected="true"]) { border-bottom-color:var(--srf-accent); color:var(--srf-accent); font-weight:600; }
 .scope :global(.ui-test-case-step-card.is-detail .ui-test-case-step-extract) { padding-top:0; border-top:0; }
-.scope :global(.ui-flow-toolbar-title) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
 .scope :global(.ui-flow-toolbar-title .ui-wb-ribbon) { padding:0; border:0; border-radius:0; background:transparent; }
 .scope :global(.ui-flow-toolbar-title .ui-flow-count) { margin-left:0; }
 /* 常用配置项的名称与控件同行，保留控件下方的校验信息空间。 */

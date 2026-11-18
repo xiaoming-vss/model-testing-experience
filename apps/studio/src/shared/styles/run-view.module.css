@@ -197,7 +197,8 @@
 }
 
 .root :global(.api-collection-run-history-item-main),
-.root :global(.api-collection-run-history-item-side) {
+.root :global(.api-collection-run-history-item-side),
+.reportRoot :global(.api-collection-run-report-head-main) {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -208,7 +209,8 @@
   flex: 1 1 auto;
 }
 
-.root :global(.api-collection-run-history-item-title) {
+.root :global(.api-collection-run-history-item-title),
+.reportRoot :global(.api-collection-run-report-item-title) {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -331,13 +333,6 @@
   gap: 8px;
 }
 
-.reportRoot :global(.api-collection-run-report-head-main) {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .reportRoot :global(.api-collection-run-report-title) {
   display: flex;
   align-items: center;
@@ -448,14 +443,6 @@
   gap: 12px;
   text-align: left;
   cursor: pointer;
-}
-
-.reportRoot :global(.api-collection-run-report-item-title) {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .reportRoot :global(.api-collection-run-report-item-title strong) {
