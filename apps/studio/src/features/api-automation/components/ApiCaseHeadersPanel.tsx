@@ -160,7 +160,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                             onInsert: (templateText) => insertTemplateText(['headers', field.name, 'value'], `headers:${field.key}:value`, templateText),
                             trigger: (
                               <Tooltip title="插入动态值">
-                                <Button type="text" size="small" className="api-env-var-picker-trigger" icon={<CodeOutlined />} />
+                                <Button type="text" size="small" className="api-env-var-picker-trigger" style={{ width: 28, height: 28, padding: 0, borderRadius: 8 }} icon={<CodeOutlined />} />
                               </Tooltip>
                             ),
                           })}

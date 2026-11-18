@@ -4,9 +4,17 @@ import { Alert, Button, Tag } from 'antd'
 import { useState } from 'react'
 import { usePersonalLlmChoice } from '@/features/ai-testing/hooks/usePersonalLlmChoice'
 import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
+import { cx } from '@/shared/utils/cx'
 import { getErrorMessage } from '@/utils/format'
 import { caseVisualizationApi, isVisualizationRunning, visualizationStatus } from '../../api/caseVisualization.api'
-import vizStyles from '../../styles/test-order-visualization.module.css'
+import {
+  vizBatchClass,
+  vizBatchCountsClass,
+  vizBatchItemClass,
+  vizBatchLinkClass,
+  vizBatchListClass,
+  vizBatchSummaryClass,
+} from './visualizationClasses'
 
 type Props = { orderId: string; projectId?: string; entryIds: string[]; onSelect: (id: string) => void; compact?: boolean }
 export function VisualizationBatchButton({ orderId, projectId, entryIds, onSelect, compact = false }: Props) {
@@ -30,7 +38,7 @@ export function VisualizationBatchButton({ orderId, projectId, entryIds, onSelec
       void client.invalidateQueries({ queryKey: ['caseVisualization', orderId] })
     },
   })
-  return <div className={`test-order-viz-batch ${vizStyles.batch}${compact ? ' is-compact' : ''}`}>
+  return <div className={cx(vizBatchClass, compact && 'is-compact')}>
     <Button
       size="small"
       icon={compact ? <ExperimentOutlined aria-hidden="true" /> : undefined}
@@ -43,7 +51,7 @@ export function VisualizationBatchButton({ orderId, projectId, entryIds, onSelec
     {entryIds.length > 100 && <p>每批最多 100 条，请减少勾选。</p>}
     {generate.error && <Alert type="error" title={getErrorMessage(generate.error)} />}
     {query.error && <Alert type="warning" title="批量状态暂不可用" action={<Button size="small" onClick={() => void query.refetch()}>重试</Button>} />}
-    {query.data && <details open><summary>本批 {query.data.total} 条 · 已有图解自动跳过</summary><div className="test-order-viz-batch-counts">{Object.entries(query.data.counts).map(([status, count]) => <Tag key={status}>{visualizationStatus(status)} {count}</Tag>)}</div><ul>{query.data.items.map(item => <li key={item.entryId}><Button size="small" type="link" onClick={() => onSelect(item.entryId)}>{item.entryId}</Button><span>{item.errorMessage || visualizationStatus(item.run?.status ?? item.disposition, item.run?.artifactStatus)}</span></li>)}</ul></details>}
+    {query.data && <details open><summary className={vizBatchSummaryClass}>本批 {query.data.total} 条 · 已有图解自动跳过</summary><div className={vizBatchCountsClass}>{Object.entries(query.data.counts).map(([status, count]) => <Tag key={status}>{visualizationStatus(status)} {count}</Tag>)}</div><ul className={vizBatchListClass}>{query.data.items.map(item => <li key={item.entryId} className={vizBatchItemClass}><Button className={vizBatchLinkClass} size="small" type="link" onClick={() => onSelect(item.entryId)}>{item.entryId}</Button><span>{item.errorMessage || visualizationStatus(item.run?.status ?? item.disposition, item.run?.artifactStatus)}</span></li>)}</ul></details>}
     {llm.dialog}
   </div>
 }

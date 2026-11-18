@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–38 已完成；本文件是整改收口归档与后续维护台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **44 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
+> 2026-11-18。阶段 0–38 已完成预算收口；阶段 39–44 结构性整改已立项。本文件是整改台账与后续维护基线。它覆盖 `apps/studio/src/**/*.css` 当前全部 **44 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,8 +8,8 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 44 | ≤ 45 | 已达标（余 1 个） |
-| CSS 行数 | 8,047 | ≤ 9,000 | 已达标（余 953 行） |
+| CSS 文件 | 42 | ≤ 45 | 已达标（余 3 个） |
+| CSS 行数 | 7,756 | ≤ 9,000 | 已达标（余 1,244 行） |
 | `!important` | 93 | ≤ 100 | 已达标（数值） |
 | 长前缀 | 0 | 0 | 已达标 |
 | 重复规则体 | 10 | ≤ 60 | 已达标 |
@@ -23,7 +23,7 @@
    - 7 个 token 文件：1,847 行；
    - 9 个外壳/全局基础文件：1,296 行；
    - 5 个共享全局契约：726 行。
-4. 其余 **23 个页面/共享组件文件（4,178 行）** 已低于阶段 37 前的文件与行数上限；总数的 44 个文件也已低于 ≤45 目标。
+4. 其余 **21 个页面/共享组件文件（3,887 行）** 已低于阶段 37 前的文件与行数上限；阶段 39 删除右栏卡片与测试单可视化两个 Module，并收缩 API 规则与 AI 阶段可视化样式。
 5. 10 组重复规则体已在目标内，且多为跨页面同构皮肤；阶段 38 只做了复测与基线 ratchet，没有为了清零合并语义不同的选择器。完整列表见附录 B。
 6. **阶段 38 收口已完成。** 全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；两个基线 ratchet 后保持 44 文件 / 93 处 `!important` / 10 组重复体。D 类 token 审计确认 28 个 `--legacy-*` 别名仍各有消费者，删除组件未遗留同名 token；调色板 token 属于保留契约，未批量删除。
 
@@ -32,11 +32,11 @@
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
 | **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 0 | 0 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 23 | 4,178 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 21 | 3,887 |
 | **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 14 | 2,022 |
 | **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
 
-> A 类已清零。B 类剩余文件均已只保留深层皮肤或跨页面共享结构；阶段 37 只收缩 C 类，不再新增页面迁移。
+> A 类已清零。B 类剩余文件均已只保留深层皮肤或跨页面共享结构；阶段 39 删除 `ui-detail-inspector` 与 `test-order-visualization` 两个 Module。
 
 ### A 类：已完成（0 个文件）
 
@@ -52,7 +52,7 @@
 
 ## 三、完整文件清单（按页面族）
 
-> 每一行对应一个存量文件；“动作”列保留 A/B/C/D 归类。当前 44 个文件均已列入，没有省略项；阶段 29–37 删除或并入的 22 个文件不再保留条目。
+> 每一行对应一个存量文件；“动作”列保留 A/B/C/D 归类。当前 42 个文件均已列入，没有省略项；阶段 29–39 删除或并入的 24 个文件不再保留条目。
 
 
 ### 一、外壳与全局基础
@@ -77,11 +77,10 @@
 
 测试集列表、详情壳、检查器、执行流水线与测试集抽屉。
 
-**3 个文件 / 546 行（阶段 29 前：5 个 / 1,959 行）**。页面布局与可迁移皮肤已全部迁入组件 utility；以下只保留 AntD / React Flow 深层规则。
+**2 个文件 / 475 行（阶段 29 前：5 个 / 1,959 行）**。页面布局与可迁移皮肤已全部迁入组件 utility；右栏卡片原语已抽为 `shared/components/RunCard.tsx`，以下只保留 AntD / React Flow 深层规则。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/ui-automation/styles/ui-detail-inspector.module.css` | 71 | — | — | 2 | 0 | 0 | **B** | 右栏卡片原语与 AntD 空态；阶段 29 后不再承载页面布局 |
 | `features/ui-automation/styles/ui-detail-shell.module.css` | 317 | — | — | 多 | 6 | 0 | **B** | 板面、顶栏输入、未保存态、React Flow 深层规则 |
 | `features/ui-automation/styles/ui-suite.module.css` | 158 | — | — | 多 | 0 | 0 | **B** | 测试集抽屉与步骤编辑器的 AntD 表单深层规则 |
 
@@ -89,22 +88,21 @@
 
 测试集列表、详情壳、请求编辑器、请求头/请求体、规则/后置操作与环境选择。
 
-**2 个文件 / 336 行（阶段 30 前：4 个 / 1,466 行）**。列表、顶栏、用例行、请求面板、环境弹层与后置操作已迁入组件 utility；以下只保留 AntD / CodeMirror 深层规则和页面级玻璃变量。
+**2 个文件 / 296 行（阶段 30 前：4 个 / 1,466 行）**。列表、顶栏、用例行、请求面板、环境弹层与后置操作已迁入组件 utility；以下只保留 AntD / CodeMirror 深层规则和页面级玻璃变量。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
 | `features/api-automation/styles/api-detail-shell.module.css` | 231 | — | — | 多 | 0 | 0 | **B** | 用例名称行、方法 Select、路径输入、Tabs、键值输入、请求头表与请求体 CodeMirror |
-| `features/api-automation/styles/api-detail-rules.module.css` | 105 | — | — | 多 | 0 | 0 | **B** | 环境弹层、规则弹窗、AntD 卡片/按钮与 JSON 编辑器玻璃外壳 |
+| `features/api-automation/styles/api-detail-rules.module.css` | 65 | — | — | 多 | 0 | 0 | **B** | 环境弹层、后置操作 hover 与 JSON 编辑器玻璃外壳；表单/卡片/按钮尺寸已内联 |
 
 ### 四、测试单（阶段 31 已完成）
 
 列表、工作台、图谱与可视化。
 
-**2 个文件 / 329 行（阶段 31 前：5 个 / 1,154 行）**。列表、工作台骨架、图谱页壳/查看器、执行面板与判定区已迁入组件 utility；以下只保留页面高度链、AntD 表格/弹层深层规则与可视化容器查询。
+**1 个文件 / 210 行（阶段 31 前：5 个 / 1,154 行）**。列表、工作台骨架、图谱页壳/查看器、执行面板与判定区已迁入组件 utility；可视化面板已整体迁入 `visualizationClasses.ts` 并删除 Module，以下只保留页面高度链与 AntD 表格/弹层深层规则。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/test-orders/styles/test-order-visualization.module.css` | 119 | — | — | 多 | 0 | 5 | **B** | 可视化面板的容器查询布局与图表/空态皮肤 |
 | `features/test-orders/styles/test-order-workspace.module.css` | 210 | — | — | 多 | 0 | 6 | **B** | 页面高度链、工具栏/条目表格、详情翻页、加入用例弹窗、执行条与判定控件 |
 
 ### 五、接口库（阶段 32 已完成）
@@ -122,7 +120,7 @@
 
 需求生成、生成链、画布、产物、关系图谱、UI 生成与阶段可视化。
 
-**5 个文件 / 1,449 行（阶段 33 前：10 个 / 3,759 行）**。页面骨架、字段排版、关系图与 UI 生成弹窗已全部迁入组件 utility；以下只保留 AntD / CodeMirror / React Flow 深层规则、宿主适配和页面级玻璃变量。
+**5 个文件 / 1,388 行（阶段 33 前：10 个 / 3,759 行）**。页面骨架、字段排版、关系图与 UI 生成弹窗已全部迁入组件 utility；阶段可视化的浅色规则已迁入 `uiStageVisualClasses.ts`，以下只保留 AntD / CodeMirror / React Flow 深层规则、深色覆盖和页面级玻璃变量。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
@@ -130,7 +128,7 @@
 | `features/ai-testing/styles/artifact-cases.module.css` | 255 | — | — | 多 | 0 | 0 | **B** | 用例名称树/React Flow 节点、选中动效、生成用例审核字段、仓库画像与产物宿主适配 |
 | `features/ai-testing/styles/generation-chain.module.css` | 426 | — | — | 多 | 0 | 3 | **B** | 生成链弹窗、节点/文档/泳道、状态胶囊、产物滚动、导入、修订侧栏与关系图谱 |
 | `features/ai-testing/styles/generation-canvas.module.css` | 256 | — | — | 多 | 0 | 4 | **B** | React Flow 边/光束/分组动效、检查器深层规则、产物阅读布局、API 选择器与源码仓库 |
-| `features/ai-testing/styles/ui-stage-visual.module.css` | 217 | — | — | 多 | 0 | 1 | **B** | 阶段可视化胶囊/关键词 token、检查器内部、深色覆盖与产物模式控制 |
+| `features/ai-testing/styles/ui-stage-visual.module.css` | 156 | — | — | 多 | 0 | 1 | **B** | 阶段可视化深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局在 `uiStageVisualClasses.ts` |
 
 ### 七、用例 / Bug / 需求（阶段 34 已完成）
 
@@ -256,7 +254,7 @@
 
 结构门禁口径 10 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
 
-- 不单独立项，不为了把 44 降到 0 而合并语义不同的选择器。
+- 不单独立项，不为了把 42 降到 0 而合并语义不同的选择器。
 - 页面批次里如果同一规则体落在同一宿主/同一 utility 能表达，就合并；否则保留。
 - 附录 B 列出全部 10 组的成员选择器，供批次内查重，不要求逐组清零。
 
@@ -357,20 +355,20 @@
 
 1. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css → :global(.app-shell):has(.root)`
 2. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/sprint-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
-3. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`
-4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
-5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
-6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar), .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quick-filters`
-7. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
-8. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
-9. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
+3. `src/app/styles/shell.css → .workbench-page`；`src/app/styles/shell.css → .workbench-panel`
+4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`
+5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
+6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
+7. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`
+8. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
+9. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
 10. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
 
 ## 八、执行顺序建议
 
 1. **阶段 29–38（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件、全局契约、收口）已完成**，当前 44 文件 / 8,047 行。
 2. **38（收口）已完成**：全量复测、ratchet 两个基线、审计 D 类 token 并更新本文与迁移计划；未再整体迁移全局契约，也未批量删除调色板 token。
-3. **最终目标已达成**：44 ≤ 45 文件、8,047 ≤ 9,000 行、93 ≤ 100 处 `!important`、0 长前缀、10 ≤ 60 组重复体。
+3. **阶段 38 预算目标已达成**：44 ≤ 45 文件、8,047 ≤ 9,000 行、93 ≤ 100 处 `!important`、0 长前缀、10 ≤ 60 组重复体；阶段 39 继续把文件/行数压到 42 / 7,756。
 
 ## 九、完成与未完成记录
 
@@ -385,17 +383,29 @@
 - **验证**：全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；阶段 29–37 已按各阶段记录完成对应页面与断点的浏览器核对，阶段 37 覆盖 Shell、工具栏、快速过滤条与按钮；两个基线已 ratchet 且无回退。
 - **Token 审计**：28 个 `--legacy-*` 别名仍有消费者，未发现删除组件遗留的同名 token；未批量删除调色板 token。
 
+### 阶段 39 已完成（2026-11-18）
+
+- **度量**：结构门禁新增 `layoutDeclarations`；全量布局声明 1,893 → 1,530（−363）。
+- **迁移**：删除 `ui-detail-inspector.module.css`（71 行，右栏卡片抽为 `shared/components/RunCard.tsx`）与 `test-order-visualization.module.css`（119 行，面板/步骤/关系图迁 utility，容器查询改用 Tailwind 变体）；`api-detail-rules` 105 → 65；`ui-stage-visual` 217 → 156，浅色规则迁 `uiStageVisualClasses.ts`。
+- **指标**：44 → 42 文件，8,047 → 7,756 行；`!important` 93、长前缀 0、10 组重复体、0 个超过 600 行的文件。
+- **验证**：`npm run verify`、CSS 三件套、`git diff --check` 通过；全量 188 个测试文件 / 946 个用例通过（当前工作树含性能测试新增；阶段 38 基线为 187/942）；UI 自动化、测试单可视化、API 自动化、AI 阶段可视化与运行报告定向测试通过。
+- **浏览器核对**：当前 `perf-e2e-1794842106` 项目无 UI/API 测试数据，`Zata-Platform` 无项目权限；列表与空态可打开，详情/回放/图谱需真实数据，留阶段 42 补齐，未伪造验收。
+
 ### 未完成 / 明确保留
 
 - **C 类全局契约（14 个文件 / 2,022 行）**：只做死规则、层叠和重复体收缩，未整体 utility 化；其中 83 处 `!important` 属于外壳/表格/按钮/表面契约，保留。
-- **B 类页面/共享 Module（23 个文件 / 4,178 行）**：保留 AntD / React Flow / DOCX 深层选择器、玻璃皮肤、页面高度链与容器查询，不再继续迁移。
+- **B 类页面/共享 Module（21 个文件 / 3,887 行）**：保留 AntD / React Flow / DOCX 深层选择器、玻璃皮肤、页面高度链与容器查询，不再继续迁移。
 - **D 类 Token（7 个文件 / 1,847 行）**：主题、调色板与 Tailwind 层声明保留；当前无直接消费者的调色板 token 未删除，需设计系统确认后再处理。
 - **视觉验收缺口**：运行报告、导入预览、图谱执行面板等依赖后端数据的界面未做真实数据浏览器核对，当前由组件测试、类型检查与构建覆盖。
-- **交付状态**：阶段 37/38 的两笔提交仅存在于本地 `dev`（`cb6ef53`、`7bb5faa`），未推送；工作树另有性能测试环境选择器改动，不属于本计划。
+- **交付状态**：`origin/dev` 停在阶段 20（`5c31a6e`），阶段 21–38 共 20 笔提交仅在本地 `dev`，尚未推送；其中收口提交为 `cb6ef53`、`7bb5faa`、`55bb860`。工作树另有性能测试步骤编辑器与运行环境选择改动，不属于本计划。
 
-### 后续可选计划（未立项）
+### 阶段 39–44：结构性整改（已立项）
 
-1. C 类全局契约进一步 utility 化，并降低可替代的 `!important`；需先定义计算样式与视觉回归口径。
-2. B 类深层规则继续收缩，优先处理可在真实数据下验证的页面。
-3. 补依赖后端数据页面的视觉验收。
-4. 设计系统确认后清理无直接消费者的调色板 token。
+阶段 38 只完成预算收口；以下阶段继续处理结构性缺口，目标 **40–41 个文件 / ≤7,000 行 / `!important` ≤50**：
+
+1. **39 重新定界 + 安全 B 类第一批**：布局声明审计入基线；迁移 `ui-detail-inspector`、`test-order-visualization`，收缩 `api-detail-rules`、`ui-stage-visual`。
+2. **40 B 类页面布局第二批**：迁移 `test-order-workspace`、`bugs`、`interface-library`、`sprint-overview` 的剩余普通布局。
+3. **41 共享原语与合并**：抽 `RunCard` / `MethodBadge` / `EditorSurface`，合并重复 Modal 与 macOS 复位契约，移除页面级 `!important`。
+4. **42 数据依赖界面视觉验收**：运行报告、图谱执行、AI 生成链、DOCX 预览等；未通过不进入 C 类。
+5. **43 C 类全局契约收缩**：逐契约去 `!important`（93 → ≤50，争取 ≤30），每处移除配 computed-style 测试。
+6. **44 D 类 token 清理与最终收口**：清理 `--legacy-*` 与未定义 fallback token，更新最终指标与不可迁移 CSS 清单。

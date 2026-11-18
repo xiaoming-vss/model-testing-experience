@@ -1,70 +1,9 @@
-/* UI 测试阶段可视化：Surface / Design / YAML 三视图及深色覆盖。 */
+/* UI 测试阶段可视化：Surface / Design / YAML 三视图的深色覆盖与产物切换栏。
+ * 浅色布局/排版已迁到 components/uiStageVisual/uiStageVisualClasses.ts；这里保留
+ * :root[data-theme="dark"] 成组覆盖、CodeMirror 兜底和 AntD 弹窗头部结构。 */
 
 .scope { --ai-ui-stage-scope: 1; }
 
-/* 三阶段可视化：结构工作台。视觉语言与审核弹窗一致，数据来自当前阶段原文。 */
-.scope :global(.uisv-pill) { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 5px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-.scope :global(.uisv-pill.green) { background: var(--uisv-f0fdf4); color: var(--uisv-15803d); }
-.scope :global(.uisv-pill.amber) { background: var(--uisv-fff8eb); color: var(--uisv-b45309); }
-.scope :global(.uisv-pill.blue) { background: var(--uisv-eff6ff); color: var(--uisv-1d4ed8); }
-.scope :global(.uisv-pill.slate) { background: var(--uisv-f1f5f9); color: var(--uisv-475569); }
-
-
-/* 检查器内部结构：步骤/控件证据、缺口与来源引用。 */
-.scope :global(.uisv-inspector-scroll) { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
-.scope :global(.uisv-inspector-head) { display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid var(--uisv-eef2f7); }
-.scope :global(.uisv-inspector-head.compact) { align-items: flex-start; }
-.scope :global(.uisv-inspector-head > div) { flex: 1; min-width: 0; }
-.scope :global(.uisv-inspector-head h3) { margin: 0; overflow: hidden; color: var(--uisv-0f172a); font-size: 13.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-inspector-head code) { display: block; margin-top: 2px; overflow: hidden; color: var(--uisv-94a3b8); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-inspector-head .ant-tag),
-.scope :global(.uisv-inspector-tags .ant-tag) { margin: 0; font-size: 11px; }
-.scope :global(.uisv-inspector-tags) { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
-.scope :global(.uisv-inspector section) { margin-top: 10px; }
-.scope :global(.uisv-inspector section h4) { display: flex; align-items: center; gap: 5px; margin: 0 0 5px; color: var(--uisv-475569); font-size: 12px; font-weight: 700; }
-.scope :global(.uisv-inspector section h4 span) { display: inline-flex; align-items: center; justify-content: center; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 4px; background: var(--uisv-eff6ff); color: var(--uisv-1d4ed8); font-size: 10px; }
-.scope :global(.uisv-inspector section p) { margin: 3px 0; color: var(--uisv-64748b); font-size: 12px; line-height: 1.6; }
-.scope :global(.uisv-inspector section p code) { color: var(--uisv-334155); font-size: 11px; }
-.scope :global(.uisv-inspector section blockquote) { margin: 0; padding: 7px 8px; border-left: 2px solid var(--uisv-bfdbfe); border-radius: 0 6px 6px 0; background: var(--uisv-f8fafc); color: var(--uisv-475569); font-size: 12px; line-height: 1.6; }
-.scope :global(.uisv-note-box) { display: flex; gap: 6px; margin-bottom: 5px; padding: 7px 8px; border-radius: 6px; font-size: 11.5px; line-height: 1.6; }
-.scope :global(.uisv-note-box .anticon) { flex: 0 0 auto; margin-top: 1px; }
-.scope :global(.uisv-note-box.amber) { border: 1px solid var(--uisv-fde8c3); background: var(--uisv-fffaf0); color: var(--uisv-92400e); }
-.scope :global(.uisv-note-box.amber .anticon) { color: var(--uisv-d97706); }
-.scope :global(.uisv-note-box.green) { border: 1px solid var(--uisv-dcfce7); background: var(--uisv-f7fdf9); color: var(--uisv-166534); }
-.scope :global(.uisv-note-box.green .anticon) { color: var(--uisv-16a34a); }
-.scope :global(.uisv-locator-box) { margin-bottom: 6px; padding: 7px; border: 1px solid var(--uisv-e5ecf5); border-radius: 6px; background: var(--uisv-f8fafc); }
-.scope :global(.uisv-locator-box > code) { display: block; overflow: hidden; color: var(--uisv-334155); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-locator-box > div) { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
-.scope :global(.uisv-locator-box .ant-tag),
-.scope :global(.uisv-locator-box span),
-.scope :global(.uisv-locator-box p) { margin: 0; color: var(--uisv-94a3b8); font-size: 11.5px; line-height: 1.55; }
-.scope :global(.uisv-interaction-box) { display: flex; flex-direction: column; gap: 1px; margin-bottom: 5px; padding: 6px 7px; border: 1px solid var(--uisv-e0e7ff); border-radius: 6px; background: var(--uisv-f8faff); }
-.scope :global(.uisv-interaction-box strong),
-.scope :global(.uisv-interaction-box span) { font-size: 11.5px; }
-.scope :global(.uisv-interaction-box strong) { color: var(--uisv-3730a3); }
-.scope :global(.uisv-interaction-box span) { color: var(--uisv-64748b); line-height: 1.45; }
-.scope :global(.uisv-inspector-note) { margin-top: 10px; padding: 8px; border-radius: 6px; background: var(--uisv-f0f7ff); color: var(--uisv-3b6ea5); font-size: 11.5px; line-height: 1.6; }
-.scope :global(.uisv-step-badge) { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--uisv-eff6ff); color: var(--uisv-1d4ed8); font-size: 10.5px; font-weight: 700; flex: 0 0 30px; }
-.scope :global(.uisv-step-badge.amber) { background: var(--uisv-fff8eb); color: var(--uisv-b45309); }
-.scope :global(.uisv-trace-item) { display: flex; align-items: flex-start; gap: 5px; margin-bottom: 5px; padding: 6px; border: 1px solid var(--uisv-eef2f7); border-radius: 6px; background: var(--uisv-fcfdff); }
-.scope :global(.uisv-trace-item.excluded) { border-color: var(--uisv-fde8c3); background: var(--uisv-fffaf0); }
-.scope :global(.uisv-trace-index) { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: var(--uisv-eff6ff); color: var(--uisv-1d4ed8); font-size: 9px; font-weight: 700; flex: 0 0 18px; }
-.scope :global(.uisv-trace-index.assert) { background: var(--uisv-ecfeff); color: var(--uisv-0e7490); }
-.scope :global(.uisv-trace-item .uisv-pill) { height: 19px; font-size: 10.5px; }
-.scope :global(.uisv-value-grid) { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.scope :global(.uisv-value-grid > span) { display: flex; flex-direction: column; gap: 1px; padding: 5px 6px; border-radius: 5px; background: var(--uisv-f8fafc); }
-.scope :global(.uisv-value-grid em) { color: var(--uisv-94a3b8); font-size: 10.5px; font-style: normal; }
-.scope :global(.uisv-value-grid code) { color: var(--uisv-334155); font-size: 11.5px; }
-.scope :global(.uisv-missing-box) { margin-bottom: 6px; padding: 7px; border: 1px solid var(--uisv-fde8c3); border-radius: 6px; background: var(--uisv-fffaf0); }
-.scope :global(.uisv-missing-head) { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
-.scope :global(.uisv-missing-head code) { display: inline-flex; align-items: center; height: 20px; padding: 0 4px; border-radius: 4px; background: var(--uisv-fef3c7); color: var(--uisv-92400e); font-size: 11.5px; }
-.scope :global(.uisv-missing-head strong) { color: var(--uisv-78350f); font-size: 11.5px; }
-.scope :global(.uisv-missing-box p) { margin: 5px 0; color: var(--uisv-a16207); font-size: 11.5px; line-height: 1.6; }
-.scope :global(.uisv-missing-value) { display: flex; align-items: center; gap: 5px; padding: 4px 5px; border-radius: 4px; background: var(--uisv-fff); }
-.scope :global(.uisv-missing-value span),
-.scope :global(.uisv-missing-value code) { color: var(--uisv-94a3b8); font-size: 11.5px; }
-.scope :global(.uisv-missing-value code) { overflow: hidden; color: var(--uisv-475569); text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.uisv-fix-list) { margin: 0 0 0 14px; padding: 0; color: var(--uisv-64748b); font-size: 11.5px; line-height: 1.65; }
 
 /* 暗色主题：可视化面板、表格、检查器和状态色全部使用 GitHub Dark 语义色。 */
 :root[data-theme="dark"] .scope :global(.uisv-pane) { background: var(--uisv-161b22); border-color: var(--uisv-30363d); }

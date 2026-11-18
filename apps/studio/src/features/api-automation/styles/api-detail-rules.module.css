@@ -1,6 +1,6 @@
-/* API 测试集详情：规则弹层、环境选择器外壳与代码编辑器的深层皮肤。
- * 环境选项、后置操作、方法标签和表单栅格已迁到组件 utility；
- * 这里只保留 AntD 弹层/按钮/卡片、CodeMirror 与页面级 CSS 变量的必要规则。 */
+/* API 测试集详情：环境选择器外壳与代码编辑器的深层皮肤。
+ * 表单/卡片/按钮的尺寸与底色已迁到组件 inline style；
+ * 这里只保留 AntD 弹层、CodeMirror 与页面级 CSS 变量的必要规则。 */
 
 .scope { --api-rules-scope: 1; }
 
@@ -33,47 +33,7 @@
   }
 }
 
-/* AntD 表单/卡片/按钮：utility 层压不过未分层的组件样式。 */
-.scope :global(.api-body-editor-form-item) {
-  margin-bottom: 0;
-}
-
-.scope :global(.api-body-placeholder-card) {
-  border-radius: 10px;
-  background: var(--app-request-section-bg);
-}
-
-.scope :global(.api-rule-empty-card) {
-  border-radius: 10px;
-}
-
-.scope :global(.api-env-var-picker-trigger.ant-btn) {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 8px;
-}
-
-.scope :global(.api-post-ops-add-trigger) {
-  width: 100%;
-  padding: 11px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px dashed var(--app-request-upload-border);
-  border-radius: 12px;
-  background: var(--app-surface-raised);
-  color: var(--app-request-upload-text);
-  font-size: 13px;
-  line-height: 20px;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-
+/* 后置操作入口的 hover 仍由未分层规则负责，避免被 AntD 按钮状态覆盖。 */
 .scope :global(.api-post-ops-add-trigger:hover) {
   border-color: var(--app-editor-border-focus);
   background: var(--app-request-add-hover);

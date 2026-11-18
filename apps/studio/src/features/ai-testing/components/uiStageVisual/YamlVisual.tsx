@@ -1,11 +1,43 @@
 import { useMemo, useState } from 'react'
 import { Alert, Empty, Progress, Tag } from 'antd'
+import { cx } from '@/shared/utils/cx'
 import {
   CheckCircleFilled,
   ExclamationCircleFilled,
 } from '@ant-design/icons'
 import { parseYaml, type YamlMissing, type YamlStep } from './uiStageVisualUtils'
 import { VisualEmpty, VisualParseError } from './VisualStates'
+import {
+  uisvFixListClass,
+  uisvInspectorHeadBodyClass,
+  uisvInspectorHeadClass,
+  uisvInspectorHeadCodeClass,
+  uisvInspectorHeadCompactClass,
+  uisvInspectorHeadTitleClass,
+  uisvInspectorNoteClass,
+  uisvInspectorParagraphClass,
+  uisvInspectorScrollClass,
+  uisvInspectorSectionClass,
+  uisvInspectorSectionCountClass,
+  uisvInspectorSectionTitleClass,
+  uisvMissingBoxClass,
+  uisvMissingHeadClass,
+  uisvMissingHeadCodeClass,
+  uisvMissingHeadStrongClass,
+  uisvMissingParagraphClass,
+  uisvMissingValueClass,
+  uisvMissingValueCodeClass,
+  uisvMissingValueTextClass,
+  uisvNoteBoxClass,
+  uisvNoteBoxGreenClass,
+  uisvNoteBoxIconClass,
+  uisvStepBadgeAmberClass,
+  uisvStepBadgeClass,
+  uisvValueGridClass,
+  uisvValueGridCodeClass,
+  uisvValueGridItemClass,
+  uisvValueGridLabelClass,
+} from './uiStageVisualClasses'
 
 function keywordClass(keyword: string): string {
   if (['click', 'assert_visible', 'assert_hidden', 'assert_text', 'open', 'wait_text', 'input'].includes(keyword)) return keyword
@@ -13,22 +45,22 @@ function keywordClass(keyword: string): string {
 }
 
 function MissingInspector({ step }: { step: YamlStep }) {
-  return <div className="uisv-inspector-scroll">
-    <div className="uisv-inspector-head compact">
-      <span className="uisv-step-badge amber">S{step.orderNo}</span>
-      <div><h3>{step.name}</h3><code>orderNo {step.orderNo} · {step.keyword}</code></div>
+  return <div className={uisvInspectorScrollClass}>
+    <div className={cx(uisvInspectorHeadClass, uisvInspectorHeadCompactClass)}>
+      <span className={cx(uisvStepBadgeClass, uisvStepBadgeAmberClass)}>S{step.orderNo}</span>
+      <div className={uisvInspectorHeadBodyClass}><h3 className={uisvInspectorHeadTitleClass}>{step.name}</h3><code className={uisvInspectorHeadCodeClass}>orderNo {step.orderNo} · {step.keyword}</code></div>
       {step.missing.length ? <Tag variant="filled" color="warning">{step.missing.length} 项待补</Tag> : <Tag variant="filled" color="green">就绪</Tag>}
     </div>
-    <section><h4>当前步骤</h4><p>{step.locatorValue || step.operationValue || '没有额外定位或值。'}</p><div className="uisv-value-grid">{step.locatorType ? <span><em>定位类型</em><code>{step.locatorType}</code></span> : null}{step.operationValue ? <span><em>操作值</em><code>{step.operationValue}</code></span> : null}</div></section>
-    <section><h4>需要补齐的字段 <span>{step.missing.length}</span></h4>
-      {step.missing.length ? step.missing.map((missing: YamlMissing, index) => <div className="uisv-missing-box" key={`${missing.target}-${index}`}>
-        <div className="uisv-missing-head">{missing.fields.map(field => <code key={field}>{field}</code>)}<strong>{missing.target || missing.operation || '未命名缺口'}</strong></div>
-        <p>{missing.reason}</p>
-        {missing.value ? <div className="uisv-missing-value"><span>当前值</span><code>{missing.value}</code></div> : null}
-      </div>) : <div className="uisv-note-box green"><CheckCircleFilled /><span>这个步骤没有声明字段缺口；仍需核对测试数据、设计冲突与定位正确性。</span></div>}
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>当前步骤</h4><p className={uisvInspectorParagraphClass}>{step.locatorValue || step.operationValue || '没有额外定位或值。'}</p><div className={uisvValueGridClass}>{step.locatorType ? <span className={uisvValueGridItemClass}><em className={uisvValueGridLabelClass}>定位类型</em><code className={uisvValueGridCodeClass}>{step.locatorType}</code></span> : null}{step.operationValue ? <span className={uisvValueGridItemClass}><em className={uisvValueGridLabelClass}>操作值</em><code className={uisvValueGridCodeClass}>{step.operationValue}</code></span> : null}</div></section>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>需要补齐的字段 <span className={uisvInspectorSectionCountClass}>{step.missing.length}</span></h4>
+      {step.missing.length ? step.missing.map((missing: YamlMissing, index) => <div className={uisvMissingBoxClass} key={`${missing.target}-${index}`}>
+        <div className={uisvMissingHeadClass}>{missing.fields.map(field => <code className={uisvMissingHeadCodeClass} key={field}>{field}</code>)}<strong className={uisvMissingHeadStrongClass}>{missing.target || missing.operation || '未命名缺口'}</strong></div>
+        <p className={uisvMissingParagraphClass}>{missing.reason}</p>
+        {missing.value ? <div className={uisvMissingValueClass}><span className={uisvMissingValueTextClass}>当前值</span><code className={uisvMissingValueCodeClass}>{missing.value}</code></div> : null}
+      </div>) : <div className={cx(uisvNoteBoxClass, uisvNoteBoxGreenClass, uisvNoteBoxIconClass)}><CheckCircleFilled /><span>这个步骤没有声明字段缺口；仍需核对测试数据、设计冲突与定位正确性。</span></div>}
     </section>
-    <section><h4>如何补齐</h4><ol className="uisv-fix-list"><li>优先补行级定位：按业务主键定位行，再定位行内单元格或控件。</li><li>页面地址和期望文本属于测试数据，可以按环境批量填写。</li><li>补齐后切换回 YAML 修改原文，或继续使用当前原文编辑。</li></ol></section>
-    <div className="uisv-inspector-note"><ExclamationCircleFilled /> 当前步骤来自真实 YAML 产物；可视化视图只读，修改请切换到 YAML。</div>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>如何补齐</h4><ol className={uisvFixListClass}><li>优先补行级定位：按业务主键定位行，再定位行内单元格或控件。</li><li>页面地址和期望文本属于测试数据，可以按环境批量填写。</li><li>补齐后切换回 YAML 修改原文，或继续使用当前原文编辑。</li></ol></section>
+    <div className={uisvInspectorNoteClass}><ExclamationCircleFilled /> 当前步骤来自真实 YAML 产物；可视化视图只读，修改请切换到 YAML。</div>
   </div>
 }
 

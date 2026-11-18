@@ -65,18 +65,17 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 | `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚、继续优化侧栏与关系图谱/查看器 |
 | `generation-canvas.module.css` | 生成画布、阶段卡片、阅读态与阶段检查器 |
 | `artifact-cases.module.css` | 用例名称树、用例浏览器、生成用例审核字段与仓库画像 |
-| `ui-stage-visual.module.css` | UI 三阶段可视化（Surface / Design / YAML）、产物视图切换与复制控制条及深色覆盖 |
+| `ui-stage-visual.module.css` | UI 三阶段可视化的深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局/排版在 `components/uiStageVisual/uiStageVisualClasses.ts` |
 
 需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/run-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。
 
 ### 测试单样式归属
 
-文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。阶段 21 合并同根 Module；阶段 31 再把列表、工作台骨架、图谱页壳/查看器、执行面板与判定区整体迁入组件 utility，删除 `test-orders-list.module.css`、`test-order-graph.module.css` 与 `test-order-graph-execution.module.css`。工作台页面根挂 `test-order-workspace` 的 `.root`，图谱执行面板与加入用例 Modal 复用同一作用域。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS；剩余两个 Module 只保留高度链、AntD 深层结构、执行条与可视化容器查询。
+文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。阶段 21 合并同根 Module；阶段 31 再把列表、工作台骨架、图谱页壳/查看器、执行面板与判定区整体迁入组件 utility，删除 `test-orders-list.module.css`、`test-order-graph.module.css` 与 `test-order-graph-execution.module.css`。阶段 39 删除 `test-order-visualization.module.css`，可视化面板、步骤条、关系图与批量按钮改用 `components/visualization/visualizationClasses.ts` 的 utility 与容器查询变体。工作台页面根挂 `test-order-workspace` 的 `.root`，图谱执行面板与加入用例 Modal 复用同一作用域。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS；剩余一个 Module 只保留高度链、AntD 深层结构与执行条。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
-| `test-order-workspace.module.css` | 工作台页面高度链、AntD 表格/工具栏深层结构、详情翻页、加入用例弹窗与底部执行条/判定控件；列表、骨架、图谱壳与判定区布局由组件 utility 负责 |
-| `test-order-visualization.module.css` | 可视化面板容器查询与图表皮肤；面板骨架与批量图解按钮由组件 utility 负责 |
+| `test-order-workspace.module.css` | 工作台页面高度链、AntD 表格/工具栏深层结构、详情翻页、加入用例弹窗与底部执行条/判定控件；列表、骨架、图谱壳、判定区与可视化布局由组件 utility 负责 |
 
 ### 测试用例样式归属
 
@@ -100,7 +99,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义，并放在 `@layer components`。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`theme.css`；旧 `legacy-surface.css` 已随阶段 36 删除，聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表、软件仓库树与共用的方法签在 `interface-library.module.css`；详情、编辑器深层 AntD 规则与 OpenAPI 导入标签间距在 `interface-detail.module.css`。阶段 32 后页面根与 Modal/Drawer 根挂两个 `.scope`；布局、树节点、仓库表格、编辑器面板、导入步骤与结果都已迁入组件 utility。
-- UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `ui-detail-inspector.module.css`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根同时挂这三个 Module 的作用域。阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
+- UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `shared/components/RunCard.tsx`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根挂 `ui-detail-shell` 与 `ui-suite` 两个 Module 的作用域。阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
 - Sprint 详情页与 Projects 概览共用 `sprint-overview.module.css`，只保留卡片/健康带表面、图表色块、状态色映射与报告 Markdown 在 `sprint-overview.module.css`；页面网格、工具栏、指标与断点由 `SprintDetailPage` / `ProjectsPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。

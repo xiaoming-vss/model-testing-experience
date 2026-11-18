@@ -1,4 +1,5 @@
 import { StoredImage } from '@/shared/components/files/StoredFile'
+import { RunCard, runCardChipClass } from '@/shared/components/RunCard'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { Button, Empty, Tooltip } from 'antd'
 
@@ -12,7 +13,7 @@ import { isUiRunPollingStatus } from '../utils/runHelpers'
  * 平台只产出逐步截图，没有视频文件，于是同一块地方放的是「按步骤截图回放」：
  * 浏览器外壳显示运行时的当前 URL，舞台显示当前步骤的截图，下面的滑轨按步骤打点，
  * 点击打点或前后按钮切换步骤。没有截图的步骤显示占位而不是伪造画面。
- * 样式见 styles/ui-detail-inspector.module.css。
+ * 卡片骨架见 shared/components/RunCard。
  */
 
 type Props = {
@@ -34,20 +35,18 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
   const progress = total > 1 ? (activeIndex / (total - 1)) * 100 : total === 1 ? 100 : 0
 
   return (
-    <section className="ui-wb-card ui-wb-replay">
-      <header className="ui-wb-card-head">
-        <div className="ui-wb-card-title">
-          <span className="ui-wb-card-dot" aria-hidden="true" />
-          执行回放
-          <span className="ui-wb-card-chip">Step Snapshots</span>
-        </div>
-        <div className="ui-wb-card-head-side">
-          <span className="ui-wb-card-chip is-mono">{viewportText}</span>
-          <Tooltip title="截图策略">
-            <span className="ui-wb-card-chip">{screenshotText}</span>
-          </Tooltip>
-        </div>
-      </header>
+    <RunCard
+      className="ui-wb-replay"
+      dot
+      title="执行回放"
+      chip="Step Snapshots"
+      side={<>
+        <span className={runCardChipClass}>{viewportText}</span>
+        <Tooltip title="截图策略">
+          <span className={runCardChipClass}>{screenshotText}</span>
+        </Tooltip>
+      </>}
+    >
 
       <div className="ui-wb-replay-stage flex min-h-[150px] flex-[1_1_auto] flex-col overflow-hidden rounded-[var(--srf-radius-control)] bg-[var(--srf-terminal-bg)]">
         <div className="ui-wb-replay-chrome flex items-center gap-2 bg-[var(--srf-terminal-bar)] px-2.5 py-1.5 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] text-[var(--srf-terminal-muted)]">
@@ -73,7 +72,7 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
               preview={{ mask: '查看大图' }}
             />
           ) : (
-            <div className="ui-wb-replay-placeholder p-3 text-center">
+            <div className="ui-wb-replay-placeholder p-3 text-center [&_.ant-empty-description]:text-[var(--srf-terminal-muted)]">
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
@@ -146,6 +145,6 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
           <span className="ui-wb-replay-hint text-[11px] text-[var(--srf-text-muted)]">按步骤截图回放，没有录屏文件</span>
         </div>
       </div>
-    </section>
+    </RunCard>
   )
 }

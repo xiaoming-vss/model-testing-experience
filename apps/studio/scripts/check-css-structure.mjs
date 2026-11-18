@@ -25,6 +25,18 @@ const update = process.argv.includes('--update')
 // success/failed/error/skipped/expanded/compact 是这些视图共用的状态修饰类。
 const THIRD_PARTY_CLASS = /^(?:ant-|anticon|cm-|react-flow|recharts|hljs|mermaid|json-editor-|api-case-run-result-|api-collection-|base-services-|sprint-card-|success|failed|error|skipped|expanded|compact)/
 const SUBSTANTIVE_BODY = /\S/
+// 普通页面布局声明。用于阶段 39+ 跟踪 B 类 Module 还剩多少本可 utility 化的结构；
+// 第三方深层规则与高度链也会被计入，因此只作为向下 ratchet 的存量指标，不作为绝对禁令。
+const LAYOUT_PROPERTY = /^(?:display|position|top|right|bottom|left|inset(?:-(?:top|right|bottom|left))?|float|clear|box-sizing|width|min-width|max-width|height|min-height|max-height|flex(?:-(?:direction|wrap|flow|grow|shrink|basis))?|grid(?:-template(?:-(?:columns|rows|areas))?|-auto(?:-(?:columns|rows|flow))?|-column|-row|-area)?|gap|row-gap|column-gap|align(?:-(?:items|content|self))?|justify(?:-(?:items|content|self))?|place(?:-(?:items|content|self))?|order|padding(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|margin(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|overflow(?:-[xy])?|columns|column-count|column-width)$/
+
+function layoutDeclarations(declarations) {
+  return declarations.reduce((count, declaration) => {
+    const separator = declaration.indexOf(':')
+    if (separator < 0) return count
+    const property = declaration.slice(0, separator).trim().toLowerCase()
+    return count + (LAYOUT_PROPERTY.test(property) ? 1 : 0)
+  }, 0)
+}
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
@@ -189,6 +201,7 @@ for (const file of cssFiles) {
     rules: rules.length,
     declarations: rules.reduce((sum, rule) => sum + rule.declarations.length, 0),
     selectors: rules.reduce((sum, rule) => sum + rule.selectors.length, 0),
+    layoutDeclarations: rules.reduce((sum, rule) => sum + layoutDeclarations(rule.declarations), 0),
   }
   for (const [hash, entry] of duplicateBodies(rules)) {
     const existing = duplicates.get(hash) ?? { count: 0, sample: entry.sample }
@@ -276,7 +289,7 @@ if (!init && !update) {
 for (const [file, count] of Object.entries(counts)) {
   const allowed = baseline.files?.[file]
   if (!allowed) continue
-  for (const key of ['rules', 'declarations', 'selectors']) {
+  for (const key of ['rules', 'declarations', 'selectors', 'layoutDeclarations']) {
     if (count[key] > allowed[key]) {
       errors.push(`${file}: ${key} ${allowed[key]} -> ${count[key]}`)
     }
@@ -312,4 +325,4 @@ if (errors.length) {
   process.exit(1)
 }
 
-console.log(`CSS structure OK: ${cssFiles.length} CSS files, ${globalCss.length} global, ${uniqueCrossFeature.length} cross-feature imports, ${Object.keys(duplicateBaseline).length} duplicate body groups.`)
+console.log(`CSS structure OK: ${cssFiles.length} CSS files, ${globalCss.length} global, ${uniqueCrossFeature.length} cross-feature imports, ${Object.keys(duplicateBaseline).length} duplicate body groups, ${Object.values(counts).reduce((sum, count) => sum + count.layoutDeclarations, 0)} layout declarations.`)

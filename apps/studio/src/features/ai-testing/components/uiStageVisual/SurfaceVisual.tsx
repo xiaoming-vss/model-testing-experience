@@ -15,6 +15,24 @@ import {
 } from '@ant-design/icons'
 import { parseSurface, type SurfaceControl } from './uiStageVisualUtils'
 import { VisualEmpty, VisualParseError } from './VisualStates'
+import {
+  uisvInspectorCodeClass,
+  uisvInspectorNoteClass,
+  uisvInspectorParagraphClass,
+  uisvInspectorSectionClass,
+  uisvInspectorSectionCountClass,
+  uisvInspectorSectionTitleClass,
+  uisvInteractionBoxClass,
+  uisvInteractionSpanClass,
+  uisvInteractionStrongClass,
+  uisvLocatorBoxClass,
+  uisvLocatorCodeClass,
+  uisvLocatorMetaClass,
+  uisvLocatorRowClass,
+  uisvNoteBoxAmberClass,
+  uisvNoteBoxClass,
+  uisvNoteBoxIconClass,
+} from './uiStageVisualClasses'
 
 const typeIcons: Record<string, ReactNode> = {
   button: <ThunderboltOutlined />,
@@ -122,11 +140,11 @@ function ControlInspector({ control, data }: { control: SurfaceControl; data: Re
   return <div className="uisv-inspector-scroll min-h-0 flex-1 overflow-auto p-3">
     <div className="uisv-inspector-head flex items-center gap-[7px] border-b border-[var(--uisv-eef2f7)] pb-2 [&>div]:min-w-0 [&>div]:flex-1 [&_.ant-tag]:m-0 [&_.ant-tag]:text-[11px] [&_code]:mt-0.5 [&_code]:block [&_code]:overflow-hidden [&_code]:text-ellipsis [&_code]:whitespace-nowrap [&_code]:text-[11px] [&_code]:text-[var(--uisv-94a3b8)] [&_h3]:m-0 [&_h3]:overflow-hidden [&_h3]:text-ellipsis [&_h3]:whitespace-nowrap [&_h3]:text-[13.5px] [&_h3]:font-bold [&_h3]:text-[var(--uisv-0f172a)]"><TypeIcon type={control.type} /><div><h3>{control.name}</h3><code>{control.controlId}</code></div><Tag variant="filled" color="blue">{control.typeLabel}</Tag></div>
     <div className="uisv-inspector-tags mt-[7px] flex flex-wrap gap-1 [&_.ant-tag]:m-0 [&_.ant-tag]:text-[11px]"><Tag>{control.containerId || '未归属区域'}</Tag><Tag>{control.uniqueness === 'unknown' ? '唯一性未知' : control.uniqueness}</Tag></div>
-    <section><h4>来源</h4><p>源码：<code>{control.sourceRef || '—'}</code></p><p>容器：<code>{control.containerId || '—'}</code></p>{control.visibleText ? <p>可见文本：{control.visibleText}</p> : null}</section>
-    <section><h4>显示条件 <span>{control.conditions.length}</span></h4>{control.conditions.length ? control.conditions.map((condition, index) => <div className="uisv-note-box amber" key={`${condition.description}-${index}`}><WarningFilled /><span>{condition.description}</span></div>) : <p className="uisv-muted">无显示条件。</p>}</section>
-    <section><h4>定位候选 <span>{control.locators.length}</span></h4>{control.locators.length ? control.locators.map((locator, index) => <div className="uisv-locator-box" key={`${locator.locatorValue}-${index}`}><code>{locator.locatorValue}</code><div><Tag variant="filled" color="blue">{locator.locatorType ?? 'locator'}</Tag>{locator.confirmed ? <Tag variant="filled" color="green">confirmed</Tag> : <Tag variant="filled" color="gold">源码推断</Tag>}<span>{locator.stability ?? '未知稳定性'}</span></div>{locator.reason ? <p>{locator.reason}</p> : null}</div>) : <div className="uisv-note-box amber"><ExclamationCircleFilled /><span>源码中还没有可用的定位候选，需要在运行时补充 DOM 证据。</span></div>}</section>
-    {interactions.length ? <section><h4>关联交互 <span>{interactions.length}</span></h4>{interactions.slice(0, 3).map(interaction => <div className="uisv-interaction-box" key={interaction.interactionId}><strong>{interaction.interactionId}</strong><span>{interaction.description || interaction.effect || '无描述'}</span></div>)}</section> : null}
-    {unknowns.length ? <section><h4>待确认 <span>{unknowns.length}</span></h4>{unknowns.slice(0, 2).map(unknown => <div className="uisv-note-box amber" key={unknown.topic}><WarningFilled /><span>{unknown.topic}</span></div>)}</section> : null}
-    <div className="uisv-inspector-note">审核提示：源码候选只代表模板推断，运行时需要用真实页面确认 locator 与唯一性。</div>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>来源</h4><p className={uisvInspectorParagraphClass}>源码：<code className={uisvInspectorCodeClass}>{control.sourceRef || '—'}</code></p><p className={uisvInspectorParagraphClass}>容器：<code className={uisvInspectorCodeClass}>{control.containerId || '—'}</code></p>{control.visibleText ? <p className={uisvInspectorParagraphClass}>可见文本：{control.visibleText}</p> : null}</section>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>显示条件 <span className={uisvInspectorSectionCountClass}>{control.conditions.length}</span></h4>{control.conditions.length ? control.conditions.map((condition, index) => <div className={`${uisvNoteBoxClass} ${uisvNoteBoxAmberClass} ${uisvNoteBoxIconClass}`} key={`${condition.description}-${index}`}><WarningFilled /><span>{condition.description}</span></div>) : <p className={`uisv-muted ${uisvInspectorParagraphClass}`}>无显示条件。</p>}</section>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>定位候选 <span className={uisvInspectorSectionCountClass}>{control.locators.length}</span></h4>{control.locators.length ? control.locators.map((locator, index) => <div className={uisvLocatorBoxClass} key={`${locator.locatorValue}-${index}`}><code className={uisvLocatorCodeClass}>{locator.locatorValue}</code><div className={uisvLocatorRowClass}><Tag className={uisvLocatorMetaClass} variant="filled" color="blue">{locator.locatorType ?? 'locator'}</Tag>{locator.confirmed ? <Tag className={uisvLocatorMetaClass} variant="filled" color="green">confirmed</Tag> : <Tag className={uisvLocatorMetaClass} variant="filled" color="gold">源码推断</Tag>}<span className={uisvLocatorMetaClass}>{locator.stability ?? '未知稳定性'}</span></div>{locator.reason ? <p className={uisvLocatorMetaClass}>{locator.reason}</p> : null}</div>) : <div className={`${uisvNoteBoxClass} ${uisvNoteBoxAmberClass} ${uisvNoteBoxIconClass}`}><ExclamationCircleFilled /><span>源码中还没有可用的定位候选，需要在运行时补充 DOM 证据。</span></div>}</section>
+    {interactions.length ? <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>关联交互 <span className={uisvInspectorSectionCountClass}>{interactions.length}</span></h4>{interactions.slice(0, 3).map(interaction => <div className={uisvInteractionBoxClass} key={interaction.interactionId}><strong className={uisvInteractionStrongClass}>{interaction.interactionId}</strong><span className={uisvInteractionSpanClass}>{interaction.description || interaction.effect || '无描述'}</span></div>)}</section> : null}
+    {unknowns.length ? <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>待确认 <span className={uisvInspectorSectionCountClass}>{unknowns.length}</span></h4>{unknowns.slice(0, 2).map(unknown => <div className={`${uisvNoteBoxClass} ${uisvNoteBoxAmberClass} ${uisvNoteBoxIconClass}`} key={unknown.topic}><WarningFilled /><span>{unknown.topic}</span></div>)}</section> : null}
+    <div className={uisvInspectorNoteClass}>审核提示：源码候选只代表模板推断，运行时需要用真实页面确认 locator 与唯一性。</div>
   </div>
 }

@@ -3,6 +3,7 @@ import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import type { UiTestCaseRun } from '@/services/api'
+import { RunCard, runCardChipClass } from '@/shared/components/RunCard'
 import { CopyOutlined, DownOutlined, FilterOutlined, UpOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Empty, Tooltip } from 'antd'
 import { useMemo, useState } from 'react'
@@ -18,7 +19,7 @@ import { prettyPrintValue } from '../utils/uiTestCaseEditor'
  * 换成运行耗时、通过步骤数、失败步骤数。
  * 运行快照（浏览器信息与运行配置）原来在「运行快照」页签里，现在收进底部的展开区。
  * 日志级别过滤按设计稿的 Filter 做：范围就是真实存在的四种级别，不新增假分类。
- * 样式见 styles/ui-detail-inspector.module.css。
+ * 卡片骨架见 shared/components/RunCard。
  */
 
 const LOG_LEVEL_FILTERS: Array<{ key: UiRunLogLevel | 'all'; label: string }> = [
@@ -75,42 +76,42 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
   }
 
   return (
-    <section className="ui-wb-card ui-wb-console">
-      <header className="ui-wb-card-head">
-        <div className="ui-wb-card-title">
-          执行控制台
-          <span className="ui-wb-card-chip">Live Log</span>
-          {run ? <span className={`ui-wb-console-status rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 py-px text-[10px] font-semibold leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${run.success === false ? 'red' : 'green'}`}>{statusMeta.label}</span> : null}
-          <RunWaitingReason status={run?.status} />
-        </div>
-        <div className="ui-wb-card-head-side">
-          <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
-          {canStop ? <StopRunButton kind="ui-case" runId={run?.runId ?? run?.uiTestCaseRunId} status={run?.status} /> : null}
-          <span className="ui-wb-console-meta max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace]">
-            {run ? `运行 ID ${run.runId ?? run.uiTestCaseRunId ?? '-'}` : '暂无运行记录'}
-          </span>
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: LOG_LEVEL_FILTERS.map((item) => ({ key: item.key, label: item.label })),
-              selectable: true,
-              selectedKeys: [levelFilter],
-              onClick: ({ key }) => setLevelFilter(key as UiRunLogLevel | 'all'),
-            }}
-          >
-            <Button type="text" size="small" className="ui-wb-console-action" icon={<FilterOutlined />} disabled={logLines.length === 0}>
-              过滤{levelFilter === 'all' ? '' : `：${LOG_LEVEL_LABELS[levelFilter]}`}
-            </Button>
-          </Dropdown>
-          <Tooltip title="复制控制台内容">
-            <Button type="text" size="small" className="ui-wb-console-action" icon={<CopyOutlined />} disabled={logLines.length === 0} onClick={handleCopy} />
-          </Tooltip>
-        </div>
-      </header>
+    <RunCard
+      className="ui-wb-console"
+      title={<>
+        执行控制台
+        <span className={runCardChipClass}>Live Log</span>
+        {run ? <span className={`ui-wb-console-status rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 py-px text-[10px] font-semibold leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${run.success === false ? 'red' : 'green'}`}>{statusMeta.label}</span> : null}
+        <RunWaitingReason status={run?.status} />
+      </>}
+      side={<>
+        <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
+        {canStop ? <StopRunButton kind="ui-case" runId={run?.runId ?? run?.uiTestCaseRunId} status={run?.status} /> : null}
+        <span className="ui-wb-console-meta max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace]">
+          {run ? `运行 ID ${run.runId ?? run.uiTestCaseRunId ?? '-'}` : '暂无运行记录'}
+        </span>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: LOG_LEVEL_FILTERS.map((item) => ({ key: item.key, label: item.label })),
+            selectable: true,
+            selectedKeys: [levelFilter],
+            onClick: ({ key }) => setLevelFilter(key as UiRunLogLevel | 'all'),
+          }}
+        >
+          <Button type="text" size="small" className="ui-wb-console-action" icon={<FilterOutlined />} disabled={logLines.length === 0}>
+            过滤{levelFilter === 'all' ? '' : `：${LOG_LEVEL_LABELS[levelFilter]}`}
+          </Button>
+        </Dropdown>
+        <Tooltip title="复制控制台内容">
+          <Button type="text" size="small" className="ui-wb-console-action" icon={<CopyOutlined />} disabled={logLines.length === 0} onClick={handleCopy} />
+        </Tooltip>
+      </>}
+    >
 
       <div className="ui-wb-console-log flex min-h-[60px] flex-[1_1_auto] flex-col gap-0.5 overflow-auto rounded-[var(--srf-radius-control)] bg-[var(--srf-terminal-bg)] p-2.5 px-3 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] leading-[18px]" role="log" aria-label="执行日志">
         {visibleLogLines.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有可显示的日志" className="ui-wb-console-empty" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有可显示的日志" className="ui-wb-console-empty [&_.ant-empty-description]:text-[var(--srf-terminal-muted)]" />
         ) : (
           visibleLogLines.map((line) => (
             <div key={line.key} className={`ui-wb-console-line flex items-start gap-2${line.level === 'error' ? ' is-error text-[var(--srf-terminal-danger-text)]' : ' text-[var(--srf-terminal-text)]'}`}>
@@ -137,7 +138,7 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
           <Button
             type="text"
             size="small"
-            className="ui-wb-console-snapshot-toggle"
+            className="ui-wb-console-snapshot-toggle p-0"
             icon={snapshotOpen ? <UpOutlined /> : <DownOutlined />}
             onClick={() => setSnapshotOpen((current) => !current)}
           >
@@ -156,6 +157,6 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
           ) : null}
         </div>
       ) : null}
-    </section>
+    </RunCard>
   )
 }

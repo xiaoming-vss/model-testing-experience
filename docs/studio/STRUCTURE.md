@@ -129,9 +129,9 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 用例库 | `features/test-cases/styles/case-library.module.css`（含用例编辑与导入禅道弹窗皮肤）；页面骨架与导航布局在 `CaseLibraryPage` utility |
 | 项目 / 迭代看板 | `features/projects/styles/sprint-overview.module.css`（Projects 概览与 Sprint 详情共用）；页面网格与断点在 Projects/Sprint 页面 utility |
 | 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css`；列表/树、详情、编辑器与导入流程布局在组件 utility |
-| 测试单 | `features/test-orders/styles/test-order-workspace.module.css` + `test-order-visualization.module.css`；列表、工作台骨架、图谱页壳/查看器与判定区排版在页面/组件 utility |
+| 测试单 | `features/test-orders/styles/test-order-workspace.module.css`；列表、工作台骨架、图谱页壳/查看器、判定区与可视化布局在页面/组件 utility |
 | API 测试 | `features/api-automation/styles/api-detail-shell.module.css` + `api-detail-rules.module.css`；列表、详情两栏、顶栏、用例行、请求面板与后置操作布局在页面与组件 utility |
-| UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css` + `ui-detail-inspector.module.css`；列表/详情页面布局在组件 utility |
+| UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css`；右栏卡片原语在 `shared/components/RunCard.tsx` |
 | 性能测试 | 复用 `tp-*` 与 `shared/components/EntityCard.tsx` 内置卡片 utility；新样式使用 Tailwind utility，不新增页面级全局 CSS |
 | TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
 
@@ -217,8 +217,8 @@ section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/ui-suit
 API 测试列表点测试集名称进来的页面：顶栏（返回 / 测试集名 + 需求 + 迭代 / 当前环境 / 运行记录 /
 运行测试集）+ 两栏（左栏用例列表卡片、右栏请求编辑与运行结果卡片）。阶段 30 后页面布局与可迁移皮肤全部在
 组件 utility；`api-detail-shell.module.css` 只留用例名称行、方法 Select、路径输入、Tabs、键值输入、请求头表
-与请求体 CodeMirror 的 AntD 深层规则，`api-detail-rules.module.css` 只留环境弹层、AntD 卡片/按钮、规则弹窗与
-JSON 编辑器玻璃外壳。页面结构按职责拆分：`components/ApiCollectionToolbar.tsx`、`components/ApiCaseExplorer.tsx`、
+与请求体 CodeMirror 的 AntD 深层规则，`api-detail-rules.module.css` 只留环境弹层、后置操作 hover 与
+JSON 编辑器玻璃外壳；规则/表单/卡片的尺寸与底色改为组件内联样式。页面结构按职责拆分：`components/ApiCollectionToolbar.tsx`、`components/ApiCaseExplorer.tsx`、
 `components/ApiCaseRunConsole.tsx` 各自负责一段，请求头与请求体两个页签分别由
 `components/ApiCaseHeadersPanel.tsx`、`components/ApiCaseBodyPanel.tsx` 承担，`components/ApiCaseEditor.tsx`
 只留请求地址条与页签编排；三段配置（环境 / 模板插入 / 后置操作）共用的 props 形状集中在
@@ -274,13 +274,13 @@ JSON 编辑器玻璃外壳。页面结构按职责拆分：`components/ApiCollec
 `ApiCaseBodyPanel.test.tsx` 依赖类型胶囊的 `role="tab"`，以及状态条文案「无语法错误 / 存在语法错误 /
 大小: N B / 格式: JSON / 编码: UTF-8」。
 
-### UI 测试集详情页（`ui-detail-shell.module.css` / `ui-detail-inspector.module.css` / `ui-suite.module.css`）
+### UI 测试集详情页（`ui-detail-shell.module.css` / `ui-suite.module.css`）
 
 UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求 / 迭代 + 环境选择 + 保存；
 测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
 右：执行回放 / 执行日志 / 运行变量）。顶栏、板面、步骤配置表单的 Ant Design 深层规则与 React Flow 节点/连线/光束集中在
-`ui-detail-shell.module.css`；右栏卡片原语在 `ui-detail-inspector.module.css`；测试集抽屉与步骤编辑器的 Ant Design 表单规则在
-`ui-suite.module.css`；三个 Module 的 `.scope` 都挂在 `UiTestSuiteCasePage` 根节点。页面结构同样按职责切：
+`ui-detail-shell.module.css`；右栏卡片原语在 `shared/components/RunCard.tsx`；测试集抽屉与步骤编辑器的 Ant Design 表单规则在
+`ui-suite.module.css`；两个 Module 的 `.scope` 都挂在 `UiTestSuiteCasePage` 根节点。页面结构同样按职责切：
 `UiSuiteDetailToolbar`、`UiExecutionFlow`、`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunConsoleCard`）各自负责一段，
 页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
 
@@ -352,10 +352,10 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 「新建用例」按钮的 `aria-label` 是「新建 UI测试用例」（空态里那个按钮的可及名仍是「新建用例」），
 `src/test/automationEditors.test.tsx` 按前者点击。改这一页时逐条保留。
 
-### 测试单执行工作台（`test-order-workspace.module.css` / `test-order-visualization.module.css`）
+### 测试单执行工作台（`test-order-workspace.module.css`）
 
-测试单列表点名称进来的页面参考两栏布局：执行清单 / 单一详情卡片，视觉沿用平台公共边距、工具栏、圆角卡片和胶囊标签。用例摘要、前置条件与步骤在详情区一起滚动，执行判定、缺陷关联与条目位置常驻详情底部，操作条不覆盖步骤。用例 ID 通过公共按钮提供复制入口，摘要由 `components/TestOrderCaseSummary.tsx` 渲染。顶栏直接使用 `tp-list-toolbar`，状态及筛选标签复用 `tp-tone-tag`／`tp-chip`。尺寸及换行规则见 UI-GUIDELINES.md。样式按职责拆为两个 Module：`test-order-workspace.module.css` 只保留页面高度链、AntD 表格/工具栏深层结构、详情翻页、加入用例弹窗与底部执行条/判定控件；`test-order-visualization.module.css` 保留可视化面板的容器查询布局与图表皮肤。列表、工作台骨架、面包屑、条目表、详情表、判定按钮与图谱页壳/查看器/执行面板均已改为组件 utility；图谱执行面板复用工作台 `.root`。旧类名全部保留为 `:global()` 测试与兼容钩子，工作台规则限定在 `.test-order-workspace-page` 或对应面板根下。
-`features/test-orders/styles/index.css`、`workspace-v2.css`、`workspace-list-v2.css`、`workspace-verdict-v2.css`、`workspace-content-v3.css` 已删除；`test-orders-list.module.css`、`test-order-graph.module.css`、`test-order-graph-execution.module.css` 也已删除，图谱页壳、查看器与执行面板的布局在组件 utility，用例可视化在 `test-order-visualization.module.css`。
+测试单列表点名称进来的页面参考两栏布局：执行清单 / 单一详情卡片，视觉沿用平台公共边距、工具栏、圆角卡片和胶囊标签。用例摘要、前置条件与步骤在详情区一起滚动，执行判定、缺陷关联与条目位置常驻详情底部，操作条不覆盖步骤。用例 ID 通过公共按钮提供复制入口，摘要由 `components/TestOrderCaseSummary.tsx` 渲染。顶栏直接使用 `tp-list-toolbar`，状态及筛选标签复用 `tp-tone-tag`／`tp-chip`。尺寸及换行规则见 UI-GUIDELINES.md。`test-order-workspace.module.css` 只保留页面高度链、AntD 表格/工具栏深层结构、详情翻页、加入用例弹窗与底部执行条/判定控件；可视化面板、步骤条、关系图与批量按钮改用 `components/visualization/visualizationClasses.ts` 的 utility 与容器查询变体。列表、工作台骨架、面包屑、条目表、详情表、判定按钮与图谱页壳/查看器/执行面板均已改为组件 utility；图谱执行面板复用工作台 `.root`。旧类名全部保留为 `:global()` 测试与兼容钩子，工作台规则限定在 `.test-order-workspace-page` 或对应面板根下。
+`features/test-orders/styles/index.css`、`workspace-v2.css`、`workspace-list-v2.css`、`workspace-verdict-v2.css`、`workspace-content-v3.css` 已删除；`test-orders-list.module.css`、`test-order-graph.module.css`、`test-order-graph-execution.module.css` 与 `test-order-visualization.module.css` 也已删除，图谱页壳、查看器、执行面板与用例可视化布局在组件 utility。
 
 右侧 `.test-order-panel` 承担 A 版单一详情卡片的表面与布局，不能挂 `workbench-panel`：全局 macOS 工作台规则会以 `!important` 附加半透明背景与阴影，导致边缘出现高光竖边。摘要、内容和底部操作共用这一表面；内容区按确认的分色对照样式渲染，前置条件为浅中性色带并纵向排列，步骤与预期保持逐行对应。详情卡片的阴影、模糊与内部区块圆角由浏览器检查；页面测试覆盖执行与条目切换行为。
 

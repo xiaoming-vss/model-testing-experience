@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Empty, Tag } from 'antd'
+import { cx } from '@/shared/utils/cx'
 import {
   CheckCircleFilled,
   ExclamationCircleFilled,
@@ -8,17 +9,44 @@ import {
 } from '@ant-design/icons'
 import { parseDesign, stepHasExcluded, type DesignAction, type DesignExpectation, type DesignStep } from './uiStageVisualUtils'
 import { VisualEmpty, VisualParseError } from './VisualStates'
+import {
+  uisvBlockquoteClass,
+  uisvInspectorHeadBodyClass,
+  uisvInspectorHeadClass,
+  uisvInspectorHeadCodeClass,
+  uisvInspectorHeadCompactClass,
+  uisvInspectorHeadTitleClass,
+  uisvInspectorNoteClass,
+  uisvInspectorParagraphClass,
+  uisvInspectorScrollClass,
+  uisvInspectorSectionClass,
+  uisvInspectorSectionCountClass,
+  uisvInspectorSectionTitleClass,
+  uisvNoteBoxAmberClass,
+  uisvNoteBoxClass,
+  uisvNoteBoxIconClass,
+  uisvPillAmberClass,
+  uisvPillClass,
+  uisvPillCompactClass,
+  uisvPillGreenClass,
+  uisvPillSlateClass,
+  uisvStepBadgeClass,
+  uisvTraceIndexAssertClass,
+  uisvTraceIndexClass,
+  uisvTraceItemClass,
+  uisvTraceItemExcludedClass,
+} from './uiStageVisualClasses'
 
 function coveragePill(coverage: string) {
   return coverage === 'full'
-    ? <span className="uisv-pill green">完整覆盖</span>
-    : <span className="uisv-pill amber">部分覆盖</span>
+    ? <span className={cx(uisvPillClass, uisvPillGreenClass)}>完整覆盖</span>
+    : <span className={cx(uisvPillClass, uisvPillAmberClass)}>部分覆盖</span>
 }
 
 function StatusPill({ status }: { status: string }) {
-  if (status === 'excluded') return <span className="uisv-pill amber">excluded</span>
-  if (status === 'bookkeeping') return <span className="uisv-pill slate">记录</span>
-  return <span className="uisv-pill green">included</span>
+  if (status === 'excluded') return <span className={cx(uisvPillClass, uisvPillCompactClass, uisvPillAmberClass)}>excluded</span>
+  if (status === 'bookkeeping') return <span className={cx(uisvPillClass, uisvPillCompactClass, uisvPillSlateClass)}>记录</span>
+  return <span className={cx(uisvPillClass, uisvPillCompactClass, uisvPillGreenClass)}>included</span>
 }
 
 function TraceItem({ index, operation, target, value, status, reason, assertion }: {
@@ -30,21 +58,21 @@ function TraceItem({ index, operation, target, value, status, reason, assertion 
   reason: string
   assertion?: string
 }) {
-  return <div className={`uisv-trace-item${status === 'excluded' ? ' excluded' : ''}`}>
-    <span className={`uisv-trace-index${assertion ? ' assert' : ''}`}>{index}</span>
+  return <div className={cx(uisvTraceItemClass, status === 'excluded' && uisvTraceItemExcludedClass)}>
+    <span className={cx(uisvTraceIndexClass, assertion && uisvTraceIndexAssertClass)}>{index}</span>
     <div className="uisv-trace-copy flex min-w-0 flex-1 flex-col gap-px [&_em]:text-[11.5px] [&_em]:not-italic [&_em]:leading-[1.5] [&_em]:text-[var(--uisv-b45309)] [&_span]:overflow-hidden [&_span]:text-ellipsis [&_span]:whitespace-nowrap [&_span]:text-[11.5px] [&_span]:text-[var(--uisv-94a3b8)] [&_strong]:text-[11.5px] [&_strong]:text-[var(--uisv-334155)]"><strong>{operation ?? assertion ?? 'item'}</strong><span>{target}{value ? ` · ${value}` : ''}</span>{status === 'excluded' && reason ? <em>{reason}</em> : null}</div>
     <StatusPill status={status} />
   </div>
 }
 
 function StepInspector({ step, limitations }: { step: DesignStep; limitations: string[] }) {
-  return <div className="uisv-inspector-scroll">
-    <div className="uisv-inspector-head compact"><span className="uisv-step-badge">S{step.sourceStepNo}</span><div><h3>步骤 {step.sourceStepNo}</h3><code>{step.actions.length} 操作 · {step.expectations.length} 断言</code></div></div>
-    <section><h4>源操作原文</h4><blockquote>{step.sourceAction || '没有记录源操作原文'}</blockquote></section>
-    <section><h4>拆解操作 <span>{step.actions.length}</span></h4>{step.actions.length ? step.actions.map((action: DesignAction, index) => <TraceItem key={action.actionId} index={index + 1} operation={action.operation} target={action.target} value={action.value} status={action.status} reason={action.reason} />) : <p className="uisv-muted">没有拆解出操作。</p>}</section>
-    <section><h4>可执行断言 <span>{step.expectations.length}</span></h4>{step.expectations.length ? step.expectations.map((expectation: DesignExpectation, index) => <TraceItem key={expectation.expectationId} index={index + 1} assertion={expectation.assertion} target={expectation.target} value={expectation.value} status={expectation.status} reason={expectation.reason} />) : <p className="uisv-muted">没有拆解出断言。</p>}</section>
-    {limitations.length ? <section><h4>本用例限制 <span>{limitations.length}</span></h4>{limitations.slice(0, 2).map(limitation => <div className="uisv-note-box amber" key={limitation}><WarningFilled /><span>{limitation}</span></div>)}</section> : null}
-    <div className="uisv-inspector-note"><LinkOutlined /> 每个操作和断言都保留 sourceQuote；审核时可直接对照源功能用例，不需要在 JSON 和页面之间来回切换。</div>
+  return <div className={uisvInspectorScrollClass}>
+    <div className={cx(uisvInspectorHeadClass, uisvInspectorHeadCompactClass)}><span className={uisvStepBadgeClass}>S{step.sourceStepNo}</span><div className={uisvInspectorHeadBodyClass}><h3 className={uisvInspectorHeadTitleClass}>步骤 {step.sourceStepNo}</h3><code className={uisvInspectorHeadCodeClass}>{step.actions.length} 操作 · {step.expectations.length} 断言</code></div></div>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>源操作原文</h4><blockquote className={uisvBlockquoteClass}>{step.sourceAction || '没有记录源操作原文'}</blockquote></section>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>拆解操作 <span className={uisvInspectorSectionCountClass}>{step.actions.length}</span></h4>{step.actions.length ? step.actions.map((action: DesignAction, index) => <TraceItem key={action.actionId} index={index + 1} operation={action.operation} target={action.target} value={action.value} status={action.status} reason={action.reason} />) : <p className={cx('uisv-muted', uisvInspectorParagraphClass)}>没有拆解出操作。</p>}</section>
+    <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>可执行断言 <span className={uisvInspectorSectionCountClass}>{step.expectations.length}</span></h4>{step.expectations.length ? step.expectations.map((expectation: DesignExpectation, index) => <TraceItem key={expectation.expectationId} index={index + 1} assertion={expectation.assertion} target={expectation.target} value={expectation.value} status={expectation.status} reason={expectation.reason} />) : <p className={cx('uisv-muted', uisvInspectorParagraphClass)}>没有拆解出断言。</p>}</section>
+    {limitations.length ? <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>本用例限制 <span className={uisvInspectorSectionCountClass}>{limitations.length}</span></h4>{limitations.slice(0, 2).map(limitation => <div className={cx(uisvNoteBoxClass, uisvNoteBoxAmberClass, uisvNoteBoxIconClass)} key={limitation}><WarningFilled /><span>{limitation}</span></div>)}</section> : null}
+    <div className={uisvInspectorNoteClass}><LinkOutlined /> 每个操作和断言都保留 sourceQuote；审核时可直接对照源功能用例，不需要在 JSON 和页面之间来回切换。</div>
   </div>
 }
 

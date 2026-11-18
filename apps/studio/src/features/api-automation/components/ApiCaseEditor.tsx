@@ -221,7 +221,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
       </div>
 
       <Tabs
-        className="api-wb-tabs px-4"
+        className="api-wb-tabs px-4 [&_.shared-tab-motion-indicator]:[clip-path:inset(7px_0_round_8px)]"
         activeKey={activeTabKey}
         onChange={setActiveTabKey}
         tabBarExtraContent={activeTabKey === 'headers' ? (
@@ -270,7 +270,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                                 {renderEnvVarPicker({
                                   pickerKey: `query:${field.key}:value`,
                                   onInsert: (templateText) => insertTemplateText(['query', field.name, 'value'], `query:${field.key}:value`, templateText),
-                                  trigger: <Button type="text" size="small" className="api-env-var-picker-trigger" icon={<CodeOutlined />} />,
+                                  trigger: <Button type="text" size="small" className="api-env-var-picker-trigger" style={{ width: 28, height: 28, padding: 0, borderRadius: 8 }} icon={<CodeOutlined />} />,
                                 })}
                               </Space.Compact>
                             </div>
@@ -353,7 +353,27 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                     },
                   }}
                 >
-                  <ProjectActionButton action="write" type="text" className="api-post-ops-add-trigger">
+                  <ProjectActionButton
+                    action="write"
+                    type="text"
+                    className="api-post-ops-add-trigger"
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      border: '1px dashed var(--app-request-upload-border)',
+                      borderRadius: 12,
+                      background: 'var(--app-surface-raised)',
+                      color: 'var(--app-request-upload-text)',
+                      fontSize: 13,
+                      lineHeight: '20px',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease',
+                    }}
+                  >
                     <PlusOutlined />
                     <span>添加后置操作</span>
                     <DownOutlined />
@@ -363,7 +383,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 {assertRulesQuery.isLoading || extractRulesQuery.isLoading ? (
                   <Empty description="后置操作加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : postOperationCount === 0 ? (
-                  <Card size="small" className="api-rule-empty-card">
+                  <Card size="small" className="api-rule-empty-card" style={{ borderRadius: 10 }}>
                     <Empty description="还没有后置操作，点击上方添加断言或提取规则" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   </Card>
                 ) : (
@@ -475,7 +495,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 )}
               </div>
             ) : (
-              <Card size="small" className="api-rule-empty-card">
+              <Card size="small" className="api-rule-empty-card" style={{ borderRadius: 10 }}>
                 <Empty description="请先保存当前用例后再配置后置操作" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </Card>
             ),

@@ -129,6 +129,7 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
         <Form.Item
           name="bodyJson"
           className="api-body-editor-form-item"
+          style={{ marginBottom: 0 }}
           validateTrigger={['onChange', 'onBlur']}
           rules={[
             {
@@ -147,19 +148,19 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
       ) : null}
 
       {bodyType === 'raw' ? (
-        <Form.Item name="bodyText" label="Body 内容" className="api-body-editor-form-item">
+        <Form.Item name="bodyText" label="Body 内容" className="api-body-editor-form-item" style={{ marginBottom: 0 }}>
           <Input.TextArea rows={8} placeholder="原始请求体内容" />
         </Form.Item>
       ) : null}
 
       {bodyType === 'form' ? (
-        <Card size="small" className="api-body-placeholder-card">
+        <Card size="small" className="api-body-placeholder-card" style={{ borderRadius: 10, background: 'var(--app-request-section-bg)' }}>
           <Text type="secondary">`x-www-form-urlencoded` 类型的键值表单下一步再补，这一版先保留类型切换。</Text>
         </Card>
       ) : null}
 
       {bodyType === 'none' ? (
-        <Card size="small" className="api-body-placeholder-card">
+        <Card size="small" className="api-body-placeholder-card" style={{ borderRadius: 10, background: 'var(--app-request-section-bg)' }}>
           <Text type="secondary">当前选择 `none`，无需填写请求体。</Text>
         </Card>
       ) : null}

@@ -33,222 +33,254 @@
     "src/app/styles/action-buttons.css": {
       "rules": 7,
       "declarations": 11,
-      "selectors": 19
+      "selectors": 19,
+      "layoutDeclarations": 0
     },
     "src/app/styles/antd-overrides.css": {
       "rules": 9,
       "declarations": 28,
-      "selectors": 11
+      "selectors": 11,
+      "layoutDeclarations": 0
     },
     "src/app/styles/buttons.css": {
       "rules": 27,
       "declarations": 113,
-      "selectors": 37
+      "selectors": 37,
+      "layoutDeclarations": 6
     },
     "src/app/styles/layout.css": {
       "rules": 22,
       "declarations": 76,
-      "selectors": 22
+      "selectors": 22,
+      "layoutDeclarations": 30
     },
     "src/app/styles/shell-header.css": {
       "rules": 40,
       "declarations": 99,
-      "selectors": 49
+      "selectors": 49,
+      "layoutDeclarations": 40
     },
     "src/app/styles/shell.css": {
       "rules": 62,
       "declarations": 166,
-      "selectors": 77
+      "selectors": 77,
+      "layoutDeclarations": 112
     },
     "src/app/styles/sidebar.css": {
       "rules": 21,
       "declarations": 89,
-      "selectors": 22
+      "selectors": 22,
+      "layoutDeclarations": 47
     },
     "src/app/styles/theme.css": {
       "rules": 6,
       "declarations": 12,
-      "selectors": 6
+      "selectors": 6,
+      "layoutDeclarations": 3
     },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
       "rules": 50,
       "declarations": 164,
-      "selectors": 54
+      "selectors": 54,
+      "layoutDeclarations": 46
     },
     "src/features/ai-testing/styles/artifact-cases.module.css": {
       "rules": 44,
       "declarations": 136,
-      "selectors": 53
+      "selectors": 53,
+      "layoutDeclarations": 63
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
       "rules": 178,
       "declarations": 520,
-      "selectors": 207
+      "selectors": 207,
+      "layoutDeclarations": 266
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
       "rules": 157,
       "declarations": 526,
-      "selectors": 166
+      "selectors": 166,
+      "layoutDeclarations": 276
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
-      "rules": 158,
-      "declarations": 395,
-      "selectors": 188
+      "rules": 104,
+      "declarations": 166,
+      "selectors": 129,
+      "layoutDeclarations": 18
     },
     "src/features/api-automation/styles/api-detail-rules.module.css": {
-      "rules": 14,
-      "declarations": 50,
-      "selectors": 16
+      "rules": 9,
+      "declarations": 28,
+      "selectors": 11,
+      "layoutDeclarations": 7
     },
     "src/features/api-automation/styles/api-detail-shell.module.css": {
       "rules": 38,
       "declarations": 91,
-      "selectors": 43
+      "selectors": 43,
+      "layoutDeclarations": 21
     },
     "src/features/base-services/styles/zentao-binding.module.css": {
       "rules": 8,
       "declarations": 27,
-      "selectors": 8
+      "selectors": 8,
+      "layoutDeclarations": 11
     },
     "src/features/bugs/styles/bugs.module.css": {
       "rules": 63,
       "declarations": 174,
-      "selectors": 75
+      "selectors": 75,
+      "layoutDeclarations": 86
     },
     "src/features/interface-library/styles/interface-detail.module.css": {
       "rules": 13,
       "declarations": 40,
-      "selectors": 20
+      "selectors": 20,
+      "layoutDeclarations": 11
     },
     "src/features/interface-library/styles/interface-library.module.css": {
       "rules": 20,
       "declarations": 64,
-      "selectors": 22
+      "selectors": 22,
+      "layoutDeclarations": 19
     },
     "src/features/projects/styles/environment-drawer.module.css": {
       "rules": 11,
       "declarations": 37,
-      "selectors": 12
+      "selectors": 12,
+      "layoutDeclarations": 22
     },
     "src/features/projects/styles/sprint-overview.module.css": {
       "rules": 33,
       "declarations": 92,
-      "selectors": 36
+      "selectors": 36,
+      "layoutDeclarations": 35
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
       "rules": 29,
       "declarations": 71,
-      "selectors": 38
+      "selectors": 38,
+      "layoutDeclarations": 44
     },
     "src/features/test-cases/styles/case-library.module.css": {
       "rules": 23,
       "declarations": 57,
-      "selectors": 27
-    },
-    "src/features/test-orders/styles/test-order-visualization.module.css": {
-      "rules": 116,
-      "declarations": 375,
-      "selectors": 127
+      "selectors": 27,
+      "layoutDeclarations": 12
     },
     "src/features/test-orders/styles/test-order-workspace.module.css": {
       "rules": 33,
       "declarations": 89,
-      "selectors": 37
-    },
-    "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
-      "rules": 9,
-      "declarations": 44,
-      "selectors": 10
+      "selectors": 37,
+      "layoutDeclarations": 61
     },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
       "rules": 47,
       "declarations": 135,
-      "selectors": 53
+      "selectors": 53,
+      "layoutDeclarations": 40
     },
     "src/features/ui-automation/styles/ui-suite.module.css": {
       "rules": 26,
       "declarations": 60,
-      "selectors": 39
+      "selectors": 39,
+      "layoutDeclarations": 30
     },
     "src/index.css": {
       "rules": 8,
       "declarations": 24,
-      "selectors": 20
+      "selectors": 20,
+      "layoutDeclarations": 4
     },
     "src/shared/components/RichTextEditor/rich-text-editor.css": {
       "rules": 32,
       "declarations": 89,
-      "selectors": 53
+      "selectors": 53,
+      "layoutDeclarations": 35
     },
     "src/shared/styles/account.module.css": {
       "rules": 23,
       "declarations": 61,
-      "selectors": 29
+      "selectors": 29,
+      "layoutDeclarations": 15
     },
     "src/shared/styles/chart-tokens.css": {
       "rules": 2,
       "declarations": 40,
-      "selectors": 2
+      "selectors": 2,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/foundation-tokens.css": {
       "rules": 2,
       "declarations": 534,
-      "selectors": 2
+      "selectors": 2,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/github-dark-foundation.css": {
       "rules": 1,
       "declarations": 498,
-      "selectors": 1
+      "selectors": 1,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/github-dark-tokens.css": {
       "rules": 10,
       "declarations": 200,
-      "selectors": 11
+      "selectors": 11,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/indigo-amber-light-tokens.css": {
       "rules": 6,
       "declarations": 288,
-      "selectors": 6
+      "selectors": 6,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/list-table.css": {
       "rules": 26,
       "declarations": 79,
-      "selectors": 36
+      "selectors": 36,
+      "layoutDeclarations": 16
     },
     "src/shared/styles/pagination.css": {
       "rules": 14,
       "declarations": 48,
-      "selectors": 20
+      "selectors": 20,
+      "layoutDeclarations": 29
     },
     "src/shared/styles/run-view.module.css": {
       "rules": 18,
       "declarations": 56,
-      "selectors": 19
+      "selectors": 19,
+      "layoutDeclarations": 35
     },
     "src/shared/styles/scrollbars.css": {
       "rules": 5,
       "declarations": 10,
-      "selectors": 6
+      "selectors": 6,
+      "layoutDeclarations": 2
     },
     "src/shared/styles/surface-tokens.css": {
       "rules": 40,
       "declarations": 210,
-      "selectors": 43
+      "selectors": 43,
+      "layoutDeclarations": 82
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
       "declarations": 24,
-      "selectors": 13
+      "selectors": 13,
+      "layoutDeclarations": 6
     },
     "src/shared/styles/tailwind.css": {
       "rules": 0,
       "declarations": 0,
-      "selectors": 0
+      "selectors": 0,
+      "layoutDeclarations": 0
     },
     "src/shared/styles/ui-stage-visual-tokens.css": {
       "rules": 1,
       "declarations": 87,
-      "selectors": 1
+      "selectors": 1,
+      "layoutDeclarations": 0
     }
   },
   "duplicateBodies": {
@@ -289,7 +321,7 @@
       "sample": "height: 100%;min-height: 0;overflow: hidden"
     },
     "fbbb9331ecfd8380": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     }
   }

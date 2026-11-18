@@ -12,7 +12,7 @@
 | 空间与边界 | 桌面正文内收 16px，以 1px 主题分隔线组织信息；步骤和实体使用 6px 圆角。局部样式未新增阴影。 |
 | 响应式与焦点 | 图解与详情桌面分栏；1100px 以下上下排列，640px 以下正文内收 12px、数量图改单列。区间在自身区域内横向滚动；步骤、实体和原文区提供主题色焦点轮廓。 |
 
-以上尺寸仅记录本扩展的实现，不提升为所有 Studio 页面必须遵循的新规则。样式来源：[test-order-visualization.module.css](../../apps/studio/src/features/test-orders/styles/test-order-visualization.module.css)。
+以上尺寸仅记录本扩展的实现，不提升为所有 Studio 页面必须遵循的新规则。样式来源：[visualizationClasses.ts](../../apps/studio/src/features/test-orders/components/visualization/visualizationClasses.ts) 与 [CaseVisualizationPanel.tsx](../../apps/studio/src/features/test-orders/components/visualization/CaseVisualizationPanel.tsx)。
 
 ## 阅读与生成行为
 
