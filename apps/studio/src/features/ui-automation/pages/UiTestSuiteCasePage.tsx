@@ -78,9 +78,9 @@ import flowStyles from '@/features/ui-automation/styles/ui-execution-flow.module
 const RUN_HISTORY_PAGE_SIZE = 20
 
 function UiFlowLoading({ label }: { label: string }) {
-  return <div className="ui-wb-pipeline ui-flow-loading" role="status" aria-live="polite">
+  return <div className="ui-wb-pipeline ui-flow-loading min-h-[360px]" role="status" aria-live="polite">
     <span className="ui-flow-loading-label">{label}</span>
-    <div className="ui-flow-loading-grid" aria-hidden="true">
+    <div className="ui-flow-loading-grid grid grid-cols-[repeat(auto-fill,180px)] content-start gap-5" aria-hidden="true">
       {Array.from({ length: 12 }, (_, index) => <span className="ui-flow-loading-card" key={index} />)}
     </div>
   </div>

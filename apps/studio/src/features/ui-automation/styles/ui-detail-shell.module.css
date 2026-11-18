@@ -45,59 +45,9 @@
    多出来的高度由左栏步骤列表与右栏控制台日志各自内部滚动消化，底部指标区固定可见。
    矮屏下保留下限，回落到「整页滚动」的旧行为，避免面板被压到不可用。 */
 .scope :global(.ui-wb-inspector) {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
   gap: 12px;
   /* 空间不够时右栏自己滚（而不是把卡片压扁），指标区始终能滚到。 */
   overflow-y: auto;
-}
-
-.scope :global(.ui-wb-inspector-slot) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-
-/*
- * 三个槽的弹性分配（右栏要在一屏内放下三张卡片）：
- * 1. 回放：空间不足时主要压它（shrink 权重 4）——舞台本来就是自适应区域；空间富余时它先长到上限。
- * 2. 关键帧：定高（单行横滚），不参与伸缩。
- * 3. 执行控制台：只吸收剩余空间（shrink 权重 1），卡片内部的日志是弹性区，
- *    底部的指标区是 flex: 0 0 auto，任何情况下都不会被压或看不见。
- * 三个卡片各自有 min-height，压到极限时右栏整体滚动，而不是把卡片压扁。
- */
-/*
- * 右栏三张卡片的高度分配：
- * 1. 回放：舞台是 16:9（设计稿的主视觉），空间富余时不长，不够时先收它（收到下限为止）。
- * 2. 关键帧：单行定高，不参与伸缩。
- * 3. 执行控制台：吃掉剩余高度；空间不够时先压它的日志（日志本来就是滚动区）。
- *    卡片下限写在槽上——槽才是右栏的 flex 项，写在卡片上会被槽压过去、内容外溢——所以
- *    底部的指标区在任何高度下都留在卡片里，既不会被压扁，也不会被挤出卡片。
- * 4. 三张卡片都到下限后仍放不下（矮屏）时，右栏整体滚动，卡片保持完整。
- */
-.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(2)) {
-  flex: 0 0 auto;
-}
-
-/* 中等屏幕（不够放下全部、但也不至于要滚动）时，先让舞台收一点，
-   别把控制台整块挤出视野；落到卡片下限后右栏才整体滚动。 */
-.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(1)) {
-  flex: 0 1 auto;
-  min-height: 256px;
-}
-
-.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(3)) {
-  flex: 1 1 auto;
-  /* 卡片下限：内距 + 头 + 日志 60 + 指标区 + 快照开关 */
-  min-height: 226px;
-}
-
-.scope :global(.ui-wb-inspector-slot > .ui-wb-card) {
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 /* 缺失变量补齐弹窗：变量名与输入框逐行对齐，缺失位置清单只读展示。 */
@@ -189,14 +139,8 @@
   }
 }
 
-/* 测试集流程和当前用例共用一条导航；用例的新建与切换都在流程画布卡片上。 */
-.scope :global(.ui-wb-flow-breadcrumb) { display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; }
-.scope :global(.ui-wb-flow-breadcrumb-current) { color:var(--srf-text-secondary); overflow-wrap:anywhere; }
 .scope :global(.ui-wb-inspector.ui-wb-inspector-unified) { gap:0; padding:12px; border:1px solid var(--srf-card-border); border-radius:var(--srf-radius-card); background:var(--srf-card); }
-.scope :global(.ui-wb-inspector.ui-wb-inspector-unified > .ui-wb-inspector-slot) { flex:0 0 auto; min-height:0; }
-.scope :global(.ui-wb-inspector-unified > .ui-wb-inspector-slot + .ui-wb-inspector-slot) { margin-top:16px; }
 .scope :global(.ui-wb-inspector-unified .ui-wb-card) { padding:0; border:0; border-radius:0; background:transparent; overflow:visible; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty) { padding:0; }
 .scope :global(.ui-wb-inspector-unified .ui-wb-console-log) { min-height:85px; max-height:240px; }
 /* 让回放、快照和日志在一个视口中保持可见；截图与日志仍使用各自的原有控件。 */
 .scope :global(.ui-wb-inspector-unified .ui-wb-replay-stage) { flex:0 0 auto; }
@@ -227,10 +171,6 @@
  * 颜色只引用 `--srf-*` / `.tone-*`。左栏根节点上的 `.ui-suite-case-editor-panel` 必须留着，
  * 它是本文件下面这些选择器的作用点。
  */
-
-.scope :global(.ui-suite-case-editor-panel) {
-  min-width: 0;
-}
 
 /* 用例表单是左栏的排布容器（旧布局里它是编辑器面板内部那个带 16/24px 内距、overflow:hidden 的滚动区，
    那条规则已删）：拉伸填满左栏，卡片间距 12px，页面内的边距全部交给外层板面，
@@ -279,6 +219,8 @@
 
 /* ===== 用例信息条 ===== */
 
+/* ===== 用例信息条 ===== */
+
 .scope :global(.ui-wb-case-meta) {
   display: flex;
   flex-direction: column;
@@ -287,12 +229,6 @@
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
-}
-
-.scope :global(.ui-wb-case-meta-head) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .scope :global(.ui-wb-case-serial) {
@@ -305,82 +241,6 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
-}
-
-.scope :global(.ui-wb-case-name-item) {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin-bottom: 0;
-}
-
-.scope :global(.ui-wb-case-name-item .ant-form-item-control-input) {
-  min-height: auto;
-}
-
-.scope :global(.ui-wb-case-name-item .ant-input) {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 22px;
-  border-color: transparent;
-  background: var(--srf-hover);
-  color: var(--srf-text);
-}
-
-.scope :global(.ui-wb-case-name-item .ant-input:is(:hover, :focus)) {
-  border-color: var(--srf-accent-border);
-  background: var(--srf-card);
-}
-
-.scope :global(.ui-wb-case-name-icon) {
-  color: var(--srf-text-muted);
-  font-size: 12px;
-}
-
-.scope :global(.ui-wb-case-meta-actions) {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.scope :global(.ui-wb-case-meta-sub) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-}
-
-.scope :global(.ui-wb-case-meta-flags) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.scope :global(.ui-wb-case-enabled-item) {
-  margin-bottom: 0;
-}
-
-.scope :global(.ui-wb-case-enabled-item .ant-form-item-control-input) {
-  min-height: auto;
-}
-
-.scope :global(.ui-wb-case-meta-sep) {
-  color: var(--srf-card-border);
-}
-
-.scope :global(.ui-wb-case-step-count) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.scope :global(.ui-wb-case-meta-links) {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 /* ===== 步骤编辑器 ===== */
@@ -554,20 +414,9 @@
 }
 
 /* 用例列表/详情加载时的流程骨架：按真实卡片尺寸占位，避免先闪空态再跳到画布。 */
-.scope :global(.ui-flow-loading) {
-  min-height: 360px;
-}
-
 .scope :global(.ui-flow-loading-label) {
   color: var(--srf-text-muted);
   font-size: 12px;
-}
-
-.scope :global(.ui-flow-loading-grid) {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 180px);
-  align-content: start;
-  gap: 20px;
 }
 
 .scope :global(.ui-flow-loading-card) {

@@ -38,7 +38,7 @@ export function UiRunInspector({ run, viewportText, viewportWidth, viewportHeigh
   const safeIndex = snapshots.length === 0 ? 0 : Math.min(activeIndex, snapshots.length - 1)
 
   return (
-    <div className={`ui-wb-inspector ui-wb-inspector-unified ui-wb-inspector-stacked${showStepConfig ? ' has-step-config' : ''}`}>
+    <div className={`ui-wb-inspector ui-wb-inspector-unified ui-wb-inspector-stacked flex min-h-0 min-w-0 flex-col${showStepConfig ? ' has-step-config' : ''}`}>
       <div className="ui-inspector-run">
         <div className="ui-inspector-tabs" role="tablist" aria-label="运行结果">
           {([['replay', '执行回放'], ['logs', '执行日志'], ['variables', '运行变量']] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>{label}</button>)}

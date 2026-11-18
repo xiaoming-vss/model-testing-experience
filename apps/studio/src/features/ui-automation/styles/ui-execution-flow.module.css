@@ -43,7 +43,6 @@
 .scope :global(.ui-flow .react-flow__background) { color:var(--srf-card-border); }
 .scope :global(.ui-flow-footer) { padding:8px 12px; border-top:1px solid var(--srf-card-border); color:var(--srf-text-muted); font-size:12px; }
 .scope :global(.ui-flow-footer .ant-alert) { padding:5px 8px; }
-.scope :global(.ui-flow-navigation) { display:flex; gap:8px; flex-wrap:wrap; }
 .scope :global(.ui-flow-editor) { display:flex; flex:1; flex-direction:column; min-height:0; }
 .scope :global(.ui-flow-editor .ui-test-case-form) { overflow:auto; }
 .scope :global(.ui-flow-editor .ui-flow) { flex:none; }
@@ -67,19 +66,10 @@
 
 /* 用例信息融入步骤流程工具栏，连接操作保留在下一行。 */
 .scope :global(.ui-flow-case-toolbar) { padding:8px 12px; border-bottom:1px solid var(--srf-card-border); }
-.scope :global(.ui-flow-case-meta.ui-wb-case-meta) { display:flex; flex-direction:row; align-items:center; flex-wrap:wrap; gap:8px; padding:0; border:0; border-radius:0; background:transparent; }
-.scope :global(.ui-flow-case-meta .ui-wb-case-name-item) { flex:1 1 180px; min-width:120px; max-width:300px; margin:0; }
-.scope :global(.ui-flow-case-status) { color:var(--srf-tone-text); white-space:nowrap; font-size:12px; }
-.scope :global(.ui-flow-case-enabled) { display:inline-flex; align-items:center; gap:6px; }
-.scope :global(.ui-flow-case-count) { color:var(--srf-text-muted); white-space:nowrap; font-size:12px; }
-.scope :global(.ui-flow-case-actions) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-left:auto; }
 .scope :global(.ui-flow-edge-delete) { position:absolute; pointer-events:all; width:24px; height:24px; padding:0; border:1px solid var(--srf-card-border); border-radius:50%; background:var(--srf-card); color:var(--srf-text); font-size:18px; line-height:20px; cursor:pointer; }
 .scope :global(.ui-flow-edge-delete:hover),
 .scope :global(.ui-flow-edge-delete:focus-visible) { border-color:var(--srf-accent); color:var(--srf-accent); }
-.scope :global(.ui-flow-header-combined),
 .scope :global(.ui-flow-toolbar-title) { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.scope :global(.ui-flow-header-combined .ui-wb-ribbon.is-compact) { flex:0 0 auto; padding:0; border:0; border-radius:0; background:transparent; }
-.scope :global(.ui-flow-header-combined .ui-flow-case-meta) { flex:1 1 420px; min-width:0; }
 .scope :global(.ui-step-header-switches) { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-right:8px; }
 .scope :global(.ui-step-header-switches label) { display:flex; align-items:center; gap:6px; white-space:nowrap; font-size:12px; color:var(--srf-text-secondary); }
 .scope :global(.ui-step-config-tabs) { display:flex; gap:20px; margin-bottom:12px; border-bottom:1px solid var(--srf-card-border); }

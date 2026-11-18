@@ -236,14 +236,14 @@
       "selectors": 20
     },
     "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
-      "rules": 72,
-      "declarations": 307,
-      "selectors": 76
+      "rules": 62,
+      "declarations": 260,
+      "selectors": 66
     },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
-      "rules": 90,
-      "declarations": 265,
-      "selectors": 95
+      "rules": 63,
+      "declarations": 193,
+      "selectors": 68
     },
     "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
       "rules": 38,
@@ -251,9 +251,9 @@
       "selectors": 44
     },
     "src/features/ui-automation/styles/ui-execution-flow.module.css": {
-      "rules": 143,
-      "declarations": 421,
-      "selectors": 166
+      "rules": 134,
+      "declarations": 384,
+      "selectors": 156
     },
     "src/features/ui-automation/styles/ui-suite.module.css": {
       "rules": 91,
@@ -417,11 +417,11 @@
       "sample": "display: flex;align-items: center;gap: 10px"
     },
     "2ea85dd40793deee": {
-      "count": 3,
+      "count": 2,
       "sample": "display: inline-flex;align-items: center;gap: 4px"
     },
     "300b373f254ffd3c": {
-      "count": 8,
+      "count": 6,
       "sample": "display: flex;align-items: center;gap: 8px"
     },
     "37bf457a62a94b20": {
@@ -476,10 +476,6 @@
       "count": 2,
       "sample": "color: var(--srf-text-muted);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size: 10px"
     },
-    "6008df5c3dcaa46a": {
-      "count": 2,
-      "sample": "flex: 0 0 auto;display: flex;align-items: center;gap: 8px"
-    },
     "6747dfd794ecfb61": {
       "count": 2,
       "sample": "border-color: var(--app-accent-border);background: var(--app-accent-surface);color: var(--app-accent);font-weight: 600"
@@ -501,7 +497,7 @@
       "sample": "width: 100%;align-items: flex-start;flex-direction: column;gap: 10px"
     },
     "8286808fdc44ffaa": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;align-items: center;gap: 4px"
     },
     "83bfbff9a699fecc": {
