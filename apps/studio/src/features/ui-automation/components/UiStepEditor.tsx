@@ -95,11 +95,11 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
       {(fields, { remove, move }) => (
         <>
           {fields.length === 0 ? (
-            <div className="ui-test-case-step-empty">
+            <div className="ui-test-case-step-empty rounded-[12px] border border-dashed border-[var(--tp-border-soft)] bg-[var(--app-review-surface)] p-[18px]">
               <Empty description="当前还没有步骤，请在流程末尾的「+ 添加步骤」卡片中添加" />
             </div>
           ) : (
-            <div className="ui-test-case-step-list" ref={stepListRef}>
+            <div className="ui-test-case-step-list flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-0.5" ref={stepListRef}>
               {fields.map((field, index) => {
                 const { key: fieldKey, ...fieldProps } = field
                 const step = watchedSteps[index]
@@ -128,7 +128,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                     key={fieldKey}
                     data-step-index={index}
                     hidden={selectedStepIndex !== undefined && selectedStepIndex !== index}
-                    className={`ui-test-case-step-card${expanded ? ' expanded' : ''}${selectedStepIndex !== undefined ? ' is-detail' : ''}${draggingStepIndex === index ? ' dragging' : ''}`}
+                    className={`ui-test-case-step-card p-0 transition-[border-color,box-shadow] duration-200${selectedStepIndex !== undefined ? ' is-detail rounded-none border-0 bg-transparent shadow-none overflow-visible' : ' rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-hover)] overflow-hidden'}${expanded ? ' expanded' : ''}${expanded && selectedStepIndex === undefined ? ' border-[var(--srf-accent-border)] shadow-none' : ''}${draggingStepIndex === index ? ' dragging opacity-[0.72]' : ''}`}
                     onDragOver={(event) => {
                       event.preventDefault()
                     }}
@@ -138,21 +138,21 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                     }}
                   >
                     <div
-                      className="ui-test-case-step-card-top"
+                      className={`ui-test-case-step-card-top flex items-center justify-between gap-4${selectedStepIndex === undefined ? ' cursor-grab px-4 py-3.5 active:cursor-grabbing' : ' cursor-default px-0 pb-3 pt-0'}`}
                       draggable={can('write') && selectedStepIndex === undefined}
                       onDragStart={(event) => handleStepDragStart(event, index)}
                       onDragEnd={() => setDraggingStepIndex(null)}
                       onClick={selectedStepIndex === undefined ? () => toggleStepPanel(index) : undefined}
                     >
-                      <div className="ui-test-case-step-card-main">
-                        <div className="ui-test-case-step-card-leading">
+                      <div className="ui-test-case-step-card-main min-w-0 flex flex-1 items-center gap-2.5">
+                        <div className="ui-test-case-step-card-leading flex flex-none items-center gap-2">
                           {/* 设计稿在行首画了拖拽手柄；整行本来就可拖（见上面的 draggable），这里只是把可拖这件事画出来。 */}
-                          {selectedStepIndex === undefined ? <span className="ui-wb-step-grip" aria-hidden="true">
+                          {selectedStepIndex === undefined ? <span className="ui-wb-step-grip inline-flex items-center text-sm text-[var(--srf-text-muted)] cursor-grab active:cursor-grabbing" aria-hidden="true">
                             <HolderOutlined />
                           </span> : null}
                           {selectedStepIndex === undefined ? <button
                             type="button"
-                            className={`ui-test-case-step-toggle${expanded ? ' expanded' : ''}`}
+                            className={`ui-test-case-step-toggle inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-[8px] border border-[var(--tp-border-soft)] bg-[var(--app-review-code-bg)] p-0 text-[var(--tp-text-secondary)] transition-[color,transform,border-color,background-color] duration-200 hover:border-[var(--app-review-border-hover)] hover:bg-[var(--app-request-card-shadow-hover)] hover:text-[var(--app-accent)]${expanded ? ' expanded rotate-180 text-[var(--app-accent)]' : ''}`}
                             aria-label={expanded ? '折叠步骤' : '展开步骤'}
                             aria-expanded={expanded}
                             onClick={(event) => {
@@ -162,40 +162,40 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           >
                             <DownOutlined />
                           </button> : null}
-                          <span className="ui-test-case-step-order">#{index + 1}</span>
+                          <span className={`ui-test-case-step-order inline-flex h-6 w-6 flex-none items-center justify-center rounded-[6px] p-0 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] font-bold${expanded ? ' bg-[var(--srf-accent)] text-[var(--srf-on-accent)]' : ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]'}`}>#{index + 1}</span>
                         </div>
                         <div
-                          className="ui-test-case-step-card-title"
+                          className="ui-test-case-step-card-title min-w-0 flex flex-1 flex-col gap-1"
                           onClick={(event) => event.stopPropagation()}
                           onMouseDown={(event) => event.stopPropagation()}
                         >
-                          <div className="ui-test-case-step-title-head">
+                          <div className="ui-test-case-step-title-head flex items-center gap-3">
                             <Form.Item
                               {...fieldProps}
                               noStyle={compact}
                               name={[field.name, 'stepName']}
-                              className="ui-test-case-step-title-item"
+                              className="ui-test-case-step-title-item mb-0 min-w-0 flex-1"
                               rules={[{ required: true, whitespace: true, message: '请输入步骤名称' }]}
                             >
                               {compact ? null : <Input
                                 placeholder="点击输入步骤名称"
                                 maxLength={120}
                                 className="ui-test-case-step-title-input"
-                                suffix={<EditOutlined className="ui-test-case-step-title-edit-icon" />}
+                                suffix={<EditOutlined className="ui-test-case-step-title-edit-icon text-xs text-[var(--tp-text-muted)]" />}
                               />}
                             </Form.Item>
                           </div>
-                          {selectedStepIndex === undefined ? <div className="ui-wb-step-summary">
+                          {selectedStepIndex === undefined ? <div className="ui-wb-step-summary flex min-w-0 flex-wrap items-center gap-1.5 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] leading-4 text-[var(--srf-text-muted)]">
                             <span className="ui-wb-step-summary-text">{stepSummary}</span>
                             {stepResult ? (
                               <UiStepResultBadge stepResult={stepResult} />
                             ) : step?.keyword?.trim() ? null : (
-                              <span className="ui-wb-step-status is-draft">草稿</span>
+                              <span className="ui-wb-step-status is-draft flex-none rounded border border-[var(--srf-card-border)] bg-[var(--srf-chip)] px-1.5 py-px font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[10px] font-bold leading-4 text-[var(--srf-text-muted)]">草稿</span>
                             )}
                           </div> : null}
                         </div>
                       </div>
-                      <div className="ui-test-case-step-actions" onClick={(event) => event.stopPropagation()}>
+                      <div className="ui-test-case-step-actions flex flex-none flex-wrap items-center gap-2 pt-1.5" onClick={(event) => event.stopPropagation()}>
                         {compact ? null : <Tooltip title="删除步骤">
                           <ProjectActionButton action="write"
                             type="text"
@@ -209,12 +209,12 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                     </div>
 
                     {selectedStepIndex === index ? detailActions : null}
-                    {selectedStepIndex !== undefined && selectedStepIndex === index ? <div className="ui-step-config-tabs" role="tablist" aria-label="步骤配置分类">
-                      <button type="button" role="tab" aria-selected={activeTab === 'basic'} onClick={() => onTabChange?.('basic')}>基础配置</button>
-                      <button type="button" role="tab" aria-selected={activeTab === 'extract'} onClick={() => onTabChange?.('extract')}>后置提取</button>
+                    {selectedStepIndex !== undefined && selectedStepIndex === index ? <div className="ui-step-config-tabs mb-4 flex gap-6 border-b border-[var(--srf-card-border)]" role="tablist" aria-label="步骤配置分类">
+                      <button type="button" role="tab" aria-selected={activeTab === 'basic'} className={`cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 py-2 text-[var(--srf-text-secondary)]${activeTab === 'basic' ? ' border-b-[var(--srf-accent)] font-semibold text-[var(--srf-accent)]' : ''}`} onClick={() => onTabChange?.('basic')}>基础配置</button>
+                      <button type="button" role="tab" aria-selected={activeTab === 'extract'} className={`cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 py-2 text-[var(--srf-text-secondary)]${activeTab === 'extract' ? ' border-b-[var(--srf-accent)] font-semibold text-[var(--srf-accent)]' : ''}`} onClick={() => onTabChange?.('extract')}>后置提取</button>
                     </div> : null}
-                    <div className="ui-test-case-step-body" hidden={!expanded} aria-hidden={!expanded}>
-                      <div className="ui-test-case-step-grid ui-test-case-step-core-grid" hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
+                    <div className={`ui-test-case-step-body flex flex-col${selectedStepIndex !== undefined ? ' gap-2 border-0 bg-transparent p-0' : ' mt-0 gap-4 border-t border-[var(--tp-border-soft)] p-4'}`} hidden={!expanded} aria-hidden={!expanded}>
+                      <div className={`ui-test-case-step-grid ui-test-case-step-core-grid grid items-start${selectedStepIndex !== undefined ? ' grid-cols-1 gap-4' : ' grid-cols-2 gap-x-4 gap-y-3.5 max-[1180px]:grid-cols-1'}`} hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
                         <Form.Item
                           {...fieldProps}
                           noStyle={compact}
@@ -272,9 +272,9 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         </Form.Item>
                       </div>
 
-                      <div className="ui-test-case-step-detail-grid" hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
+                      <div className={`ui-test-case-step-detail-grid grid items-start${selectedStepIndex !== undefined ? ' grid-cols-1 gap-4' : ' grid-cols-2 gap-x-4 gap-y-3.5 max-[1180px]:grid-cols-1'}`} hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
                         <div
-                          className="ui-test-case-step-field-note ui-test-case-step-field-wide"
+                          className="ui-test-case-step-field-note ui-test-case-step-field-wide -mt-1 text-xs leading-[18px] text-[var(--tp-text-secondary)]"
                           hidden={selectedStepIndex !== undefined || !showLocatorTypeField || !locatorFieldHint}
                         >
                           {locatorFieldHint}
@@ -286,7 +286,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           name={[field.name, 'locatorValue']}
                           label={selectedStepIndex !== undefined ? '定位值' : renderTemplatePickerLabel(field.name, 'locatorValue', '定位值')}
                           hidden={!compact && !showLocatorFields}
-                          className={`ui-test-case-step-field ${locatorValueFieldClass}`}
+                          className={`ui-test-case-step-field ${locatorValueFieldClass} ${selectedStepIndex !== undefined ? 'col-span-1' : locatorValueFieldClass.includes('wide') ? 'col-span-2 max-[1180px]:col-span-1' : 'col-span-1'}`}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
                             ({ getFieldValue }) => ({
@@ -314,7 +314,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           name={[field.name, 'operationValue']}
                           label={selectedStepIndex !== undefined ? <span title={operationFieldLabel}>{step?.keyword === 'open' ? '页面 URL' : '操作值'}</span> : renderTemplatePickerLabel(field.name, 'operationValue', operationFieldLabel)}
                           hidden={!compact && !showOperationField}
-                          className={`ui-test-case-step-field ${operationValueFieldClass}`}
+                          className={`ui-test-case-step-field ${operationValueFieldClass} ${selectedStepIndex !== undefined ? 'col-span-1' : operationValueFieldClass.includes('wide') ? 'col-span-2 max-[1180px]:col-span-1' : 'col-span-1'}`}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
                             {
@@ -380,7 +380,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         </Form.Item>
 
                         <div
-                          className="ui-test-case-step-field-note ui-test-case-step-field-wide"
+                          className="ui-test-case-step-field-note ui-test-case-step-field-wide -mt-1 text-xs leading-[18px] text-[var(--tp-text-secondary)]"
                           hidden={selectedStepIndex !== undefined || !showOperationField || !operationFieldHint}
                         >
                           {operationFieldHint}
@@ -392,7 +392,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           name={[field.name, 'comparator']}
                           label="比较器"
                           hidden={!compact && !stepUsesComparator}
-                          className="ui-test-case-step-field ui-test-case-step-field-third"
+                          className="ui-test-case-step-field ui-test-case-step-field-third col-span-1"
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
                             ({ getFieldValue }) => ({
@@ -416,10 +416,10 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         </Form.Item>
                       </div>
 
-                      <div className="ui-test-case-step-extract" hidden={selectedStepIndex !== undefined && activeTab !== 'extract'}>
-                        <div className="ui-test-case-step-extract-head">
-                          <span className="ui-test-case-step-extract-title">后置提取</span>
-                          {selectedStepIndex === undefined ? <span className="ui-test-case-step-extract-hint">
+                      <div className="ui-test-case-step-extract flex flex-col gap-2 border-t border-dashed border-[var(--tp-border)] pt-3" hidden={selectedStepIndex !== undefined && activeTab !== 'extract'}>
+                        <div className="ui-test-case-step-extract-head flex items-baseline gap-2.5">
+                          <span className="ui-test-case-step-extract-title text-xs font-semibold">后置提取</span>
+                          {selectedStepIndex === undefined ? <span className="ui-test-case-step-extract-hint text-xs leading-[18px] text-[var(--tp-text-secondary)]">
                             步骤成功后读取页面上的值，立即写回环境变量
                           </span> : null}
                         </div>
@@ -427,14 +427,14 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           {(saveFields, { add: addSaveRule, remove: removeSaveRule }) => (
                             <>
                               {saveFields.length === 0 && !compact ? (
-                                <div className="ui-test-case-step-extract-empty">当前没有提取规则</div>
+                                <div className="ui-test-case-step-extract-empty text-xs leading-[18px] text-[var(--tp-text-secondary)]">当前没有提取规则</div>
                               ) : null}
                               {saveFields.map((saveField) => {
                                 const { key: saveKey, ...saveFieldProps } = saveField
                                 const ruleName = step?.saveTo?.[saveField.name]?.name?.trim() ?? ''
                                 const ownerStepIndex = ruleName ? saveNameOwners.get(ruleName) : undefined
                                 return (
-                                  <div key={saveKey} className="ui-test-case-step-extract-row">
+                                  <div key={saveKey} className="ui-test-case-step-extract-row grid grid-cols-2 items-start gap-2 max-[1180px]:grid-cols-2">
                                     <Form.Item
                                       {...saveFieldProps}
                                       noStyle={compact}
@@ -442,7 +442,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                       className="ui-test-case-step-extract-name"
                                       extra={
                                         ownerStepIndex !== undefined && ownerStepIndex < index ? (
-                                          <span className="ui-test-case-step-extract-warning">
+                                          <span className="ui-test-case-step-extract-warning text-[11px] leading-4 text-[var(--app-status-warning-text)]">
                                             同名变量会覆盖第 {ownerStepIndex + 1} 步写入的值
                                           </span>
                                         ) : undefined
@@ -587,15 +587,15 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         </Form.List>
                       </div>
 
-                      {selectedStepIndex === undefined ? <div className="ui-test-case-step-footer">
-                        <div className="ui-test-case-step-footer-grid">
-                          <div className="ui-test-case-step-status-row">
+                      {selectedStepIndex === undefined ? <div className="ui-test-case-step-footer flex flex-col gap-4 pt-0.5">
+                        <div className="ui-test-case-step-footer-grid grid grid-cols-[minmax(120px,160px)_repeat(2,max-content)] items-end gap-x-[22px] gap-y-3 max-[1180px]:grid-cols-1">
+                          <div className="ui-test-case-step-status-row contents">
                             <Form.Item
                               {...fieldProps}
                               name={[field.name, 'enabled']}
                               label="启用"
                               valuePropName="checked"
-                              className="ui-test-case-step-inline-switch-item"
+                              className="ui-test-case-step-inline-switch-item mb-0 flex items-center"
                             >
                               <Switch />
                             </Form.Item>
@@ -604,7 +604,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                               name={[field.name, 'continueOnFailure']}
                               label="失败后继续"
                               valuePropName="checked"
-                              className="ui-test-case-step-inline-switch-item"
+                              className="ui-test-case-step-inline-switch-item mb-0 flex items-center"
                             >
                               <Switch />
                             </Form.Item>

@@ -1,4 +1,4 @@
-// 与 ui-execution-flow.module.css 中卡片的实际渲染尺寸一致（含内边距、描边与基础行高），
+// 与 ui-detail-shell.module.css 中流程卡片的实际渲染尺寸一致（含内边距、描边与基础行高），
 // 否则 fitView 会按偏小的初始尺寸计算，放大后最右一列会贴到画布边缘。
 export const FLOW_NODE_WIDTH = 206
 export const FLOW_NODE_HEIGHT = 108

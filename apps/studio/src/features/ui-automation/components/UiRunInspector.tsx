@@ -38,20 +38,20 @@ export function UiRunInspector({ run, viewportText, viewportWidth, viewportHeigh
   const safeIndex = snapshots.length === 0 ? 0 : Math.min(activeIndex, snapshots.length - 1)
 
   return (
-    <div className={`ui-wb-inspector ui-wb-inspector-unified ui-wb-inspector-stacked flex min-h-0 min-w-0 flex-col${showStepConfig ? ' has-step-config' : ''}`}>
-      <div className="ui-inspector-run">
-        <div className="ui-inspector-tabs" role="tablist" aria-label="运行结果">
-          {([['replay', '执行回放'], ['logs', '执行日志'], ['variables', '运行变量']] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>{label}</button>)}
+    <div className={`ui-wb-inspector ui-wb-inspector-unified ui-wb-inspector-stacked flex min-h-0 min-w-0 flex-col rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]${showStepConfig ? ' has-step-config gap-0 overflow-hidden p-0 max-[1099px]:min-h-[500px]' : ' gap-3 overflow-y-auto p-3'}`}>
+      <div className={`ui-inspector-run flex flex-col overflow-hidden${showStepConfig ? ' flex-[0_0_55%] min-h-[240px]' : ' flex-[1_1_52%] min-h-[180px]'}`}>
+        <div className="ui-inspector-tabs flex flex-none gap-5 overflow-x-auto border-b border-[var(--srf-card-border)] px-5" role="tablist" aria-label="运行结果">
+          {([['replay', '执行回放'], ['logs', '执行日志'], ['variables', '运行变量']] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={activeTab === key} className={`flex-none cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 py-3 text-[var(--srf-text-secondary)]${activeTab === key ? ' border-b-[var(--srf-accent)] font-semibold text-[var(--srf-accent)]' : ''}`} onClick={() => setActiveTab(key)}>{label}</button>)}
         </div>
-        <div className="ui-inspector-tab-content" hidden={activeTab !== 'replay'}>
+        <div className="ui-inspector-tab-content min-h-0 flex-1 overflow-auto p-4 px-5" hidden={activeTab !== 'replay'}>
           <UiRunReplayStage run={run} snapshots={snapshots} activeIndex={safeIndex} viewportText={viewportText} viewportWidth={viewportWidth} viewportHeight={viewportHeight} screenshotText={screenshotText} onActiveIndexChange={setActiveIndex} />
         </div>
-        <div className="ui-inspector-tab-content" hidden={activeTab !== 'logs'}>
+        <div className="ui-inspector-tab-content min-h-0 flex-1 overflow-auto p-4 px-5" hidden={activeTab !== 'logs'}>
           <UiRunConsoleCard run={run} refreshing={refreshing} onRefresh={onRefreshRun} canStop={canStop} />
         </div>
-        <div className="ui-inspector-tab-content" hidden={activeTab !== 'variables'}><UiRunVariables run={run} /></div>
+        <div className="ui-inspector-tab-content min-h-0 flex-1 overflow-auto p-4 px-5" hidden={activeTab !== 'variables'}><UiRunVariables run={run} /></div>
       </div>
-      <div className="ui-inspector-step-host" hidden={!showStepConfig} ref={stepConfigHostRef} />
+      <div className="ui-inspector-step-host flex min-h-[220px] flex-1 overflow-hidden border-t border-[var(--srf-card-border)]" hidden={!showStepConfig} ref={stepConfigHostRef} />
     </div>
   )
 }

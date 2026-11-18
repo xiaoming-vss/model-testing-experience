@@ -231,29 +231,19 @@
       "selectors": 20
     },
     "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
-      "rules": 62,
-      "declarations": 260,
-      "selectors": 66
+      "rules": 9,
+      "declarations": 44,
+      "selectors": 10
     },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
-      "rules": 63,
-      "declarations": 193,
-      "selectors": 68
-    },
-    "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
-      "rules": 38,
-      "declarations": 159,
-      "selectors": 44
-    },
-    "src/features/ui-automation/styles/ui-execution-flow.module.css": {
-      "rules": 134,
-      "declarations": 384,
-      "selectors": 156
+      "rules": 47,
+      "declarations": 135,
+      "selectors": 53
     },
     "src/features/ui-automation/styles/ui-suite.module.css": {
-      "rules": 91,
-      "declarations": 252,
-      "selectors": 119
+      "rules": 26,
+      "declarations": 60,
+      "selectors": 39
     },
     "src/index.css": {
       "rules": 8,
@@ -399,21 +389,13 @@
       "count": 2,
       "sample": "display: flex;align-items: center;gap: 6px;min-width: 0"
     },
-    "299d1f386c062b4a": {
-      "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 6px"
-    },
     "2adc3dcdcc63441e": {
-      "count": 5,
+      "count": 4,
       "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "2e2e45e2d4ca13fb": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;align-items: center;gap: 10px"
-    },
-    "2ea85dd40793deee": {
-      "count": 2,
-      "sample": "display: inline-flex;align-items: center;gap: 4px"
     },
     "300b373f254ffd3c": {
       "count": 6,
@@ -427,10 +409,6 @@
       "count": 3,
       "sample": "display: flex;flex-direction: column;gap: 14px"
     },
-    "3be4dd54c65b7d06": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 12px"
-    },
     "3dc1af6e21ca837c": {
       "count": 2,
       "sample": "display: inline-flex;align-items: center;gap: 6px"
@@ -442,14 +420,6 @@
     "440644315a04af4d": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;flex: 1 1 auto;min-height: 0;min-width: 0;overflow: hidden"
-    },
-    "45996232e0d4bfd4": {
-      "count": 2,
-      "sample": "display: inline-flex;align-items: center;gap: 8px"
-    },
-    "50abdfaf427f4445": {
-      "count": 2,
-      "sample": "display:flex;flex-flow:row nowrap;align-items:flex-start;gap:10px"
     },
     "528f9ebfeb41bb50": {
       "count": 2,
@@ -484,7 +454,7 @@
       "sample": "display: flex;flex-direction: column;gap: 1px"
     },
     "790b1e6d62087b78": {
-      "count": 4,
+      "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
     },
     "7c586f54a3b7d455": {
@@ -520,16 +490,12 @@
       "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px"
     },
     "a71bc4fe08430bdb": {
-      "count": 3,
+      "count": 2,
       "sample": "flex: 1 1 auto;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "a8c592ec8463dd98": {
-      "count": 7,
+      "count": 6,
       "sample": "display: flex;flex-direction: column;gap: 12px"
-    },
-    "b36f4265bfbdde0f": {
-      "count": 3,
-      "sample": "color: var(--tp-text-secondary);font-size: 12px;line-height: 18px"
     },
     "b55a347634ad307b": {
       "count": 2,
@@ -540,7 +506,7 @@
       "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
     },
     "bd53bc74855fdf05": {
-      "count": 6,
+      "count": 5,
       "sample": "display: flex;flex-direction: column;gap: 6px"
     },
     "c3a767a35bba8500": {

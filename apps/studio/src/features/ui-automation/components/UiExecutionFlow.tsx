@@ -8,7 +8,7 @@ import { getFlowOrder } from '../utils/flowOrder'
 import { computeFlowLayout, oppositeFlowSide, FLOW_NODE_WIDTH, FLOW_NODE_HEIGHT, FLOW_COLUMN_PITCH, FLOW_ROW_PITCH, LEGACY_COLUMN_PITCH, LEGACY_ROW_OFFSETS, type FlowHandleSide } from '../utils/flowLayout'
 import { UiStepResultBadge } from './UiStepResultBadge'
 
-// 画布样式由详情页引入的 ui-execution-flow.module.css 作用域提供。
+// 画布深层皮肤由详情页引入的 ui-detail-shell.module.css 作用域提供。
 
 export type FlowItemAction = { key: string; label: string; danger?: boolean; onSelect: () => void }
 export type FlowItem = { id: string; title: string; caption: string; serial: string; enabled: boolean; result?: UiTestCaseRunStepResult; actions?: FlowItemAction[] }
@@ -27,11 +27,11 @@ const HIDDEN_HANDLE_STYLE: CSSProperties = { opacity: 0, pointerEvents: 'none' }
 
 function ExecutionNode({ data }: NodeProps<FlowNode>) {
   const actions = data.actions ?? []
-  return <div className={`ui-flow-node${actions.length ? ' has-actions' : ''}`} style={{ animationDelay: `${data.revealDelay}ms` }}>
+  return <div className={`ui-flow-node group relative w-[180px] min-h-[86px] rounded-[8px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-2.5 px-3 text-[var(--srf-text)]${actions.length ? ' has-actions' : ''}`} style={{ animationDelay: `${data.revealDelay}ms` }}>
     <Handle type="target" position={HANDLE_POSITION[data.targetSide]} />
-    <div className="ui-flow-node-head"><span className="ui-flow-node-serial">{data.serial}</span><span className={`ui-flow-node-status${data.enabled ? ' tone-green' : ''}`}>{data.enabled ? '● 已启用' : '已禁用'}</span></div>
-    <strong title={data.title}>{data.title}</strong><span className="ui-flow-node-caption">{data.caption}</span>{data.result ? <UiStepResultBadge stepResult={data.result} /> : null}
-    {actions.length ? <div className="ui-flow-node-actions nodrag nopan" onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+    <div className={`ui-flow-node-head flex items-center justify-between gap-2${actions.length ? ' pr-5' : ''}`}><span className="ui-flow-node-serial rounded-[4px] bg-[var(--srf-accent-soft)] px-1.5 py-0.5 text-[11px] text-[var(--srf-accent)]">{data.serial}</span><span className={`ui-flow-node-status text-[12px]${data.enabled ? ' tone-green text-[var(--srf-tone-text)]' : ' text-[var(--srf-text-secondary)]'}`}>{data.enabled ? '● 已启用' : '已禁用'}</span></div>
+    <strong className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap" title={data.title}>{data.title}</strong><span className="ui-flow-node-caption mt-1.5 block text-[12px] text-[var(--srf-text-secondary)] [overflow-wrap:anywhere]">{data.caption}</span>{data.result ? <UiStepResultBadge stepResult={data.result} /> : null}
+    {actions.length ? <div className="ui-flow-node-actions nodrag nopan absolute right-[5px] top-[5px] opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 max-[700px]:opacity-100 [@media(pointer:coarse)]:opacity-100" onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
       <Dropdown
         trigger={['click']}
         placement="bottomRight"
@@ -40,7 +40,7 @@ function ExecutionNode({ data }: NodeProps<FlowNode>) {
           onClick: ({ key }) => actions.find((action) => action.key === key)?.onSelect(),
         }}
       >
-        <button type="button" className="ui-flow-node-action-trigger" aria-label={`${data.title} 更多操作`}>
+        <button type="button" className="ui-flow-node-action-trigger inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[4px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-0 text-[var(--srf-text-secondary)] hover:border-[var(--srf-accent)] hover:text-[var(--srf-accent)] focus-visible:border-[var(--srf-accent)] focus-visible:text-[var(--srf-accent)]" aria-label={`${data.title} 更多操作`}>
           <MoreOutlined />
         </button>
       </Dropdown>
@@ -50,11 +50,11 @@ function ExecutionNode({ data }: NodeProps<FlowNode>) {
 }
 
 function AddNode({ data }: NodeProps<AddFlowNode>) {
-  return <div className="ui-flow-node ui-flow-node-add" style={{ animationDelay: `${data.revealDelay}ms` }}>
+  return <div className="ui-flow-node ui-flow-node-add flex cursor-pointer flex-col items-center justify-center gap-1 border-dashed bg-transparent text-[var(--srf-text-secondary)] hover:border-[var(--srf-accent)] hover:text-[var(--srf-accent)] focus-within:border-[var(--srf-accent)] focus-within:text-[var(--srf-accent)]" style={{ animationDelay: `${data.revealDelay}ms` }}>
     {/* 三个方向的入线口常驻，按终点方向选择其中一个，避免连接点位置变化后需要重新测量。 */}
     {ADD_TARGET_SIDES.map((side) => <Handle key={side} id={`add-${side}`} type="target" position={HANDLE_POSITION[side]} style={side === data.targetSide ? undefined : HIDDEN_HANDLE_STYLE} />)}
-    <span className="ui-flow-node-add-icon" aria-hidden="true">+</span>
-    <strong>{data.label}</strong>
+    <span className="ui-flow-node-add-icon text-[20px] font-normal leading-[20px]" aria-hidden="true">+</span>
+    <strong className="mt-0 text-[13px]">{data.label}</strong>
   </div>
 }
 const nodeTypes = { execution: ExecutionNode, add: AddNode }
@@ -73,7 +73,7 @@ function RemovableEdge(props: EdgeProps) {
       {beamSegments.map((style, index) => <path key={index} d={path} className="ui-flow-beam" style={style} />)}
     </g> : <path d={path} className="ui-flow-edge-stream" fill="none" aria-hidden="true" />}
     {props.selected && remove ? <EdgeLabelRenderer>
-      <button type="button" className="ui-flow-edge-delete nodrag nopan" aria-label="删除选中连线" style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }} onClick={(event) => { event.stopPropagation(); remove(props.id) }}>×</button>
+      <button type="button" className="ui-flow-edge-delete nodrag nopan absolute h-6 w-6 cursor-pointer rounded-full border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-0 text-[18px] leading-5 text-[var(--srf-text)] pointer-events-auto hover:border-[var(--srf-accent)] hover:text-[var(--srf-accent)] focus-visible:border-[var(--srf-accent)] focus-visible:text-[var(--srf-accent)]" aria-label="删除选中连线" style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }} onClick={(event) => { event.stopPropagation(); remove(props.id) }}>×</button>
     </EdgeLabelRenderer> : null}
   </>
 }
@@ -238,16 +238,16 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
     if (!onAdd || !terminalId || !addNode) return list
     return [...list, { id: `${terminalId}-add`, source: terminalId, target: ADD_NODE_ID, targetHandle: `add-${addNode.data.targetSide}`, className: 'ui-flow-edge-add', selectable: false, deletable: false, focusable: false }]
   }, [edges, runningIds, inlineSave, editable, setEdges, setSelectedEdge, terminalId, onAdd, addNode])
-  return <section className="ui-flow" aria-label="执行流程图">
-    {header ? <div className="ui-flow-case-toolbar">{header}</div> : null}
-    {!inlineSave || toolbarExtra ? <div className="ui-flow-toolbar"><div className="ui-flow-toolbar-title"><strong>执行流程</strong><span className="ui-flow-count">{items.length} 个节点</span>{toolbarExtra}</div>
+  return <section className="ui-flow flex flex-[1_1_auto] flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]" aria-label="执行流程图">
+    {header ? <div className="ui-flow-case-toolbar border-b border-[var(--srf-card-border)] px-3 py-2">{header}</div> : null}
+    {!inlineSave || toolbarExtra ? <div className="ui-flow-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[var(--srf-card-border)] px-3 py-2.5 text-[var(--srf-text)]"><div className="ui-flow-toolbar-title flex flex-wrap items-center gap-2"><strong>执行流程</strong><span className="ui-flow-count ml-2 text-xs text-[var(--srf-text-muted)]">{items.length} 个节点</span>{toolbarExtra}</div>
       {!inlineSave ? <Space wrap>
         <Button size="small" disabled={!editable || !selectedEdge} onClick={() => { setEdges((current) => current.filter((edge) => edge.id !== selectedEdge)); setSelectedEdge('') }}>删除连线</Button>
         <Button size="small" disabled={!editable || !dirty} onClick={() => { setEdges(items.slice(1).map((item, index) => ({ id: `${items[index].id}-${item.id}`, source: items[index].id, target: item.id, ...edgeStyle }))); setSelectedEdge('') }}>还原连线</Button>
         <Button size="small" type="primary" loading={applying} disabled={!editable || !dirty || !order} onClick={() => { if (order) applyOrder(order) }}>应用顺序</Button>
       </Space> : null}
     </div> : null}
-    <div className={`ui-flow-canvas${revealing ? ' is-revealing' : ''}`} onKeyDown={(event) => {
+    <div className={`ui-flow-canvas relative h-[360px] min-h-[300px] flex-[1_0_360px] bg-[var(--srf-card)] [--xy-controls-button-background-color:var(--srf-card)] [--xy-controls-button-background-color-hover:var(--srf-hover)] [--xy-controls-button-border-color:var(--srf-card-border)] [--xy-controls-button-color:var(--srf-text)]${revealing ? ' is-revealing' : ''}`} onKeyDown={(event) => {
       if (event.key !== 'Enter' || (!onOpen && !onSelect)) return
       const nodeId = (event.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id
       if (nodeId) {
@@ -255,7 +255,7 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
         (onSelect ?? onOpen)?.(nodeId)
       }
     }}>
-      <div className="ui-flow-hint">{hint ?? (onSelect ? '点击步骤编辑 · ' : '')}拖动卡片摆放 · 拖动连接点连线 · 选中连线后可删除或拖动端点</div>
+      <div className="ui-flow-hint pointer-events-none absolute left-3 top-2.5 z-[2] text-xs text-[var(--srf-text-secondary)]">{hint ?? (onSelect ? '点击步骤编辑 · ' : '')}拖动卡片摆放 · 拖动连接点连线 · 选中连线后可删除或拖动端点</div>
       <ReactFlow nodes={displayedNodes} edges={displayedEdges} onlyRenderVisibleElements nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={editable ? onEdgesChange : undefined}
         onConnect={editable ? onConnect : undefined} onReconnect={editable ? onReconnect : undefined} edgesReconnectable={editable} nodesConnectable={editable}
         onNodeDragStop={(_, __, allNodes) => savePositions(allNodes)} onEdgeClick={(_, edge) => setSelectedEdge(edge.id)} onPaneClick={() => setSelectedEdge('')}
@@ -273,6 +273,6 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
         <Background gap={20} size={1} /><Controls showInteractive={false} />
       </ReactFlow>
     </div>
-    <div className="ui-flow-footer">{order ? <span>{dirty ? (inlineSave ? '保存后更新执行顺序；离开画布将丢弃未保存的连线。' : '应用后更新执行顺序；离开画布将丢弃未应用的连线。') : '卡片位置仅保存在此浏览器。'}</span> : <Alert type="warning" showIcon message="连线尚未形成完整顺序，请检查断开、分叉或循环。当前执行顺序未改变，离开画布将丢弃未保存的连线。" />}</div>
+    <div className="ui-flow-footer border-t border-[var(--srf-card-border)] px-3 py-2 text-[12px] text-[var(--srf-text-muted)]">{order ? <span>{dirty ? (inlineSave ? '保存后更新执行顺序；离开画布将丢弃未保存的连线。' : '应用后更新执行顺序；离开画布将丢弃未应用的连线。') : '卡片位置仅保存在此浏览器。'}</span> : <Alert type="warning" showIcon message="连线尚未形成完整顺序，请检查断开、分叉或循环。当前执行顺序未改变，离开画布将丢弃未保存的连线。" />}</div>
   </section>
 })

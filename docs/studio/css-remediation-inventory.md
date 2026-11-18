@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–28 已完成；本文件是阶段 29 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 的全部 **66 个文件**，不是单模块建议。
+> 2026-11-18。阶段 0–29 已完成；本文件是阶段 30 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **64 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,30 +8,30 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 66 | ≤ 45 | **-21** |
-| CSS 行数 | 18,259 | ≤ 9,000 | **-9,259** |
+| CSS 文件 | 64 | ≤ 45 | **-19** |
+| CSS 行数 | 16,846 | ≤ 9,000 | **-7,846** |
 | `!important` | 95 | ≤ 100 | 已达标（数值） |
 | 长前缀 | 0 | 0 | 已达标 |
-| 重复规则体 | 56 | ≤ 60 | 已达标 |
+| 重复规则体 | 50 | ≤ 60 | 已达标 |
 | 单文件 > 600 行 | 0 | 0 | 已达标 |
 
 **先看结论，避免继续“一个模块一个模块”地漏：**
 
 1. **真正的缺口是文件数和行数，不是 `!important`。** 95 处 `!important` 中 85 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。后面不应为了数字机械去 `!important`。
-2. **只迁布局达不到行数目标。** 全部文件里纯布局 + 混合布局声明共 5,932 条；即使全部迁走，也覆盖不了 9,259 行的缺口。要达标，颜色、字体、边框、圆角、阴影等皮肤声明也必须随 JSX utility 或共享 token 迁走，最终让大部分页面 Module 整体消失。
+2. **只迁布局达不到行数目标。** 只迁布局仍覆盖不了 7,846 行的缺口；阶段 29 的 UI 自动化已实际验证，必须同时迁皮肤。要达标，颜色、字体、边框、圆角、阴影等皮肤声明也必须随 JSX utility 或共享 token 迁走，最终让大部分页面 Module 整体消失。
 3. **按当前文件边界，保留底座已经占 23 个文件 / 4,316 行：**
    - 7 个 token 文件：1,847 行；
    - 9 个外壳/全局基础文件：1,565 行；
    - 7 个共享全局契约：904 行。
-4. 因此其余 **43 个页面/共享组件文件（13,943 行）必须压到 ≤22 个文件、≤4,684 行**：至少 **21 个文件要删除或并入宿主 Module**，约 **66% 的页面 CSS 行要消失**。这是阶段 29–38 的硬约束。
-5. 56 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随页面批次顺手合并。完整列表见附录 B。
+4. 因此其余 **41 个页面/共享组件文件（12,530 行）必须压到 ≤22 个文件、≤4,684 行**：至少 **19 个文件要删除或并入宿主 Module**，约 **62.6% 的页面 CSS 行要消失**。这是阶段 30–38 的硬约束。
+5. 50 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随页面批次顺手合并。完整列表见附录 B。
 
 ## 二、动作分类
 
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
 | **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 8 | 951 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 35 | 12,992 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 33 | 11,579 |
 | **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 16 | 2,469 |
 | **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
 
@@ -60,7 +60,7 @@
 
 ## 三、完整文件清单（按页面族）
 
-> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。所有 66 个文件均已列入，没有省略项。
+> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 64 个文件均已列入，没有省略项；阶段 29 删除的 2 个文件不再保留条目。
 
 
 ### 一、外壳与全局基础
@@ -81,19 +81,17 @@
 | `app/styles/theme.css` | 27 | 1 / 3 | 7 | 3 | 4 | 0 | **C** | 主题变量与玻璃层；只收缩 |
 | `index.css` | 98 | 2 / 2 | 20 | 0 | 2 | 0 | **C** | 全局 reset/基础层；只收缩 |
 
-### 二、UI 自动化
+### 二、UI 自动化（阶段 29 已完成）
 
-测试集列表、详情壳、顶栏、检查器、执行流水线。
+测试集列表、详情壳、检查器、执行流水线与测试集抽屉。
 
-**5 个文件 / 1,959 行 / 706 条布局声明 / 553 条皮肤声明**
+**3 个文件 / 546 行（阶段 29 前：5 个 / 1,959 行）**。页面布局与可迁移皮肤已全部迁入组件 utility；以下只保留 AntD / React Flow 深层规则。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/ui-automation/styles/ui-detail-inspector.module.css` | 463 | 37 / 110 | 113 | 2 | 0 | 6 | **B** | 检查器 463 行；保留回放/控制台皮肤 |
-| `features/ui-automation/styles/ui-detail-shell.module.css` | 438 | 66 / 38 | 91 | 1 | 6 | 3 | **B** | 详情壳；有 6 处 `!important`，随批次单独核对 |
-| `features/ui-automation/styles/ui-detail-topbar.module.css` | 287 | 9 / 53 | 98 | 5 | 0 | 0 | **B** | 顶栏已迁大半；剩余皮肤与 5 条深层规则 |
-| `features/ui-automation/styles/ui-execution-flow.module.css` | 203 | 122 / 101 | 169 | 8 | 0 | 2 | **B** | 流程 392 条声明、81 条上下文；优先迁纯布局 |
-| `features/ui-automation/styles/ui-suite.module.css` | 568 | 124 / 46 | 82 | 2 | 0 | 6 | **B** | 步骤编辑器 568 行；保留 AntD 表单深层皮肤 |
+| `features/ui-automation/styles/ui-detail-inspector.module.css` | 71 | — | — | 2 | 0 | 0 | **B** | 右栏卡片原语与 AntD 空态；阶段 29 后不再承载页面布局 |
+| `features/ui-automation/styles/ui-detail-shell.module.css` | 317 | — | — | 多 | 6 | 0 | **B** | 板面、顶栏输入、未保存态、React Flow 深层规则 |
+| `features/ui-automation/styles/ui-suite.module.css` | 158 | — | — | 多 | 0 | 0 | **B** | 测试集抽屉与步骤编辑器的 AntD 表单深层规则 |
 
 ### 三、API 自动化
 
@@ -235,7 +233,7 @@
 
 | 阶段 | 范围 | 当前 | 达标线 | 文件目标 | 核心动作 | 风险 |
 | --- | --- | ---: | ---: | :---: | --- | --- |
-| 29 | UI 自动化全部 5 个 Module | 1,959 | ≤ 650 | 5 → 3 | 测试集/步骤编辑器、执行流水线、检查器、详情壳、顶栏一次排完；顶栏并入详情壳、执行流水线并入步骤编辑器；保留回放/控制台/React Flow 深层皮肤 | 中 |
+| 29 | UI 自动化全部 5 个 Module | 1,959 | ≤ 650 | 5 → 3 | **已完成（546 行）**：测试集/步骤编辑器、执行流水线、检查器、详情壳、顶栏一次排完；顶栏与流程深层规则并入详情壳；保留回放/控制台/React Flow 深层皮肤 | 中 |
 | 30 | API 自动化全部 4 个 Module | 1,466 | ≤ 450 | 4 → 2 | 删除 `api-list`；请求编辑器与规则/后置操作并入详情壳；保留 AntD/代码编辑器皮肤 | 中 |
 | 31 | 测试单全部 5 个 Module | 1,154 | ≤ 350 | 5 → 2 | 删除图谱/列表小 Module；执行视图并入工作台；可视化容器查询与工作台骨架迁 utility | 中高 |
 | 32 | 接口库全部 3 个 Module | 1,550 | ≤ 550 | 3 → 2 | 详情与列表 0 深层规则，优先整块迁；编辑器并入详情 Module，保留代码编辑器皮肤 | 低–中 |
@@ -246,7 +244,7 @@
 | 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | 只做死规则、重复体、可替代 `!important`；把 `table-row-dividers` 与 `list-name` 并入 `list-table` | 高 |
 | 38 | 收口 | — | ≤ 9,000 / ≤ 45 | 44 | 全量复测、ratchet 两个基线、清理无消费者 token、更新本文与迁移计划 | 低 |
 
-**目标校验**：650 + 450 + 350 + 550 + 1,450 + 650 + 450 + 450 + 2,100 + 1,847（token）= **8,947 行**；文件目标 **44**（≤45，留 1 个文件余量）。达标线是排期目标，最终以实际数字为准；如果某阶段只完成布局迁移，必须在阶段 38 前补做皮肤迁出，否则目标不成立。
+**目标校验**：546（阶段 29 实际）+ 450 + 350 + 550 + 1,450 + 650 + 450 + 450 + 2,100 + 1,847（token）= **8,843 行**；文件目标 **44**（≤45，留 1 个文件余量）。达标线是排期目标，最终以实际数字为准；如果某阶段只完成布局迁移，必须在阶段 38 前补做皮肤迁出，否则目标不成立。
 
 ### 各阶段完成口径
 
@@ -283,15 +281,15 @@
 
 - 先确认是否有同权重替代规则或 `@layer` 可覆盖；只有确认无替代才保留 `!important`。
 - 全局按钮/表格/表面契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
-- 页面 Module 的 10 处随阶段 29/35 处理；全局 85 处随阶段 37 处理，优先合并同体规则和删死规则，而不是硬去 `!important`。
+- 页面 Module 剩余 10 处随阶段 35/38 处理；全局 85 处随阶段 37 处理，优先合并同体规则和删死规则，而不是硬去 `!important`。
 
-## 六、重复规则体（56 组）
+## 六、重复规则体（50 组）
 
-结构门禁口径 56 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
+结构门禁口径 50 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
 
-- 不单独立项，不为了把 56 降到 0 而合并语义不同的选择器。
+- 不单独立项，不为了把 50 降到 0 而合并语义不同的选择器。
 - 页面批次里如果同一规则体落在同一宿主/同一 utility 能表达，就合并；否则保留。
-- 附录 B 列出全部 56 组的成员选择器，供批次内查重，不要求逐组清零。
+- 附录 B 列出全部 50 组的成员选择器，供批次内查重，不要求逐组清零。
 
 ## 七、附录
 
@@ -389,71 +387,64 @@
   - `border-bottom: 1px solid var(--app-list-row-border) !important`
 
 
-### 附录 B：全部 56 组重复规则体
+### 附录 B：全部 50 组重复规则体
 
 > 每组列出所有成员（文件 → 选择器）。只用于查重，不表示必须合并。
 
-1. `src/app/styles/layout.css` → `.app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css` → `:global(.app-shell):has(.root)`
-2. `src/app/styles/layout.css` → `.app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/projects-overview.module.css` → `:global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
-3. `src/app/styles/sidebar.css` → `.top-nav-menu`；`src/features/api-automation/styles/api-detail-request.module.css` → `.scope :global(.api-wb-hdr-value-cell)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-item-actions)`
-4. `src/features/ai-testing/styles/ai-task-detail.module.css` → `.scope :global(.ai-task-detail-card .ant-card-body)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-group-list)`；`src/features/interface-library/styles/interface-editor.module.css` → `.scope :global(.if-body-panel), .scope :global(.if-response-panel), .scope :global(.if-settings-panel)`
-5. `src/features/ai-testing/styles/ai-task-detail.module.css` → `.scope :global(.code-risk-report)`；`src/features/ai-testing/styles/artifact-misc.module.css` → `.scope :global(.repository-profile-report)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-section)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-import-step)`；`src/features/interface-library/styles/interface-library.module.css` → `.scope :global(.if-group-modal)`；`src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-test-case-step-list)`；`src/shared/styles/surface-tokens.css` → `.api-collection-card .ant-card-body`
-6. `src/features/ai-testing/styles/ai-task-detail.module.css` → `.scope :global(.ai-task-run-list .ai-task-run-table-id)`；`src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-template-picker-label)`
-7. `src/features/ai-testing/styles/ai-task-detail.module.css` → `.scope :global(.ai-requirement-design-history)`；`src/features/ai-testing/styles/ai-task-detail.module.css` → `.scope :global(.ai-requirement-design-panel)`
-8. `src/features/ai-testing/styles/artifact-api.module.css` → `.scope :global(.api-config-visual-step)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-reading-tools .gc-footer-row)`
-9. `src/features/ai-testing/styles/artifact-api.module.css` → `.scope :global(.api-config-visual-rule-title)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-heading)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-review-heading)`
-10. `src/features/ai-testing/styles/artifact-api.module.css` → `.scope :global(.api-design-visual-case-head strong)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-visual-group > header strong)`
-11. `src/features/ai-testing/styles/artifact-cases.module.css` → `.scope :global(.ai-case-name-tree)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-artifact-scroll.is-case-names)`
-12. `src/features/ai-testing/styles/artifact-cases.module.css` → `.scope :global(.ai-generated-case-editor label)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-modal-footer)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-items)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-repository-selects)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-import-editor)`
-13. `src/features/ai-testing/styles/artifact-misc.module.css` → `.scope :global(.gc-profile-binding-list)`；`src/features/test-orders/styles/test-order-visualization.module.css` → `.batch :global(.test-order-viz-batch-counts)`
-14. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-canvas-frame)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-canvas-stage)`
-15. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css` → `.scope :global(.ai-artifact-mode-controls)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-item-side)`；`src/features/bugs/styles/bugs.module.css` → `.root :global(.bugs-filter-popover) :global(.api-filter-field)`；`src/features/test-orders/styles/test-order-graph.module.css` → `.viewer :global(.test-order-graph-status)`；`src/shared/styles/json-editor.module.css` → `.toolbarActions`
-16. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-flow-group-header small)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-visual-group > header small)`
-17. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-flow-stage .gc-node-main)`；`src/features/ai-testing/styles/ui-stage-visual.module.css` → `.scope :global(.uisv-control-cell)`
-18. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-node > strong)`
-19. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-trace-chip.is-danger)`
-20. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-section h3)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-inspector-review h3)`；`src/features/ai-testing/styles/ui-generation.module.css` → `.scope :global(.ui-source-block h4)`
-21. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.gc-canvas-map)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-detail-main)`
-22. `src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css` → `.scope :global(.api-interface-selector-toolbar)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.revision-attachments)`；`src/features/test-orders/styles/test-order-visualization.module.css` → `.panel :global(.test-order-viz-toolbar), .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css` → `.tp-surface .tp-quick-filters`
-23. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-node-meta > span:last-child)`；`src/features/ai-testing/styles/ui-stage-visual.module.css` → `.scope :global(.uisv-precondition-strip span)`；`src/features/api-automation/styles/api-detail-shell.module.css` → `.scope :global(.api-wb-base-url-text)`；`src/features/test-orders/styles/test-order-workspace.module.css` → `.root :global(.test-order-case-no) :global(.ant-btn-content)`；`src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-replay-overlay-text)`
-24. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-trace-chip.is-ok)`
-25. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-version-button.is-active)`；`src/features/ai-testing/styles/ui-generation.module.css` → `.scope :global(.ui-source-version-button.is-active)`
-26. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-upstream-trigger-text)`；`src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-item-title strong)`；`src/features/bugs/styles/bugs.module.css` → `.root :global(.bug-form-project) > span:not(:global(.anticon))`；`src/shared/styles/run-view.module.css` → `.reportRoot :global(.api-collection-run-report-item-title strong)`
-27. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-import-title)`；`src/features/test-orders/styles/test-order-visualization.module.css` → `.panel :global(.test-order-viz-detail-heading)`
-28. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-import-title > div)`；`src/shared/styles/entity-card.css` → `.entity-card-meta > div`
-29. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-import-record > div)`；`src/features/ai-testing/styles/ui-stage-visual.module.css` → `.scope :global(.uisv-readiness-copy)`
-30. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.gc-import-footer)`；`src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.revision-footer-actions)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-drawer-footer)`
-31. `src/features/ai-testing/styles/generation-chain.module.css` → `.scope :global(.revision-side-panel header)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-app-form > label)`；`src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-import-field)`；`src/features/interface-library/styles/interface-editor.module.css` → `.scope :global(.if-settings-field)`；`src/features/test-orders/styles/test-order-graph-execution.module.css` → `.execution label`；`src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-replay-track)`
-32. `src/features/ai-testing/styles/relations.module.css` → `.scope :global(.ai-relations-page-legend .legend-item)`；`src/features/api-automation/styles/api-detail-shell.module.css` → `.scope :global(.api-wb-tab-label)`
-33. `src/features/ai-testing/styles/relations.module.css` → `.scope :global(.gc-relations-controls)`；`src/features/bugs/styles/bugs.module.css` → `.root :global(.bug-column-options)`；`src/features/test-orders/styles/test-order-visualization.module.css` → `.panel :global(.test-order-viz-state) > div`；`src/shared/styles/run-view.module.css` → `.root :global(.api-collection-run-history-layout), .root :global(.api-collection-run-history-list)`
-34. `src/features/ai-testing/styles/ui-generation.module.css` → `.scope :global(.ui-source-summary-actions)`；`src/features/base-services/styles/zentao-binding.module.css` → `.settingsDetails`
-35. `src/features/api-automation/styles/api-detail-request.module.css` → `.scope :global(.api-wb-hdr-toolbar-main), .scope :global(.api-wb-hdr-toolbar-side)`；`src/features/ui-automation/styles/ui-detail-shell.module.css` → `.scope :global(.ui-wb-pipeline-actions)`
-36. `src/features/api-automation/styles/api-detail-request.module.css` → `.scope :global(.api-wb-hdr-preset:hover)`；`src/features/test-orders/styles/test-order-workspace.module.css` → `.root :global(.test-order-workspace-filter-btn):global(.is-active)`
-37. `src/features/api-automation/styles/api-detail-rules.module.css` → `.scope :global(.api-post-ops-head)`；`src/shared/styles/run-view.module.css` → `.reportRoot :global(.api-collection-run-report-head)`
-38. `src/features/api-automation/styles/api-list.module.css` → `.scope :global(.api-environment-selector)`；`src/features/requirements/styles/requirement-detail.module.css` → `.root :global(.requirement-document-modal-title-row)`；`src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-row)`；`src/shared/styles/run-view.module.css` → `.reportRoot :global(.api-collection-run-report-title)`
-39. `src/features/api-automation/styles/api-list.module.css` → `.scope :global(.api-environment-selector)`；`src/shared/styles/legacy-surface.css` → `.requirement-panel-head`
-40. `src/features/api-automation/styles/api-list.module.css` → `.scope :global(.api-test-search-hint)`；`src/features/test-cases/styles/case-library.module.css` → `.root :global(.case-library-search-hint)`
-41. `src/features/base-services/styles/zentao-binding.module.css` → `.formRow`；`src/features/bugs/styles/bugs.module.css` → `.root :global(.bug-form-title-line)`
-42. `src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-app-form)`；`src/features/test-cases/styles/case-library.module.css` → `.root :global(.case-editor-body)`
-43. `src/features/interface-library/styles/interface-detail.module.css` → `.scope :global(.if-import-item-title)`；`src/features/interface-library/styles/interface-library.module.css` → `.scope :global(.if-app-tag-group)`
-44. `src/features/interface-library/styles/interface-editor.module.css` → `.scope :global(.if-body-type-row)`；`src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-test-case-step-title-head)`
-45. `src/features/interface-library/styles/interface-editor.module.css` → `.scope :global(.if-editor-tools)`；`src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-replay-chrome-dots)`
-46. `src/features/interface-library/styles/interface-library.module.css` → `.scope :global(.if-app-tag-name)`；`src/features/interface-library/styles/interface-library.module.css` → `.scope :global(.if-app-child-name)`；`src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-replay-chrome-url)`
-47. `src/features/projects/styles/projects-overview.module.css` → `.root :global(.requirements-binding-item) img`；`src/features/projects/styles/projects-overview.module.css` → `.root :global(.sprint-board-binding-status) img`
-48. `src/features/test-cases/styles/case-library.module.css` → `.root :global(.case-editor-head-title)`；`src/shared/styles/surface-tokens.css` → `.tp-surface .api-test-header-main .api-panel-head-main`
-49. `src/features/test-orders/styles/test-order-workspace.module.css` → `.root:global(.tp-surface) :global(.test-order-workspace), .root :global(.api-automation-content)`；`src/shared/styles/case-import.module.css` → `.root :global(.ant-modal-body)`
-50. `src/features/test-orders/styles/test-order-workspace.module.css` → `.root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css` → `.tp-surface .tp-list-panel > .tp-list-toolbar`
-51. `src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-card-head)`；`src/features/ui-automation/styles/ui-detail-inspector.module.css` → `.scope :global(.ui-wb-replay-controls)`；`src/features/ui-automation/styles/ui-detail-shell.module.css` → `.scope :global(.ui-wb-pipeline-head)`；`src/shared/styles/surface-tokens.css` → `.tp-surface .tp-quickbar`
-52. `src/features/ui-automation/styles/ui-detail-shell.module.css` → `:global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css` → `.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
-53. `src/features/ui-automation/styles/ui-execution-flow.module.css` → `.scope :global(.ui-test-case-step-card.is-detail .ui-test-case-step-core-grid > .ant-form-item > .ant-form-item-row)`；`src/features/ui-automation/styles/ui-execution-flow.module.css` → `.scope :global(.ui-test-case-step-card.is-detail .ui-test-case-step-detail-grid > .ant-form-item > .ant-form-item-row)`
-54. `src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-test-case-step-card-title span)`；`src/features/ui-automation/styles/ui-suite.module.css` → `.scope :global(.ui-test-case-step-extract-hint), .scope :global(.ui-test-case-step-extract-empty)`；`src/shared/styles/case-import.module.css` → `.hint`
-55. `src/shared/components/RichTextEditor/rich-text-editor.css` → `.rich-text-content .tiptap code`；`src/shared/components/RichTextEditor/rich-text-editor.css` → `.rich-text-viewer code`
-56. `src/shared/styles/legacy-surface.css` → `.requirement-panel-head`；`src/shared/styles/surface-tokens.css` → `.api-filter-group`
-
+1. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-item-side)`；`src/features/bugs/styles/bugs.module.css → .root :global(.bugs-filter-popover) :global(.api-filter-field)`；`src/features/test-orders/styles/test-order-graph.module.css → .viewer :global(.test-order-graph-status)`；`src/shared/styles/json-editor.module.css → .toolbarActions`
+2. `src/features/ai-testing/styles/ai-task-detail.module.css → .scope :global(.code-risk-report)`；`src/features/ai-testing/styles/artifact-misc.module.css → .scope :global(.repository-profile-report)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-section)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-import-step)`；`src/features/interface-library/styles/interface-library.module.css → .scope :global(.if-group-modal)`；`src/shared/styles/surface-tokens.css → .api-collection-card .ant-card-body`
+3. `src/features/ai-testing/styles/artifact-cases.module.css → .scope :global(.ai-generated-case-editor label)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-modal-footer)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-items)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-repository-selects)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-import-editor)`
+4. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.revision-side-panel header)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-app-form > label)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-import-field)`；`src/features/interface-library/styles/interface-editor.module.css → .scope :global(.if-settings-field)`；`src/features/test-orders/styles/test-order-graph-execution.module.css → .execution label`
+5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.revision-attachments)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quick-filters`
+6. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node-meta > span:last-child)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.uisv-precondition-strip span)`；`src/features/api-automation/styles/api-detail-shell.module.css → .scope :global(.api-wb-base-url-text)`；`src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-case-no) :global(.ant-btn-content)`
+7. `src/features/ai-testing/styles/relations.module.css → .scope :global(.gc-relations-controls)`；`src/features/bugs/styles/bugs.module.css → .root :global(.bug-column-options)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-state) > div`；`src/shared/styles/run-view.module.css → .root :global(.api-collection-run-history-layout)`；`src/shared/styles/run-view.module.css → .root :global(.api-collection-run-history-list)`
+8. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-upstream-trigger-text)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-item-title strong)`；`src/features/bugs/styles/bugs.module.css → .root :global(.bug-form-project) > span:not(:global(.anticon))`；`src/shared/styles/run-view.module.css → .reportRoot :global(.api-collection-run-report-item-title strong)`
+9. `src/features/api-automation/styles/api-list.module.css → .scope :global(.api-environment-selector)`；`src/features/requirements/styles/requirement-detail.module.css → .root :global(.requirement-document-modal-title-row)`；`src/shared/styles/run-view.module.css → .reportRoot :global(.api-collection-run-report-title)`
+10. `src/features/ai-testing/styles/ai-task-detail.module.css → .scope :global(.ai-task-detail-card .ant-card-body)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-group-list)`；`src/features/interface-library/styles/interface-editor.module.css → .scope :global(.if-body-panel)`；`src/features/interface-library/styles/interface-editor.module.css → .scope :global(.if-response-panel)`；`src/features/interface-library/styles/interface-editor.module.css → .scope :global(.if-settings-panel)`
+11. `src/app/styles/sidebar.css → .top-nav-menu`；`src/features/api-automation/styles/api-detail-request.module.css → .scope :global(.api-wb-hdr-value-cell)`；`src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-item-actions)`
+12. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-import-footer)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.revision-footer-actions)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-drawer-footer)`
+13. `src/features/ai-testing/styles/artifact-api.module.css → .scope :global(.api-config-visual-rule-title)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-heading)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-review-heading)`
+14. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
+15. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-section h3)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-review h3)`；`src/features/ai-testing/styles/ui-generation.module.css → .scope :global(.ui-source-block h4)`
+16. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-canvas-map)`；`src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-detail-main)`
+17. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-canvas-frame)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-canvas-stage)`
+18. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css → :global(.app-shell):has(.root)`
+19. `src/features/ai-testing/styles/artifact-api.module.css → .scope :global(.api-config-visual-step)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-reading-tools .gc-footer-row)`
+20. `src/features/ai-testing/styles/ui-generation.module.css → .scope :global(.ui-source-summary-actions)`；`src/features/base-services/styles/zentao-binding.module.css → .settingsDetails`
+21. `src/shared/styles/legacy-surface.css → .requirement-panel-head`；`src/shared/styles/surface-tokens.css → .api-filter-group`
+22. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.uisv-control-cell)`
+23. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header small)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-visual-group > header small)`
+24. `src/features/ai-testing/styles/relations.module.css → .scope :global(.ai-relations-page-legend .legend-item)`；`src/features/api-automation/styles/api-detail-shell.module.css → .scope :global(.api-wb-tab-label)`
+25. `src/features/ai-testing/styles/ai-task-detail.module.css → .scope :global(.ai-requirement-design-history)`；`src/features/ai-testing/styles/ai-task-detail.module.css → .scope :global(.ai-requirement-design-panel)`
+26. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
+27. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
+28. `src/features/base-services/styles/zentao-binding.module.css → .formRow`；`src/features/bugs/styles/bugs.module.css → .root :global(.bug-form-title-line)`
+29. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-import-title)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-detail-heading)`
+30. `src/features/api-automation/styles/api-list.module.css → .scope :global(.api-test-search-hint)`；`src/features/test-cases/styles/case-library.module.css → .root :global(.case-library-search-hint)`
+31. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-version-button.is-active)`；`src/features/ai-testing/styles/ui-generation.module.css → .scope :global(.ui-source-version-button.is-active)`
+32. `src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-import-item-title)`；`src/features/interface-library/styles/interface-library.module.css → .scope :global(.if-app-tag-group)`
+33. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-import-record > div)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.uisv-readiness-copy)`
+34. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
+35. `src/features/api-automation/styles/api-list.module.css → .scope :global(.api-environment-selector)`；`src/shared/styles/legacy-surface.css → .requirement-panel-head`
+36. `src/features/projects/styles/projects-overview.module.css → .root :global(.requirements-binding-item) img`；`src/features/projects/styles/projects-overview.module.css → .root :global(.sprint-board-binding-status) img`
+37. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
+38. `src/features/api-automation/styles/api-detail-rules.module.css → .scope :global(.api-post-ops-head)`；`src/shared/styles/run-view.module.css → .reportRoot :global(.api-collection-run-report-head)`
+39. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-import-title > div)`；`src/shared/styles/entity-card.css → .entity-card-meta > div`
+40. `src/features/interface-library/styles/interface-library.module.css → .scope :global(.if-app-tag-name)`；`src/features/interface-library/styles/interface-library.module.css → .scope :global(.if-app-child-name)`
+41. `src/features/test-cases/styles/case-library.module.css → .root :global(.case-editor-head-title)`；`src/shared/styles/surface-tokens.css → .tp-surface .api-test-header-main .api-panel-head-main`
+42. `src/features/test-orders/styles/test-order-workspace.module.css → .root:global(.tp-surface) :global(.test-order-workspace)`；`src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.api-automation-content)`；`src/shared/styles/case-import.module.css → .root :global(.ant-modal-body)`
+43. `src/features/ai-testing/styles/artifact-cases.module.css → .scope :global(.ai-case-name-tree)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-artifact-scroll.is-case-names)`
+44. `src/features/api-automation/styles/api-detail-request.module.css → .scope :global(.api-wb-hdr-preset:hover)`；`src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-workspace-filter-btn):global(.is-active)`
+45. `src/features/ai-testing/styles/artifact-api.module.css → .scope :global(.api-design-visual-case-head strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-visual-group > header strong)`
+46. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar)`；`src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar)`；`src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
+47. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/projects-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
+48. `src/features/interface-library/styles/interface-detail.module.css → .scope :global(.if-app-form)`；`src/features/test-cases/styles/case-library.module.css → .root :global(.case-editor-body)`
+49. `src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-content .tiptap code`；`src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-viewer code`
+50. `src/features/ai-testing/styles/artifact-misc.module.css → .scope :global(.gc-profile-binding-list)`；`src/features/test-orders/styles/test-order-visualization.module.css → .batch :global(.test-order-viz-batch-counts)`
 
 ## 八、执行顺序建议
 
-1. **先 29–32（UI / API / 测试单 / 接口库）**：页面边界清晰，能快速验证“整族迁移 + 删小 Module”的工作流，先把文件数从 66 压到约 58。
+1. **阶段 29（UI 自动化）已完成**，当前 64 文件 / 16,846 行；继续 30–32（API / 测试单 / 接口库），把文件数压到约 58。
 2. **再 33（AI）**：最大、最深，单独排期；先 33A 产物/关系，再 33B 画布/生成链，最后 33C 生成页/任务详情。
 3. **再 34–36（用例/Bug/需求、基础服务、共享组件）**：深层 AntD 与跨页面组件集中处理，必须在浏览器里逐页对照。
 4. **最后 37–38（全局契约与收口）**：只收缩，不整体迁移；所有 `!important` 变更都在这里做，避免和页面迁移混在一起难以回滚。

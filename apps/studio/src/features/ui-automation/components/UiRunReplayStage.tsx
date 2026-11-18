@@ -49,31 +49,31 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
         </div>
       </header>
 
-      <div className="ui-wb-replay-stage">
-        <div className="ui-wb-replay-chrome">
-          <span className="ui-wb-replay-chrome-dots" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+      <div className="ui-wb-replay-stage flex min-h-[150px] flex-[1_1_auto] flex-col overflow-hidden rounded-[var(--srf-radius-control)] bg-[var(--srf-terminal-bg)]">
+        <div className="ui-wb-replay-chrome flex items-center gap-2 bg-[var(--srf-terminal-bar)] px-2.5 py-1.5 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] text-[var(--srf-terminal-muted)]">
+          <span className="ui-wb-replay-chrome-dots inline-flex items-center gap-1 [&>span:first-child]:bg-[var(--srf-result-failed)] [&>span:last-child]:bg-[var(--srf-result-passed)]" aria-hidden="true">
+            <span className="h-2 w-2 rounded-full bg-[var(--srf-track-pending)]" />
+            <span className="h-2 w-2 rounded-full bg-[var(--srf-track-pending)]" />
+            <span className="h-2 w-2 rounded-full bg-[var(--srf-track-pending)]" />
           </span>
-          <span className="ui-wb-replay-chrome-url" title={run?.currentUrl || ''}>
+          <span className="ui-wb-replay-chrome-url min-w-0 flex-[1_1_auto] overflow-hidden text-ellipsis whitespace-nowrap" title={run?.currentUrl || ''}>
             {run?.currentUrl || '尚未产生运行地址'}
           </span>
-          <span className={`ui-wb-replay-chrome-state${run && !isUiRunPollingStatus(run.status) ? ' is-done' : ''}`}>
+          <span className={`ui-wb-replay-chrome-state flex-none font-bold tracking-[0.02em] text-[var(--srf-terminal-accent)]${run && !isUiRunPollingStatus(run.status) ? ' is-done text-[var(--srf-terminal-info)]' : ''}`}>
             {run ? (isUiRunPollingStatus(run.status) ? 'AUT RUNNING' : 'AUT DONE') : 'AUT IDLE'}
           </span>
         </div>
 
-        <div className="ui-wb-replay-canvas" style={{ aspectRatio }}>
+        <div className="ui-wb-replay-canvas relative flex min-h-[120px] max-h-[min(40vh,480px)] flex-[0_1_auto] items-center justify-center overflow-hidden bg-[var(--srf-terminal-surface)]" style={{ aspectRatio }}>
           {activeSnapshot?.screenshotPath ? (
             <StoredImage
               src={activeSnapshot.screenshotPath}
               alt={`${activeSnapshot.name} 的截图`}
-              className="ui-wb-replay-shot"
+              className="ui-wb-replay-shot max-h-full max-w-full [&_img]:max-h-full [&_img]:object-contain"
               preview={{ mask: '查看大图' }}
             />
           ) : (
-            <div className="ui-wb-replay-placeholder">
+            <div className="ui-wb-replay-placeholder p-3 text-center">
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
@@ -88,9 +88,9 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
           )}
 
           {activeSnapshot ? (
-            <div className="ui-wb-replay-overlay">
-              <span className={`ui-wb-replay-overlay-dot tone-${activeSnapshot.tone}`} aria-hidden="true" />
-              <span className="ui-wb-replay-overlay-text">
+            <div className="ui-wb-replay-overlay absolute left-2.5 top-2.5 inline-flex max-w-[calc(100%-20px)] items-center gap-1.5 rounded-[6px] bg-[var(--srf-terminal-chip)] px-2 py-1 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] text-[var(--srf-terminal-bg)]">
+              <span className={`ui-wb-replay-overlay-dot h-1.5 w-1.5 flex-none rounded-full bg-[var(--srf-tone-text,var(--srf-result-skipped))] tone-${activeSnapshot.tone}`} aria-hidden="true" />
+              <span className="ui-wb-replay-overlay-text overflow-hidden text-ellipsis whitespace-nowrap">
                 Step {activeSnapshot.orderNo ?? activeIndex + 1}: {activeSnapshot.keyword || 'step'}（{activeSnapshot.name}）
               </span>
             </div>
@@ -98,14 +98,14 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
         </div>
       </div>
 
-      <div className="ui-wb-replay-track">
-        <div className="ui-wb-replay-track-bar" role="presentation">
-          <div className="ui-wb-replay-track-fill" style={{ width: `${progress}%` }} />
+      <div className="ui-wb-replay-track flex flex-none flex-col gap-1.5">
+        <div className="ui-wb-replay-track-bar relative mx-1 mb-0.5 mt-1.5 h-1.5 rounded-full bg-[var(--srf-track)]" role="presentation">
+          <div className="ui-wb-replay-track-fill absolute inset-y-0 left-0 rounded-full bg-[var(--srf-accent)]" style={{ width: `${progress}%` }} />
           {snapshots.map((snapshot, index) => (
             <button
               key={snapshot.key}
               type="button"
-              className={`ui-wb-replay-pin${index === activeIndex ? ' active' : ''} tone-${snapshot.tone}`}
+              className={`ui-wb-replay-pin absolute top-1/2 h-[9px] w-[9px] -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-[var(--srf-card)] bg-[var(--srf-tone-text,var(--srf-track-pending))] p-0${index === activeIndex ? ' active h-3 w-3 bg-[var(--srf-accent)]' : ''} tone-${snapshot.tone}`}
               style={{ left: `${total > 1 ? (index / (total - 1)) * 100 : 50}%` }}
               title={`#${snapshot.orderNo ?? index + 1} ${snapshot.name}`}
               aria-label={`跳转到第 ${snapshot.orderNo ?? index + 1} 步 ${snapshot.name}`}
@@ -114,8 +114,8 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
           ))}
         </div>
 
-        <div className="ui-wb-replay-controls">
-          <div className="ui-wb-replay-controls-main">
+        <div className="ui-wb-replay-controls flex flex-wrap items-center justify-between gap-2">
+          <div className="ui-wb-replay-controls-main inline-flex items-center gap-1.5 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] text-[var(--srf-text-secondary)]">
             <Tooltip title="上一步">
               <Button
                 type="text"
@@ -143,7 +143,7 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, vi
             </span>
             {activeSnapshot?.durationText ? <span className="ui-wb-replay-duration">{activeSnapshot.durationText}</span> : null}
           </div>
-          <span className="ui-wb-replay-hint">按步骤截图回放，没有录屏文件</span>
+          <span className="ui-wb-replay-hint text-[11px] text-[var(--srf-text-muted)]">按步骤截图回放，没有录屏文件</span>
         </div>
       </div>
     </section>

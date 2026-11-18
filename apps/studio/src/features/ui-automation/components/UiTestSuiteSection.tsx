@@ -315,7 +315,7 @@ export const UiTestSuiteSection = forwardRef<
     [openCreateDrawer, refresh],
   )
   return (
-    <div className="ui-test-suite-section">
+    <div className="ui-test-suite-section flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
       {suitesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
       <div className="ui-suite-card-body tp-list-body">

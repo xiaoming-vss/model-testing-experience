@@ -80,13 +80,13 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
         <div className="ui-wb-card-title">
           执行控制台
           <span className="ui-wb-card-chip">Live Log</span>
-          {run ? <span className={`ui-wb-console-status tone-${run.success === false ? 'red' : 'green'}`}>{statusMeta.label}</span> : null}
+          {run ? <span className={`ui-wb-console-status rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 py-px text-[10px] font-semibold leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${run.success === false ? 'red' : 'green'}`}>{statusMeta.label}</span> : null}
           <RunWaitingReason status={run?.status} />
         </div>
         <div className="ui-wb-card-head-side">
           <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
           {canStop ? <StopRunButton kind="ui-case" runId={run?.runId ?? run?.uiTestCaseRunId} status={run?.status} /> : null}
-          <span className="ui-wb-console-meta">
+          <span className="ui-wb-console-meta max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace]">
             {run ? `运行 ID ${run.runId ?? run.uiTestCaseRunId ?? '-'}` : '暂无运行记录'}
           </span>
           <Dropdown
@@ -108,26 +108,26 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
         </div>
       </header>
 
-      <div className="ui-wb-console-log" role="log" aria-label="执行日志">
+      <div className="ui-wb-console-log flex min-h-[60px] flex-[1_1_auto] flex-col gap-0.5 overflow-auto rounded-[var(--srf-radius-control)] bg-[var(--srf-terminal-bg)] p-2.5 px-3 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] leading-[18px]" role="log" aria-label="执行日志">
         {visibleLogLines.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有可显示的日志" className="ui-wb-console-empty" />
         ) : (
           visibleLogLines.map((line) => (
-            <div key={line.key} className={`ui-wb-console-line is-${line.level}`}>
-              <span className="ui-wb-console-level">[{line.level}]</span>
-              {line.time ? <span className="ui-wb-console-time">{line.time}</span> : null}
-              {line.command ? <span className="ui-wb-console-command">{line.command}</span> : null}
-              <span className="ui-wb-console-result">{line.result}</span>
+            <div key={line.key} className={`ui-wb-console-line flex items-start gap-2${line.level === 'error' ? ' is-error text-[var(--srf-terminal-danger-text)]' : ' text-[var(--srf-terminal-text)]'}`}>
+              <span className={`ui-wb-console-level flex-none font-bold ${line.level === 'wait' || line.level === 'done' ? 'text-[var(--srf-terminal-info)]' : line.level === 'error' ? 'text-[var(--srf-terminal-danger)]' : 'text-[var(--srf-terminal-accent)]'}`}>[{line.level}]</span>
+              {line.time ? <span className="ui-wb-console-time flex-none text-[var(--srf-terminal-muted)]">{line.time}</span> : null}
+              {line.command ? <span className="ui-wb-console-command flex-none text-[var(--srf-terminal-title)]">{line.command}</span> : null}
+              <span className="ui-wb-console-result min-w-0 break-words text-inherit">{line.result}</span>
             </div>
           ))
         )}
       </div>
 
-      <div className="ui-wb-console-metrics">
+      <div className="ui-wb-console-metrics grid flex-none grid-cols-3 gap-1.5 border-t border-[var(--srf-divider)] pt-2">
         {metrics.map((metric) => (
-          <div key={metric.key} className="ui-wb-metric">
-            <span className="ui-wb-metric-label">{metric.label}</span>
-            <span className={`ui-wb-metric-value${metric.tone ? ` tone-${metric.tone}` : ''}`}>{metric.value}</span>
+          <div key={metric.key} className="ui-wb-metric flex min-h-[52px] flex-none flex-col gap-0.5 rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] p-2 px-2.5">
+            <span className="ui-wb-metric-label text-[11px] text-[var(--srf-text-muted)]">{metric.label}</span>
+            <span className={`ui-wb-metric-value text-[15px] font-bold leading-[22px] text-[var(--srf-text)]${metric.tone ? ` tone-${metric.tone} text-[var(--srf-tone-text)]` : ''}`}>{metric.value}</span>
           </div>
         ))}
       </div>
@@ -144,14 +144,14 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
             运行快照
           </Button>
           {snapshotOpen ? (
-            <div className="ui-wb-console-snapshot-body">
+            <div className="ui-wb-console-snapshot-body mt-1.5 flex flex-col gap-2">
               {snapshotSections.map((section) => (
                 <div key={section.label} className="ui-wb-console-snapshot-block">
-                  <div className="ui-wb-console-snapshot-label">{section.label}</div>
-                  <pre className="ui-wb-console-snapshot-pre">{prettyPrintValue(section.value)}</pre>
+                  <div className="ui-wb-console-snapshot-label text-[11px] text-[var(--srf-text-muted)]">{section.label}</div>
+                  <pre className="ui-wb-console-snapshot-pre mt-1 max-h-[180px] overflow-auto rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] p-2 font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">{prettyPrintValue(section.value)}</pre>
                 </div>
               ))}
-              {run?.tracePath ? <div className="ui-wb-console-snapshot-trace"><StoredFileDownload path={run.tracePath} label="下载 Trace" /></div> : null}
+              {run?.tracePath ? <div className="ui-wb-console-snapshot-trace break-all font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] text-[var(--srf-text-muted)]"><StoredFileDownload path={run.tracePath} label="下载 Trace" /></div> : null}
             </div>
           ) : null}
         </div>

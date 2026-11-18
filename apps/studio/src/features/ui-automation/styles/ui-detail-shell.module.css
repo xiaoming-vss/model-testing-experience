@@ -1,29 +1,10 @@
-/* UI 测试集详情壳：板面、控制条、两栏高度分配、缺失变量弹窗；顶栏在 ui-detail-topbar.module.css。 */
+/* UI 测试集详情壳：板面、顶栏输入、检查器统一卡片与流程骨架的深层皮肤。 */
 
 .scope { --ui-detail-shell-scope: 1; }
 
 /*
- * UI测试集详情页（UI 测试列表点测试集名称进来的页面）按设计稿重做的表面层：板面、顶栏、控制条、用例顺序弹层。
- *
- * 结构：顶栏（返回 / 标题 + 测试集 / 需求 / 迭代 / 就绪结论 / 上次运行 / 四个动作）
- * + 控制条（选用例 + 工作区视图 + 运行环境）+ 两栏（左步骤编排、右执行回放与控制台）。
- * 设计稿的副标题栏里还有「当前项目 / 当前迭代 / 测试阶段」三段面包屑，那是工作台外壳顶栏的内容，
- * 页面里不再重复。
- *
- * token 与色盘来自 shared/styles/surface-tokens.css：页面根节点带 `tp-surface`、板面带 `tp-board`，
- * 颜色只引用 `--srf-*` / `.tone-*`。顶栏在 ui-detail-topbar.module.css，用例信息条与步骤编辑器在
- * ui-detail-pipeline.module.css，右栏三张卡片在 ui-detail-inspector.module.css。
- */
-
-/* ===== 板面与两栏 ===== */
-
-/*
- * 板面必须是裸画布：`app/styles/shell-header.css` 给 `.app-shell-macos .workbench-panel`
- * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) +），shared/styles/surface-tokens.css 里
- * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
- * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：
- * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)。
- * 去掉这层的判据：板面应无底色 / 无投影（否则内容区会凭空多出一个容器）。
+ * macOS 外壳给 .workbench-panel 铺了玻璃底；详情页不是 .testing-page 路由，
+ * 需要这条更高权重的规则把板面还原成裸画布。
  */
 :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board) {
   border: 0 !important;
@@ -34,398 +15,153 @@
   backdrop-filter: none !important;
 }
 
-/* 折叠状态由 `hidden` 属性表达（步骤卡片展开/收起就是这一条），而 `.ui-test-case-step-body` 在
-   ui-suite.module.css 里是 flex 容器——作者样式压得过 UA 的 `[hidden]`，这里补一条 兜住。
-   antd 的 reset 也带同效规则，这条是让折叠不依赖三方 reset。 */
+/* 折叠由 hidden 属性表达；步骤卡片是 flex 容器，需要压过作者样式。 */
 .scope [hidden] {
   display: none;
 }
 
-/* 工作区高度：取板上剩余高度（板面本身是有高度的滚动容器），所以整页不再随内容变长。
-   多出来的高度由左栏步骤列表与右栏控制台日志各自内部滚动消化，底部指标区固定可见。
-   矮屏下保留下限，回落到「整页滚动」的旧行为，避免面板被压到不可用。 */
-.scope :global(.ui-wb-inspector) {
-  gap: 12px;
-  /* 空间不够时右栏自己滚（而不是把卡片压扁），指标区始终能滚到。 */
-  overflow-y: auto;
+/* ===== 顶栏：用例名称输入与校验提示 ===== */
+
+.scope :global(.ui-wb-crumb-name-item .ant-form-item-control-input) {
+  min-height: 26px;
 }
 
-/* 缺失变量补齐弹窗：变量名与输入框逐行对齐，缺失位置清单只读展示。 */
-.scope :global(.ui-missing-variable-row .ant-input) {
-  flex: 1 1 auto;
-}
-
-.scope :global(.ui-missing-variable-locations ul) {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  color: var(--srf-text-muted);
-}
-
-/* 测试集描述：设计稿没有这一块，但它是测试集自身的说明，保留为板面末尾一行弱化文字。 */
-/* ===== 控制条 ===== */
-
-/* 用例的新建、切换、排序、删除都在流程画布卡片上完成，这里只保留运行环境。 */
-/* ===== 窄屏 ===== */
-
-/* 断点与 API 详情页一致（1180px）：再窄就把 7:5 双栏改成上下堆叠。 */
-@media (max-width: 1180px) {
-  .scope :global(.ui-wb-crumb-suite) {
-    max-width: 280px;
-  }
-}
-
-@media (max-width: 1439px) {
-  /* 中等宽度只保留测试集名，需求与迭代仍在 title 中；避免截到需求名的一半。 */
-  .scope :global(.ui-wb-crumb-context-rest) {
-    display: none;
-  }
-
-  .scope :global(.ui-wb-crumb-suite) {
-    max-width: 140px;
-  }
-}
-
-/* 顶栏动作留给运行/保存，次级动作在中等宽度收成图标；title/aria-label 保留完整名称。 */
-@media (max-width: 1800px) {
-  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact) {
-    width: 28px;
-    padding-inline: 0;
-  }
-
-  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact .ui-wb-btn-label) {
-    display: none;
-  }
-
-  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact .ant-btn-icon) {
-    margin-inline-end: 0;
-  }
-
-  .scope :global(.ui-wb-toolbar-actions) {
-    gap: 6px;
-  }
-
-  .scope :global(.ui-wb-toolbar-environment) {
-    min-width: 140px;
-  }
-}
-
-@media (max-width: 900px) {
-  .scope :global(.ui-wb-crumb-suite) {
-    max-width: 220px;
-  }
-
-  .scope :global(.ui-wb-crumb-name-item) {
-    flex-basis: 180px;
-  }
-}
-
-@media (max-width: 700px) {
-  .scope :global(.ui-wb-crumb-suite) {
-    max-width: 180px;
-  }
-
-  .scope :global(.ui-wb-crumb-case-name) {
-    max-width: 150px;
-  }
-
-  .scope :global(.ui-wb-crumb-name-item) {
-    flex-basis: 150px;
-    min-width: 96px;
-  }
-
-  .scope :global(.ui-wb-toolbar-actions) {
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
-
-.scope :global(.ui-wb-inspector.ui-wb-inspector-unified) { gap:0; padding:12px; border:1px solid var(--srf-card-border); border-radius:var(--srf-radius-card); background:var(--srf-card); }
-.scope :global(.ui-wb-inspector-unified .ui-wb-card) { padding:0; border:0; border-radius:0; background:transparent; overflow:visible; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-console-log) { min-height:85px; max-height:240px; }
-/* 让回放、快照和日志在一个视口中保持可见；截图与日志仍使用各自的原有控件。 */
-.scope :global(.ui-wb-inspector-unified .ui-wb-replay-stage) { flex:0 0 auto; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-replay-canvas) { flex:0 0 auto; width:100%; height:auto; aspect-ratio:16 / 9; max-height:none; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-replay-placeholder .ant-empty-image),
-.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty-image),
-.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty .ant-empty-image) { display:none; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty),
-.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty.ant-empty) { margin:0; }
-
-.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot) { width:100%; height:100%; }
-.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot img) { width:100%; height:100%; object-fit:contain; }
-
-/* ===== 原 ui-detail-pipeline.module.css ===== */
-
-/* UI 测试集详情左栏：用例信息条与步骤编辑流水线。 */
-
-.scope { --ui-detail-pipeline-scope: 1; }
-
-/*
- * UI测试集详情页左栏：用例信息条 + 步骤编辑器（Step Pipeline）。
- *
- * 步骤编辑器的字段、校验与折叠逻辑仍在 components/UiStepEditor.tsx，本文件只把既有
- * `.ui-test-case-step-*` 规则的皮肤换成设计稿的取值（柔和底色的步骤卡片、方形序号徽标、
- * 与运行结果挂钩的 PASS / FAIL 徽标）。旧规则留在 features/ui-automation/styles/ui-suite.module.css：
- * 它们同时被 UiTestCaseEditor 之外的地方引用，这里只做页面内的覆盖。
- *
- * 颜色只引用 `--srf-*` / `.tone-*`。左栏根节点上的 `.ui-suite-case-editor-panel` 必须留着，
- * 它是本文件下面这些选择器的作用点。
- */
-
-/* 用例表单是左栏的排布容器（旧布局里它是编辑器面板内部那个带 16/24px 内距、overflow:hidden 的滚动区，
-   那条规则已删）：拉伸填满左栏，卡片间距 12px，页面内的边距全部交给外层板面，
-   这样左右两栏的卡片边缘才对得齐。 */
-.scope :global(.ui-wb-main > .ui-test-case-form) {
-  flex: 1 1 auto;
+.scope :global(.ui-wb-crumb-name-item .ant-form-item-control-input-content) {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  min-height: 0;
 }
 
-.scope :global(.ui-wb-main > .ui-test-case-form > .ui-wb-case-meta) {
-  flex: 0 0 auto;
-}
-
-/* 步骤编辑器卡片吃掉左栏多出来的高度，两栏最后一张卡片的底边因此对齐。 */
-.scope :global(.ui-wb-main > .ui-test-case-form > .ui-wb-pipeline),
-.scope :global(.ui-wb-main > .ui-wb-pipeline) {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-/* 步骤列表是左栏的滚动区：步骤多的时候在这里滚，卡片与页面都不再变长；
-   新建步骤的入口在流程画布末尾的虚线卡片上。 */
-.scope :global(.ui-wb-pipeline > .ui-test-case-step-list) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-/* 列表是 flex 列容器，卡片默认 flex-shrink: 1；高度不够时它们会被压扁
-   （卡片自己 overflow: hidden，展开面板的下半截直接被裁掉），列表的
-   scrollHeight 也随卡片一起收缩，滚动条永远不出现。卡片保持自然高度，
-   超出部分交给上面的 overflow-y: auto。 */
-.scope :global(.ui-wb-pipeline > .ui-test-case-step-list > .ui-test-case-step-card) {
-  flex: 0 0 auto;
-}
-
-/* 空态在长高的卡片里居中，而不是贴顶。 */
-.scope :global(.ui-wb-pipeline > .ui-test-case-empty-editor) {
-  flex: 1 1 auto;
-}
-
-/* ===== 用例信息条 ===== */
-
-/* ===== 用例信息条 ===== */
-
-.scope :global(.ui-wb-case-meta) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-}
-
-.scope :global(.ui-wb-case-serial) {
-  flex: 0 0 auto;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--srf-chip);
-  color: var(--srf-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-}
-
-/* ===== 步骤编辑器 ===== */
-
-.scope :global(.ui-wb-pipeline) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-}
-
-.scope :global(.ui-wb-pipeline-head) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.scope :global(.ui-wb-pipeline-title) {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  color: var(--srf-text);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.scope :global(.ui-wb-pipeline-chip) {
-  padding: 2px 8px;
-  border-radius: 999px;
+.scope :global(.ui-wb-crumb-name-item .ant-input-affix-wrapper) {
+  height: 26px;
+  padding: 0 7px;
+  border-color: transparent;
   background: var(--srf-hover);
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.scope :global(.ui-wb-pipeline-actions) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 步骤卡片：设计稿是柔和底色的圆角块，展开后再嵌一张白卡。 */
-.scope :global(.ui-test-case-step-card) {
-  border-color: var(--srf-card-border);
-  background: var(--srf-hover);
-}
-
-.scope :global(.ui-test-case-step-card.expanded) {
-  border-color: var(--srf-accent-border);
   box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.scope :global(.ui-test-case-step-card-top) {
-  align-items: center;
-  padding: 10px 12px;
+.scope :global(.ui-wb-crumb-name-item .ant-input-affix-wrapper:is(:hover, :focus-within)) {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-card);
 }
 
-.scope :global(.ui-test-case-step-card-main) {
-  align-items: center;
-  gap: 10px;
+.scope :global(.ui-wb-crumb-name-item .ant-input) {
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.scope :global(.ui-test-case-step-card-leading) {
-  gap: 8px;
-  padding-top: 0;
-}
-
-/* 序号是方形徽标（设计稿 #1 / #2 …），与列表页的胶囊形状不同。 */
-.scope :global(.ui-test-case-step-order) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-radius: 6px;
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+.scope :global(.ui-wb-crumb-name-item .ant-form-item-explain) {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 5;
+  padding: 2px 6px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-card);
+  box-shadow: 0 4px 12px var(--srf-shadow-color);
   font-size: 11px;
-  font-weight: 700;
+  white-space: nowrap;
 }
 
-.scope :global(.ui-test-case-step-card.expanded .ui-test-case-step-order) {
+/* ===== 顶栏：未保存状态 ===== */
+
+.scope :global(.ui-wb-toolbar-save.is-dirty) {
+  border-color: var(--srf-accent);
   background: var(--srf-accent);
+  color: var(--srf-on-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
+}
+
+.scope :global(.ui-wb-toolbar-save.is-dirty:hover),
+.scope :global(.ui-wb-toolbar-save.is-dirty:focus-visible) {
+  border-color: var(--srf-accent-strong);
+  background: var(--srf-accent-strong);
   color: var(--srf-on-accent);
 }
 
-.scope :global(.ui-test-case-step-title-input.ant-input) {
-  min-height: 28px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 20px;
-}
-
-.scope :global(.ui-test-case-step-title-input.ant-input:hover),
-.scope :global(.ui-test-case-step-title-input.ant-input:focus) {
-  background: var(--srf-card);
-  border-color: var(--srf-card-border);
-}
-
-.scope :global(.ui-test-case-step-body) {
-  background: var(--srf-card);
-  border-top: 1px solid var(--srf-divider);
-}
-
-.scope :global(.ui-test-case-step-empty) {
-  border-color: var(--srf-card-border);
-  background: var(--srf-hover);
-}
-
-/* 步骤行上的运行结论徽标：只有拿到该步骤的运行结果时才渲染。 */
-.scope :global(.ui-wb-step-summary) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  line-height: 16px;
-}
-
-.scope :global(.ui-wb-step-status) {
+.scope :global(.ui-wb-toolbar-save.is-dirty::before) {
+  content: "";
   flex: 0 0 auto;
-  padding: 1px 6px;
-  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
-  border-radius: 4px;
-  background: var(--srf-tone-bg, var(--srf-chip));
-  color: var(--srf-tone-text, var(--srf-chip-text));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--srf-on-accent);
+  box-shadow: 0 0 0 2px var(--srf-accent);
 }
 
-.scope :global(.ui-wb-step-status.is-draft) {
-  border-color: var(--srf-card-border);
-  background: var(--srf-chip);
-  color: var(--srf-text-muted);
+.scope :global(.ui-wb-toolbar.has-unsaved-case .ui-wb-toolbar-run:not(:disabled)) {
+  border-color: var(--srf-accent-border);
+  background: transparent;
+  color: var(--srf-accent);
+  box-shadow: none;
 }
 
-/* `.ui-test-case-step-card-title span` 会把步骤行里所有 span 刷成 12px，摘要文字要跟着自己的容器。 */
-.scope :global(.ui-wb-step-summary-text) {
-  color: inherit;
-  font-size: inherit;
-  line-height: inherit;
+.scope :global(.ui-wb-toolbar.has-unsaved-case .ui-wb-toolbar-run:not(:disabled):hover) {
+  border-color: var(--srf-accent);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
 }
 
-/* 步骤行首的拖拽手柄：整行可拖，这里只是一个视觉提示。 */
-.scope :global(.ui-wb-step-grip) {
-  display: inline-flex;
-  align-items: center;
-  color: var(--srf-text-muted);
-  font-size: 14px;
-  cursor: grab;
+/* ===== 检查器统一卡片 ===== */
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-card) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
-.scope :global(.ui-test-case-step-card-top:active .ui-wb-step-grip) {
-  cursor: grabbing;
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-log) {
+  min-height: 85px;
+  max-height: 240px;
 }
 
-/* 用例列表/详情加载时的流程骨架：按真实卡片尺寸占位，避免先闪空态再跳到画布。 */
-.scope :global(.ui-flow-loading-label) {
-  color: var(--srf-text-muted);
-  font-size: 12px;
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-stage) {
+  flex: 0 0 auto;
 }
 
-.scope :global(.ui-flow-loading-card) {
-  height: 86px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--srf-hover) 20%, var(--srf-card) 40%, var(--srf-hover) 60%);
-  background-size: 300% 100%;
-  animation: ui-flow-loading-shimmer 1.4s ease-in-out infinite;
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-canvas) {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 16 / 9;
+}
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-placeholder .ant-empty-image),
+.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty-image),
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty .ant-empty-image) {
+  display: none;
+}
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty),
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty.ant-empty) {
+  margin: 0;
+}
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot),
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot img) {
+  width: 100%;
+  height: 100%;
+}
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot img) {
+  object-fit: contain;
+}
+
+/* ===== 动效 ===== */
+
+@media (prefers-reduced-motion: no-preference) {
+  .scope :global(.ui-wb-toolbar-save.is-dirty::before) {
+    animation: ui-wb-save-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes ui-wb-save-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
 }
 
 @keyframes ui-flow-loading-shimmer {
@@ -435,4 +171,147 @@
 
 @media (prefers-reduced-motion: reduce) {
   .scope :global(.ui-flow-loading-card) { animation: none; }
+}
+
+/* ===== 原 ui-execution-flow.module.css：React Flow 深层皮肤 ===== */
+
+.scope { --ui-execution-flow-scope: 1; }
+
+/* 步骤流程嵌在左栏编辑器里：由剩余高度撑开，画布随卡片数量伸缩。 */
+.scope :global(.ui-flow-editor > .ui-flow) {
+  flex: 1 1 300px;
+  min-height: 210px;
+}
+
+.scope :global(.ui-flow-editor .ui-flow-canvas) {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 100px;
+}
+
+.scope :global(.ui-flow-canvas) {
+  --xy-controls-button-background-color: var(--srf-card);
+  --xy-controls-button-background-color-hover: var(--srf-hover);
+  --xy-controls-button-border-color: var(--srf-card-border);
+  --xy-controls-button-color: var(--srf-text);
+}
+
+/* ===== React Flow 深层皮肤 ===== */
+
+.scope :global(.ui-flow .react-flow__edge-add .react-flow__edge-path) {
+  stroke: var(--srf-card-border);
+  stroke-dasharray: 6 4;
+  opacity: 1;
+}
+
+.scope :global(.react-flow__node.selected .ui-flow-node) {
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 2px var(--srf-accent-border);
+}
+
+.scope :global(.ui-flow .react-flow__handle) {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--srf-card);
+  background: var(--srf-accent);
+}
+
+.scope :global(.ui-flow .react-flow__edge-path) {
+  stroke: var(--app-accent);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.scope :global(.ui-flow .react-flow__edge.selected .react-flow__edge-path) {
+  stroke: var(--srf-accent-strong);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.scope :global(.ui-flow .react-flow__background) {
+  color: var(--srf-card-border);
+}
+
+.scope :global(.ui-flow-footer .ant-alert) {
+  padding: 5px 8px;
+}
+
+/* 首屏按执行顺序依次浮现；卡片仍一次性挂载，避免反复 fitView 和连线重算。 */
+@keyframes ui-flow-node-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scope :global(.ui-flow-canvas.is-revealing .ui-flow-node) {
+  animation: ui-flow-node-reveal .24s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope :global(.ui-flow-canvas.is-revealing .ui-flow-node) { animation: none; }
+}
+
+/* 侧栏内的次级标签采用下划线，区别于页面级标签的选中底色。 */
+.scope :global(:is(.ui-inspector-tabs, .ui-step-config-tabs) > .shared-tab-motion-indicator) {
+  border-radius: 0;
+  background: transparent;
+}
+
+.scope :global(:is(.ui-inspector-tabs, .ui-step-config-tabs) > .shared-tab-motion-indicator::after) {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--srf-accent);
+  content: '';
+}
+
+/* 与需求画布常态连线一致：短光带沿路径持续流动。 */
+.scope :global(.ui-flow-edge-stream) {
+  fill: none;
+  stroke: color-mix(in srgb, var(--app-accent) 65%, var(--app-surface-text-muted));
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 10 10;
+  opacity: 0.72;
+  pointer-events: none;
+  animation: ui-flow-edge-stream 0.8s linear infinite;
+}
+
+@keyframes ui-flow-edge-stream {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -20; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope :global(.ui-flow-edge-stream) { display: none; animation: none; }
+  .scope :global(.ui-flow .react-flow__edge-path) { opacity: 0.65; }
+}
+
+/* 运行中节点的出边使用需求画布的光束，其余连线保持常态流动。 */
+.scope :global(.ui-flow-edge-output) { pointer-events: none; }
+
+.scope :global(.ui-flow-beam) {
+  fill: none;
+  stroke: var(--app-generation-running-accent);
+  stroke-width: 1.8;
+  stroke-linecap: butt;
+  stroke-dasharray: 7.25 312.75;
+  animation: ui-flow-beam 1s linear infinite;
+}
+
+.scope :global(.ui-flow-beam-halo) {
+  --ui-flow-beam-offset: 79.75px;
+  stroke-width: 6;
+  stroke-dasharray: 87 233;
+  opacity: 0.1;
+}
+
+@keyframes ui-flow-beam {
+  from { stroke-dashoffset: var(--ui-flow-beam-offset); }
+  to { stroke-dashoffset: calc(var(--ui-flow-beam-offset) - 320px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope :global(.ui-flow-edge-output) { display: none; }
 }

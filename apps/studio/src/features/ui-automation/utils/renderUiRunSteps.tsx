@@ -52,9 +52,9 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
         </span>
       </div>
       {stepResult.usedVariables?.length ? (
-        <div className="ui-test-run-step-variables">
+        <div className="ui-test-run-step-variables mt-2.5 flex flex-wrap items-baseline gap-2 text-xs">
           <strong>使用变量</strong>
-          <div className="ui-test-run-step-tags">
+          <div className="ui-test-run-step-tags flex flex-wrap gap-1.5">
             {stepResult.usedVariables.map((item, variableIndex) => (
               <Tag key={`${item.name ?? ''}-${variableIndex}`} color={item.secret ? 'gold' : 'blue'}>
                 {item.name ?? '-'} = {item.secret ? '********' : formatOptionalValue(item.value)}
@@ -64,9 +64,9 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
         </div>
       ) : null}
       {stepResult.saveResults?.length ? (
-        <div className="ui-test-run-step-variables">
+        <div className="ui-test-run-step-variables mt-2.5 flex flex-wrap items-baseline gap-2 text-xs">
           <strong>写回变量</strong>
-          <div className="ui-test-run-step-tags">
+          <div className="ui-test-run-step-tags flex flex-wrap gap-1.5">
             {stepResult.saveResults.map((item, saveIndex) => (
               <Tag key={`${item.name ?? ''}-${saveIndex}`} color={item.usedDefault ? 'warning' : 'green'}>
                 {item.name ?? '-'} ← {formatOptionalValue(item.value)}
@@ -77,7 +77,7 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
         </div>
       ) : null}
       {stepResult.screenshotPath ? (
-        <div className="ui-test-run-step-screenshot">
+        <div className="ui-test-run-step-screenshot mt-2.5 grid justify-items-start gap-2">
           <strong>截图</strong>
           <StoredImage
             src={stepResult.screenshotPath}

@@ -67,9 +67,9 @@ export function UiTestSuiteDrawer({
         requiredMark={false}
         initialValues={DEFAULT_UI_TEST_SUITE_RUN_CONFIG}
       >
-        <div className="ui-test-suite-drawer-shell">
-          <div className="ui-test-suite-drawer-section">
-            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-2">
+        <div className="ui-test-suite-drawer-shell flex flex-col gap-0">
+          <div className="ui-test-suite-drawer-section flex flex-col border-b border-[var(--tp-border-soft)] pb-4 pt-0.5">
+            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-2 grid grid-cols-2 gap-x-3 max-narrow:grid-cols-2 max-[720px]:grid-cols-1">
               {sprintOptions ? (
                 <Form.Item name="sprintId" label="所属迭代" rules={[{ required: true, message: '请选择所属迭代' }]}>
                   <Select placeholder="请选择迭代" options={sprintOptions} onChange={onSprintChange} />
@@ -83,16 +83,16 @@ export function UiTestSuiteDrawer({
             </div>
           </div>
 
-          <div className="ui-test-suite-drawer-section">
-            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-1">
+          <div className="ui-test-suite-drawer-section flex flex-col border-b border-[var(--tp-border-soft)] pb-4 pt-4">
+            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-1 grid grid-cols-1 gap-x-3">
               <Form.Item name="name" label="测试集名称" rules={[{ required: true, message: '请输入测试集名称' }]}>
                 <Input maxLength={64} placeholder="例如：登录冒烟 / 支付主流程" />
               </Form.Item>
             </div>
           </div>
 
-          <div className="ui-test-suite-drawer-section">
-            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-config-grid">
+          <div className="ui-test-suite-drawer-section flex flex-col border-b border-[var(--tp-border-soft)] pb-4 pt-4">
+            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-config-grid grid grid-cols-3 gap-x-3 max-narrow:grid-cols-2 max-[720px]:grid-cols-1">
               <Form.Item name="headless" label="运行模式">
                 <Select
                   allowClear
@@ -176,8 +176,8 @@ export function UiTestSuiteDrawer({
             </div>
           </div>
 
-          <div className="ui-test-suite-drawer-section ui-test-suite-drawer-section-last">
-            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-1">
+          <div className="ui-test-suite-drawer-section flex flex-col pb-0 pt-4">
+            <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-1 grid grid-cols-1 gap-x-3">
               <Form.Item name="description" label="描述">
                 <Input.TextArea rows={4} maxLength={200} placeholder="补充这个 UI 测试集的目标、范围或备注" />
               </Form.Item>

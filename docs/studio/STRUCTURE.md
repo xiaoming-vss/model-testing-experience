@@ -132,7 +132,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css` + `interface-editor.module.css` |
 | 测试单 | `features/test-orders/styles/test-orders-list.module.css` + `test-order-workspace.module.css` + `test-order-graph-execution.module.css`；工作台骨架与判定区排版在页面/组件 utility |
 | API 测试 | `features/api-automation/styles/api-list.module.css` + `api-detail-shell.module.css` + `api-detail-request.module.css` + `api-detail-rules.module.css`；详情两栏/顶栏/用例行布局在页面与组件 utility |
-| UI 测试 | `features/ui-automation/styles/ui-list.module.css` + `ui-suite.module.css` + `ui-detail-topbar.module.css` + `ui-detail-shell.module.css` + `ui-detail-inspector.module.css` + `ui-execution-flow.module.css` |
+| UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css` + `ui-detail-inspector.module.css`；列表/详情页面布局在组件 utility |
 | 性能测试 | 复用 `tp-*` 与 `shared/styles/entity-card.css`；新样式使用 Tailwind utility，不新增页面级全局 CSS |
 | TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
 
@@ -277,14 +277,13 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 `ApiCaseBodyPanel.test.tsx` 依赖类型胶囊的 `role="tab"`，以及状态条文案「无语法错误 / 存在语法错误 /
 大小: N B / 格式: JSON / 编码: UTF-8」。
 
-### UI 测试集详情页（`ui-detail-topbar.module.css` / `ui-detail-shell.module.css` / `ui-detail-shell.module.css` / `ui-detail-inspector.module.css` / `ui-execution-flow.module.css`）
+### UI 测试集详情页（`ui-detail-shell.module.css` / `ui-detail-inspector.module.css` / `ui-suite.module.css`）
 
 UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求 / 迭代 + 环境选择 + 保存；
 测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
-右：执行回放 / 执行日志 / 运行变量）。样式按职责拆入 `ui-detail-topbar.module.css`（顶栏面包屑、就绪结论与动作区）、
-`ui-detail-shell.module.css`（板面、控制条与窄屏高度分配）、`ui-detail-shell.module.css`（用例信息条与步骤卡片皮肤）、
-`ui-detail-inspector.module.css`（右栏三张卡片）、`ui-execution-flow.module.css`（React Flow 节点、连线、光束与编辑区布局），共享的测试集区块、抽屉与步骤编辑器
-基础皮肤在 `ui-suite.module.css`；五个详情 Module 的 `.scope` 都挂在 `UiTestSuiteCasePage` 根节点。页面结构同样按职责切：
+右：执行回放 / 执行日志 / 运行变量）。顶栏、板面、步骤配置表单的 Ant Design 深层规则与 React Flow 节点/连线/光束集中在
+`ui-detail-shell.module.css`；右栏卡片原语在 `ui-detail-inspector.module.css`；测试集抽屉与步骤编辑器的 Ant Design 表单规则在
+`ui-suite.module.css`；三个 Module 的 `.scope` 都挂在 `UiTestSuiteCasePage` 根节点。页面结构同样按职责切：
 `UiSuiteDetailToolbar`、`UiExecutionFlow`、`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunConsoleCard`）各自负责一段，
 页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
 
@@ -300,23 +299,22 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   保存后才创建；添加步骤直接追加步骤并选中，内容在右侧「步骤配置」填写，侧栏不再提供添加按钮。
 - **设计稿控制条上的三个工作区页签（步骤编排 / 回放快照 / 执行控制台）已按用户要求去掉**：工作区只有一种排布
   （左步骤编排 + 右回放与控制台），三张卡片恒定显示，`UiStudioView` / `uiStudioViewOptions` / `ui-wb-cols--*` /
-  `ui-wb-ribbon-view*` 一并删除。`ui-detail-shell.module.css` 里那条 `.scope [hidden] { display: none !important }`
-  留着，但服务对象换成了步骤卡片的展开/收起：`.ui-test-case-step-body` 在 `ui-suite.module.css` 里是 flex 容器，作者样式压得过
+  `ui-wb-ribbon-view*` 一并删除。`ui-detail-shell.module.css` 里的 `.scope [hidden] { display: none }`
+  留着，服务对象是步骤卡片的展开/收起：步骤卡片 body 现在是 flex 容器，作者样式压得过
   UA 的 `[hidden]`（antd 的 reset 也带同效规则，这条让折叠不依赖三方 reset）。
 - **工作区在一个屏内，两栏齐高**：`.ui-wb-cols` 是 `align-items: stretch` 的网格，行高取板上剩余高度（板面本身是
   有高度的滚动容器），两栏因此等高、整页不随内容变长。内容超出这一屏时由各面板内部滚动消化：左栏是步骤列表
   （`.ui-wb-pipeline > .ui-test-case-step-list`），右栏是执行控制台日志（`.ui-wb-console-log`）。
-- **右栏三张卡片的高度分配**（踩过的坑写在这里，改这一层时逐条对）：回放按 16:9 定高、空间不够时先收它；
-  关键帧单行定高；执行控制台吃掉剩余高度、日志是其中的弹性区。**卡片下限必须写在槽上
-  （`.ui-wb-inspector-slot`），不能写在卡片上**——槽才是右栏的 flex 项，写在卡片上会被槽的 `min-height: 0`
-  压过去，卡片被压到 0 而内容整片溢出（实测控制台卡片被压成 26px，日志与指标区浮在外面）。
+- **右栏卡片的高度分配**（踩过的坑写在这里，改这一层时逐条对）：回放按 16:9 定高、空间不够时先收它；
+  关键帧单行定高；执行控制台吃掉剩余高度、日志是其中的弹性区。**卡片下限必须写在右栏的 flex 槽上
+  （`ui-inspector-run` / `ui-inspector-step-host`），不能写在卡片上**——槽才是右栏的 flex 项，写在卡片上会被槽的
+  `min-height: 0` 压过去，卡片被压到 0 而内容整片溢出。
   指标区是 `flex: 0 0 auto` 的页脚，任何高度下都留在卡片里——用户报的「底部指标区被压」就是右栏比一屏高、
   页脚被顶到视口外；三张卡片都到下限后仍放不下（矮屏）时右栏整体滚动，卡片保持完整。
 - 首版写成 `align-items: start` 时左栏只有内容那么高，下面留一大片空白。
-- **`.ui-test-case-form` 的旧规则已删**（现由 `ui-suite.module.css` / `ui-detail-shell.module.css` 分持）：它带着 `padding: 16px 24px 0`
-  与 `height: 100%; overflow: hidden`，那是「表单本身是编辑器面板里的滚动容器」时代的产物。留着会让左栏两张卡片
-  被内推 24px、比右栏窄，两栏的卡片边缘对不齐（实测左卡 x=124 / 右卡 x=779，删掉后左卡 x=100、栏间距正好 12px）。
-  现在表单只是左栏的排布容器，规则写在 `ui-detail-shell.module.css`（拉伸 + 卡片间距 12px）。
+- **`.ui-test-case-form` 的旧规则已删**：它带着 `padding: 16px 24px 0` 与 `height: 100%; overflow: hidden`，
+  那是「表单本身是编辑器面板里的滚动容器」时代的产物。留着会让左栏两张卡片被内推 24px、比右栏窄，两栏的卡片边缘
+  对不齐。现在表单只是左栏的排布容器，`flex-auto flex min-h-0 flex-col gap-3` utility 写在 `UiTestSuiteCasePage` 上。
 - 控制条左侧那一组的子项（下拉 / 计数 / 前后切换 / 顺序 / 新建）加起来接近 560px，所以它的 `flex-basis` 也取 560px：
   空间不够时让右侧那组换行，而不是让左组子项溢出画到右边那组上面（实测过：`flex: 1 1 420px` 时右组的内容被
   「新建用例」整块盖住，`elementFromPoint` 命中的是按钮，而这类遮挡在 jsdom 的布局盲区里看不见）。
@@ -324,8 +322,8 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   建，重复序号保留第一条），文案由 `formatUiStepResultBadge` 统一给出；没有运行记录时不编造结论，未设置关键字的步骤显示
   「草稿」。行首的拖拽手柄只是把「整行可拖」画出来，不是新的交互。步骤行的字段显隐与折叠摘要由
   `utils/stepRowView.ts` 推导（`UiStepEditor` 只渲染），这份推导有 `stepRowView.test.ts` 单独钉住。
-- 左栏根节点上的 `ui-suite-case-editor-panel` 必须保留，`ui-detail-shell.module.css` 与
-  `ui-detail-shell.module.css` 的选择器都挂在它上面。随之删除的是分栏拖拽（`UiTestPanelSplitter`、
+- 左栏根节点上的 `ui-suite-case-editor-panel` 作为业务钩子保留；阶段 29 后布局全部由组件 utility 负责，
+  不再有 Module 选择器依赖它。随之删除的是分栏拖拽（`UiTestPanelSplitter`、
   `utils/uiTestPanelResize.ts`）与 `detailView.ts` 里三个编辑器高度常量，
   以及 `ui-test-case-toolbar` / `ui-test-case-secondary-meta` / `ui-suite-case-empty-list` 等只属于旧结构的规则
   （旧 `ui-automation/styles/index.css` 已迁入 `ui-suite.module.css`，旧 `api-automation/styles/detail.css`

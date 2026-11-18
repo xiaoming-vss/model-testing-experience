@@ -70,18 +70,16 @@ import {
 } from '../utils/uiTestCaseEditor'
 import '@/shared/styles/surface-tokens.css'
 import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
-import topbarStyles from '@/features/ui-automation/styles/ui-detail-topbar.module.css'
 import shellStyles from '@/features/ui-automation/styles/ui-detail-shell.module.css'
 import inspectorStyles from '@/features/ui-automation/styles/ui-detail-inspector.module.css'
-import flowStyles from '@/features/ui-automation/styles/ui-execution-flow.module.css'
 
 const RUN_HISTORY_PAGE_SIZE = 20
 
 function UiFlowLoading({ label }: { label: string }) {
-  return <div className="ui-wb-pipeline ui-flow-loading min-h-[360px]" role="status" aria-live="polite">
-    <span className="ui-flow-loading-label">{label}</span>
+  return <div className="ui-wb-pipeline ui-flow-loading flex min-h-[360px] flex-col gap-3 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3" role="status" aria-live="polite">
+    <span className="ui-flow-loading-label text-xs text-[var(--srf-text-muted)]">{label}</span>
     <div className="ui-flow-loading-grid grid grid-cols-[repeat(auto-fill,180px)] content-start gap-5" aria-hidden="true">
-      {Array.from({ length: 12 }, (_, index) => <span className="ui-flow-loading-card" key={index} />)}
+      {Array.from({ length: 12 }, (_, index) => <span className="ui-flow-loading-card h-[86px] rounded-[8px] border border-[var(--srf-card-border)] bg-[linear-gradient(90deg,var(--srf-hover)_20%,var(--srf-card)_40%,var(--srf-hover)_60%)] bg-[length:300%_100%] animate-[ui-flow-loading-shimmer_1.4s_ease-in-out_infinite] motion-reduce:animate-none" key={index} />)}
     </div>
   </div>
 }
@@ -443,12 +441,12 @@ export function UiTestSuiteCasePage() {
 
   function renderTemplatePickerLabel(stepIndex: number, fieldKey: UiTemplateFieldKey, label: string) {
     return (
-      <div className="ui-template-picker-label">
+      <div className="ui-template-picker-label inline-flex items-center gap-0">
         <span>{label}</span>
         <Button
           type="link"
           size="small"
-          className="ui-template-picker-trigger"
+          className="ui-template-picker-trigger h-auto whitespace-nowrap p-0 text-xs leading-[18px]"
           icon={<CodeOutlined />}
           onClick={() => setTemplatePickerTarget({ stepIndex, fieldKey })}
         >
@@ -1178,16 +1176,16 @@ export function UiTestSuiteCasePage() {
   const lastRunText = formatUiRunRelativeTime(latestSuiteRun?.startedAt || latestSuiteRun?.createdAt || latestSuiteRun?.updatedAt)
 
   const stepConfigActions = (
-    <div className="ui-wb-pipeline-actions">
-      <div className="ui-step-header-switches">
-        <label><Form.Item name={[selectedStepIndex, 'enabled']} valuePropName="checked" noStyle><Switch size="small" aria-label="启用步骤" disabled={!can('write')} /></Form.Item>启用</label>
-        <label><Form.Item name={[selectedStepIndex, 'continueOnFailure']} valuePropName="checked" noStyle><Switch size="small" aria-label="失败后继续" disabled={!can('write')} /></Form.Item>失败后继续</label>
+    <div className="ui-wb-pipeline-actions mb-4 flex flex-wrap items-center justify-between gap-1.5">
+      <div className="ui-step-header-switches mr-auto flex flex-wrap items-center gap-5">
+        <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-[var(--srf-text-secondary)]"><Form.Item name={[selectedStepIndex, 'enabled']} valuePropName="checked" noStyle><Switch size="small" aria-label="启用步骤" disabled={!can('write')} /></Form.Item>启用</label>
+        <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-[var(--srf-text-secondary)]"><Form.Item name={[selectedStepIndex, 'continueOnFailure']} valuePropName="checked" noStyle><Switch size="small" aria-label="失败后继续" disabled={!can('write')} /></Form.Item>失败后继续</label>
       </div>
     </div>
   )
 
   return (<ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>{(
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${topbarStyles.scope} ${shellStyles.scope} ${inspectorStyles.scope} ${flowStyles.scope}`}>
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${shellStyles.scope} ${inspectorStyles.scope}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board ui-suite-detail-board">
           {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}
@@ -1305,7 +1303,7 @@ export function UiTestSuiteCasePage() {
               onImport={openCaseImportModal}
             />
 
-          <div className="ui-wb-cols grid min-h-[min(520px,calc(100vh-320px))] flex-auto grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-stretch gap-3 max-[1180.01px]:min-h-0 max-[1180.01px]:flex-none max-[1180.01px]:grid-cols-1 max-[1180.01px]:grid-rows-[auto_auto]">
+          <div className="ui-wb-cols grid min-h-[min(520px,calc(100vh-320px))] flex-auto grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-stretch gap-3 min-[1100px]:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] max-[1180.01px]:min-h-0 max-[1180.01px]:flex-none max-[1180.01px]:grid-cols-1 max-[1180.01px]:grid-rows-[auto_auto]">
             <div className="ui-wb-main ui-suite-case-editor-panel flex min-h-0 min-w-0 flex-col gap-3">
               {flowLevel === 'cases' ? <UiExecutionFlow
                 ref={caseFlowRef} inlineSave
@@ -1314,11 +1312,11 @@ export function UiTestSuiteCasePage() {
                 applying={reorderCasesMutation.isPending} onSelect={handleSelectCase} onOpen={handleSelectCase} onApply={applyCaseFlowOrder}
                 onAdd={can('write') ? openCreateCase : undefined} addLabel="添加用例" hint="点击用例进入 · "
               /> : null}
-              <div className="ui-flow-editor" hidden={flowLevel === 'cases'}>
+              <div className="ui-flow-editor flex min-h-0 flex-1 flex-col" hidden={flowLevel === 'cases'}>
               {caseList.length === 0 ? (
                 casesQuery.isLoading ? <UiFlowLoading label="正在加载 UI 测试用例..." /> : (
-                  <div className="ui-wb-pipeline">
-                    <div className="ui-test-case-empty-editor">
+                  <div className="ui-wb-pipeline flex flex-col gap-3 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3">
+                    <div className="ui-test-case-empty-editor grid min-h-[360px] place-items-center px-6 pb-6">
                       <Empty description="当前测试集还没有 UI测试用例">
                         <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
                           新建用例
@@ -1340,19 +1338,19 @@ export function UiTestSuiteCasePage() {
                     onSelect={(id) => { const index = Number(id); setSelectedStepIndex(index); setExpandedStepIndexes([index]) }}
                   /> : null}
 
-                  {stepConfigHost ? createPortal(<div className="ui-wb-pipeline">
-                    <div className="ui-wb-pipeline-head">
-                      <div className="ui-wb-pipeline-title">
+                  {stepConfigHost ? createPortal(<div className="ui-wb-pipeline flex min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden border-0 bg-[var(--srf-card)] p-4 px-5">
+                    <div className="ui-wb-pipeline-head mb-4 flex flex-wrap items-center justify-between gap-2">
+                      <div className="ui-wb-pipeline-title inline-flex items-center gap-2 text-[15px] font-bold text-[var(--srf-text)]">
                         步骤配置
-                        {watchedSteps.length > 0 ? <span className="ui-wb-pipeline-chip">#{selectedStepIndex + 1} / {watchedSteps.length}</span> : null}
+                        {watchedSteps.length > 0 ? <span className="ui-wb-pipeline-chip rounded-full bg-[var(--srf-hover)] px-2 py-0.5 font-[inherit] text-[11px] font-medium leading-4 text-[var(--srf-text-muted)]">#{selectedStepIndex + 1} / {watchedSteps.length}</span> : null}
                         {currentRunStepResults.find((result) => result.orderNo === selectedStepIndex + 1) ? <UiStepResultBadge stepResult={currentRunStepResults.find((result) => result.orderNo === selectedStepIndex + 1)!} /> : null}
                       </div>
-                      <div className="ui-step-navigation-actions">
-                        <Button size="small" aria-label="上一个步骤" icon={<LeftOutlined />} disabled={selectedStepIndex <= 0} onClick={() => { const index = selectedStepIndex - 1; setSelectedStepIndex(index); setExpandedStepIndexes([index]) }} />
-                        <Button size="small" aria-label="下一个步骤" icon={<RightOutlined />} disabled={selectedStepIndex >= watchedSteps.length - 1} onClick={() => { const index = selectedStepIndex + 1; setSelectedStepIndex(index); setExpandedStepIndexes([index]) }} />
+                      <div className="ui-step-navigation-actions ml-auto flex items-center gap-1">
+                        <Button size="small" className="text-xs" aria-label="上一个步骤" icon={<LeftOutlined />} disabled={selectedStepIndex <= 0} onClick={() => { const index = selectedStepIndex - 1; setSelectedStepIndex(index); setExpandedStepIndexes([index]) }} />
+                        <Button size="small" className="text-xs" aria-label="下一个步骤" icon={<RightOutlined />} disabled={selectedStepIndex >= watchedSteps.length - 1} onClick={() => { const index = selectedStepIndex + 1; setSelectedStepIndex(index); setExpandedStepIndexes([index]) }} />
                       </div>
                     </div>
-                    <div id="ui-step-config-body" className="ui-step-details-body">
+                    <div id="ui-step-config-body" className="ui-step-details-body flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
                     <UiStepEditor
                       watchedSteps={watchedSteps}
                       selectedStepIndex={selectedStepIndex}
@@ -1375,8 +1373,8 @@ export function UiTestSuiteCasePage() {
                   </div>, stepConfigHost) : null}
                 </>
               ) : (
-                <div className="ui-wb-pipeline">
-                  <div className="ui-test-case-empty-editor">
+                <div className="ui-wb-pipeline flex flex-col gap-3 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3">
+                  <div className="ui-test-case-empty-editor grid min-h-[360px] place-items-center px-6 pb-6">
                     <Empty description={selectedCaseDetailQuery.isError ? 'UI测试用例详情加载失败' : '未找到对应的 UI测试用例'} />
                   </div>
                 </div>
@@ -1464,6 +1462,7 @@ export function UiTestSuiteCasePage() {
                   <span className="ui-missing-variable-name font-mono flex-[0_0_180px] overflow-hidden text-ellipsis whitespace-nowrap text-[12px]">{name}</span>
                   <Input
                     size="small"
+                    className="flex-1"
                     placeholder={`请输入 ${name} 的值`}
                     value={missingValues[name] ?? ''}
                     onChange={(event) =>
@@ -1477,7 +1476,7 @@ export function UiTestSuiteCasePage() {
         ) : null}
         <div className="ui-missing-variable-locations mt-4 text-[12px]">
           <Text strong>缺失位置</Text>
-          <ul>
+          <ul className="mt-2 list-disc pl-[18px] text-[var(--srf-text-muted)]">
             {missingVariables.map((item, index) => (
               <li key={`${item.caseId ?? ''}-${item.orderNo ?? ''}-${item.field ?? ''}-${item.name ?? ''}-${index}`}>
                 {[item.caseName, item.stepName, item.field]

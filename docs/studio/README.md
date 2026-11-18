@@ -108,7 +108,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义，并放在 `@layer components`。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`theme.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表与软件仓库管理在 `interface-library.module.css`；方法签、OpenAPI 导入与详情规则已合并进 `interface-detail.module.css`，编辑器内容区在 `interface-editor.module.css`。阶段 21 后页面根与 Modal/Drawer 根挂三个 `.scope`。
-- UI 测试集详情顶栏归 `ui-detail-topbar.module.css`，板面/控制条/窄屏归 `ui-detail-shell.module.css`；页面根同时挂五个详情 Module 的作用域。步骤编辑器和测试集抽屉的窄屏规则仍归 `ui-suite.module.css`，阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
+- UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `ui-detail-inspector.module.css`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根同时挂这三个 Module 的作用域。阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
 - Sprint 详情页只保留卡片/健康带表面、图表色块与报告 Markdown 在 `sprint-overview.module.css` / `sprint-overview.module.css`，两者按顺序导入；页面网格、工具栏、指标与断点由 `SprintDetailPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的 `projects-overview.module.css` 保留空态、状态色、焦点与 macOS 皮肤，需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
