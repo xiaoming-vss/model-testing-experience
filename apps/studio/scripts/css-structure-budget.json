@@ -246,9 +246,9 @@
       "selectors": 95
     },
     "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
-      "rules": 51,
-      "declarations": 216,
-      "selectors": 57
+      "rules": 38,
+      "declarations": 159,
+      "selectors": 44
     },
     "src/features/ui-automation/styles/ui-execution-flow.module.css": {
       "rules": 143,
@@ -437,7 +437,7 @@
       "sample": "display: flex;align-items: center;gap: 12px"
     },
     "3dc1af6e21ca837c": {
-      "count": 4,
+      "count": 3,
       "sample": "display: inline-flex;align-items: center;gap: 6px"
     },
     "41ff9fcb4194ebda": {
@@ -593,7 +593,7 @@
       "sample": "background: var(--srf-chip);border-radius: 4px;padding: 1px 4px;font-size: 13px"
     },
     "fbbb9331ecfd8380": {
-      "count": 6,
+      "count": 5,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     },
     "fce376b002f77271": {

@@ -1218,7 +1218,7 @@ export function UiTestSuiteCasePage() {
             form={caseForm}
             layout="vertical"
             requiredMark={false}
-            className="ui-suite-detail-form"
+            className="ui-suite-detail-form flex-auto flex min-h-0 flex-col gap-3"
             onValuesChange={(_changedValues, allValues) => {
               setCaseDirty(true)
               if (isCreatingCase) {

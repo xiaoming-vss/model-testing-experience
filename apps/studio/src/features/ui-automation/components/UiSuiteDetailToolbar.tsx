@@ -106,9 +106,9 @@ export function UiSuiteDetailToolbar({
   const historyLabel = `运行记录${runHistoryCount > 0 ? ` (${runHistoryCount})` : ''}`
 
   return (
-    <div className={`ui-wb-toolbar${saveDirty ? ' has-unsaved-case' : ''}`}>
-      <h1 className="ui-wb-visually-hidden">UI测试集详情</h1>
-      <div className="ui-wb-toolbar-main">
+    <div className={`ui-wb-toolbar flex-none flex flex-wrap items-center justify-between gap-2.5 min-[1181px]:flex-nowrap${saveDirty ? ' has-unsaved-case' : ''}`}>
+      <h1 className="ui-wb-visually-hidden sr-only">UI测试集详情</h1>
+      <div className="ui-wb-toolbar-main flex min-w-0 flex-wrap items-center gap-2.5 min-[1181px]:flex-auto min-[1181px]:flex-nowrap min-[1181px]:overflow-hidden">
         <Button
           type="text"
           className="ui-wb-toolbar-back"
@@ -117,7 +117,7 @@ export function UiSuiteDetailToolbar({
           title="返回UI测试集列表"
           onClick={onBack}
         />
-        <nav className="ui-wb-crumbs" aria-label="面包屑">
+        <nav className="ui-wb-crumbs flex min-w-0 flex-wrap items-center gap-0.5 min-[1181px]:flex-nowrap min-[1181px]:overflow-hidden" aria-label="面包屑">
           <button type="button" className="ui-wb-crumb ui-wb-crumb-link" title="返回UI测试集列表" onClick={onBack}>测试集</button>
           <span className="ui-wb-crumb-sep" aria-hidden="true">/</span>
           {showCase ? (
@@ -128,7 +128,7 @@ export function UiSuiteDetailToolbar({
               aria-label="返回测试集流程"
               onClick={onOpenSuiteFlow}
             >
-              <span className="ui-wb-crumb-suite-text">
+              <span className="ui-wb-crumb-suite-text block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                 {suiteName && suiteName !== '-'
                   ? <><strong>{suiteName}</strong>{contextRest ? <span className="ui-wb-crumb-context-rest"> · {contextRest}</span> : null}</>
                   : <span className="ui-wb-crumb-muted">加载中…</span>}
@@ -136,7 +136,7 @@ export function UiSuiteDetailToolbar({
             </button>
           ) : (
             <span className="ui-wb-crumb ui-wb-crumb-suite is-current" aria-current="page" title={contextTitle}>
-              <span className="ui-wb-crumb-suite-text">
+              <span className="ui-wb-crumb-suite-text block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                 {suiteName && suiteName !== '-'
                   ? <><strong>{suiteName}</strong>{contextRest ? <span className="ui-wb-crumb-context-rest"> · {contextRest}</span> : null}</>
                   : <span className="ui-wb-crumb-muted">加载中…</span>}
@@ -151,7 +151,7 @@ export function UiSuiteDetailToolbar({
                 {caseEditable ? (
                   <Form.Item
                     name="name"
-                    className="ui-wb-crumb-name-item"
+                    className="ui-wb-crumb-name-item relative m-0 min-w-[110px] max-w-[260px] flex-[0_1_220px]"
                     rules={[{ required: true, whitespace: true, message: '请输入 UI测试用例名称' }]}
                   >
                     <Input
@@ -169,7 +169,7 @@ export function UiSuiteDetailToolbar({
 
         {showCase && caseEditable ? (
           <div className="ui-wb-case-meta">
-            <span className="ui-wb-case-enabled">
+            <span className="ui-wb-case-enabled inline-flex items-center gap-1.5">
               <Form.Item name="enabled" valuePropName="checked" noStyle>
                 <Switch size="small" aria-label="启用当前用例" />
               </Form.Item>
@@ -198,9 +198,9 @@ export function UiSuiteDetailToolbar({
         ) : null}
       </div>
 
-      <div className="ui-wb-toolbar-actions">
+      <div className="ui-wb-toolbar-actions flex flex-wrap items-center gap-2 min-[1181px]:flex-none min-[1181px]:flex-nowrap">
         <Select
-          className="ui-wb-toolbar-environment"
+          className="ui-wb-toolbar-environment min-w-[150px] max-w-[200px]"
           size="small"
           placeholder="选择 UI 环境"
           value={environmentId || undefined}

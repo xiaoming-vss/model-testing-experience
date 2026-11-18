@@ -5,47 +5,13 @@
 /* ===== 顶栏 ===== */
 
 .scope :global(.ui-wb-toolbar) {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   padding: 10px 16px;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
 }
 
-.scope :global(.ui-wb-toolbar-main) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 /* 标题改成面包屑后只保留一个语义标题，视觉内容由 crumbs 承担。 */
-.scope :global(.ui-wb-visually-hidden) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.scope :global(.ui-wb-crumbs) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-
 .scope :global(.ui-wb-crumb) {
   display: inline-flex;
   flex: 0 0 auto;
@@ -103,14 +69,6 @@
   overflow: hidden;
 }
 
-.scope :global(.ui-wb-crumb-suite-text) {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .scope :global(.ui-wb-crumb-suite strong) {
   color: var(--srf-accent);
   font-weight: 600;
@@ -145,14 +103,6 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.scope :global(.ui-wb-crumb-name-item) {
-  position: relative;
-  flex: 0 1 220px;
-  min-width: 110px;
-  max-width: 260px;
-  margin: 0;
 }
 
 .scope :global(.ui-wb-crumb-name-item .ant-form-item-control-input) {
@@ -231,13 +181,6 @@
   font-size: 12px;
 }
 
-.scope :global(.ui-wb-toolbar-actions) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 /* 有未保存修改时：保存成为当前页最优先的动作，运行测试集让出主按钮。 */
 .scope :global(.ui-wb-toolbar-save.is-dirty) {
   border-color: var(--srf-accent);
@@ -312,15 +255,6 @@
   50% { opacity: .35; }
 }
 
-/* 顶栏、两栏工作区与描述同属一个表单：用例名/启用开关在顶栏，步骤字段在左右两栏。 */
-.scope :global(.ui-suite-detail-form) {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-}
-
 .scope :global(.ui-wb-toolbar-divider) {
   width: 1px;
   height: 18px;
@@ -341,12 +275,6 @@
   background: transparent;
 }
 
-.scope :global(.ui-wb-case-enabled) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .scope :global(.ui-wb-case-status),
 .scope :global(.ui-wb-case-count) {
   color: var(--srf-text-muted);
@@ -356,33 +284,4 @@
 
 .scope :global(.ui-wb-case-status.tone-green) {
   color: var(--srf-tone-text);
-}
-
-/* 桌面宽度保持单行：动作组不换行，面包屑在剩余空间里截断。 */
-@media (min-width: 1181px) {
-  .scope :global(.ui-wb-toolbar) {
-    flex-wrap: nowrap;
-  }
-
-  .scope :global(.ui-wb-toolbar-main) {
-    flex: 1 1 auto;
-    flex-wrap: nowrap;
-    overflow: hidden;
-  }
-
-  .scope :global(.ui-wb-crumbs) {
-    flex-wrap: nowrap;
-    overflow: hidden;
-  }
-
-  .scope :global(.ui-wb-toolbar-actions) {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-  }
-}
-
-/* 环境选择器与「环境」按钮放在整套运行操作之前，窄屏时和按钮组一起换行。 */
-.scope :global(.ui-wb-toolbar-environment) {
-  min-width: 150px;
-  max-width: 200px;
 }
