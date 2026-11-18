@@ -129,7 +129,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | --- | --- |
 | 用例库 | `features/test-cases/styles/case-library.module.css`（含用例编辑与导入禅道弹窗皮肤）；页面骨架与导航布局在 `CaseLibraryPage` utility |
 | 项目 / 迭代看板 | `features/projects/styles/projects-overview.module.css` + `sprint-overview.module.css`；页面网格与断点在 Projects/Sprint 页面 utility |
-| 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css` + `interface-editor.module.css` |
+| 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css`；列表/树、详情、编辑器与导入流程布局在组件 utility |
 | 测试单 | `features/test-orders/styles/test-order-workspace.module.css` + `test-order-visualization.module.css`；列表、工作台骨架、图谱页壳/查看器与判定区排版在页面/组件 utility |
 | API 测试 | `features/api-automation/styles/api-detail-shell.module.css` + `api-detail-rules.module.css`；列表、详情两栏、顶栏、用例行、请求面板与后置操作布局在页面与组件 utility |
 | UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css` + `ui-detail-inspector.module.css`；列表/详情页面布局在组件 utility |

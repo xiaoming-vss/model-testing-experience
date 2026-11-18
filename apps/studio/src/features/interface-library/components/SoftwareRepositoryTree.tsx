@@ -169,16 +169,20 @@ export function SoftwareRepositoryTree({
     })
   }
 
+  const treeClassName = mode === 'detail'
+    ? 'if-app-tree if-detail-app-tree flex flex-[0_0_var(--app-sidebar-width)] flex-col min-h-0 max-w-[var(--app-sidebar-width)] rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3 max-[960.01px]:hidden'
+    : 'if-app-tree flex flex-[0_0_var(--app-sidebar-width)] flex-col min-h-0 border-r border-[var(--srf-card-border)] bg-[color-mix(in_srgb,var(--srf-card)_94%,var(--srf-hover))] p-[14px_12px] max-[760.01px]:flex-none max-[760.01px]:max-h-[220px] max-[760.01px]:border-r-0 max-[760.01px]:border-b max-[760.01px]:border-b-[var(--srf-card-border)]'
+
   return (
-    <aside className={`if-app-tree${mode === 'detail' ? ' if-detail-app-tree' : ''}`}>
-      <div className="if-app-tree-head">
-        <div className="if-app-tree-title">
+    <aside className={treeClassName}>
+      <div className="if-app-tree-head flex min-h-6 items-center justify-between gap-2 text-[12px] font-semibold text-[var(--srf-text-secondary)]">
+        <div className="if-app-tree-title inline-flex min-w-0 items-center gap-1.5">
           <span>软件仓库</span>
-          <span className="if-app-tree-total">{repositories.length}</span>
+          <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
         </div>
       </div>
       <Input
-        className="if-app-search"
+        className="if-app-search mt-2.5 mb-2"
         allowClear
         prefix={<SearchOutlined />}
         placeholder="搜索软件仓库"
@@ -186,28 +190,28 @@ export function SoftwareRepositoryTree({
         value={repositorySearch}
         onChange={event => setRepositorySearch(event.target.value)}
       />
-      <div className="if-app-tree-scroll">
+      <div className="if-app-tree-scroll mt-0.5 flex min-h-0 flex-auto flex-col gap-0.5 overflow-auto max-[760.01px]:max-h-[150px]">
         <button
           type="button"
-          className={`if-app-all${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active' : ''}`}
+          className={`if-app-all flex min-h-[34px] w-full cursor-pointer items-center justify-between rounded-[var(--srf-radius-control)] border-0 px-[9px] py-1.5 text-left font-[inherit] text-[13px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
           onClick={onShowAll}
         >
-          <span className="if-app-all-main">
+          <span className="if-app-all-main inline-flex min-w-0 items-center gap-2">
             <AppstoreOutlined />
             <span>全部接口</span>
           </span>
-          <span className="if-app-count">{totalInterfaces}</span>
+          <span className={`if-app-count min-w-[22px] flex-none rounded-full px-1.5 text-center text-[11px] leading-[18px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : ' bg-[var(--srf-chip)] text-[var(--srf-text-secondary)]'}`}>{totalInterfaces}</span>
         </button>
 
         {loading ? (
-          <div className="if-app-tree-loading"><Spin size="small" /></div>
+          <div className="if-app-tree-loading grid place-items-center py-2.5"><Spin size="small" /></div>
         ) : null}
 
         {!loading && !visibleRepositories.length ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={repositorySearch ? '没有匹配的软件仓库' : '还没有软件仓库'}
-            className="if-app-tree-empty"
+            className="if-app-tree-empty my-3"
           />
         ) : null}
 
@@ -226,40 +230,40 @@ export function SoftwareRepositoryTree({
           return (
             <div
               key={repository.softwareRepositoryId}
-              className={`if-app-group${expanded ? ' is-expanded' : ''}${selected ? ' is-selected' : ''}`}
+              className={`if-app-group flex min-w-0 flex-col rounded-[var(--srf-radius-control)] ${expanded ? ' is-expanded' : ''} ${selected ? ' is-selected' : ''}`}
             >
-              <div className="if-app-row">
+              <div className={`if-app-row flex min-w-0 items-center gap-px rounded-[var(--srf-radius-control)] px-0.5 ${selected ? ' bg-[var(--srf-accent-soft)]' : ' hover:bg-[var(--srf-hover)] focus-within:bg-[var(--srf-hover)]'}`}>
                 <button
                   type="button"
-                  className="if-app-chevron"
-                  aria-label={`${expanded ? '收起' : '展开'}${repository.name}`}
+                  className={`if-app-chevron inline-grid h-7 w-5 flex-[0_0_20px] cursor-pointer place-items-center border-0 bg-transparent p-0 text-[10px] text-[var(--srf-text-muted)] transition-transform duration-[120ms] ${expanded ? ' rotate-0' : ' -rotate-90'}`}
+                  aria-label={` ${expanded ? '收起' : '展开'}${repository.name}`}
                   onClick={() => toggleExpanded(repository.softwareRepositoryId)}
                 >
                   <DownOutlined />
                 </button>
                 <button
                   type="button"
-                  className="if-app-main"
+                  className={`if-app-main flex min-h-8 min-w-0 flex-auto cursor-pointer items-center justify-between gap-2 border-0 bg-transparent px-[3px] py-1 text-left font-[inherit] text-[13px] ${selected ? ' font-semibold text-[var(--srf-accent-strong)]' : ' text-[var(--srf-text-secondary)]'}`}
                   title={repository.name}
                   onClick={() => handleRepositoryMain(repository)}
                 >
-                  <span className="if-app-name">{repository.name}</span>
-                  <span className="if-app-count">{repository.interfaceCount}</span>
+                  <span className="if-app-name inline-flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap">{repository.name}</span>
+                  <span className={`if-app-count min-w-[22px] flex-none rounded-full px-1.5 text-center text-[11px] leading-[18px] ${selected ? ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : ' bg-[var(--srf-chip)] text-[var(--srf-text-secondary)]'}`}>{repository.interfaceCount}</span>
                 </button>
               </div>
 
               {expanded ? (
-                <div className="if-app-children">
+                <div className="if-app-children mb-[5px] ml-5 mt-px flex min-w-0 flex-col gap-px border-l border-[var(--srf-divider)] pl-[7px]">
                   {childState?.loading ? (
-                    <div className="if-app-tree-loading"><Spin size="small" /></div>
+                    <div className="if-app-tree-loading grid place-items-center py-2.5"><Spin size="small" /></div>
                   ) : null}
                   {childState?.failed ? (
-                    <div className="if-app-children-note">接口加载失败</div>
+                    <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">接口加载失败</div>
                   ) : null}
                   {canManageInterfaces ? (
                     <button
                       type="button"
-                      className="if-app-add-group"
+                      className="if-app-add-group flex min-h-[26px] cursor-pointer items-center gap-1.5 self-start rounded-[var(--srf-radius-control)] border-0 bg-transparent px-1.5 py-[3px] font-[inherit] text-[11px] text-[var(--srf-text-muted)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-accent-strong)] focus-visible:bg-[var(--srf-hover)] focus-visible:text-[var(--srf-accent-strong)]"
                       onClick={() => onCreateGroup(repository)}
                     >
                       <PlusOutlined />
@@ -267,7 +271,7 @@ export function SoftwareRepositoryTree({
                     </button>
                   ) : null}
                   {!childState?.loading && !childState?.failed && !groups.length ? (
-                    <div className="if-app-children-note">还没有接口</div>
+                    <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">还没有接口</div>
                   ) : null}
                   {groups.map(group => {
                     const collapsed = collapsedGroups.has(
@@ -275,23 +279,23 @@ export function SoftwareRepositoryTree({
                     )
                     return (
                       <div
-                        className={`if-app-tag-group${collapsed ? ' is-collapsed' : ''}`}
+                        className={`if-app-tag-group flex min-w-0 flex-col gap-px [&+&]:mt-[5px] ${collapsed ? ' is-collapsed' : ''}`}
                         key={group.tag}
                       >
-                        <div className="if-app-tag-head" title={group.tag}>
+                        <div className="if-app-tag-head group flex items-center justify-between gap-1.5 px-1.5 pb-0.5 pt-1 text-[10px] font-semibold tracking-[0.02em] text-[var(--srf-text-muted)]" title={group.tag}>
                           <button
                             type="button"
-                            className={`if-app-chevron if-app-tag-chevron${collapsed ? '' : ' is-expanded'}`}
-                            aria-label={`${collapsed ? '展开' : '收起'}分组「${group.tag}」`}
+                            className={`if-app-chevron if-app-tag-chevron inline-grid h-[18px] w-4 flex-[0_0_16px] cursor-pointer place-items-center border-0 bg-transparent p-0 text-[8px] text-[var(--srf-text-muted)] transition-transform duration-[120ms] ${collapsed ? ' -rotate-90' : ' is-expanded rotate-0'}`}
+                            aria-label={` ${collapsed ? '展开' : '收起'}分组「${group.tag}」`}
                             onClick={() =>
                               toggleGroup(repository.softwareRepositoryId, group.tag)
                             }
                           >
                             <DownOutlined />
                           </button>
-                          <span className="if-app-tag-name">{group.tag}</span>
-                          <span className="if-app-tag-meta">
-                            <span className="if-app-tag-count">{group.items.length}</span>
+                          <span className="if-app-tag-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{group.tag}</span>
+                          <span className="if-app-tag-meta flex items-center gap-0.5">
+                            <span className="if-app-tag-count flex-none font-normal">{group.items.length}</span>
                             {canManageInterfaces && group.tag !== UNTAGGED_GROUP ? (
                               <Dropdown
                                 trigger={['click']}
@@ -309,7 +313,7 @@ export function SoftwareRepositoryTree({
                                 <Button
                                   type="text"
                                   size="small"
-                                  className="if-app-tag-action"
+                                  className="if-app-tag-action opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                                   aria-label={`分组「${group.tag}」更多操作`}
                                   icon={<MoreOutlined />}
                                   onClick={event => event.stopPropagation()}
@@ -320,17 +324,17 @@ export function SoftwareRepositoryTree({
                         </div>
                         {collapsed ? null : group.items.length ? (
                           group.items.map(item => (
-                            <div className="if-app-child-row" key={item.interfaceId}>
+                            <div className="if-app-child-row group flex min-w-0 items-center gap-0.5" key={item.interfaceId}>
                               <button
                                 type="button"
-                                className={`if-app-child${item.interfaceId === selectedInterfaceId ? ' is-active' : ''}`}
+                                className={`if-app-child flex min-h-[26px] min-w-0 flex-auto cursor-pointer items-center gap-1.5 rounded-[var(--srf-radius-control)] border-0 px-1.5 py-[3px] text-left font-[inherit] text-[12px] ${item.interfaceId === selectedInterfaceId ? ' is-active bg-[var(--srf-accent-soft)] text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
                                 title={`${item.name} ${item.path}`}
                                 onClick={() => onOpenInterface(item.interfaceId)}
                               >
                                 <Tag className={`if-method if-method-${methodTone(item.method)}`}>
                                   {item.method}
                                 </Tag>
-                                <span className="if-app-child-name">{item.name}</span>
+                                <span className="if-app-child-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{item.name}</span>
                               </button>
                               {canManageInterfaces ? (
                                 <Dropdown
@@ -344,7 +348,7 @@ export function SoftwareRepositoryTree({
                                   <Button
                                     type="text"
                                     size="small"
-                                    className="if-app-child-action"
+                                    className="if-app-child-action flex-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                                     aria-label={`${item.name} 更多操作`}
                                     icon={<MoreOutlined />}
                                     onClick={event => event.stopPropagation()}
@@ -354,7 +358,7 @@ export function SoftwareRepositoryTree({
                             </div>
                           ))
                         ) : (
-                          <div className="if-app-children-note">
+                          <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
                             该分组还没有接口，可从接口的「更多操作」移动进来
                           </div>
                         )}

@@ -1,10 +1,10 @@
-/* 接口库列表与软件仓库管理的资产库皮肤。旧类名保留为测试与兼容钩子；页面根与抽屉根挂 .scope。
-   方法签、OpenAPI 导入、详情顶栏与编辑器分别在同目录的 interface-*.module.css。 */
+/* 接口库列表、软件仓库树与详情共用的页面壳、AntD 深层规则和方法签。
+ * 页面骨架、工具栏、树节点、抽屉表单与仓库表格排版已迁到组件 utility；
+ * 这里只保留页面高度/内距、AntD 内部 DOM 与跨视图复用的方法签。 */
+
 .scope {
   --if-scope: 1;
 }
-
-/* 接口库：列表与软件仓库管理共用一套资产库视觉。 */
 
 .pageRoot {
   box-sizing: border-box;
@@ -12,376 +12,17 @@
   padding: 12px var(--app-page-gutter) 16px;
 }
 
-
-.scope :global(.if-library-board) {
-  min-height: 0;
+/* 加载态根节点同时带 .workbench-page；未分层的 flex 会压过 grid utility。 */
+.scope:global(.if-detail-loading) {
+  display: grid;
+  place-items: center;
 }
 
-.scope :global(.if-library-toolbar) {
-  row-gap: 8px;
-}
-
-.scope :global(.if-toolbar-filters),
-.scope :global(.if-toolbar-actions) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.scope :global(.if-toolbar-actions) {
-  margin-inline-start: auto;
-  justify-content: flex-end;
-}
-
-.scope :global(.if-search-input) {
-  width: 230px;
-}
-
-.scope :global(.if-app-tree) {
-  display: flex;
-  flex: 0 0 var(--app-sidebar-width);
-  flex-direction: column;
-  min-height: 0;
-  padding: 14px 12px;
-  border-right: 1px solid var(--srf-card-border);
-  background: color-mix(in srgb, var(--srf-card) 94%, var(--srf-hover));
-}
-
-.scope :global(.if-app-tree-head) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 24px;
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.scope :global(.if-app-tree-title) {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-}
-
-.scope :global(.if-app-tree-total) {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-size: 10px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.scope :global(.if-app-search) {
-  margin: 10px 0 8px;
-}
+/* ===== 软件仓库树：AntD 搜索框、标签与空态 ===== */
 
 .scope :global(.if-app-tree .if-app-search.ant-input-affix-wrapper) {
   border-radius: var(--srf-radius-control);
   background: var(--srf-card);
-}
-
-.scope :global(.if-app-tree-scroll) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  gap: 2px;
-  margin-top: 2px;
-  overflow: auto;
-}
-
-.scope :global(.if-app-all) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 34px;
-  padding: 6px 9px;
-  border: 0;
-  border-radius: var(--srf-radius-control);
-  background: transparent;
-  color: var(--srf-text-secondary);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.scope :global(.if-app-all:hover) {
-  background: var(--srf-hover);
-  color: var(--srf-text);
-}
-
-.scope :global(.if-app-all.is-active) {
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
-  font-weight: 600;
-}
-
-.scope :global(.if-app-all.is-active .if-app-count) {
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-}
-
-.scope :global(.if-app-all-main) {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-}
-
-.scope :global(.if-app-group) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border-radius: var(--srf-radius-control);
-}
-
-.scope :global(.if-app-row) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 1px;
-  padding: 0 2px;
-  border-radius: var(--srf-radius-control);
-}
-
-.scope :global(.if-app-row:hover),
-.scope :global(.if-app-row:focus-within) {
-  background: var(--srf-hover);
-}
-
-.scope :global(.if-app-chevron) {
-  display: inline-grid;
-  flex: 0 0 20px;
-  place-items: center;
-  width: 20px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text-muted);
-  font-size: 10px;
-  cursor: pointer;
-  transform: rotate(-90deg);
-  transition: transform 120ms ease;
-}
-
-.scope :global(.if-app-group.is-expanded .if-app-chevron) {
-  transform: rotate(0deg);
-}
-
-.scope :global(.if-app-main) {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-  min-height: 32px;
-  gap: 8px;
-  padding: 4px 3px;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text-secondary);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.scope :global(.if-app-group.is-selected > .if-app-row) {
-  background: var(--srf-accent-soft);
-}
-
-.scope :global(.if-app-group.is-selected > .if-app-row .if-app-main) {
-  color: var(--srf-accent-strong);
-  font-weight: 600;
-}
-
-.scope :global(.if-app-children) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-  margin: 1px 0 5px 20px;
-  padding-left: 7px;
-  border-left: 1px solid var(--srf-divider);
-}
-
-.scope :global(.if-app-tag-group) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-}
-
-.scope :global(.if-app-tag-group + .if-app-tag-group) {
-  margin-top: 5px;
-}
-
-.scope :global(.if-app-tag-head) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 4px 6px 2px;
-  color: var(--srf-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.scope :global(.if-app-tag-chevron) {
-  flex-basis: 16px;
-  width: 16px;
-  height: 18px;
-  font-size: 8px;
-}
-
-.scope :global(.if-app-tag-chevron.is-expanded) {
-  transform: rotate(0deg);
-}
-
-.scope :global(.if-app-tag-name) {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-app-tag-count) {
-  flex: 0 0 auto;
-  font-weight: 400;
-}
-
-.scope :global(.if-app-tag-meta) {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.scope :global(.if-app-tag-action) {
-  opacity: 0;
-}
-
-.scope :global(.if-app-tag-head:hover .if-app-tag-action),
-.scope :global(.if-app-tag-head:focus-within .if-app-tag-action) {
-  opacity: 1;
-}
-
-.scope :global(.if-app-child-row) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 2px;
-}
-
-.scope :global(.if-app-child-row .if-app-child) {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 0;
-}
-
-.scope :global(.if-app-child-action) {
-  flex: 0 0 auto;
-  opacity: 0;
-}
-
-.scope :global(.if-app-child-row:hover .if-app-child-action),
-.scope :global(.if-app-child-row:focus-within .if-app-child-action) {
-  opacity: 1;
-}
-
-.scope :global(.if-app-add-group) {
-  display: flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 6px;
-  min-height: 26px;
-  padding: 3px 6px;
-  border: 0;
-  border-radius: var(--srf-radius-control);
-  background: transparent;
-  color: var(--srf-text-muted);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.scope :global(.if-app-add-group:hover),
-.scope :global(.if-app-add-group:focus-visible) {
-  background: var(--srf-hover);
-  color: var(--srf-accent-strong);
-}
-
-.scope :global(.if-group-modal) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.scope :global(.if-group-modal-label) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-}
-
-.scope :global(.if-group-modal-interface) {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--srf-text);
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-group-move-select) {
-  width: 100%;
-}
-
-.scope :global(.if-group-modal-hint) {
-  margin: 0;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.scope :global(.if-app-child) {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  min-height: 26px;
-  gap: 6px;
-  padding: 3px 6px;
-  border: 0;
-  border-radius: var(--srf-radius-control);
-  background: transparent;
-  color: var(--srf-text-secondary);
-  font: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.scope :global(.if-app-child:hover) {
-  background: var(--srf-hover);
-  color: var(--srf-text);
-}
-
-.scope :global(.if-app-child.is-active) {
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
 }
 
 .scope :global(.if-app-child .ant-tag) {
@@ -391,67 +32,11 @@
   line-height: 16px;
 }
 
-.scope :global(.if-app-child-name) {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-app-tree-loading) {
-  display: grid;
-  place-items: center;
-  padding: 10px 0;
-}
-
-.scope :global(.if-app-children-note) {
-  padding: 3px 6px;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.scope :global(.if-app-tree-empty) {
-  margin: 12px 0;
-}
-
 .scope :global(.if-app-tree-empty .ant-empty-description) {
   font-size: 12px;
 }
 
-.scope :global(.if-app-name) {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-app-count) {
-  flex: 0 0 auto;
-  min-width: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.scope :global(.if-app-group.is-selected > .if-app-row .if-app-count) {
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-}
-
-.scope :global(.if-list-scroll) {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
+/* ===== 软件仓库表格：AntD table 深层结构 ===== */
 
 .scope :global(.if-interface-table .ant-table) {
   background: transparent;
@@ -483,33 +68,11 @@
   background: var(--srf-list-row-hover);
 }
 
-.scope :global(.if-name-link) {
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text);
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
+.scope :global(.if-row-actions .ant-btn) {
+  color: var(--srf-text-secondary);
 }
 
-.scope :global(.if-name-link:hover) {
-  color: var(--srf-accent);
-}
-
-.scope :global(.if-path),
-.scope :global(.if-app-name-cell code) {
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  line-height: 18px;
-  overflow-wrap: anywhere;
-}
+/* ===== 接口 HTTP 方法签：列表、导入预览与详情共用 ===== */
 
 .scope :global(.if-method) {
   flex: 0 0 auto;
@@ -527,3 +90,49 @@
   letter-spacing: 0.02em;
 }
 
+.scope :global(.if-method.if-method-get) {
+  color: var(--app-http-method-get);
+  border-color: color-mix(in srgb, var(--app-http-method-get) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-get) 10%, var(--srf-card));
+}
+
+.scope :global(.if-method.if-method-post) {
+  color: var(--app-http-method-post);
+  border-color: color-mix(in srgb, var(--app-http-method-post) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-post) 10%, var(--srf-card));
+}
+
+.scope :global(.if-method.if-method-put) {
+  color: var(--app-http-method-put);
+  border-color: color-mix(in srgb, var(--app-http-method-put) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-put) 10%, var(--srf-card));
+}
+
+.scope :global(.if-method.if-method-patch) {
+  color: var(--app-http-method-patch);
+  border-color: color-mix(in srgb, var(--app-http-method-patch) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-patch) 10%, var(--srf-card));
+}
+
+.scope :global(.if-method.if-method-delete) {
+  color: var(--app-http-method-delete);
+  border-color: color-mix(in srgb, var(--app-http-method-delete) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-delete) 10%, var(--srf-card));
+}
+
+.scope :global(.if-method.if-method-head),
+.scope :global(.if-method.if-method-options),
+.scope :global(.if-method.if-method-other) {
+  color: var(--srf-text-secondary);
+  border-color: var(--srf-card-border);
+  background: var(--srf-chip);
+}
+
+@media (max-width: 760px) {
+  .pageRoot {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    padding: 8px var(--app-page-gutter) 14px;
+  }
+}

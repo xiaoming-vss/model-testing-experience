@@ -61,9 +61,8 @@ import {
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
-import editorStyles from '../styles/interface-editor.module.css'
 
-const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope}`
 
 type TabKey = 'params' | 'headers' | 'body' | 'response' | 'settings'
 
@@ -536,8 +535,8 @@ export function InterfaceDetailPage() {
 
   return (
     <InterfaceWorkspaceShell>
-      <header className="if-detail-topbar">
-        <div className="if-detail-topbar-main">
+      <header className="if-detail-topbar flex min-h-[60px] flex-none items-center justify-between gap-3 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-3.5 py-2 max-[760.01px]:flex-col max-[760.01px]:items-start">
+        <div className="if-detail-topbar-main flex min-w-0 items-center gap-2">
           <Tooltip title="返回接口库">
             <Button
               type="text"
@@ -546,23 +545,23 @@ export function InterfaceDetailPage() {
               onClick={() => navigate(-1)}
             />
           </Tooltip>
-          <div className="if-detail-heading">
-            <div className="if-detail-title-row">
-              <h1>{draft.name.trim() || (isCreate ? '新建接口' : '未命名接口')}</h1>
+          <div className="if-detail-heading flex min-w-0 flex-col gap-0.5">
+            <div className="if-detail-title-row flex min-w-0 items-center gap-2">
+              <h1 className="m-0 max-w-[520px] overflow-hidden text-ellipsis whitespace-nowrap text-[16px] font-[650] leading-6 text-[var(--srf-text)] max-[760.01px]:max-w-[70vw]">{draft.name.trim() || (isCreate ? '新建接口' : '未命名接口')}</h1>
               {isCreate ? <Tag>草稿</Tag> : null}
               {!canWrite ? <Tag>只读成员 · 不可编辑</Tag> : null}
             </div>
-            <div className="if-detail-meta">
+            <div className="if-detail-meta flex min-w-0 items-center gap-1.5 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
               <Tag className={`if-method if-method-${methodToneClass}`}>{draft.method}</Tag>
-              <code>{draft.path || '未填写路径'}</code>
-              <span className="if-meta-dot">·</span>
+              <code className="text-[11px] text-[var(--srf-text-secondary)]">{draft.path || '未填写路径'}</code>
+              <span className="if-meta-dot text-[var(--srf-text-muted)]">·</span>
               <span>{draft.softwareRepositoryName || selectedRepository?.name || '未选择软件仓库'}</span>
               <span className="if-meta-dot">·</span>
               <span>{draft.updatedAt ? `更新于 ${formatTime(draft.updatedAt)}` : '尚未保存'}</span>
             </div>
           </div>
         </div>
-        <div className="if-detail-topbar-actions">
+        <div className="if-detail-topbar-actions flex flex-none items-center gap-2">
           <Tooltip title="刷新">
             <Button
               aria-label="刷新接口"
@@ -605,7 +604,7 @@ export function InterfaceDetailPage() {
         </div>
       </header>
 
-      <div className="if-detail-shell">
+      <div className="if-detail-shell flex min-h-0 min-w-0 flex-auto gap-3">
         <SoftwareRepositoryTree
           repositories={repositories}
           loading={repositoriesQuery.isLoading}
@@ -622,9 +621,9 @@ export function InterfaceDetailPage() {
           onMoveInterface={openMoveInterface}
         />
 
-        <main className="if-detail-main">
-          <section className="if-editor-card">
-            <div className="if-editor-head">
+        <main className="if-detail-main flex min-h-0 min-w-0 flex-auto">
+          <section className="if-editor-card flex min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
+            <div className="if-editor-head flex flex-none flex-col gap-[5px] px-4 pb-[9px] pt-[13px]">
               <Input
                 className="if-name-input"
                 value={draft.name}
@@ -634,11 +633,11 @@ export function InterfaceDetailPage() {
                 aria-label="接口名称"
                 onChange={event => patch({ name: event.target.value })}
               />
-              <div className="if-editor-meta">
+              <div className="if-editor-meta flex min-w-0 items-center gap-[7px] text-[11px] leading-5 text-[var(--srf-text-muted)]">
                 <span>所属软件仓库</span>
                 {isCreate ? (
                   <Select
-                    className="if-app-select"
+                    className="if-app-select min-w-40"
                     aria-label="所属软件仓库"
                     value={draft.softwareRepositoryId || undefined}
                     placeholder="选择软件仓库"
@@ -650,24 +649,24 @@ export function InterfaceDetailPage() {
                     onChange={changeRepository}
                   />
                 ) : (
-                  <span className="if-editor-app">{draft.softwareRepositoryName || selectedRepository?.name || '—'}</span>
+                  <span className="if-editor-app font-semibold text-[var(--srf-text)]">{draft.softwareRepositoryName || selectedRepository?.name || '—'}</span>
                 )}
                 <span className="if-meta-dot">·</span>
                 <span>{draft.updatedAt ? formatTime(draft.updatedAt) : '新建'}</span>
               </div>
             </div>
 
-            <div className="if-request-bar">
+            <div className="if-request-bar flex flex-none items-center gap-2 border-b border-[var(--srf-divider)] px-4 pb-[13px] pt-2 max-[760.01px]:flex-wrap max-[760.01px]:items-stretch">
               <Select
-                className={`if-method-select if-method-${methodToneClass}`}
+                className={`if-method-select if-method-${methodToneClass} w-[104px] flex-none max-[760.01px]:w-[96px]`}
                 aria-label="请求方法"
                 value={draft.method}
                 disabled={!canWrite}
                 options={INTERFACE_METHODS.map(method => ({ label: method, value: method }))}
                 onChange={method => patch({ method })}
               />
-              <div className="if-path-input-wrap">
-                <span className="if-base-prefix" title={repositoryBasePath || '软件仓库未设置 base path'}>
+              <div className="if-path-input-wrap flex min-w-0 flex-auto items-stretch overflow-hidden rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] focus-within:border-[var(--srf-accent-border)] focus-within:shadow-[0_0_0_3px_var(--srf-accent-soft)] max-[760.01px]:order-3 max-[760.01px]:basis-full">
+                <span className="if-base-prefix flex max-w-[170px] flex-none items-center overflow-hidden text-ellipsis whitespace-nowrap border-r border-[var(--srf-divider)] bg-[var(--srf-chip)] px-2.5 font-[ui-monospace,SFMono-Regular,Menlo,Consolas,monospace] text-[11px] text-[var(--srf-text-secondary)]" title={repositoryBasePath || '软件仓库未设置 base path'}>
                   {repositoryBasePath || '/…'}
                 </span>
                 <Input
@@ -683,7 +682,7 @@ export function InterfaceDetailPage() {
               {canWrite ? (
                 <Button
                   type="primary"
-                  className="if-save-button"
+                  className="if-save-button min-w-[86px] flex-none max-[760.01px]:ms-auto"
                   loading={saveMutation.isPending}
                   disabled={
                     !draft.name.trim() ||
@@ -701,7 +700,7 @@ export function InterfaceDetailPage() {
               )}
             </div>
 
-            <div className="if-editor-tabs" role="tablist" aria-label="接口编辑分区">
+            <div className="if-editor-tabs flex flex-none items-stretch gap-0.5 overflow-x-auto border-b border-[var(--srf-card-border)] px-4" role="tablist" aria-label="接口编辑分区">
               {tabs.map(tab => (
                 <button
                   key={tab.key}
@@ -710,23 +709,23 @@ export function InterfaceDetailPage() {
                   id={`if-editor-tab-${tab.key}`}
                   aria-controls={`if-editor-panel-${tab.key}`}
                   aria-selected={activeTab === tab.key}
-                  className={`if-editor-tab${activeTab === tab.key ? ' is-active' : ''}`}
+                  className={`if-editor-tab relative inline-flex min-h-10 cursor-pointer items-center gap-[5px] whitespace-nowrap border-0 bg-transparent px-2.5 py-0 font-[inherit] text-[12px] font-semibold ${activeTab === tab.key ? ' is-active text-[var(--srf-accent)] after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-t-[2px] after:bg-[var(--srf-accent)] after:content-[""]' : ' text-[var(--srf-text-secondary)] hover:text-[var(--srf-text)]'}`}
                   onClick={() => setActiveTab(tab.key)}
                 >
                   {tab.label}
-                  {tab.count !== undefined ? <span className="if-tab-count">{tab.count}</span> : null}
+                  {tab.count !== undefined ? <span className={`if-tab-count min-w-[17px] rounded-full px-[5px] text-center text-[10px] leading-[17px] ${activeTab === tab.key ? ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : ' bg-[var(--srf-chip)] text-[var(--srf-text-muted)]'}`}>{tab.count}</span> : null}
                 </button>
               ))}
             </div>
 
             <div
-              className="if-editor-body"
+              className="if-editor-body min-h-0 flex-auto overflow-auto p-4"
               role="tabpanel"
-              id={`if-editor-panel-${activeTab}`}
-              aria-labelledby={`if-editor-tab-${activeTab}`}
+              id={`if-editor-panel- ${activeTab}`}
+              aria-labelledby={`if-editor-tab- ${activeTab}`}
             >
               {activeTab === 'params' ? (
-                <div className="if-tab-section">
+                <div className="if-tab-section flex flex-col gap-[22px]">
                   <InterfaceParamsPanel
                     title="Path 参数"
                     hint="路径占位符自动同步；Path 参数始终必填。"
@@ -824,8 +823,8 @@ export function InterfaceDetailPage() {
         onOk={submitCreateGroup}
         onCancel={() => setCreateGroupRepository(null)}
       >
-        <div className="if-group-modal">
-          <div className="if-group-modal-label">
+        <div className="if-group-modal flex flex-col gap-3">
+          <div className="if-group-modal-label flex items-center gap-2 text-[12px] text-[var(--srf-text-secondary)]">
             <span>软件仓库</span>
             <Tag>{createGroupRepository?.name}</Tag>
           </div>
@@ -838,7 +837,7 @@ export function InterfaceDetailPage() {
             onChange={event => setCreateGroupName(event.target.value)}
             onPressEnter={submitCreateGroup}
           />
-          <p className="if-group-modal-hint">
+          <p className="if-group-modal-hint m-0 text-[12px] leading-[1.6] text-[var(--srf-text-muted)]">
             分组会保存在软件仓库中，即使暂时没有接口也会保留；可在接口的「更多操作」中移动接口进来。
           </p>
         </div>
@@ -887,7 +886,7 @@ export function InterfaceDetailPage() {
         <div className="if-group-modal">
           <div className="if-group-modal-label">
             <span>接口</span>
-            <span className="if-group-modal-interface">
+            <span className="if-group-modal-interface min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[var(--srf-text)]">
               {moveTarget?.item.name || moveTarget?.item.path}
             </span>
           </div>
@@ -900,7 +899,7 @@ export function InterfaceDetailPage() {
           </Radio.Group>
           {moveMode === 'group' ? (
             <AutoComplete
-              className="if-group-move-select"
+              className="if-group-move-select w-full"
               aria-label="目标分组"
               value={moveGroupName}
               options={(moveTarget?.groups ?? []).map(name => ({

@@ -1,129 +1,16 @@
-/* 接口详情：顶栏、元信息、编辑器壳与请求地址条。 */
+/* 接口详情与编辑器：只保留 Ant Design 输入/选择器、键值表和导入预览的深层结构。
+ * 顶栏、两栏骨架、请求地址条、标签页、面板排版、导入步骤与结果已迁到组件 utility。 */
 
 .scope { --if-detail-scope: 1; }
 
-/* ---------- 接口详情 ---------- */
+/* ===== 详情顶栏：AntD Tag 间距 ===== */
 
-.scope :global(.if-detail-loading) {
-  display: grid;
-  place-items: center;
-}
-
-.scope :global(.if-detail-topbar) {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 60px;
-  padding: 8px 14px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-}
-
-.scope :global(.if-detail-topbar-main),
-.scope :global(.if-detail-title-row) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 8px;
-}
-
-.scope :global(.if-detail-heading) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 2px;
-}
-
-.scope :global(.if-detail-title-row h1) {
-  max-width: 520px;
-  margin: 0;
-  overflow: hidden;
-  color: var(--srf-text);
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 24px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-detail-title-row .ant-tag) {
+.scope :global(.if-detail-title-row .ant-tag),
+.scope :global(.if-readonly-tag) {
   margin: 0;
 }
 
-.scope :global(.if-detail-meta) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.scope :global(.if-detail-meta code) {
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-}
-
-.scope :global(.if-meta-dot) {
-  color: var(--srf-text-muted);
-}
-
-.scope :global(.if-detail-topbar-actions) {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.scope :global(.if-detail-shell) {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  gap: 12px;
-}
-
-.scope :global(.if-detail-app-tree) {
-  flex: 0 0 var(--app-sidebar-width);
-  width: var(--app-sidebar-width);
-  max-width: var(--app-sidebar-width);
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-}
-
-.scope :global(.if-detail-main) {
-  display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-}
-
-.scope :global(.if-editor-card) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  overflow: hidden;
-}
-
-.scope :global(.if-editor-head) {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  gap: 5px;
-  padding: 13px 16px 9px;
-}
+/* ===== 接口名称：无边框标题输入 ===== */
 
 .scope :global(.if-name-input.ant-input) {
   height: 34px;
@@ -145,74 +32,14 @@
   box-shadow: none;
 }
 
-.scope :global(.if-editor-meta) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 7px;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 20px;
-}
-
-.scope :global(.if-app-select) {
-  min-width: 160px;
-}
-
-.scope :global(.if-editor-app) {
-  color: var(--srf-text);
-  font-weight: 600;
-}
-
-.scope :global(.if-request-bar) {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px 13px;
-  border-bottom: 1px solid var(--srf-divider);
-}
-
-.scope :global(.if-method-select) {
-  flex: 0 0 104px;
-}
+/* ===== 请求方法：等宽字重 ===== */
 
 .scope :global(.if-method-select .ant-select-selector) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 700;
 }
 
-.scope :global(.if-path-input-wrap) {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: stretch;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-card);
-}
-
-.scope :global(.if-path-input-wrap:focus-within) {
-  border-color: var(--srf-accent-border);
-  box-shadow: 0 0 0 3px var(--srf-accent-soft);
-}
-
-.scope :global(.if-base-prefix) {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  max-width: 170px;
-  padding: 0 10px;
-  border-right: 1px solid var(--srf-divider);
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ===== 请求路径：地址条内无边框输入 ===== */
 
 .scope :global(.if-path-input.ant-input) {
   min-width: 0;
@@ -230,341 +57,44 @@
   box-shadow: none;
 }
 
-.scope :global(.if-save-button) {
-  flex: 0 0 auto;
-  min-width: 86px;
-}
+/* ===== 键值表：AntD 输入框与选择器 ===== */
 
-.scope :global(.if-readonly-tag) {
-  flex: 0 0 auto;
-  margin: 0;
-}
-
-/* ===== 原 interface-method.module.css ===== */
-
-/* 接口 HTTP 方法签：列表、导入预览与详情共用的浅色底与描边。 */
-
-.scope { --if-method-scope: 1; }
-
-/* 方法签用各自的浅色底和描边区分；颜色仍由 --app-http-method-* 主题 token 提供。 */
-.scope :global(.if-method.if-method-get) {
-  color: var(--app-http-method-get);
-  border-color: color-mix(in srgb, var(--app-http-method-get) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-get) 10%, var(--srf-card));
-}
-.scope :global(.if-method.if-method-post) {
-  color: var(--app-http-method-post);
-  border-color: color-mix(in srgb, var(--app-http-method-post) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-post) 10%, var(--srf-card));
-}
-.scope :global(.if-method.if-method-put) {
-  color: var(--app-http-method-put);
-  border-color: color-mix(in srgb, var(--app-http-method-put) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-put) 10%, var(--srf-card));
-}
-.scope :global(.if-method.if-method-patch) {
-  color: var(--app-http-method-patch);
-  border-color: color-mix(in srgb, var(--app-http-method-patch) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-patch) 10%, var(--srf-card));
-}
-.scope :global(.if-method.if-method-delete) {
-  color: var(--app-http-method-delete);
-  border-color: color-mix(in srgb, var(--app-http-method-delete) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-delete) 10%, var(--srf-card));
-}
-.scope :global(.if-method.if-method-head),
-.scope :global(.if-method.if-method-options),
-.scope :global(.if-method.if-method-other) {
-  color: var(--srf-text-secondary);
-  border-color: var(--srf-card-border);
-  background: var(--srf-chip);
-}
-
-.scope :global(.if-row-actions) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.scope :global(.if-row-actions .ant-btn) {
-  color: var(--srf-text-secondary);
-}
-
-.scope :global(.if-app-name-cell) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.scope :global(.if-apps-body) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.scope :global(.if-drawer-footer) {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.scope :global(.if-app-form) {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.scope :global(.if-app-form > label) {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.scope :global(.if-app-form > label > span),
-.scope :global(.if-import-field > span),
-.scope :global(.if-import-groups-title) {
-  color: var(--srf-text-secondary);
+.scope :global(.if-kv-table .ant-input),
+.scope :global(.if-kv-table .ant-select),
+.scope :global(.if-kv-table .ant-select-selector) {
   font-size: 12px;
-  font-weight: 600;
 }
 
-.scope :global(.if-repository-section) {
-  padding-top: 16px;
-  border-top: 1px solid var(--srf-divider);
+.scope :global(.if-kv-table .ant-input) {
+  padding: 3px 7px;
 }
 
-.scope :global(.if-repository-head) {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+/* ===== 面板工具按钮 ===== */
+
+.scope :global(.if-editor-tools .ant-btn) {
+  height: 22px;
+  padding: 0 6px;
   color: var(--srf-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.scope :global(.if-repository-head code) {
-  color: var(--srf-text-muted);
   font-size: 11px;
 }
 
-.scope :global(.if-repository-selects) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.scope :global(.if-quick-pill.ant-btn) {
+  height: 22px;
+  padding: 0 7px;
+  border-color: var(--srf-card-border);
+  border-radius: 999px;
+  color: var(--srf-text-secondary);
+  font-size: 10px;
 }
 
-.scope :global(.if-repository-selects .ant-select) {
+.scope :global(.if-response-meta .ant-input-number) {
   width: 100%;
 }
 
-.scope :global(.if-repository-hint) {
-  margin-top: 8px;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-  line-height: 20px;
-}
+/* ===== OpenAPI 导入预览：AntD Tag 间距 ===== */
 
-/* ===== 原 interface-openapi.module.css ===== */
-
-/* 接口库 OpenAPI 导入：步骤、错误、预览与仓库选择。 */
-
-.scope { --if-openapi-scope: 1; }
-
-/* ---------- OpenAPI 导入 ---------- */
-
-.scope :global(.if-import-steps) {
-  margin: 4px 0 18px;
-}
-
-.scope :global(.if-import-error) {
-  margin-bottom: 12px;
-}
-
-.scope :global(.if-import-step) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.scope :global(.if-import-field) {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.scope :global(.if-import-mode) {
-  align-self: flex-start;
-}
-
-.scope :global(.if-import-editor) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.scope :global(.if-import-actions) {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 4px;
-}
-
-.scope :global(.if-import-summary) {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.scope :global(.if-import-summary .ant-tag) {
-  margin: 0;
-}
-
-.scope :global(.if-import-source) {
-  margin-right: 4px;
-  color: var(--srf-text);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.scope :global(.if-import-groups) {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 10px;
-  border: 1px dashed var(--srf-accent-border);
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-accent-soft);
-}
-
-.scope :global(.if-import-groups .ant-tag) {
-  margin: 0;
-}
-
-.scope :global(.if-import-warnings) {
-  max-height: 130px;
-  margin: 0;
-  padding-left: 16px;
-  overflow: auto;
-  font-size: 12px;
-  line-height: 19px;
-}
-
-.scope :global(.if-import-list) {
-  display: flex;
-  flex-direction: column;
-  max-height: 330px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-control);
-  overflow: auto;
-}
-
-.scope :global(.if-import-item) {
-  display: grid;
-  grid-template-columns: 18px 48px minmax(90px, 1fr) minmax(160px, 1.5fr) auto minmax(70px, 0.8fr);
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--srf-divider);
-  cursor: pointer;
-}
-
-.scope :global(.if-import-item:last-child) {
-  border-bottom: 0;
-}
-
-.scope :global(.if-import-item:hover) {
-  background: var(--srf-hover);
-}
-
-.scope :global(.if-import-item.is-selected) {
-  background: var(--srf-accent-soft);
-}
-
-.scope :global(.if-import-item.is-disabled) {
-  cursor: default;
-  opacity: 0.72;
-}
-
-.scope :global(.if-import-item.is-disabled:hover) {
-  background: transparent;
-}
-
-.scope :global(.if-import-item-name) {
-  overflow: hidden;
-  color: var(--srf-text);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-import-item-title) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-}
-
-.scope :global(.if-import-item-group),
-.scope :global(.if-import-changed) {
-  overflow: hidden;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scope :global(.if-import-group-new) {
-  margin-left: 5px;
-  color: var(--srf-result-passed);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.scope :global(.if-import-item code) {
-  overflow: hidden;
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+.scope :global(.if-import-summary .ant-tag),
+.scope :global(.if-import-groups .ant-tag),
 .scope :global(.if-import-item .ant-tag) {
   margin: 0;
-}
-
-.scope :global(.if-import-note) {
-  padding: 9px 11px;
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-chip);
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-  line-height: 19px;
-}
-
-.scope :global(.if-import-result) {
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-control);
-}
-
-.scope :global(.if-import-result-groups) {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--srf-divider);
-  color: var(--srf-text-secondary);
-  font-size: 12px;
 }

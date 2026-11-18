@@ -18,27 +18,27 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
   }
 
   return (
-    <div className="if-param-group">
-      <div className="if-param-group-head">
-        <span className="if-field-label">{title}</span>
-        <span className="if-field-hint">{hint}</span>
+    <div className="if-param-group flex min-w-0 flex-col max-[760.01px]:overflow-x-auto">
+      <div className="if-param-group-head mb-2 flex min-w-0 flex-wrap items-center gap-2">
+        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">{title}</span>
+        <span className="if-field-hint text-[11px] leading-[18px] text-[var(--srf-text-muted)]">{hint}</span>
       </div>
-      <table className="if-kv-table">
+      <table className="if-kv-table w-full table-fixed overflow-hidden rounded-[var(--srf-radius-control)] border border-separate border-spacing-0 border-[var(--srf-card-border)] max-[760.01px]:min-w-[720px] [&_tbody_tr:last-child_td]:border-b-0">
         <thead>
           <tr>
-            <th className="if-col-enabled">启用</th>
-            <th>参数名</th>
-            <th className="if-col-type">类型</th>
-            <th className="if-col-required">必填</th>
-            <th>示例值</th>
-            <th>说明</th>
-            <th className="if-col-action" />
+            <th className="if-col-enabled h-[34px] w-12 border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--srf-list-header-text)]">启用</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">参数名</th>
+            <th className="if-col-type h-[34px] w-[106px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">类型</th>
+            <th className="if-col-required h-[34px] w-[52px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--srf-list-header-text)]">必填</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">示例值</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">说明</th>
+            <th className="if-col-action h-[34px] w-[42px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]" />
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
             <tr key={`${location}-${index}`}>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] text-center align-middle">
                 <Checkbox
                   checked={row.enabled}
                   disabled={readOnly}
@@ -46,7 +46,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={event => update(index, { enabled: event.target.checked })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.name}
                   disabled={readOnly}
@@ -55,7 +55,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={event => update(index, { name: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Select
                   value={row.type}
                   disabled={readOnly}
@@ -64,7 +64,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={value => update(index, { type: value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] text-center align-middle">
                 <Checkbox
                   checked={location === 'path' ? true : row.required}
                   disabled={readOnly || location === 'path'}
@@ -72,7 +72,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={event => update(index, { required: event.target.checked })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.example}
                   disabled={readOnly}
@@ -81,7 +81,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={event => update(index, { example: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.description}
                   disabled={readOnly}
@@ -90,7 +90,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
                   onChange={event => update(index, { description: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 {readOnly ? null : (
                   <Tooltip title="删除">
                     <Button
@@ -108,14 +108,14 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
           ))}
           {!rows.length ? (
             <tr>
-              <td colSpan={7} className="if-empty-row">还没有参数</td>
+              <td colSpan={7} className="if-empty-row h-[50px] px-1.5 py-[5px] text-center text-[12px] text-[var(--srf-text-muted)]">还没有参数</td>
             </tr>
           ) : null}
         </tbody>
       </table>
       {readOnly ? null : (
         <Button
-          className="if-add-row"
+          className="if-add-row mt-2 self-start"
           size="small"
           icon={<PlusOutlined />}
           onClick={() => onChange([...rows, blankRow()])}

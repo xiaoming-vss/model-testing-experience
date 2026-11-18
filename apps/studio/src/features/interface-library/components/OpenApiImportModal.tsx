@@ -10,11 +10,10 @@ import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { SoftwareRepository, ImportCommitResult, ImportItem, ImportPreview } from '../types'
 import styles from '../styles/interface-library.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
-import editorStyles from '../styles/interface-editor.module.css'
 import { parseJsonText } from '../utils/interfaceForm'
 import { UNTAGGED_GROUP, firstTag, groupLabel } from '../utils/interfaceGroups'
 
-const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope}`
 
 type Props = {
   open: boolean
@@ -130,7 +129,7 @@ export function OpenApiImportModal({
   function inlineJsonError() {
     if (!jsonText.trim()) return '请粘贴 OpenAPI JSON 内容'
     if (new Blob([jsonText]).size > MAX_IMPORT_BYTES) return 'JSON 内容不能超过 8 MB'
-    if (!inlineJsonState.valid) return `JSON 格式错误：${inlineJsonState.error}`
+    if (!inlineJsonState.valid) return `JSON 格式错误： ${inlineJsonState.error}`
     const value = inlineJsonState.value
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return 'OpenAPI 文档必须是 JSON 对象'
@@ -267,15 +266,15 @@ export function OpenApiImportModal({
       <Steps
         current={step}
         size="small"
-        className="if-import-steps"
+        className="if-import-steps mt-1 mb-[18px]"
         items={[{ title: '选择文档' }, { title: '预览差异' }, { title: '导入结果' }]}
       />
-      {error ? <Alert type="error" showIcon title={error} className="if-import-error" /> : null}
+      {error ? <Alert type="error" showIcon title={error} className="if-import-error mb-3" /> : null}
 
       {step === 0 ? (
-        <div className="if-import-step">
-          <label className="if-import-field">
-            <span>软件仓库</span>
+        <div className="if-import-step flex flex-col gap-3">
+          <label className="if-import-field flex flex-col gap-1.5">
+            <span className="text-[12px] font-semibold text-[var(--srf-text-secondary)]">软件仓库</span>
             <Select
               aria-label="选择导入的软件仓库"
               value={softwareRepositoryId || undefined}
@@ -288,7 +287,7 @@ export function OpenApiImportModal({
             />
           </label>
           <Segmented
-            className="if-import-mode"
+            className="if-import-mode self-start"
             aria-label="导入方式"
             value={mode}
             options={[
@@ -323,10 +322,10 @@ export function OpenApiImportModal({
               <p className="ant-upload-hint">支持 JSON / YAML 文件，最大 8 MB</p>
             </Upload.Dragger>
           ) : (
-            <div className="if-import-editor">
-              <div className="if-editor-block-head">
+            <div className="if-import-editor flex flex-col gap-2">
+              <div className="if-editor-block-head flex items-center justify-between gap-2 text-[11px] font-semibold text-[var(--srf-text-secondary)]">
                 <span>OpenAPI JSON</span>
-                <span className={`if-json-state${inlineJsonState.valid ? ' is-valid' : ' is-invalid'}`}>
+                <span className={`if-json-state ${inlineJsonState.valid ? ' is-valid' : ' is-invalid'}`}>
                   {!jsonText.trim() ? '等待输入' : inlineJsonState.valid ? 'JSON 有效' : 'JSON 格式错误'}
                 </span>
               </div>
@@ -341,12 +340,12 @@ export function OpenApiImportModal({
                 ariaLabel="OpenAPI JSON 内容"
                 height={280}
               />
-              <div className="if-import-note">
+              <div className="if-import-note rounded-[var(--srf-radius-control)] bg-[var(--srf-chip)] px-[11px] py-[9px] text-[12px] leading-[19px] text-[var(--srf-text-secondary)]">
                 直接粘贴 OpenAPI JSON 文档，提交时按内联 JSON 文件解析；文档最大 8 MB，原始输入不会单独保存。
               </div>
             </div>
           )}
-          <div className="if-import-actions">
+          <div className="if-import-actions flex justify-end gap-2 pt-1">
             <Button onClick={close}>取消</Button>
             <Button type="primary" loading={previewing} onClick={() => void loadPreview()}>
               预览差异
@@ -356,9 +355,9 @@ export function OpenApiImportModal({
       ) : null}
 
       {step === 1 && preview ? (
-        <div className="if-import-step">
-          <div className="if-import-summary">
-            <span className="if-import-source">
+        <div className="if-import-step flex flex-col gap-3">
+          <div className="if-import-summary flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="if-import-source mr-1 text-[13px] font-semibold text-[var(--srf-text)]">
               {sourceLabel}
               {preview.source.version ? ` · ${preview.source.version}` : ''}
             </span>
@@ -369,8 +368,8 @@ export function OpenApiImportModal({
             ))}
           </div>
           {selectedGroups.length ? (
-            <div className="if-import-groups" aria-label="导入分组预览">
-              <span className="if-import-groups-title">分组预览</span>
+            <div className="if-import-groups flex flex-wrap items-center gap-1.5 rounded-[var(--srf-radius-control)] border border-dashed border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] px-2.5 py-2" aria-label="导入分组预览">
+              <span className="if-import-groups-title text-[12px] font-semibold text-[var(--srf-text-secondary)]">分组预览</span>
               {selectedGroups.map(([group, count]) => {
                 const newGroup = isNewGroup(group, libraryGroupNames)
                 return (
@@ -412,7 +411,7 @@ export function OpenApiImportModal({
               icon={<WarningOutlined />}
               title={`文档提示（${preview.warnings.length}）`}
               description={
-                <ul className="if-import-warnings">
+                <ul className="if-import-warnings m-0 max-h-[130px] overflow-auto pl-4 text-[12px] leading-[19px]">
                   {preview.warnings.slice(0, 8).map((warning, index) => (
                     <li key={`${warning.code}-${index}`}>
                       {warning.method || warning.path ? `${warning.method} ${warning.path}：` : ''}
@@ -424,7 +423,7 @@ export function OpenApiImportModal({
               }
             />
           ) : null}
-          <div className="if-import-list">
+          <div className="if-import-list flex max-h-[330px] flex-col overflow-auto rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)]">
             {preview.items.map(item => {
               const selectable = item.changeType === 'new' || item.changeType === 'modified'
               const group = targetGroupLabel(item)
@@ -432,7 +431,7 @@ export function OpenApiImportModal({
               return (
                 <label
                   key={item.key}
-                  className={`if-import-item${selectable ? '' : ' is-disabled'}${selectedKeys.has(item.key) ? ' is-selected' : ''}`}
+                  className={`if-import-item grid min-h-[42px] grid-cols-[18px_48px_minmax(90px,1fr)_minmax(160px,1.5fr)_auto_minmax(70px,0.8fr)] items-center gap-2 border-b border-[var(--srf-divider)] px-2.5 py-[7px] last:border-b-0 max-[1180.01px]:grid-cols-[18px_48px_minmax(90px,1fr)_minmax(120px,1.2fr)_auto] max-[760.01px]:grid-cols-[18px_48px_minmax(0px,1fr)_auto] ${!selectable ? ' is-disabled cursor-default opacity-[0.72]' : selectedKeys.has(item.key) ? ' is-selected bg-[var(--srf-accent-soft)]' : ' hover:bg-[var(--srf-hover)]'}`}
                 >
                   <Checkbox
                     checked={selectedKeys.has(item.key)}
@@ -440,29 +439,29 @@ export function OpenApiImportModal({
                     onChange={event => toggleKey(item.key, event.target.checked)}
                   />
                   <Tag className={`if-method if-method-${item.method.toLowerCase()}`}>{item.method}</Tag>
-                  <span className="if-import-item-title">
-                    <span className="if-import-item-name">{item.name}</span>
-                    <span className="if-import-item-group">
+                  <span className="if-import-item-title flex min-w-0 flex-col gap-px">
+                    <span className="if-import-item-name overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-semibold text-[var(--srf-text)]">{item.name}</span>
+                    <span className="if-import-item-group overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--srf-text-muted)]">
                       分组：{group}
                       {rowNewGroup ? (
-                        <span className="if-import-group-new">新建</span>
+                        <span className="if-import-group-new ml-[5px] text-[10px] font-bold text-[var(--srf-result-passed)]">新建</span>
                       ) : null}
                     </span>
                   </span>
-                  <code>{item.path}</code>
+                  <code className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--srf-text-secondary)] max-[760.01px]:hidden">{item.path}</code>
                   <Tag color={CHANGE_COLORS[item.changeType]}>{CHANGE_LABELS[item.changeType]}</Tag>
                   {item.changedFields.length ? (
-                    <span className="if-import-changed">{item.changedFields.join(' / ')}</span>
+                    <span className="if-import-changed overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--srf-text-muted)] max-[1180.01px]:hidden">{item.changedFields.join(' / ')}</span>
                   ) : null}
                 </label>
               )
             })}
             {preview.items.length === 0 ? <Empty description="文档中没有接口" /> : null}
           </div>
-          <div className="if-import-note">
+          <div className="if-import-note rounded-[var(--srf-radius-control)] bg-[var(--srf-chip)] px-[11px] py-[9px] text-[12px] leading-[19px] text-[var(--srf-text-secondary)]">
             按方法与路径匹配：已有接口只更新接口内容，保留库内标签和分组；新接口使用文档标签并创建分组。文档中已移除的接口保持原样，不自动停用或删除。
           </div>
-          <div className="if-import-actions">
+          <div className="if-import-actions flex justify-end gap-2 pt-1">
             <Button onClick={() => setStep(0)} disabled={submitting}>上一步</Button>
             <Button
               type="primary"
@@ -477,19 +476,19 @@ export function OpenApiImportModal({
       ) : null}
 
       {step === 2 && result ? (
-        <div className="if-import-step">
+        <div className="if-import-step flex flex-col gap-3">
           <Alert
             type="success"
             showIcon
             title="导入完成"
             description={`新增 ${result.created} 个，更新 ${result.updated} 个，跳过 ${result.skipped} 个；仅库中存在 ${result.libraryOnly} 个保持原样。`}
           />
-          <div className="if-import-result">
+          <div className="if-import-result rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] p-3">
             <Space wrap>
               <Tag color="green">软件仓库 base path：{result.softwareRepositoryBasePath || '无前缀'}</Tag>
             </Space>
             {createdGroups.length ? (
-              <div className="if-import-result-groups">
+              <div className="if-import-result-groups mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--srf-divider)] pt-2.5 text-[12px] text-[var(--srf-text-secondary)]">
                 <span>本次新建分组</span>
                 <Space wrap>
                   {createdGroups.map(group => (
@@ -499,7 +498,7 @@ export function OpenApiImportModal({
               </div>
             ) : null}
           </div>
-          <div className="if-import-actions">
+          <div className="if-import-actions flex justify-end gap-2 pt-1">
             <Button type="primary" onClick={onImported}>查看接口库</Button>
           </div>
         </div>

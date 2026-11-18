@@ -19,9 +19,8 @@ import type { SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
-import editorStyles from '../styles/interface-editor.module.css'
 
-const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope}`
 
 /** 项目级软件仓库管理；接口库左侧软件仓库树提供同一批仓库的快捷入口。 */
 export function SoftwareRepositoriesPage() {
@@ -65,10 +64,10 @@ export function SoftwareRepositoriesPage() {
       key: 'name',
       width: 300,
       render: (_, repository) => (
-        <div className="if-app-name-cell">
+        <div className="if-app-name-cell flex items-center gap-2 font-semibold">
           <button
             type="button"
-            className="if-name-link"
+            className="if-name-link max-w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap border-0 bg-transparent p-0 text-left font-[inherit] font-semibold text-[var(--srf-text)] hover:text-[var(--srf-accent)]"
             onClick={event => {
               event.stopPropagation()
               openRepositoryInterfaces(repository)
@@ -83,7 +82,7 @@ export function SoftwareRepositoriesPage() {
       title: '代码仓库',
       key: 'repository',
       render: (_, repository) => (
-        <span className="if-path">{repository.repository?.path || '—'}</span>
+        <span className="if-path font-[ui-monospace,SFMono-Regular,Menlo,Consolas,monospace] text-[11px] leading-[18px] text-[var(--srf-text-muted)] [overflow-wrap:anywhere]">{repository.repository?.path || '—'}</span>
       ),
     },
     {
@@ -92,7 +91,7 @@ export function SoftwareRepositoriesPage() {
       key: 'basePath',
       width: 180,
       render: (basePath: string) => (
-        <span className="if-path">{basePath || '—'}</span>
+        <span className="if-path font-[ui-monospace,SFMono-Regular,Menlo,Consolas,monospace] text-[11px] leading-[18px] text-[var(--srf-text-muted)] [overflow-wrap:anywhere]">{basePath || '—'}</span>
       ),
     },
     {
@@ -115,7 +114,7 @@ export function SoftwareRepositoriesPage() {
       align: 'right',
       render: (_, repository) =>
         canManage ? (
-          <div className="if-row-actions" onClick={event => event.stopPropagation()}>
+          <div className="if-row-actions inline-flex items-center justify-end gap-0.5" onClick={event => event.stopPropagation()}>
             <Tooltip title="编辑">
               <Button
                 type="text"
@@ -152,20 +151,20 @@ export function SoftwareRepositoriesPage() {
   return (
     <div className={`workbench-page interface-library-page tp-surface tp-list-surface ${styles.pageRoot} ${interfaceScopes}`}>
       <section className="tp-board tp-list-panel if-library-board">
-        <div className="if-library-toolbar tp-list-toolbar">
-          <div className="if-toolbar-filters">
+        <div className="if-library-toolbar tp-list-toolbar gap-y-2">
+          <div className="if-toolbar-filters flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="tp-list-title">软件仓库</h1>
-            <span className="if-app-tree-total">{repositories.length}</span>
+            <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
             <DebouncedSearchInput
               ariaLabel="搜索软件仓库"
               placeholder="搜索软件仓库名称 / 仓库 / base path"
-              className="if-search-input"
+              className="if-search-input w-[230px] max-[960.01px]:w-[190px]"
               prefix={<SearchOutlined />}
               resetKey={searchResetKey}
               onCommit={setKeyword}
             />
           </div>
-          <div className="if-toolbar-actions">
+          <div className="if-toolbar-actions ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
             <Tooltip title="刷新">
               <Button
                 aria-label="刷新软件仓库列表"
@@ -183,8 +182,8 @@ export function SoftwareRepositoriesPage() {
             </Button>
           </div>
         </div>
-        <div className="if-apps-body tp-list-body">
-          <div className="if-list-scroll tp-list-scroll">
+        <div className="if-apps-body tp-list-body flex min-h-0 flex-auto flex-col">
+          <div className="if-list-scroll tp-list-scroll min-h-0 flex-auto overflow-auto">
             <Table
               rowKey="softwareRepositoryId"
               size="middle"

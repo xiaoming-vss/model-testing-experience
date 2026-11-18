@@ -9,9 +9,8 @@ import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { SoftwareRepository } from '../types'
 import styles from '../styles/interface-library.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
-import editorStyles from '../styles/interface-editor.module.css'
 
-const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope}`
 
 type Props = {
   open: boolean
@@ -152,7 +151,7 @@ export function SoftwareRepositoryEditorDrawer({
       onClose={onClose}
       destroyOnHidden
       footer={
-        <div className="if-drawer-footer">
+        <div className="if-drawer-footer flex justify-end gap-2">
           <Button onClick={onClose}>取消</Button>
           <Button
             type="primary"
@@ -165,9 +164,9 @@ export function SoftwareRepositoryEditorDrawer({
         </div>
       }
     >
-      <div className="if-app-form">
-        <label>
-          <span>软件仓库名称</span>
+      <div className="if-app-form flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] font-semibold text-[var(--srf-text-secondary)]">软件仓库名称</span>
           <Input
             value={form.name}
             maxLength={100}
@@ -175,8 +174,8 @@ export function SoftwareRepositoryEditorDrawer({
             onChange={event => setForm({ ...form, name: event.target.value })}
           />
         </label>
-        <label>
-          <span>描述</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] font-semibold text-[var(--srf-text-secondary)]">描述</span>
           <Input.TextArea
             value={form.description}
             rows={3}
@@ -185,8 +184,8 @@ export function SoftwareRepositoryEditorDrawer({
             onChange={event => setForm({ ...form, description: event.target.value })}
           />
         </label>
-        <label>
-          <span>base path</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[12px] font-semibold text-[var(--srf-text-secondary)]">base path</span>
           <Input
             value={form.basePath}
             maxLength={512}
@@ -195,18 +194,19 @@ export function SoftwareRepositoryEditorDrawer({
           />
         </label>
 
-        <div className="if-repository-section">
-          <div className="if-repository-head">
+        <div className="if-repository-section border-t border-[var(--srf-divider)] pt-4">
+          <div className="if-repository-head mb-2.5 flex items-baseline justify-between gap-2 text-[12px] font-semibold text-[var(--srf-text-secondary)]">
             <span>代码仓库（必选）</span>
-            {repository?.repository?.path ? <code>{repository.repository.path}</code> : null}
+            {repository?.repository?.path ? <code className="text-[11px] text-[var(--srf-text-muted)]">{repository.repository.path}</code> : null}
           </div>
           {repository ? (
-            <div className="if-repository-hint">
+            <div className="if-repository-hint mt-2 text-[12px] leading-5 text-[var(--srf-text-muted)]">
               重新选择代码仓库会清除需求已填写的工作分支和基线分支。
             </div>
           ) : null}
-          <div className="if-repository-selects">
+          <div className="if-repository-selects flex flex-col gap-2">
             <Select
+              className="w-full"
               aria-label="选择 GitLab 连接"
               placeholder="GitLab 连接"
               value={repoConnectionId || undefined}
@@ -224,6 +224,7 @@ export function SoftwareRepositoryEditorDrawer({
               }}
             />
             <Select
+              className="w-full"
               aria-label="选择 GitLab 群组"
               placeholder="GitLab 群组"
               value={repoGroupId || undefined}
@@ -245,6 +246,7 @@ export function SoftwareRepositoryEditorDrawer({
               }}
             />
             <Select
+              className="w-full"
               aria-label="选择代码仓库"
               placeholder="代码仓库"
               value={repoRepositoryId || undefined}
@@ -264,10 +266,10 @@ export function SoftwareRepositoryEditorDrawer({
             />
           </div>
           {repositorySelectionIncomplete ? (
-            <div className="if-repository-hint">请完整选择连接、群组和代码仓库。</div>
+            <div className="if-repository-hint mt-2 text-[12px] leading-5 text-[var(--srf-text-muted)]">请完整选择连接、群组和代码仓库。</div>
           ) : null}
           {!connections.length && open ? (
-            <div className="if-repository-hint">
+            <div className="if-repository-hint mt-2 text-[12px] leading-5 text-[var(--srf-text-muted)]">
               暂无可用 GitLab 连接，请先在项目基础服务中创建 GitLab 连接。
             </div>
           ) : null}

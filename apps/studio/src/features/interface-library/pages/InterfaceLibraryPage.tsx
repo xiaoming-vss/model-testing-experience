@@ -9,9 +9,8 @@ import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
-import editorStyles from '../styles/interface-editor.module.css'
 
-const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope}`
 
 /**
  * 接口库入口：不渲染外层接口表格，直接进入“软件仓库树 + 接口编辑器”工作区。

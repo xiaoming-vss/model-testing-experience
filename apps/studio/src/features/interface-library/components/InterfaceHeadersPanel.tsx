@@ -38,12 +38,12 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
   }
 
   return (
-    <div className="if-param-group">
-      <div className="if-param-group-head">
-        <span className="if-field-label">请求头</span>
-        <span className="if-field-hint">请求头会随接口定义保存；导入时由文档字段覆盖。</span>
+    <div className="if-param-group flex min-w-0 flex-col max-[760.01px]:overflow-x-auto">
+      <div className="if-param-group-head mb-2 flex min-w-0 flex-wrap items-center gap-2">
+        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">请求头</span>
+        <span className="if-field-hint text-[11px] leading-[18px] text-[var(--srf-text-muted)]">请求头会随接口定义保存；导入时由文档字段覆盖。</span>
         {readOnly ? null : (
-          <div className="if-quick-inject">
+          <div className="if-quick-inject ms-auto inline-flex items-center gap-[5px] text-[11px] text-[var(--srf-text-muted)]">
             <span>快捷注入</span>
             {PRESETS.map(preset => (
               <Button
@@ -58,20 +58,20 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
           </div>
         )}
       </div>
-      <table className="if-kv-table">
+      <table className="if-kv-table w-full table-fixed overflow-hidden rounded-[var(--srf-radius-control)] border border-separate border-spacing-0 border-[var(--srf-card-border)] max-[760.01px]:min-w-[720px] [&_tbody_tr:last-child_td]:border-b-0">
         <thead>
           <tr>
-            <th className="if-col-enabled">启用</th>
-            <th>Header Key</th>
-            <th>Header Value</th>
-            <th>说明</th>
-            <th className="if-col-action" />
+            <th className="if-col-enabled h-[34px] w-12 border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-center text-[11px] font-semibold text-[var(--srf-list-header-text)]">启用</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">Header Key</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">Header Value</th>
+            <th className="h-[34px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]">说明</th>
+            <th className="if-col-action h-[34px] w-[42px] border-b border-[var(--srf-card-border)] bg-[var(--srf-list-header-bg)] px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--srf-list-header-text)]" />
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
             <tr key={`header-${index}`}>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] text-center align-middle">
                 <Checkbox
                   checked={row.enabled}
                   disabled={readOnly}
@@ -79,7 +79,7 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
                   onChange={event => update(index, { enabled: event.target.checked })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.name}
                   disabled={readOnly}
@@ -88,7 +88,7 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
                   onChange={event => update(index, { name: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.example}
                   disabled={readOnly}
@@ -97,7 +97,7 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
                   onChange={event => update(index, { example: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 <Input
                   value={row.description}
                   disabled={readOnly}
@@ -106,7 +106,7 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
                   onChange={event => update(index, { description: event.target.value })}
                 />
               </td>
-              <td>
+              <td className="border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle">
                 {readOnly ? null : (
                   <Tooltip title="删除">
                     <Button
@@ -124,14 +124,14 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
           ))}
           {!rows.length ? (
             <tr>
-              <td colSpan={5} className="if-empty-row">还没有请求头</td>
+              <td colSpan={5} className="if-empty-row h-[50px] px-1.5 py-[5px] text-center text-[12px] text-[var(--srf-text-muted)]">还没有请求头</td>
             </tr>
           ) : null}
         </tbody>
       </table>
       {readOnly ? null : (
         <Button
-          className="if-add-row"
+          className="if-add-row mt-2 self-start"
           size="small"
           icon={<PlusOutlined />}
           onClick={() =>

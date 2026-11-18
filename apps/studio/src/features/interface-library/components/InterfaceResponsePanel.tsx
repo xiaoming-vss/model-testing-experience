@@ -34,11 +34,12 @@ export function InterfaceResponsePanel({
   }
 
   return (
-    <div className="if-response-panel">
-      <div className="if-response-meta">
-        <label>
-          <span className="if-field-label">状态码</span>
+    <div className="if-response-panel flex flex-col gap-3.5">
+      <div className="if-response-meta flex flex-wrap items-end gap-3">
+        <label className="flex w-[130px] flex-col gap-[5px] max-[760.01px]:w-[110px]">
+          <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">状态码</span>
           <InputNumber
+            className="w-full"
             min={100}
             max={599}
             value={draft.responseStatus}
@@ -47,8 +48,8 @@ export function InterfaceResponsePanel({
             onChange={value => onChange({ responseStatus: value ?? 200 })}
           />
         </label>
-        <label className="if-response-desc">
-          <span className="if-field-label">响应说明</span>
+        <label className="if-response-desc flex flex-[1_1_260px] w-auto flex-col gap-[5px]">
+          <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">响应说明</span>
           <Input
             value={draft.responseDescription}
             disabled={readOnly}
@@ -59,14 +60,14 @@ export function InterfaceResponsePanel({
           />
         </label>
       </div>
-      <div className="if-field-hint if-response-hint">
+      <div className="if-field-hint if-response-hint -mt-1.5 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
         每个接口只保留一个默认成功响应，作为后续生成用例的响应输入。
       </div>
-      <div className="if-body-editors">
-        <div className="if-editor-block">
-          <div className="if-editor-block-head">
+      <div className="if-body-editors grid grid-cols-2 gap-3.5 max-[960.01px]:grid-cols-1">
+        <div className="if-editor-block flex min-w-0 flex-col gap-1.5">
+          <div className="if-editor-block-head flex items-center justify-between gap-2 text-[11px] font-semibold text-[var(--srf-text-secondary)]">
             <span>响应 Schema（JSON）</span>
-            <div className="if-editor-tools">
+            <div className="if-editor-tools inline-flex items-center gap-1">
               <JsonState valid={schemaState.valid} error={schemaState.valid ? '' : schemaState.error} />
               {readOnly ? null : (
                 <Button
@@ -90,8 +91,8 @@ export function InterfaceResponsePanel({
             height={240}
           />
         </div>
-        <div className="if-editor-block">
-          <div className="if-editor-block-head">
+        <div className="if-editor-block flex min-w-0 flex-col gap-1.5">
+          <div className="if-editor-block-head flex items-center justify-between gap-2 text-[11px] font-semibold text-[var(--srf-text-secondary)]">
             <span>响应示例（JSON）</span>
             <JsonState valid={exampleState.valid} error={exampleState.valid ? '' : exampleState.error} />
           </div>
