@@ -528,6 +528,7 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 - D 类 token 审计：28 个 `--legacy-*` 别名仍各有消费者；未发现阶段 29–37 删除组件遗留的同名 token；`foundation` / 主题调色板 token 属于保留契约，未做批量删除。
 - 文档收口：更新本计划与本清单的阶段状态、当前分类行数与阶段 38 口径；`docs/studio/README.md`、`STRUCTURE.md`、`UI-GUIDELINES.md` 无需改动。
 - 指标：44 个文件 / 8,047 行 / 93 处 `!important` / 0 长前缀 / 10 组重复规则体，全部保持达标；阶段 38 无代码变更。
+- 边界记录：已完成项、明确保留项与后续可选计划见 [CSS 存量整改总清单第九节](css-remediation-inventory.md#九完成与未完成记录)。
 
 #### Tailwind 化后续阶段
 

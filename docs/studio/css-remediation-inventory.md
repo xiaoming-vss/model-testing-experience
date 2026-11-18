@@ -365,8 +365,37 @@
 8. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
 9. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
 10. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
+
 ## 八、执行顺序建议
 
 1. **阶段 29–38（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件、全局契约、收口）已完成**，当前 44 文件 / 8,047 行。
 2. **38（收口）已完成**：全量复测、ratchet 两个基线、审计 D 类 token 并更新本文与迁移计划；未再整体迁移全局契约，也未批量删除调色板 token。
 3. **最终目标已达成**：44 ≤ 45 文件、8,047 ≤ 9,000 行、93 ≤ 100 处 `!important`、0 长前缀、10 ≤ 60 组重复体。
+
+## 九、完成与未完成记录
+
+> 2026-11-18 收口时点的边界记录。后续新计划从这里开始，不重复已完成项。
+
+### 已完成
+
+- **阶段 0–38 全部执行完成**：包括页面族整族迁移、全局契约收缩、共享组件迁移、收口复测与基线 ratchet。
+- **页面级 Tailwind 化**：UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/个人设置/Projects、共享组件的布局、间距、排版与响应式排布已迁入 utility。
+- **结构收缩**：阶段 29–37 删除或并入 22 个 CSS 文件；`list-name` 并入 `list-table`，`table-row-dividers` 并入 `theme.css`，Shell/工具栏/按钮重复块已合并或 utility 化。
+- **最终指标**：44 个文件 / 8,047 行 / 93 处 `!important` / 0 长前缀 / 10 组重复规则体 / 0 个超过 600 行的文件。
+- **验证**：全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；阶段 29–37 已按各阶段记录完成对应页面与断点的浏览器核对，阶段 37 覆盖 Shell、工具栏、快速过滤条与按钮；两个基线已 ratchet 且无回退。
+- **Token 审计**：28 个 `--legacy-*` 别名仍有消费者，未发现删除组件遗留的同名 token；未批量删除调色板 token。
+
+### 未完成 / 明确保留
+
+- **C 类全局契约（14 个文件 / 2,022 行）**：只做死规则、层叠和重复体收缩，未整体 utility 化；其中 83 处 `!important` 属于外壳/表格/按钮/表面契约，保留。
+- **B 类页面/共享 Module（23 个文件 / 4,178 行）**：保留 AntD / React Flow / DOCX 深层选择器、玻璃皮肤、页面高度链与容器查询，不再继续迁移。
+- **D 类 Token（7 个文件 / 1,847 行）**：主题、调色板与 Tailwind 层声明保留；当前无直接消费者的调色板 token 未删除，需设计系统确认后再处理。
+- **视觉验收缺口**：运行报告、导入预览、图谱执行面板等依赖后端数据的界面未做真实数据浏览器核对，当前由组件测试、类型检查与构建覆盖。
+- **交付状态**：阶段 37/38 的两笔提交仅存在于本地 `dev`（`cb6ef53`、`7bb5faa`），未推送；工作树另有性能测试环境选择器改动，不属于本计划。
+
+### 后续可选计划（未立项）
+
+1. C 类全局契约进一步 utility 化，并降低可替代的 `!important`；需先定义计算样式与视觉回归口径。
+2. B 类深层规则继续收缩，优先处理可在真实数据下验证的页面。
+3. 补依赖后端数据页面的视觉验收。
+4. 设计系统确认后清理无直接消费者的调色板 token。
