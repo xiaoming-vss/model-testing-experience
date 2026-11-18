@@ -195,30 +195,15 @@
       "declarations": 227,
       "selectors": 79
     },
-    "src/features/test-orders/styles/test-order-graph-execution.module.css": {
-      "rules": 30,
-      "declarations": 102,
-      "selectors": 33
-    },
-    "src/features/test-orders/styles/test-order-graph.module.css": {
-      "rules": 21,
-      "declarations": 79,
-      "selectors": 22
-    },
     "src/features/test-orders/styles/test-order-visualization.module.css": {
       "rules": 116,
       "declarations": 375,
       "selectors": 127
     },
     "src/features/test-orders/styles/test-order-workspace.module.css": {
-      "rules": 80,
-      "declarations": 264,
-      "selectors": 88
-    },
-    "src/features/test-orders/styles/test-orders-list.module.css": {
-      "rules": 19,
-      "declarations": 56,
-      "selectors": 20
+      "rules": 33,
+      "declarations": 89,
+      "selectors": 37
     },
     "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
       "rules": 9,
@@ -380,7 +365,7 @@
       "sample": "display: flex;align-items: center;gap: 6px;min-width: 0"
     },
     "2adc3dcdcc63441e": {
-      "count": 3,
+      "count": 2,
       "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "2e2e45e2d4ca13fb": {
@@ -388,7 +373,7 @@
       "sample": "display: flex;align-items: center;gap: 10px"
     },
     "300b373f254ffd3c": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;align-items: center;gap: 8px"
     },
     "37bf457a62a94b20": {
@@ -476,7 +461,7 @@
       "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
     },
     "bd53bc74855fdf05": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;flex-direction: column;gap: 6px"
     },
     "c3a767a35bba8500": {

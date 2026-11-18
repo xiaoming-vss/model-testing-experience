@@ -31,7 +31,6 @@ import {
 } from '../utils/testOrderStatus'
 import { buildTestOrderProgress, type TestOrderProgressKey, type TestOrderProgressSegmentKey } from '../utils/testOrderProgress'
 import '@/shared/styles/surface-tokens.css'
-import styles from '../styles/test-orders-list.module.css'
 
 const { Text } = Typography
 
@@ -44,11 +43,11 @@ const METRIC_TONES: Record<TestOrderProgressKey, string> = {
 }
 
 const SEGMENT_STYLES: Record<TestOrderProgressSegmentKey, string> = {
-  passed: styles.segmentPassed,
-  failed: styles.segmentFailed,
-  blocked: styles.segmentBlocked,
-  skipped: styles.segmentSkipped,
-  pending: styles.segmentPending,
+  passed: 'bg-[var(--srf-result-passed)]',
+  failed: 'bg-[var(--srf-result-failed)]',
+  blocked: 'bg-[var(--srf-result-blocked)]',
+  skipped: 'bg-[var(--srf-result-skipped)]',
+  pending: 'bg-[var(--srf-track-pending)]',
 }
 
 export function TestOrderPage() {
@@ -120,6 +119,7 @@ export function TestOrderPage() {
   function renderOrderCard(order: TestOrder) {
     const progress = buildTestOrderProgress(order)
     const statusMeta = getTestOrderStatusMeta(order.status)
+    const statusTone = getTestOrderStatusTone(order.status)
     const orderId = order.orderId
 
     const title = orderId ? (
@@ -137,8 +137,8 @@ export function TestOrderPage() {
         key={orderId ?? order.name}
         title={title}
         status={
-          <span className={`${styles.statusPill} tone-${getTestOrderStatusTone(order.status)}`}>
-            <span className={styles.statusDot} />
+          <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-2 py-0.5 text-[12px] font-medium leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${statusTone}`}>
+            <span className={`h-[5px] w-1.5 flex-none rounded-full bg-current${statusTone === 'blue' ? ' animate-[pulse_1.6s_ease-in-out_infinite] motion-reduce:animate-none' : ''}`} />
             {statusMeta.label}
           </span>
         }
@@ -199,34 +199,34 @@ export function TestOrderPage() {
       >
         <div className="progressCell mt-0.5 mb-3 flex min-w-0 flex-col gap-1.5 tabular-nums">
           <div className="progressLine flex min-w-0 items-baseline justify-between gap-3">
-            <span className={styles.progressExecuted}>
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] leading-4 text-[var(--srf-text-secondary)]">
               已执行{' '}
-              <strong>
+              <strong className="font-semibold text-[var(--srf-text)]">
                 {progress.executed}/{progress.total}
               </strong>
               {progress.metrics.map((metric) => (
                 <span
                   key={metric.key}
-                  className={`${styles.progressMetric} tone-${METRIC_TONES[metric.key]}`}
+                  className={`text-[var(--srf-tone-text)] before:text-[var(--srf-text-muted)] before:content-['_·_'] tone-${METRIC_TONES[metric.key]}`}
                 >
                   {metric.label} {metric.count}
                 </span>
               ))}
             </span>
-            <span className={`${styles.progressPercent} tone-${getTestOrderStatusTone(order.status)}`}>
+            <span className={`flex-none text-[12px] font-medium text-[var(--srf-text-secondary)] tone-${statusTone}`}>
               {progress.percent}%
             </span>
           </div>
           {/* 分段进度条是图形，无障碍名用完整的进度文案，和抽屉 / 工作台里的说法一致。 */}
           <div
-            className={styles.progressTrack}
+            className="flex h-[5px] w-full overflow-hidden rounded-full bg-[var(--srf-track)]"
             role="img"
             aria-label={formatEntryProgress(order)}
           >
             {progress.segments.map((segment) => (
               <span
                 key={segment.key}
-                className={`${styles.progressSegment} ${SEGMENT_STYLES[segment.key]}`}
+                className={`h-full ${SEGMENT_STYLES[segment.key]}`}
                 style={{ width: `${segment.percent}%` }}
                 title={`${segment.label}: ${segment.count}`}
               />
@@ -260,7 +260,7 @@ export function TestOrderPage() {
                     inputRef={keywordInputRef}
                     className="api-filter-input test-orders-search-input"
                     prefix={<SearchOutlined />}
-                    suffix={<button type="button" className={styles.searchSubmit} onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
+                    suffix={<button type="button" className="cursor-pointer border-0 bg-transparent px-0.5 font-[inherit] text-[12px] text-[var(--app-shell-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--app-accent)]" onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
                     placeholder="搜索测试单名称 / 被测版本"
                     ariaLabel="搜索测试单名称 / 被测版本"
                     resetKey={searchResetKey}

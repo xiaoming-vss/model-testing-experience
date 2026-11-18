@@ -41,7 +41,6 @@ import { getErrorMessage } from '@/utils/format'
 import type { TestOrderStatusFilter } from '../utils/testOrderStatus'
 import '@/shared/styles/surface-tokens.css'
 import workspaceStyles from '../styles/test-order-workspace.module.css'
-import executionStyles from '../styles/test-order-graph-execution.module.css'
 
 const { Text } = Typography
 
@@ -361,7 +360,7 @@ export function TestOrderWorkspacePage() {
   />
 
   return (
-    <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root} ${executionStyles.root}`}>
+    <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root}`}>
       <div className="api-automation-content gap-3">
         <div className="page-frame test-order-workspace tp-board">
           {orderQuery.error ? (
@@ -373,7 +372,7 @@ export function TestOrderWorkspacePage() {
 
           {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph flex min-h-0 min-w-0 flex-1 overflow-hidden [&>.test-order-graph-viewer]:min-h-0 [&>.test-order-graph-viewer]:min-w-0 [&>.test-order-graph-viewer]:flex-1" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} toolbar={workspaceView === 'graph' ? workspaceToolbar : undefined} /></div>}
           <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-execution-view flex min-h-0 min-w-0 flex-auto flex-col" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
-            <div className="test-order-list-view" hidden={Boolean(selectedEntryId)}>
+            <div className="test-order-list-view flex min-h-0 min-w-0 flex-auto flex-col [&[hidden]]:hidden" hidden={Boolean(selectedEntryId)}>
               <TestOrderEntryList
                 toolbar={workspaceView === 'execution' && !selectedEntryId ? workspaceToolbar : null}
                 orderId={orderId}
@@ -407,7 +406,7 @@ export function TestOrderWorkspacePage() {
               />
             </div>
 
-            {selectedEntryId ? <section className="test-order-detail-panel">
+            {selectedEntryId ? <section className="test-order-detail-panel flex min-h-0 min-w-0 flex-auto flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
               <TestOrderDetailHeader
                 order={order}
                 caseTitle={entryView?.caseTitle}
@@ -543,7 +542,7 @@ export function TestOrderWorkspacePage() {
                     trigger={['hover', 'focus']}
                   >
                     <Button type="text" size="small" shape="circle"
-                      className="test-order-shortcut-help" aria-label="快捷键说明"
+                      className="test-order-shortcut-help text-[var(--srf-text-muted)]" aria-label="快捷键说明"
                       icon={<QuestionCircleOutlined />} />
                   </Tooltip>
                   <Checkbox

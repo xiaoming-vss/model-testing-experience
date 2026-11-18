@@ -159,7 +159,7 @@ export function TestOrderEntryList({
       width: 44,
       className: 'test-order-entry-selection-cell',
       render: (_, entry) => (
-        <span className="test-order-entry-selection" onClick={(event) => event.stopPropagation()}>
+        <span className="test-order-entry-selection inline-flex items-center" onClick={(event) => event.stopPropagation()}>
           <Checkbox
             aria-label={`选择第 ${entry.orderNo ?? ''} 条执行条目`}
             checked={checkedEntryIds.includes(entry.entryId ?? '')}
@@ -177,7 +177,7 @@ export function TestOrderEntryList({
       render: (caseId: string | undefined) => caseId ? (
         <button
           type="button"
-          className="test-order-entry-id"
+          className="test-order-entry-id inline-block box-border w-24 max-w-full cursor-copy overflow-hidden text-ellipsis whitespace-nowrap rounded-[4px] border-0 bg-[var(--srf-chip)] px-1.5 py-0.5 text-left align-middle font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[11px] leading-4 text-[var(--srf-text-muted)] hover:text-[var(--srf-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)]"
           title={`${caseId}（点击复制）`}
           aria-label={`复制用例 ID ${caseId}`}
           onClick={async (event) => {
@@ -193,7 +193,7 @@ export function TestOrderEntryList({
         >
           {caseId}
         </button>
-      ) : <span className="test-order-entry-muted">—</span>,
+      ) : <span className="test-order-entry-muted text-[var(--srf-text-muted)]">—</span>,
     },
     {
       title: '用例名称',
@@ -213,8 +213,8 @@ export function TestOrderEntryList({
       key: 'caseModule',
       width: 130,
       render: (module: string | undefined) => module
-        ? <span className="test-order-entry-module" title={module}>{module}</span>
-        : <span className="test-order-entry-muted">—</span>,
+        ? <span className="test-order-entry-module inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-[5px] bg-[var(--srf-chip)] px-[7px] py-0.5 text-[11px] text-[var(--srf-chip-text)]" title={module}>{module}</span>
+        : <span className="test-order-entry-muted text-[var(--srf-text-muted)]">—</span>,
     },
     {
       title: '优先级',
@@ -223,7 +223,7 @@ export function TestOrderEntryList({
       width: 82,
       render: (priority: string | undefined) => priority
         ? <span className={`tp-tone-tag tone-${priorityTone(priority)}`}>{priority}</span>
-        : <span className="test-order-entry-muted">—</span>,
+        : <span className="test-order-entry-muted text-[var(--srf-text-muted)]">—</span>,
     },
     {
       title: '执行状态',
@@ -234,7 +234,7 @@ export function TestOrderEntryList({
         const meta = getTestOrderEntryStatusMeta(status)
         return (
           <span className={`tp-tone-tag test-order-entry-status tone-${getTestOrderEntryStatusTone(status)}`}>
-            <i className="test-order-entry-status-dot" aria-hidden="true" />
+            <i className="test-order-entry-status-dot h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             {meta.label}
           </span>
         )
@@ -248,8 +248,8 @@ export function TestOrderEntryList({
       render: (userId: string | undefined) => {
         const name = assigneeName(userId)
         return name
-          ? <span className="test-order-entry-person">{name}</span>
-          : <span className="test-order-entry-unassigned">未分配</span>
+          ? <span className="test-order-entry-person text-[var(--srf-text-secondary)]">{name}</span>
+          : <span className="test-order-entry-unassigned text-[var(--srf-text-secondary)]">未分配</span>
       },
     },
     {
@@ -265,7 +265,7 @@ export function TestOrderEntryList({
       key: 'executedAt',
       width: 146,
       render: (executedAt: string | undefined) => (
-        <span className="test-order-entry-time">{formatTime(executedAt) || '—'}</span>
+        <span className="test-order-entry-time whitespace-nowrap text-[11.5px] tabular-nums text-[var(--srf-text-secondary)]">{formatTime(executedAt) || '—'}</span>
       ),
     },
     {
@@ -327,8 +327,8 @@ export function TestOrderEntryList({
       </div>
 
       {checkedCount > 0 ? <div className="test-order-entry-batch flex flex-none flex-wrap items-center gap-2.5 border-t border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] px-4 py-2 text-[12px] text-[var(--srf-accent-strong)]" role="region" aria-label="已选条目的批量操作">
-        <span className="test-order-entry-batch-count">已选 {checkedCount} 条</span>
-        <span className="test-order-entry-batch-note">支持跨页选择</span>
+        <span className="test-order-entry-batch-count font-semibold tabular-nums">已选 {checkedCount} 条</span>
+        <span className="test-order-entry-batch-note text-[11px] text-[var(--srf-text-secondary)]">支持跨页选择</span>
         <div className="test-order-entry-batch-actions flex flex-wrap items-center gap-2 ml-auto max-[1100.01px]:ml-0 max-[1100.01px]:w-full">
           {canExecute && orderId ? <VisualizationBatchButton
             key={orderId}

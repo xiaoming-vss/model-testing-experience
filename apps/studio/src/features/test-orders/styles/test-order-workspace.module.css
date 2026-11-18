@@ -1,8 +1,7 @@
-/* 测试单执行工作台：页面高度链、详情卡片与步骤表皮肤（阶段 10 迁移，阶段 17 收缩）。
- * 详情骨架、前置条件/步骤排版已迁到 TestOrderWorkspacePage 与 TestOrderCaseContent 的
- * Tailwind utility；这里只保留高度链、表格表面、等宽编号与 AntD 深层结构。
- * 列表工具栏、条目表格与批量条在 test-order-workspace-list.module.css；
- * 判定与底部操作条在 test-order-verdict.module.css。颜色消费 surface-tokens.css。 */
+/* 测试单执行工作台：页面高度链、AntD 表格深层结构、进度筛选伪元素与底部判定条。
+ * 页面骨架、面包屑、条目徽标、详情表与判定按钮已迁到组件 utility；
+ * 图谱页壳/查看器已迁 utility，图谱执行面板复用本文件的 `.root` 作用域。 */
+
 :global(.app-shell):has(.root) {
   height: 100dvh;
   min-height: 0;
@@ -30,150 +29,14 @@
   overflow: hidden;
 }
 
-/* 沿用平台工作台外边距，详情与列表共用同一内容区。 */
 :global(.app-shell-macos) .root :global(.api-automation-content) {
   padding: 12px var(--app-page-gutter) 16px;
 }
 
-.root :global(.test-order-case-no) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.root :global(.test-order-case-no) :global(.ant-btn-content) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.root :global(.test-order-meta-pill) strong {
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
-.root :global(.test-order-meta-pill):nth-last-child(-n + 2) strong {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.test-order-case-no):focus-visible {
-  outline: 2px solid var(--srf-accent);
-  outline-offset: -2px;
-}
-
-/* ===== 前置条件与步骤内容 ===== */
-/* Confirmed comparison layout inside the single detail surface. */
-.root :global(.test-order-content-conditions) {
-  border: 1px solid var(--srf-card-border);
-  border-left: 3px solid var(--srf-accent-border);
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-hover);
-}
-
-.root :global(.test-order-content-conditions-head) :global(.anticon) {
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.test-order-content-table) {
-  width: 100%;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 10px;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-  overflow: hidden;
-}
-
-.root :global(.test-order-content-table) caption {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.root :global(.test-order-content-table) th {
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--srf-card-border);
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
-  font-size: 12px;
-  font-weight: 600;
-  text-align: left;
-}
-
-.root :global(.test-order-content-table) th:first-child {
-  width: 64px;
-  text-align: center;
-  background: var(--srf-hover);
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.test-order-content-table) td {
-  padding: 22px 18px;
-  border-bottom: 1px solid var(--srf-divider);
-  background: var(--srf-card);
-  vertical-align: top;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.root :global(.test-order-content-table) td:nth-child(2) {
-  font-weight: 500;
-}
-
-.root :global(.test-order-content-table) td:last-child {
-  position: relative;
-  padding-left: 44px;
-}
-
+/* 详情表最后一行不画分隔线；其余单元格间距由 TestOrderCaseContent utility 控制。 */
 .root :global(.test-order-content-table) tr:last-child td {
   border-bottom: 0;
 }
-
-.root :global(.test-order-content-expected-icon) {
-  position: absolute;
-  left: 18px;
-  top: 24px;
-  color: var(--srf-accent-strong);
-  font-size: 13px;
-}
-
-.root :global(.test-order-content-empty) {
-  margin: 0;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-}
-
-.root :global(.test-order-content-table) td:global(.test-order-content-empty) {
-  padding: 22px 18px;
-  background: var(--srf-card);
-}
-
-@media (max-width: 480px) {
-  .root :global(.test-order-content-table) th,
-  .root :global(.test-order-content-table) td {
-    padding: 12px 8px;
-  }
-  .root :global(.test-order-content-table) th:first-child {
-    width: 48px;
-  }
-  .root :global(.test-order-content-table) td:last-child {
-    padding-left: 28px;
-  }
-  .root :global(.test-order-content-expected-icon) {
-    top: 14px;
-    left: 8px;
-  }
-}
-
-/* ===== 原 test-order-workspace-list.module.css ===== */
-
-/* 测试单执行工作台列表皮肤（列表优先）；阶段 17 起工具栏、进度筛选、批量条与
- * 详情骨架的布局由组件 Tailwind utility 负责，这里保留列表外框边界、选中/悬停态、
- * 等宽编号与 AntD 深层结构。列表外框、工具栏与分页沿用 surface-tokens 的 tp-list-* 契约。 */
 
 /* ===== 单行工作台工具栏 ===== */
 
@@ -181,7 +44,6 @@
   justify-content: flex-start;
 }
 
-/* 列表卡片、详情卡片和图谱容器都把工具栏作为第一行，不再单独成卡。 */
 .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar),
 .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar),
 .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar) {
@@ -190,159 +52,14 @@
   border-radius: 0;
 }
 
-.root :global(.test-order-workspace-crumb-link) {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 5px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--srf-accent);
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.root :global(.test-order-workspace-crumb-link):first-child {
-  margin-inline-start: -5px;
-}
-
-.root :global(.test-order-workspace-crumb-link):hover {
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.root :global(.test-order-workspace-crumb-link):focus-visible {
-  outline: 2px solid var(--srf-accent);
-  outline-offset: 2px;
-}
-
-.root :global(.test-order-workspace-crumb-current) {
-  margin: 0;
-  max-width: 360px;
-  overflow: hidden;
-  color: var(--srf-text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 20px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .root :global(.test-order-workspace-filter-btn):global(.is-active) {
   border-color: var(--srf-accent-border);
   background: var(--srf-accent-soft);
   color: var(--srf-accent-strong);
 }
 
-.root :global(.test-order-workspace-filter-count) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-  font-size: 10px;
-  line-height: 16px;
-  font-variant-numeric: tabular-nums;
-}
-
 .root :global(.test-order-workspace-filter-popover) :global(.ant-input-affix-wrapper) {
   width: 100%;
-}
-
-/* ===== 状态进度条筛选：视觉 8px，点击热区 18px ===== */
-
-.root :global(.test-order-progress-track)::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  right: 0;
-  left: 0;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--srf-track);
-  pointer-events: none;
-}
-
-.root :global(.test-order-progress-seg) {
-  position: relative;
-  z-index: 1;
-  flex-basis: 0;
-  flex-shrink: 1;
-  min-width: 8px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-  transition: opacity 0.16s ease, filter 0.16s ease;
-}
-
-.root :global(.test-order-progress-seg)::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  right: 0;
-  left: 0;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--seg-color);
-  transition: filter 0.16s ease, box-shadow 0.16s ease;
-}
-
-.root :global(.test-order-progress-seg):hover {
-  filter: brightness(1.12);
-}
-
-.root :global(.test-order-progress-seg):focus-visible {
-  outline: 2px solid var(--srf-accent);
-  outline-offset: 2px;
-}
-
-.root :global(.test-order-progress-seg):global(.is-dim) {
-  opacity: 0.36;
-  filter: saturate(0.45);
-}
-
-.root :global(.test-order-progress-seg):global(.is-active) {
-  z-index: 2;
-}
-
-.root :global(.test-order-progress-seg):global(.is-active)::before {
-  /* 待执行/跳过的段色很浅，环上混入一级文字色，保证选中态在浅色主题也看得出来。 */
-  box-shadow:
-    0 0 0 1px var(--app-list-toolbar-bg, var(--srf-card)),
-    0 0 0 3px color-mix(in srgb, var(--seg-color) 65%, var(--srf-text-secondary) 35%);
-  filter: saturate(1.15) brightness(1.08);
-}
-
-.root :global(.test-order-progress-seg):global(.is-passed) {
-  --seg-color: var(--srf-result-passed);
-}
-
-.root :global(.test-order-progress-seg):global(.is-failed) {
-  --seg-color: var(--srf-result-failed);
-}
-
-.root :global(.test-order-progress-seg):global(.is-blocked) {
-  --seg-color: var(--srf-result-blocked);
-}
-
-.root :global(.test-order-progress-seg):global(.is-skipped) {
-  --seg-color: var(--srf-result-skipped);
-}
-
-.root :global(.test-order-progress-seg):global(.is-pending) {
-  --seg-color: var(--srf-track-pending);
 }
 
 /* ===== 执行条目表格 ===== */
@@ -351,84 +68,11 @@
   cursor: pointer;
 }
 
-.root :global(.test-order-entry-selection),
-.root :global(.test-order-entry-actions) {
-  display: inline-flex;
-  align-items: center;
-}
-
 .root :global(.test-order-entry-name-cell) :global(.ant-typography) {
   display: block;
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-}
-
-/* 与用例库的编号 chip 一致：固定宽度，超出省略；点击复制完整 UUID。 */
-.root :global(.test-order-entry-id) {
-  display: inline-block;
-  box-sizing: border-box;
-  width: 96px;
-  max-width: 100%;
-  vertical-align: middle;
-  padding: 2px 6px;
-  overflow: hidden;
-  border: 0;
-  border-radius: 4px;
-  background: var(--srf-chip);
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  line-height: 16px;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: copy;
-}
-
-.root :global(.test-order-entry-id):hover {
-  color: var(--srf-accent);
-}
-
-.root :global(.test-order-entry-id):focus-visible {
-  outline: 2px solid var(--srf-accent);
-  outline-offset: 2px;
-}
-
-.root :global(.test-order-entry-module) {
-  display: inline-block;
-  max-width: 100%;
-  padding: 2px 7px;
-  overflow: hidden;
-  border-radius: 5px;
-  background: var(--srf-chip);
-  color: var(--srf-chip-text);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.root :global(.test-order-entry-status-dot) {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.root :global(.test-order-entry-person),
-.root :global(.test-order-entry-unassigned) {
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.test-order-entry-time) {
-  color: var(--srf-text-secondary);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.root :global(.test-order-entry-muted) {
-  color: var(--srf-text-muted);
 }
 
 .root :global(.test-order-entry-actions) :global(.ant-btn) {
@@ -440,52 +84,7 @@
   opacity: 1;
 }
 
-/* ===== 批量操作条 ===== */
-
-.root :global(.test-order-entry-batch-count) {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.root :global(.test-order-entry-batch-note) {
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-}
-
-/* ===== 全宽详情 ===== */
-
-.root :global(.test-order-execution-view),
-.root :global(.test-order-list-view) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-}
-
-.root :global(.test-order-list-view)[hidden] {
-  display: none;
-}
-
-.root :global(.test-order-detail-panel) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  overflow: hidden;
-}
-
-.root :global(.test-order-detail-header) {
-  flex: 0 0 auto;
-}
-
-.root :global(.test-order-detail-header) :global(.test-order-workspace-crumb-current) {
-  max-width: min(720px, 56vw);
-}
+/* ===== 详情两侧翻页 ===== */
 
 .root :global(.test-order-detail-side-nav) {
   position: absolute;
@@ -517,31 +116,95 @@
   opacity: 0.35;
 }
 
-/* ===== 响应式 ===== */
-
-@media (max-width: 1100px) {
-  .root :global(.test-order-workspace-crumb-current) {
-    max-width: 220px;
-  }
-}
-
-/* ===== 原 add-cases-modal.module.css ===== */
-
-/* 加入用例弹窗：只保留文字与步骤圆点的皮肤；
-   布局、间距与排版由 AddCasesFromLibraryModal 的 Tailwind utility 负责。 */
-.root :global(.test-order-preconditions) {
-  color: var(--tp-text-secondary, var(--app-shell-text-secondary));
-}
-
-.root :global(.test-order-step-no) {
-  background: var(--app-glass-table-divider);
-  color: var(--tp-text-secondary, var(--app-shell-text-secondary));
-}
-
-.root :global(.test-order-step-expect) {
-  color: var(--tp-text-muted, var(--app-shell-text-muted));
-}
+/* ===== 加入用例弹窗 ===== */
 
 .root :global(.add-cases-detail-meta) :global(.ant-tag) {
   margin-inline-end: 0;
+}
+
+/* ===== 底部判定与缺陷条 ===== */
+
+.root :global(.test-order-execution-bar) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "footer actions position";
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 12px 20px;
+  min-width: 0;
+  padding: 14px 20px;
+  border-top: 1px solid var(--srf-card-border);
+  background: var(--srf-card);
+}
+
+.root :global(.test-order-execution-actions) :global(.test-order-verdict-grid) {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.root :global(.test-order-execution-actions) :global(.test-order-judge-btn) {
+  flex: 0 0 112px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--srf-radius-control);
+}
+
+.root :global(.test-order-defect-controls) :global(.ant-btn) {
+  flex: 0 0 auto;
+}
+
+.root :global(.test-order-execution-bar) :global(.test-order-defect-section) {
+  grid-column: 1 / -1;
+  max-height: min(20vh, 180px);
+  overflow: auto;
+}
+
+.root :global(.test-order-execution-bar) :global(.test-order-execution-footer) {
+  grid-area: footer;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  font-size: 11px;
+}
+
+.root :global(.test-order-execution-bar) :global(.test-order-autoadvance) {
+  width: auto;
+}
+
+.root :global(.test-order-execution-bar) :global(.test-order-entry-position) {
+  grid-area: position;
+  text-align: right;
+  padding-inline-start: 20px;
+  border-inline-start: 1px solid var(--srf-card-border);
+}
+
+.root :global(.test-order-execution-bar) :global(.test-order-autoadvance) > span:last-child {
+  font-size: 11px;
+}
+
+@media (max-width: 1600px) {
+  .root :global(.test-order-execution-bar) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "actions actions" "footer position";
+    gap: 10px 16px;
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .root :global(.test-order-execution-bar) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "actions" "position" "footer";
+  }
+
+  .root :global(.test-order-execution-actions) {
+    gap: 8px;
+  }
+
+  .root :global(.test-order-execution-bar) :global(.test-order-entry-position) {
+    border: 0;
+    padding-inline-start: 0;
+  }
 }

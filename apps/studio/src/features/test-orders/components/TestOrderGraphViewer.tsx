@@ -29,7 +29,6 @@ import { message } from '@/shared/utils/feedback'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { getErrorMessage } from '@/utils/format'
 import relationsStyles from '@/features/ai-testing/styles/relations.module.css'
-import graphStyles from '../styles/test-order-graph.module.css'
 
 const { Text } = Typography
 
@@ -182,7 +181,7 @@ export function TestOrderGraphViewer({
     )
   } else if (inProgress) {
     body = (
-      <div className="ai-relations-page-loading test-order-graph-loading">
+      <div className="ai-relations-page-loading test-order-graph-loading flex flex-col gap-2.5">
         <Spin />
         <Text type="secondary">图谱生成中…</Text>
       </div>
@@ -225,10 +224,10 @@ export function TestOrderGraphViewer({
 
   return (
     <>
-      <div className={`test-order-graph-viewer ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-[var(--ant-color-bg-layout)] ${relationsStyles.scope} ${graphStyles.viewer}`}>
+      <div className={`test-order-graph-viewer ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-[10px] border border-[var(--app-surface-border)] bg-[var(--app-surface)] ${relationsStyles.scope}`}>
         {toolbar}
-        <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2.5 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-[9px]">
-          <div className="test-order-graph-status">
+        <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-2.5">
+          <div className="test-order-graph-status flex items-center gap-2">
             {run ? <Tag color={statusMeta.color}>{statusMeta.label}</Tag> : null}
             {inProgress ? <Text type="secondary">每 5 秒自动刷新</Text> : null}
             <Text type="secondary">
@@ -290,7 +289,7 @@ export function TestOrderGraphViewer({
           <Alert showIcon type="error" title={run.errorMessage} />
         ) : null}
 
-        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 [&>*]:min-w-0 [&>*]:flex-1">{body}</div>
+        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 bg-[var(--app-surface)] [&>*]:min-w-0 [&>*]:flex-1">{body}</div>
       </div>
       <TestOrderGraphHistoryDrawer key={orderId} open={historyOpen} orderId={orderId} projectId={projectId}
         onClose={() => setHistoryOpen(false)} onSelect={runId => { setSelectedRunId(runId); setHistoryOpen(false) }}

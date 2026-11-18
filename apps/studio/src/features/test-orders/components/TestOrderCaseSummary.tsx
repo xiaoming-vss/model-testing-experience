@@ -26,7 +26,7 @@ export function TestOrderCaseSummary({ entry, assigneeName, executorName, locked
             size="small"
             icon={<CopyOutlined aria-hidden="true" />}
             iconPlacement="end"
-            className="test-order-case-no max-w-[300px] min-w-0 flex-[0_1_auto] text-[11px]"
+            className="test-order-case-no max-w-[300px] min-w-0 flex-[0_1_auto] text-[11px] font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--srf-accent)] [&_.ant-btn-content]:overflow-hidden [&_.ant-btn-content]:text-ellipsis [&_.ant-btn-content]:whitespace-nowrap"
             aria-label="复制用例 ID"
             disabled={!entry.caseId}
             onClick={async () => {
@@ -52,26 +52,26 @@ export function TestOrderCaseSummary({ entry, assigneeName, executorName, locked
         <span
           className={`test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)] tone-${getTestOrderEntryStatusTone(entry.status)}`}
         >
-          状态 <strong className="tp-tone-tag">{entryStatusMeta.label}</strong>
+          状态 <strong className="tp-tone-tag font-medium [overflow-wrap:anywhere]">{entryStatusMeta.label}</strong>
         </span>
         {entry.casePriority ? (
           <span className={`test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)] tone-${priorityTone(entry.casePriority)}`}>
-            优先级 <strong className="tp-tone-tag">{entry.casePriority}</strong>
+            优先级 <strong className="tp-tone-tag font-medium [overflow-wrap:anywhere]">{entry.casePriority}</strong>
           </span>
         ) : null}
         <span className="test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)]">
-          分配给 <strong className="tp-tone-tag">{assigneeName ? <UserDisplayName name={assigneeName} /> : '未分配'}</strong>
+          分配给 <strong className="tp-tone-tag font-medium [overflow-wrap:anywhere]">{assigneeName ? <UserDisplayName name={assigneeName} /> : '未分配'}</strong>
         </span>
         {entry.caseModule ? (
           <span className="test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)]">
-            所属模块 <strong className="tp-tone-tag">{entry.caseModule}</strong>
+            所属模块 <strong className="tp-tone-tag font-medium [overflow-wrap:anywhere]">{entry.caseModule}</strong>
           </span>
         ) : null}
         <span className="test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)]">
-          实际执行 <strong className="tp-tone-tag">{executorName ? <UserDisplayName name={executorName} /> : '-'}</strong>
+          实际执行 <strong className="tp-tone-tag border-0 bg-transparent p-0 font-medium text-[var(--srf-text-secondary)] [overflow-wrap:anywhere]">{executorName ? <UserDisplayName name={executorName} /> : '-'}</strong>
         </span>
         <span className="test-order-meta-pill inline-flex items-center gap-1.5 text-[11px] leading-4 text-[var(--srf-text-secondary)]">
-          执行时间 <strong className="tp-tone-tag">{formatTime(entry.executedAt) || '-'}</strong>
+          执行时间 <strong className="tp-tone-tag border-0 bg-transparent p-0 font-medium text-[var(--srf-text-secondary)] [overflow-wrap:anywhere]">{formatTime(entry.executedAt) || '-'}</strong>
         </span>
       </div>
     </div>

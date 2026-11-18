@@ -394,7 +394,7 @@ export function AddCasesFromLibraryModal({
           </div>
           <div className="test-order-block flex flex-col gap-1">
             <Text type="secondary">前置条件</Text>
-            <div className="test-order-preconditions text-[13px] leading-[1.7]">
+            <div className="test-order-preconditions text-[13px] leading-[1.7] text-[var(--tp-text-secondary,var(--app-shell-text-secondary))]">
               {detailContent.preconditions.length === 0
                 ? '暂无前置条件'
                 : detailContent.preconditions.map((item, index) => (
@@ -408,10 +408,10 @@ export function AddCasesFromLibraryModal({
             detailContent.steps.map((step, index) => (
               <div key={index} className="api-case-run-result-row test-order-step">
                 <div className="api-case-run-result-row-title">
-                  <span className="test-order-step-no inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold">{index + 1}</span>
+                  <span className="test-order-step-no inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--app-glass-table-divider)] text-[11px] font-semibold text-[var(--tp-text-secondary,var(--app-shell-text-secondary))]">{index + 1}</span>
                   <span className="test-order-step-action flex-1 text-[13px]">{step.action}</span>
                 </div>
-                <div className="test-order-step-expect mt-1.5 text-[12.5px]">预期：{step.expected}</div>
+                <div className="test-order-step-expect mt-1.5 text-[12.5px] text-[var(--tp-text-muted,var(--app-shell-text-muted))]">预期：{step.expected}</div>
               </div>
             ))
           )}

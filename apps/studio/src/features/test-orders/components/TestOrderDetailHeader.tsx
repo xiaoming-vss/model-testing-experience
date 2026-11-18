@@ -29,11 +29,11 @@ export function TestOrderDetailHeader({
   onPrev,
   onNext,
 }: Props) {
-  return <div className="tp-list-toolbar test-order-workspace-toolbar test-order-detail-header">
+  return <div className="tp-list-toolbar test-order-workspace-toolbar test-order-detail-header flex-none">
     <nav className="test-order-workspace-breadcrumb flex min-w-0 flex-[0_1_auto] items-center gap-[7px]" aria-label="面包屑">
       <button
         type="button"
-        className="test-order-workspace-crumb-link"
+        className="test-order-workspace-crumb-link inline-flex h-6 cursor-pointer items-center whitespace-nowrap rounded-[5px] border-0 bg-transparent px-[5px] text-[13px] leading-none text-[var(--srf-accent)] first:-ml-[5px] hover:bg-[var(--srf-accent-soft)] hover:text-[var(--srf-accent-strong)] hover:underline hover:underline-offset-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)]"
         aria-label="返回测试单列表"
         onClick={onBackToOrders}
       >
@@ -42,7 +42,7 @@ export function TestOrderDetailHeader({
       <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
       <button
         type="button"
-        className="test-order-workspace-crumb-link"
+        className="test-order-workspace-crumb-link inline-flex h-6 cursor-pointer items-center whitespace-nowrap rounded-[5px] border-0 bg-transparent px-[5px] text-[13px] leading-none text-[var(--srf-accent)] first:-ml-[5px] hover:bg-[var(--srf-accent-soft)] hover:text-[var(--srf-accent-strong)] hover:underline hover:underline-offset-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)]"
         aria-label={`返回用例列表：${order?.name ?? '测试单'}`}
         title="返回用例列表"
         onClick={onBackToCases}
@@ -50,7 +50,7 @@ export function TestOrderDetailHeader({
         {order?.name ?? '测试单'}
       </button>
       <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
-      <h1 className="test-order-workspace-crumb-current" title={caseTitle ?? '用例详情'}>
+      <h1 className="test-order-workspace-crumb-current m-0 max-w-[min(720px,56vw)] overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-5 text-[var(--srf-text)]" title={caseTitle ?? '用例详情'}>
         {caseTitle ?? '用例详情'}
       </h1>
     </nav>

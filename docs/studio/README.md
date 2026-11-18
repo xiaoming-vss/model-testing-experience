@@ -76,15 +76,12 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ### 测试单样式归属
 
-文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。阶段 21 把 `test-order-workspace-list`、`add-cases-modal` 合并进 `test-order-workspace`，把 `test-order-verdict` 合并进 `test-order-graph-execution`；工作台页面根挂这两个 Module 的 `.root`，图谱执行面板与加入用例 Modal 复用同一组 Module。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS。阶段 17 起工作台列表/详情骨架、工具栏、进度筛选、批量条与判定区排版迁入组件 utility，两个 Module 只保留高度链、表格表面、状态色调与 AntD 深层结构。
+文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。阶段 21 合并同根 Module；阶段 31 再把列表、工作台骨架、图谱页壳/查看器、执行面板与判定区整体迁入组件 utility，删除 `test-orders-list.module.css`、`test-order-graph.module.css` 与 `test-order-graph-execution.module.css`。工作台页面根挂 `test-order-workspace` 的 `.root`，图谱执行面板与加入用例 Modal 复用同一作用域。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS；剩余两个 Module 只保留高度链、AntD 深层结构、执行条与可视化容器查询。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
-| `test-orders-list.module.css` | 测试单列表页进度条、状态胶囊与搜索按钮皮肤；搜索框宽度与 900px 断点由 `TestOrderPage` utility 负责 |
-| `test-order-workspace.module.css` | 工作台高度链、步骤表、列表工具栏/条目表格/编号/状态、进度段、加入用例弹窗皮肤与 AntD 深层结构；布局由组件 utility 负责 |
-| `test-order-graph-execution.module.css` | 图谱执行面板、判定按钮色调/选中态、快捷键键帽与底部操作条网格契约；工作台与图谱执行面板共用 |
-| `test-order-graph.module.css` | 测试单图谱页壳与查看器 |
-| `test-order-visualization.module.css` | 用例可视化面板与批量图解按钮 |
+| `test-order-workspace.module.css` | 工作台页面高度链、AntD 表格/工具栏深层结构、详情翻页、加入用例弹窗与底部执行条/判定控件；列表、骨架、图谱壳与判定区布局由组件 utility 负责 |
+| `test-order-visualization.module.css` | 可视化面板容器查询与图表皮肤；面板骨架与批量图解按钮由组件 utility 负责 |
 
 ### 测试用例样式归属
 

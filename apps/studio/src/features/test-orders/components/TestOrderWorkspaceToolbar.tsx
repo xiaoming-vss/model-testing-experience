@@ -82,14 +82,14 @@ export function TestOrderWorkspaceToolbar({
     <nav className="test-order-workspace-breadcrumb flex min-w-0 flex-[0_1_auto] items-center gap-[7px]" aria-label="面包屑">
       <button
         type="button"
-        className="test-order-workspace-crumb-link"
+        className="test-order-workspace-crumb-link inline-flex h-6 cursor-pointer items-center whitespace-nowrap rounded-[5px] border-0 bg-transparent px-[5px] text-[13px] leading-none text-[var(--srf-accent)] first:-ml-[5px] hover:bg-[var(--srf-accent-soft)] hover:text-[var(--srf-accent-strong)] hover:underline hover:underline-offset-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)]"
         title="返回测试单列表"
         onClick={onBack}
       >
         测试单
       </button>
       <span className="test-order-workspace-crumb-sep inline-flex flex-none items-center text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true"><RightOutlined /></span>
-      <h1 className="test-order-workspace-crumb-current" title={order?.name ?? '测试单'}>
+      <h1 className="test-order-workspace-crumb-current m-0 max-w-[360px] overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-5 text-[var(--srf-text)] max-[1100px]:max-w-[220px]" title={order?.name ?? '测试单'}>
         {order?.name ?? '测试单'}
       </h1>
     </nav>
@@ -137,7 +137,7 @@ export function TestOrderWorkspaceToolbar({
       >
         筛选
         {activeFilterCount ? (
-          <span className="test-order-workspace-filter-count">{activeFilterCount}</span>
+          <span className="test-order-workspace-filter-count inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--srf-count-badge)] px-1 text-[10px] leading-4 text-[var(--srf-accent-strong)] tabular-nums">{activeFilterCount}</span>
         ) : null}
       </Button>
     </Popover>
