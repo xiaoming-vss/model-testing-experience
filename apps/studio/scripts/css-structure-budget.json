@@ -255,11 +255,6 @@
       "declarations": 421,
       "selectors": 166
     },
-    "src/features/ui-automation/styles/ui-list.module.css": {
-      "rules": 12,
-      "declarations": 34,
-      "selectors": 12
-    },
     "src/features/ui-automation/styles/ui-suite.module.css": {
       "rules": 91,
       "declarations": 252,
@@ -478,7 +473,7 @@
       "sample": "display: flex;align-items: center;justify-content: space-between;gap: 12px"
     },
     "5ffa9328928dba7e": {
-      "count": 3,
+      "count": 2,
       "sample": "color: var(--srf-text-muted);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size: 10px"
     },
     "6008df5c3dcaa46a": {
@@ -546,7 +541,7 @@
       "sample": "color: var(--tp-text-secondary);font-size: 12px;line-height: 18px"
     },
     "b55a347634ad307b": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px;min-width: 0"
     },
     "b9c0f9c571daf401": {

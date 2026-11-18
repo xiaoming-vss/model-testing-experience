@@ -18,6 +18,8 @@ function screenshotTone(policy?: UiScreenshotPolicy) {
   return 'tone-amber'
 }
 
+const badgeClass = 'ui-suite-list-badge inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-2 py-0.5 text-[10px] font-medium leading-[16px] text-[var(--srf-tone-text,var(--srf-chip-text))]'
+
 export function UiSuiteRunConfigCell({ suite }: { suite: UiTestSuite }) {
   const headless = suite.headless === true
   const viewport =
@@ -26,14 +28,14 @@ export function UiSuiteRunConfigCell({ suite }: { suite: UiTestSuite }) {
   const policy = formatUiScreenshotPolicy(suite.screenshotPolicy)
 
   return (
-    <div className="ui-suite-list-config-cell">
-      <span className={`ui-suite-list-badge ${headless ? 'tone-slate' : 'tone-green'}`}>
-        {headless ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+    <div className="ui-suite-list-config-cell flex flex-nowrap items-center gap-1.5">
+      <span className={`${badgeClass} ${headless ? 'tone-slate' : 'tone-green'}`}>
+        {headless ? <EyeInvisibleOutlined className="text-xs" /> : <EyeOutlined className="text-xs" />}
         {headless ? '无头' : '可视'}
       </span>
-      <span className="ui-suite-list-badge is-mono tone-slate">{viewport}</span>
-      <span className={`ui-suite-list-badge ${screenshotTone(suite.screenshotPolicy)}`}>
-        {suite.screenshotPolicy === 'on_failure' ? <CameraOutlined /> : <ClockCircleOutlined />}
+      <span className={`${badgeClass} font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] tone-slate`}>{viewport}</span>
+      <span className={`${badgeClass} ${screenshotTone(suite.screenshotPolicy)}`}>
+        {suite.screenshotPolicy === 'on_failure' ? <CameraOutlined className="text-xs" /> : <ClockCircleOutlined className="text-xs" />}
         {timeout} / {policy}
       </span>
     </div>

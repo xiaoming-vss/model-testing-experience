@@ -12,7 +12,6 @@ import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems } from '@/services/api'
 import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
-import listStyles from '@/features/ui-automation/styles/ui-list.module.css'
 import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
 
 type UiAutomationPageScope = {
@@ -102,7 +101,7 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
     [uiEnvironments],
   )
   return (
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface ${listStyles.scope} ${suiteStyles.scope}`}>
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface ${suiteStyles.scope}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
 

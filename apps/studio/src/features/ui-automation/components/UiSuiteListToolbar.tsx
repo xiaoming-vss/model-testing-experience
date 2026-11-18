@@ -64,12 +64,12 @@ export function UiSuiteListToolbar({
 
   return (
     <div className="panel-header api-panel-header ui-suite-list-toolbar tp-list-toolbar">
-      <div className="ui-suite-list-toolbar-filters">
+      <div className="ui-suite-list-toolbar-filters flex min-w-0 flex-wrap items-center gap-2">
               <h1 className="tp-list-title">UI测试</h1>
         {showScopeFilters ? (
           <div className="api-filter-group">
             <div className="api-filter-field">
-              <span className="api-filter-field-label">需求</span>
+              <span className="api-filter-field-label text-[var(--srf-text-muted)] font-medium">需求</span>
               <Select
                 className="api-filter-select business-filter-select"
                 value={requirementValue}
@@ -86,10 +86,10 @@ export function UiSuiteListToolbar({
         <div className="api-filter-field ui-suite-list-search-field w-72 min-w-64 max-w-full max-narrow:w-full max-narrow:min-w-0">
           <Input
             ref={keywordInputRef}
-            className="api-filter-input ui-suite-list-search-input"
+            className="api-filter-input ui-suite-list-search-input rounded-[8px]"
             allowClear
             prefix={<SearchOutlined />}
-            suffix={<span className="ui-suite-list-search-hint">⌘K</span>}
+            suffix={<span className="ui-suite-list-search-hint font-[ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] text-[10px] text-[var(--srf-text-muted)]">⌘K</span>}
             placeholder="搜索UI测试集名称 / 描述"
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
@@ -97,7 +97,7 @@ export function UiSuiteListToolbar({
         </div>
       </div>
 
-      <Space size={8} className="ui-suite-list-toolbar-actions tp-refresh-actions">
+      <Space size={8} className="ui-suite-list-toolbar-actions tp-refresh-actions flex-none items-center">
         <Tooltip title="刷新测试集列表">
           <ProjectActionButton
             action="read"
@@ -112,7 +112,7 @@ export function UiSuiteListToolbar({
           />
         </Tooltip>
         <Select
-          className="ui-suite-list-environment-select"
+          className="ui-suite-list-environment-select min-w-[150px]"
           size="small"
           placeholder="选择 UI 环境"
           value={environmentId || undefined}
