@@ -10,7 +10,6 @@ import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceL
 import { listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import styles from '../styles/requirement-code-binding.module.css'
 
 const { Text, Title } = Typography
 
@@ -191,13 +190,12 @@ export function RequirementCodeBindingModal({
 
       {canWrite ? (
         <div>
-          <div className={styles.head}>
+          <div className="flex items-baseline justify-between gap-3 mt-2">
             <Title level={5}>关联软件仓库</Title>
             <Text type="secondary">每个关联分别维护工作分支和基线分支</Text>
           </div>
           <div>
             <Select
-              className={styles.select}
               aria-label="选择软件仓库"
               placeholder="选择软件仓库"
               value={selectedRepositoryId}
@@ -251,7 +249,7 @@ export function RequirementCodeBindingModal({
         </div>
       ) : null}
 
-      <div className={styles.head}>
+      <div className="flex items-baseline justify-between gap-3 mt-2">
         <Title level={5}>已关联软件仓库</Title>
         <Text type="secondary">{bindings.length} 个软件仓库</Text>
       </div>
@@ -261,7 +259,7 @@ export function RequirementCodeBindingModal({
       ) : bindings.length === 0 ? (
         <Empty description="当前需求未关联软件仓库" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div className={styles.list}>
+        <div className="flex max-h-[260px] flex-col gap-2 overflow-auto">
           {bindings.map(binding => {
             const connectionId = personal.resolve(
               binding.repository?.instanceUrl ?? '',
@@ -269,12 +267,12 @@ export function RequirementCodeBindingModal({
             return (
               <div
                 key={binding.softwareRepositoryId}
-                className={styles.row}
+                className="flex items-center justify-between gap-2.5 rounded-[8px] border border-[var(--app-document-rule)] px-2.5 py-2"
                 data-testid="requirement-code-binding-row"
               >
-                <div className={styles.rowMain}>
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <Tag
-                    className={styles.repoTag}
+                    className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap"
                     color="geekblue"
                     title={binding.repository?.path ?? binding.softwareRepositoryName}
                   >
@@ -284,7 +282,7 @@ export function RequirementCodeBindingModal({
                   <Tag color="blue">{binding.branch}</Tag>
                   <Tag color="orange">基线：{binding.baselineBranch}</Tag>
                 </div>
-                <div className={styles.rowActions}>
+                <div className="inline-flex items-center gap-1.5 [&_.ant-select]:w-40">
                   <GitlabBranchSelect
                     projectId={projectId}
                     connectionId={connectionId}

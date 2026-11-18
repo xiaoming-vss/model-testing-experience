@@ -2,7 +2,6 @@ import { Select } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { api, listItems } from '@/services/api'
-import styles from '../styles/requirement-code-binding.module.css'
 
 export function GitlabBranchSelect({
   projectId,
@@ -56,7 +55,6 @@ export function GitlabBranchSelect({
 
   return (
     <Select
-      className={styles.select}
       aria-label={ariaLabel ?? placeholder}
       showSearch
       searchValue={search}
