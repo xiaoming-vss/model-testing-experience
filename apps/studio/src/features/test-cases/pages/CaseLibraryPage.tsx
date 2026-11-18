@@ -560,7 +560,7 @@ export function CaseLibraryPage() {
             <Space size={8} className="tp-list-name functional-suite-list-name case-library-title-cell w-full min-w-0">
               {/* 用例编号是 UUID，标题里放全值太长，按运行历史的既有做法只显示前 8 位。 */}
               {caseId ? (
-                <span className="case-library-id-chip" title={caseId}>
+                <span className="case-library-id-chip flex-none rounded-[4px] bg-[var(--srf-chip)] px-1.5 py-0.5 font-mono text-[11px] leading-[16px] text-[var(--srf-text-muted)]" title={caseId}>
                   {caseId.slice(0, 8)}
                 </span>
               ) : null}
@@ -596,7 +596,7 @@ export function CaseLibraryPage() {
         align: 'center',
         render: (_, item) =>
           item.priority !== undefined && item.priority !== null && String(item.priority).trim() !== '' ? (
-            <span className={`case-library-priority tone-${priorityTone(item.priority)}`}>
+            <span className={`case-library-priority inline-flex min-w-7 box-border items-center justify-center rounded-[4px] border border-[var(--srf-tone-border,transparent)] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 py-0.5 font-mono text-[10px] font-bold leading-[16px] text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${priorityTone(item.priority)}`}>
               {formatCasePriority(item.priority)}
             </span>
           ) : (
@@ -622,7 +622,7 @@ export function CaseLibraryPage() {
         key: 'updatedAt',
         width: 180,
         render: (_, item) => (
-          <Text className="functional-suite-list-time case-library-time-cell" type="secondary">
+          <Text className="functional-suite-list-time case-library-time-cell font-mono text-[11px] text-[var(--srf-text-muted)]" type="secondary">
             {formatTime(pickUpdatedAt(item))}
           </Text>
         ),
@@ -687,27 +687,27 @@ export function CaseLibraryPage() {
   const editingCaseId = editorTarget?.mode === 'edit' ? normalizeFunctionTestCaseId(editorTarget.item) : ''
   const editingOrderNo = editorTarget?.mode === 'edit' ? editorTarget.item.orderNo : undefined
   const caseEditorHeader = (
-    <div className="case-editor-head">
-      <span className="case-editor-head-icon">
+    <div className="case-editor-head flex items-start gap-3">
+      <span className="case-editor-head-icon inline-flex h-7 w-7 flex-none items-center justify-center rounded-[8px] border border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] text-[14px] text-[var(--srf-accent)]">
         <EditOutlined />
       </span>
-      <div className="case-editor-head-copy">
-        <div className="case-editor-head-title">
-          <span className="case-editor-head-name">
+      <div className="case-editor-head-copy flex min-w-0 flex-col gap-0.5">
+        <div className="case-editor-head-title flex min-w-0 flex-wrap items-center gap-2">
+          <span className="case-editor-head-name text-[15px] font-bold leading-[22px] text-[var(--srf-text)]">
             {editorTarget?.mode === 'create' ? '新建用例' : '编辑用例'}
           </span>
           {editingOrderNo ? (
-            <span className="case-editor-head-badge" title="该测试集内的用例序号">
+            <span className="case-editor-head-badge rounded-[4px] bg-[var(--srf-chip)] px-1.5 py-0.5 font-mono text-[10px] leading-[16px] text-[var(--srf-text-secondary)]" title="该测试集内的用例序号">
               TC-{String(editingOrderNo).padStart(4, '0')}
             </span>
           ) : null}
           {editingCaseId ? (
-            <span className="case-editor-head-uid">UID: {editingCaseId.slice(0, 8)}</span>
+            <span className="case-editor-head-uid font-mono text-[11px] leading-[16px] text-[var(--srf-text-muted)]">UID: {editingCaseId.slice(0, 8)}</span>
           ) : (
-            <span className="case-editor-head-badge">未保存</span>
+            <span className="case-editor-head-badge rounded-[4px] bg-[var(--srf-chip)] px-1.5 py-0.5 font-mono text-[10px] leading-[16px] text-[var(--srf-text-secondary)]">未保存</span>
           )}
         </div>
-        <p className="case-editor-head-subtitle">
+        <p className="case-editor-head-subtitle m-0 text-[11px] leading-[16px] text-[var(--srf-text-secondary)]">
           {editorTarget?.mode === 'create'
             ? '填写用例的执行规范与验证结果'
             : '修改并完善当前测试用例的执行规范及验证结果'}
@@ -760,10 +760,10 @@ export function CaseLibraryPage() {
               </div>
               <div className="api-filter-field case-library-search-field w-72 min-w-0 max-w-full">
                 <DebouncedSearchInput
-                  className="api-filter-input case-library-search-input"
+                  className="api-filter-input case-library-search-input min-w-0 flex-1 rounded-[var(--srf-radius-control)]"
                   inputRef={keywordInputRef}
                   prefix={<SearchOutlined />}
-                  suffix={<span className="case-library-search-hint" aria-hidden="true">{searchShortcut}</span>}
+                  suffix={<span className="case-library-search-hint font-mono text-[10px] text-[var(--srf-text-muted)]" aria-hidden="true">{searchShortcut}</span>}
                   ariaLabel="搜索用例名称或模块"
                   placeholder="搜索用例名称 / 模块"
                   resetKey={searchResetKey}
@@ -872,14 +872,14 @@ export function CaseLibraryPage() {
             </div>
           ) : (
             <div className="case-library-layout grid min-h-0 flex-1 grid-cols-[var(--app-sidebar-width)_minmax(0,1fr)] gap-4 overflow-hidden max-[1180.01px]:grid-cols-1">
-              <aside className="api-case-sidebar case-library-tree flex min-h-0 flex-col overflow-hidden">
-                <div className="case-library-tree-head flex flex-none items-center justify-between gap-2 p-3">
+              <aside className="api-case-sidebar case-library-tree flex min-h-0 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
+                <div className="case-library-tree-head flex flex-none items-center justify-between gap-2 border-b border-[var(--srf-divider)] p-3">
                   <span className="case-library-tree-title inline-flex items-center gap-1.5 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">
                     <FolderOpenOutlined />
                     测试集导航
                   </span>
                 </div>
-                <div className="api-case-sidebar-toolbar case-library-tree-search flex items-center gap-2.5 px-5 pt-4">
+                <div className="api-case-sidebar-toolbar case-library-tree-search flex items-center gap-2.5 border-b border-[var(--srf-divider)] px-5 pt-4">
                   <Input
                     allowClear
                     prefix={<SearchOutlined />}
@@ -893,8 +893,7 @@ export function CaseLibraryPage() {
                   <div className="api-case-nav-list case-library-nav-list flex flex-col gap-0.5">
                     <button
                       type="button"
-                      className={`api-case-nav-item case-library-nav-item flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left${suiteId ? '' : ' active'
-                      }`}
+                      className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors hover:bg-[var(--srf-hover)] ${suiteId ? 'bg-transparent' : 'bg-[var(--srf-accent-soft)]'}`}
                       aria-current={!suiteId}
                       onClick={() => {
                         setSuiteId(null)
@@ -902,10 +901,10 @@ export function CaseLibraryPage() {
                       }}
                     >
                       <span className="case-library-nav-main flex min-w-0 items-center gap-2">
-                        <AppstoreOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
-                        <span className="case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-[18px] text-[var(--srf-text-secondary)]">全部用例</span>
+                        <AppstoreOutlined className={`case-library-tree-icon flex-none text-[16px] ${suiteId ? 'text-[var(--srf-folder)]' : 'text-[var(--srf-accent)]'}`} />
+                        <span className={`case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] leading-[18px] ${suiteId ? 'font-medium text-[var(--srf-text-secondary)] group-hover:text-[var(--srf-text)]' : 'font-semibold text-[var(--srf-accent-strong)]'}`}>全部用例</span>
                       </span>
-                      <span className="case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] text-[var(--srf-text-muted)]">{hasSuiteData ? allCaseCount : '—'}</span>
+                      <span className={`case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] ${suiteId ? 'text-[var(--srf-text-muted)]' : 'bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]'}`}>{hasSuiteData ? allCaseCount : '—'}</span>
                     </button>
                     {suitesQuery.error ? (
                       <Alert showIcon type="error" title="测试集加载失败"
@@ -933,8 +932,7 @@ export function CaseLibraryPage() {
                           <button
                             key={id ?? suite.name}
                             type="button"
-                            className={`api-case-nav-item case-library-nav-item flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left${active ? ' active' : ''
-                            }`}
+                            className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors hover:bg-[var(--srf-hover)] ${active ? 'bg-[var(--srf-accent-soft)]' : 'bg-transparent'}`}
                             aria-current={active}
                             onClick={() => {
                               setSuiteId(id ?? null)
@@ -943,13 +941,13 @@ export function CaseLibraryPage() {
                           >
                             <span className="case-library-nav-main flex min-w-0 items-center gap-2">
                               {active ? (
-                                <FolderOpenOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
+                                <FolderOpenOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-accent)]" />
                               ) : (
                                 <FolderOutlined className="case-library-tree-icon flex-none text-[16px] text-[var(--srf-folder)]" />
                               )}
-                              <span className="case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-[18px] text-[var(--srf-text-secondary)]">{suite.name}</span>
+                              <span className={`case-library-nav-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] leading-[18px] ${active ? 'font-semibold text-[var(--srf-accent-strong)]' : 'font-medium text-[var(--srf-text-secondary)] group-hover:text-[var(--srf-text)]'}`}>{suite.name}</span>
                             </span>
-                            <span className="case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] text-[var(--srf-text-muted)]">{suiteCaseCount(suite)}</span>
+                            <span className={`case-library-nav-count flex-none rounded-[4px] px-1.5 py-0.5 font-mono text-[11px] leading-[14px] ${active ? 'bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : 'text-[var(--srf-text-muted)]'}`}>{suiteCaseCount(suite)}</span>
                           </button>
                         )
                       })
@@ -957,12 +955,12 @@ export function CaseLibraryPage() {
                   </div>
                 </div>
                 {/* 三个动作排一行：新建常驻且带文字，编辑 / 删除要靠选中测试集，收成图标按钮。 */}
-                <div className="case-library-sidebar-foot flex flex-none items-center gap-2 px-3 py-2.5">
+                <div className="case-library-sidebar-foot flex flex-none items-center gap-2 border-t border-[var(--srf-divider)] bg-[var(--srf-hover)] px-3 py-2.5">
                   <Tooltip title="新建测试集">
                     <ProjectActionButton
                       action="write"
                       type="text"
-                      className="action-btn-create case-library-foot-create mr-auto flex-none"
+                      className="action-btn-create case-library-foot-create mr-auto flex-none px-0 text-xs"
                       operation="create"
                       icon={<PlusOutlined />}
                       disabled={!activeProjectId || sprints.length === 0}
@@ -1011,9 +1009,9 @@ export function CaseLibraryPage() {
                 </div>
               </aside>
 
-              <div className="case-library-main flex min-h-0 flex-col">
+              <div className="case-library-main flex min-h-0 flex-col rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
                 {/* 优先级不进筛选下拉：档位只有四档，摊平成一排比藏在二级菜单里快。 */}
-                <div className="tp-quickbar case-library-quickbar flex-none px-4 py-2.5">
+                <div className="tp-quickbar case-library-quickbar flex-none border-b border-[var(--srf-divider)] px-4 py-2.5">
                   <div className="tp-quick-filters">
                     <span className="tp-quick-label">快速过滤:</span>
                     <button
@@ -1161,7 +1159,7 @@ export function CaseLibraryPage() {
           title={caseEditorHeader}
           onCancel={closeCaseEditor}
           footer={
-            <div className="case-editor-footer">
+            <div className="case-editor-footer flex w-full flex-wrap items-center justify-between gap-2">
               {/* 删除是危险动作，按设计稿收在底部最左侧，和右侧的确认动作分开。 */}
               {editorTarget.mode === 'edit' ? (
                 <Popconfirm
@@ -1186,7 +1184,7 @@ export function CaseLibraryPage() {
                   </ProjectActionButton>
                 </Popconfirm>
               ) : null}
-              <Space size={8} className="case-editor-footer-main">
+              <Space size={8} className="case-editor-footer-main items-center">
                 <ProjectActionButton
                   action="write"
                   disabled={saveCaseMutation.isPending}

@@ -63,23 +63,23 @@ export function BugInlineEditor({ bug, projectName, sprintNames, resolveUserName
         <Button disabled={saveMutation.isPending} onClick={onClose}>取消</Button>
         <Button type="primary" className="bug-detail-primary-action" loading={saveMutation.isPending} onClick={() => form.submit()}>保存修改</Button>
       </>} />
-    <div className="bug-detail-cols">
-      <div className="bug-detail-main">
-        <section className="bug-detail-panel bug-detail-summary">
-          <div className="bug-detail-breadcrumb">{projectName || snapshot.projectId} / {formatBugNo(snapshot.bugNo)} · 编辑中</div>
+    <div className="bug-detail-cols mt-5 grid w-full min-w-0 grid-cols-[minmax(0,2.15fr)_minmax(300px,1fr)] items-start gap-5 max-[1100.01px]:grid-cols-1">
+      <div className="bug-detail-main min-w-0">
+        <section className="bug-detail-panel bug-detail-summary mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+          <div className="bug-detail-breadcrumb flex items-center gap-2.5 break-words font-mono text-[11px] text-[var(--srf-text-muted)]">{projectName || snapshot.projectId} / {formatBugNo(snapshot.bugNo)} · 编辑中</div>
           <Form.Item name="title" label="标题" rules={[{ required: true, whitespace: true, message: '请输入 Bug 标题' }]}>
             <Input maxLength={200} disabled={saveMutation.isPending} />
           </Form.Item>
-          <div className="bug-detail-subtitle"><UserDisplayName name={resolveUserName(snapshot.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(snapshot))}</div>
+          <div className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]"><UserDisplayName name={resolveUserName(snapshot.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(snapshot))}</div>
         </section>
-        <section className="bug-detail-panel">
-          <div className="bug-description-heading"><h2 className="bug-panel-title">编辑问题描述</h2>
+        <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+          <div className="bug-description-heading mb-1.5 flex flex-wrap items-center justify-between gap-2"><h2 className="bug-panel-title m-0 flex items-center gap-2 border-0 p-0 text-[14px] font-semibold text-[var(--srf-text)]">编辑问题描述</h2>
             <BugDescriptionTemplates value={descriptionHtml} onChange={(html) => { setDescriptionHtml(html); setRevision((value) => value + 1); setDirty(true) }} />
           </div>
           <RichTextEditor key={revision} value={descriptionHtml || snapshot.descriptionHtml} projectId={snapshot.projectId}
             disabled={saveMutation.isPending} onChange={(html) => { setDescriptionHtml(html); setDirty(true) }} ariaLabel="问题描述" />
         </section>
-        <section className="bug-detail-panel"><h2 className="bug-panel-title">附件</h2>
+        <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5"><h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">附件</h2>
           <BugAttachmentUploader existing={existing} items={attachments} disabled={saveMutation.isPending}
             onRemoveExisting={(fileId) => { model.setRemovedAttachmentFileIds((ids) => [...ids, fileId]); setDirty(true) }}
             onChange={(items) => { setAttachments(items); setDirty(true) }} />

@@ -28,8 +28,8 @@ export function BugImportConfiguration({ selected, choices, previews, members, s
     ...(bulkAssignee ? { assigneeUserId: bulkAssignee } : {}),
     ...(bulkSprint ? { foundSprintId: bulkSprint } : {}),
   })
-  return <div className="bug-import-step">
-    <Space wrap className="bug-import-bulk">
+  return <div className="bug-import-step flex min-h-0 flex-1 flex-col gap-3">
+    <Space wrap className="bug-import-bulk flex-none">
       <span>批量设置</span>
       <Select aria-label="批量责任人" placeholder="平台责任人" options={members} showSearch
         optionFilterProp="label" allowClear value={bulkAssignee} onChange={setBulkAssignee} disabled={busy} />
@@ -38,12 +38,12 @@ export function BugImportConfiguration({ selected, choices, previews, members, s
       <Button disabled={busy || (!bulkAssignee && !bulkSprint)} onClick={apply}>应用到全部 {selected.length} 条</Button>
     </Space>
     {error && <Alert type="error" showIcon title={error} action={<Button onClick={onRetry} disabled={busy}>重试预览</Button>} />}
-    <div className="bug-import-scroll">
+    <div className="bug-import-scroll min-h-0 flex-1 overflow-auto">
       <Table<number> size="small" rowKey={id => id} dataSource={selected} pagination={false}
         loading={loading} scroll={{ x: 860 }} columns={[
           { title: 'Bug', key: 'bug', width: 320, render: (_, id) => {
             const title = `#${id} ${previews.get(id)?.title || ''}`
-            return <Tooltip title={title}><span className="bug-import-title">{title}</span></Tooltip>
+            return <Tooltip title={title}><span className="bug-import-title line-clamp-2 break-words">{title}</span></Tooltip>
           } },
           { title: '平台责任人', key: 'assignee', width: 170, render: (_, id) => <Select
             aria-label={`责任人-${id}`} placeholder="选择平台责任人" options={members} showSearch optionFilterProp="label"
@@ -60,7 +60,7 @@ export function BugImportConfiguration({ selected, choices, previews, members, s
             const missing = [!choice?.assigneeUserId && '未分配责任人', !sprintFor(id) && '未选择发现迭代',
               !item.converted.severity && !choice?.severity && '待补严重程度',
               !item.converted.priority && !choice?.priority && '待补优先级'].filter(Boolean)
-            return <Space orientation="vertical" size={4} className="bug-import-check">
+            return <Space orientation="vertical" size={4} className="bug-import-check w-full">
               {ready.includes(id) ? <Tag color="success">可导入</Tag>
                 : <span>{item.state !== 'ready' ? item.errorMessage || item.pending.map(p => p.reason).join('；') : missing.join('；')}</span>}
               {item.converted.severity == null && <Select aria-label={`严重程度-${id}`} placeholder="补充严重程度"

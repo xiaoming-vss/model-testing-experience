@@ -38,20 +38,20 @@ export function FunctionCaseEditor({
       form={form}
       layout="vertical"
       requiredMark={false}
-      className="case-editor-form"
+      className="case-editor-form bg-transparent p-0"
       onFinish={onSubmit}
     >
-      <div className="case-editor-body">
+      <div className="case-editor-body flex flex-col gap-4">
         <section className="case-editor-name-section">
-          <div className="case-editor-name-head">
-            <span className="case-editor-name-label">
+          <div className="case-editor-name-head mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="case-editor-name-label text-xs font-bold leading-[18px] text-[var(--srf-text)]">
               用例名称
-              <em className="case-editor-required">*</em>
+              <em className="case-editor-required not-italic text-[var(--srf-danger)]">*</em>
             </span>
             {isCreate ? null : (
-              <span className="case-editor-name-meta">
+              <span className="case-editor-name-meta text-[11px] leading-[16px] text-[var(--srf-text-muted)]">
                 创建时间: {formatTime(pickCreatedAt(item ?? undefined)) || '-'}
-                <span className="case-editor-name-meta-sep">・</span>
+                <span className="case-editor-name-meta-sep mx-1.5 text-[var(--srf-card-border)]">・</span>
                 更新时间: {formatTime(pickUpdatedAt(item ?? undefined)) || '-'}
               </span>
             )}
@@ -67,31 +67,31 @@ export function FunctionCaseEditor({
           </Form.Item>
         </section>
 
-        <div className="case-editor-grid">
-          <section className="case-editor-section tone-amber">
-            <div className="case-editor-section-head">
-              <span className="case-editor-section-title">
+        <div className="case-editor-grid grid grid-cols-2 items-stretch gap-4 max-[900.01px]:grid-cols-1">
+          <section className="case-editor-section flex flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] tone-amber">
+            <div className="case-editor-section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <span className="case-editor-section-title inline-flex items-center gap-2 text-xs font-bold leading-[18px] text-[var(--srf-text)]">
                 <FlagOutlined />
                 优先级
               </span>
-              <span className="case-editor-section-hint">等级影响执行次序</span>
+              <span className="case-editor-section-hint text-[11px] leading-[16px] text-[var(--srf-text-muted)]">等级影响执行次序</span>
             </div>
-            <div className="case-editor-section-body">
+            <div className="case-editor-section-body px-4 pt-3.5 pb-4">
               <Form.Item name="priority">
                 <Select allowClear options={priorityOptions} placeholder="请选择优先级" />
               </Form.Item>
             </div>
           </section>
 
-          <section className="case-editor-section tone-blue">
-            <div className="case-editor-section-head">
-              <span className="case-editor-section-title">
+          <section className="case-editor-section flex flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] tone-blue">
+            <div className="case-editor-section-head flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <span className="case-editor-section-title inline-flex items-center gap-2 text-xs font-bold leading-[18px] text-[var(--srf-text)]">
                 <ProfileOutlined />
                 用例类型
               </span>
-              <span className="case-editor-section-hint">测试维度归类</span>
+              <span className="case-editor-section-hint text-[11px] leading-[16px] text-[var(--srf-text-muted)]">测试维度归类</span>
             </div>
-            <div className="case-editor-section-body">
+            <div className="case-editor-section-body px-4 pt-3.5 pb-4">
               <Form.Item name="caseType">
                 <AutoComplete allowClear options={caseTypeOptions} placeholder="请选择或输入用例类型" />
               </Form.Item>

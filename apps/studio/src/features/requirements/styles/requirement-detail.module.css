@@ -1,67 +1,18 @@
-/* 需求详情页皮肤（阶段 17 后收缩）。
- * 页面高度链、面包屑排版、主/侧栏骨架与窄屏堆叠由 RequirementDetailPage 和
- * RequirementDetailHeader 的 Tailwind utility 负责；这里保留链接/工具栏表面、
- * 侧栏动画、画布与文档容器的 AntD/React Flow 深层结构。 */
+/* 需求详情页与文档预览：只保留画布/文档宿主的高度链、侧栏动画、
+ * 需求文档工具栏的响应式内距以及 DOCX/RichText 深层排版。
+ * 标题栏、面包屑、预览壳、文档面板与正文文章的布局/皮肤已迁入组件 utility。 */
 
-/* 面包屑：整条路径保持同一字阶，当前项只加字重；状态用圆点收轻。 */
-.root :global(.requirement-detail-crumbs) :global(.tp-list-title) {
-  flex: 0 1 auto;
+.root {
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-testing-text-muted);
 }
 
-.root :global(.requirement-crumb-link) {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 5px;
-  margin-left: -5px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--app-accent);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
+:global(.app-shell-macos) .root {
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-glass-text-hint);
 }
 
-/* 阅读态的「需求名」一级可点，退回生成流程。 */
-.root :global(.requirement-crumb-parent-link) {
-  display: inline-flex;
-  align-items: center;
-  max-width: 300px;
-  height: 24px;
-  padding: 0 5px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--app-accent);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.root :global(.requirement-crumb-link):hover,
-.root :global(.requirement-crumb-parent-link):hover {
-  background: var(--app-accent-surface);
-  color: var(--app-accent-hover);
-  text-decoration: underline;
-}
-
-.root :global(.requirement-detail-crumbs) :global(.ant-tag) {
-  flex-shrink: 0;
-  margin: 0;
-}
-
-.root :global(.requirement-detail-header) {
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-}
-
+/* —— 详情节侧栏与画布宿主 —— */
 .root :global(.requirement-detail-side) {
   transition: flex-basis 420ms cubic-bezier(.22, 1, .36, 1);
 }
@@ -84,21 +35,11 @@
   }
 }
 
-/* 标题栏并入容器后不再自带卡片边框，改为容器内的工具栏与分隔线。 */
-.root :global(.requirement-detail-main) > :global(.requirement-detail-header) {
-  border: 0;
-  border-bottom: 1px solid var(--app-surface-border);
-  border-radius: 0;
-  background: var(--app-list-toolbar-bg, var(--srf-card));
-}
-
-/* 画布跟着大容器走：不加自己的边框圆角。 */
 .root :global(.requirement-detail-main) :global(.gc-canvas-frame) {
   border: 0;
   border-radius: 0;
 }
 
-/* 点开卡片后的阅读页（产物、文档、用例图谱）铺满容器，不再自己套一层圆角卡片。 */
 .root :global(.requirement-detail-main) :global(.gc-canvas-stage) > :global(.gc-embedded-artifact) {
   border: 0;
   border-radius: 0;
@@ -109,29 +50,13 @@
   display: none;
 }
 
-/* 需求详情中的原文与增强文本随画布阅读容器分配高度，分别在列内滚动。 */
 .root :global(.requirement-detail-main) :global(.requirement-document-inline) :global(.requirement-document-workspace) {
   flex: 1 1 0%;
   min-height: 0;
   height: 100%;
 }
 
-/* ===== 原 document-preview.module.css ===== */
-
-/*
- * 需求文档预览（弹窗内嵌与需求详情内嵌共用）。
- * 旧类名保留为测试与兼容钩子，所有规则由根类 .root 限定作用域。
- */
-.root {
-  --testing-text: var(--app-glass-text);
-  --testing-text-muted: var(--app-testing-text-muted);
-}
-
-:global(.app-shell-macos) .root {
-  --testing-text: var(--app-glass-text);
-  --testing-text-muted: var(--app-glass-text-hint);
-}
-
+/* —— 文档预览工具栏与响应式内距 —— */
 .root :global(.requirement-document-modal-toolbar) {
   display: flex;
   justify-content: space-between;
@@ -144,226 +69,11 @@
   backdrop-filter: none;
 }
 
-.root :global(.requirement-document-modal-toolbar-main) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.root :global(.requirement-document-modal-title-row) {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.root :global(.requirement-document-modal-title-icon) {
-  display: inline-flex;
-  color: var(--app-testing-control-accent);
-  font-size: 21px;
-}
-
-.root :global(.requirement-document-modal-title) {
-  color: var(--testing-text);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 28px;
-  letter-spacing: 0;
-}
-
-.root :global(.requirement-document-modal-meta) {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--testing-text-muted);
-  font-size: 13px;
-}
-
-.root :global(.requirement-document-type-chip) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--app-testing-control-hover-border);
-  border-radius: 6px;
-  background: var(--app-testing-control-hover-bg);
-  color: var(--app-testing-control-accent);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-  letter-spacing: 0.02em;
-}
-
-.root :global(.requirement-document-file-name) {
-  display: block;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: min(52vw, 760px);
-  overflow: hidden;
-  color: var(--app-list-header-text);
-  font-size: 13px;
-  line-height: 20px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.root :global(.requirement-document-download-link) {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  align-self: center;
-  height: 34px;
-  padding: 0 13px;
-  border: 1px solid var(--app-testing-control-selected-border);
-  border-radius: 7px;
-  background: var(--app-surface);
-  color: var(--app-testing-control-accent);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  box-shadow: none;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease;
-}
-
-.root :global(.requirement-document-download-link:hover) {
-  border-color: var(--app-testing-control-focus-border);
-  background: var(--app-testing-control-selected-bg);
-  transform: none;
-}
-
-.root :global(.requirement-document-modal) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 0;
-  min-height: 0;
-}
-
-.root :global(.requirement-document-workspace) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  flex: 1 1 auto;
-  min-height: 520px;
-  height: calc(100vh - 176px);
-  padding: 0;
-  overflow: hidden;
-  background: var(--app-testing-control-disabled-bg);
-}
-
-.root :global(.requirement-document-pane) {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--app-testing-control-disabled-border);
-  border-radius: 8px;
-  background: var(--app-surface);
-}
-
 .root :global(.requirement-document-pane:fullscreen) {
   width: 100vw;
   height: 100vh;
   border: 0;
   border-radius: 0;
-}
-
-.root :global(.requirement-document-pane-body) {
-  display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--app-surface);
-}
-
-.root :global(.requirement-document-modal-stage) {
-  display: flex;
-  flex: 0 0 auto;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 0;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-  background: transparent;
-}
-
-.root :global(.requirement-document-modal-stage.docx-mode),
-.root :global(.requirement-document-modal-stage.text-mode) {
-  padding: 0;
-  background: transparent;
-}
-
-.root :global(.requirement-document-preview-shell) {
-  display: flex;
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.root :global(.requirement-document-preview-state) {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 220px;
-  color: var(--testing-text-muted);
-  font-size: 13px;
-}
-
-.root :global(.requirement-document-preview-state.error) {
-  gap: 8px;
-}
-
-.root :global(.requirement-document-text-host) {
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  max-width: 100%;
-  overflow: auto;
-}
-
-.root :global(.requirement-document-text-article) {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  min-width: 0;
-  min-inline-size: 0;
-  inline-size: 100%;
-  min-height: 100%;
-  max-width: 100%;
-  max-inline-size: 100%;
-  margin: 0;
-  padding: 24px;
-  border: 0;
-  background: var(--app-surface);
-  box-shadow: none;
-  color: var(--description-text);
-  font-family: var(--description-font);
-  font-size: 15px;
-  line-height: 1.84;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
 }
 
 .root :global(.requirement-document-text-host) :global(.rich-text-viewer) {
@@ -373,23 +83,7 @@
   padding: 24px;
 }
 
-.root :global(.requirement-document-docx-host) {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0;
-  max-height: none;
-  overflow: auto;
-  border: 0;
-  border-radius: 0;
-  background: var(--app-surface);
-  box-shadow: none;
-}
-
-.root :global(.requirement-document-modal-stage.docx-mode) :global(.requirement-document-docx-host),
-.root :global(.requirement-document-modal-stage.text-mode) :global(.requirement-document-text-host) {
-  background: var(--app-surface);
-}
-
+/* —— DOCX 渲染结构 —— */
 .root :global(.requirement-document-docx-host.loading) {
   opacity: 0.3;
 }
@@ -456,11 +150,6 @@
     height: min(62vh, 620px);
     min-height: 460px;
     padding: 16px 18px 18px;
-  }
-
-  .root :global(.requirement-document-modal-stage.docx-mode),
-  .root :global(.requirement-document-modal-stage.text-mode) {
-    padding: 0;
   }
 
   .root :global(.requirement-document-docx-host),

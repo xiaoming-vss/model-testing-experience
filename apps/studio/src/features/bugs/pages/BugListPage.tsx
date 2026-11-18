@@ -45,8 +45,8 @@ export function BugListPage() {
               <Empty description="请先选择项目" />
             </div>
           ) : (
-            <div className="bugs-table-card tp-list-body">
-              <div className="table-body-scroll bugs-table-scroll tp-list-scroll">
+            <div className="bugs-table-card tp-list-body flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
+              <div className="table-body-scroll bugs-table-scroll tp-list-scroll min-h-0 flex-1 overflow-auto">
                 {bugsQuery.isLoading ? (
                   <div className="sprint-card-loading">
                     <Empty description="Bug 列表加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />

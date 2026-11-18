@@ -11,7 +11,7 @@ export function BugDetailHeader({ bug, onBack, onTransition, onEdit, onTransfer,
 }) {
   const actions = getBugActions(bug)
   return (
-        <section className="bugs-detail-topbar tp-list-toolbar">
+        <section className="bugs-detail-topbar tp-list-toolbar sticky top-0 z-[3] flex flex-wrap items-center gap-3 bg-[var(--srf-card)]">
           <Button
             type="text"
             className="bug-back-button"
@@ -21,12 +21,12 @@ export function BugDetailHeader({ bug, onBack, onTransition, onEdit, onTransfer,
           >
             返回
           </Button>
-          <span className="bug-no-chip"><strong>{formatBugNo(bug.bugNo)}</strong></span>
-          <span className={`bug-status-pill tone-${getBugStatusTone(bug.status)}`}>
-            <span className="bug-status-dot" />
+          <span className="bug-no-chip inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[var(--srf-chip)] px-2 py-0.5 text-xs text-[var(--srf-chip-text)]"><strong>{formatBugNo(bug.bugNo)}</strong></span>
+          <span className={`bug-status-pill inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-2 py-0.5 text-[11px] font-medium leading-[16px] text-[var(--srf-tone-text,var(--srf-chip-text))] tone-${getBugStatusTone(bug.status)}`}>
+            <span className="bug-status-dot h-1.5 w-1.5 rounded-full bg-current" />
             {getBugStateLabel(bug)}
           </span>
-          <Space wrap size={8} className="bug-detail-actions">
+          <Space wrap size={8} className="bug-detail-actions ml-auto whitespace-nowrap max-[720.01px]:ml-0 max-[720.01px]:basis-full">
             {editingActions ?? <>
             {actions.map((action) => (
               <ProjectActionButton action="bug_handle" projectId={bug.projectId}

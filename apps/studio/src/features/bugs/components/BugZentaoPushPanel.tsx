@@ -102,8 +102,8 @@ export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: stri
   const canConfirm = canWrite && !busy && !fieldBusy && choicesValid
     && (existing ? !!current : data?.ready)
     && data?.ready
-  return <section className="bug-detail-panel">
-    <h2 className="bug-panel-title">禅道同步</h2>
+  return <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+    <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">禅道同步</h2>
     {query.error && <Alert showIcon type="error" title={getErrorMessage(query.error)}
       action={<Button onClick={() => query.refetch()}>重新加载</Button>} />}
     <Space orientation="vertical" size="middle" style={{ width: '100%' }}>

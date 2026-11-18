@@ -121,9 +121,9 @@
       "selectors": 36
     },
     "src/features/bugs/styles/bugs.module.css": {
-      "rules": 199,
-      "declarations": 598,
-      "selectors": 217
+      "rules": 63,
+      "declarations": 174,
+      "selectors": 75
     },
     "src/features/interface-library/styles/interface-detail.module.css": {
       "rules": 13,
@@ -156,14 +156,14 @@
       "selectors": 54
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
-      "rules": 59,
-      "declarations": 275,
-      "selectors": 72
+      "rules": 29,
+      "declarations": 71,
+      "selectors": 38
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 72,
-      "declarations": 227,
-      "selectors": 79
+      "rules": 23,
+      "declarations": 57,
+      "selectors": 27
     },
     "src/features/test-orders/styles/test-order-visualization.module.css": {
       "rules": 116,
@@ -310,16 +310,12 @@
       "count": 2,
       "sample": "display: flex;align-items: center;gap: 10px;min-width: 0"
     },
-    "2e2e45e2d4ca13fb": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 10px"
-    },
     "300b373f254ffd3c": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;align-items: center;gap: 8px"
     },
     "41ff9fcb4194ebda": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;flex-direction: column;gap: 10px"
     },
     "528f9ebfeb41bb50": {
@@ -329,10 +325,6 @@
     "58c9a32dd9adcce7": {
       "count": 2,
       "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
-    },
-    "5da36abee4ca0183": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 10px;flex-wrap: wrap"
     },
     "790b1e6d62087b78": {
       "count": 2,
@@ -346,10 +338,6 @@
       "count": 2,
       "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
     },
-    "b55a347634ad307b": {
-      "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px;min-width: 0"
-    },
     "b9c0f9c571daf401": {
       "count": 2,
       "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
@@ -357,10 +345,6 @@
     "c3a767a35bba8500": {
       "count": 3,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
-    },
-    "c7777c6e868d5ddd": {
-      "count": 2,
-      "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "e0a80c835c3c40a9": {
       "count": 2,

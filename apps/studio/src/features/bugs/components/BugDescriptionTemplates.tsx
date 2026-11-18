@@ -9,7 +9,7 @@ const TEMPLATES = [
 export function BugDescriptionTemplates({ value, onChange }: { value: string; onChange: (html: string) => void }) {
   const document = new DOMParser().parseFromString(value, 'text/html')
   const hasContent = Boolean(document.body.textContent?.trim() || document.querySelector('img,video,audio,iframe,hr,table'))
-  return <div className="bug-description-templates" role="group" aria-label="描述模板预置">
+  return <div className="bug-description-templates flex flex-wrap items-center gap-1 text-[11px] text-[var(--srf-text-secondary)]" role="group" aria-label="描述模板预置">
     <span>模板预置：</span>
     {TEMPLATES.map((template) => {
       const apply = () => onChange(template.sections.map((section) => `<p><strong>【${section}】</strong></p><p></p>`).join(''))

@@ -1,142 +1,35 @@
-/* Bug 列表、详情与内联编辑皮肤；根类由 BugListPage / BugDetailPage / BugFormModal 提供，旧类名保留为测试与兼容钩子。 */
+/* Bug 列表、详情、内联编辑与新建/导入弹窗：只保留 AntD 深层结构、伪元素和
+ * 需要与外壳高度链绑定的规则。页面布局、卡片、列表单元、详情栏与表单骨架
+ * 已由 Bug* 组件的 Tailwind utility 负责。 */
 
-/* Bug 列表与详情样式：与测试单/用例库同一套视觉语言，颜色全部走 --srf-* token。 */
+.root { --bugs-scope: 1; }
 
-/* —— 工具栏 —— */
-.root :global(.bugs-search-field) {
-  width: 288px;
-  min-width: 0;
-  max-width: 100%;
-}
+/* —— 详情页高度链 —— */
+.root:global(.bugs-detail-page) { min-height: 100%; }
 
-
-.root :global(.bugs-table-card) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
+:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) {
+  height: 100%;
   min-height: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  box-shadow: 0 1px 2px var(--srf-shadow-color);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.root :global(.bugs-table-scroll) {
-  flex: 1 1 0;
+:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) > :global(.api-automation-content) {
+  flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
 }
 
-.root :global(.bug-title-cell) {
-  min-width: 0;
-}
-
-.root :global(.bug-no-chip) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--srf-chip);
-  color: var(--srf-chip-text);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.root :global(.bug-title-text) {
-  color: var(--srf-text);
-  min-width: 0;
-}
-
-.root :global(.bug-status-pill) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: var(--srf-tone-bg, var(--srf-chip));
-  color: var(--srf-tone-text, var(--srf-chip-text));
-  white-space: nowrap;
-}
-
-.root :global(.bug-status-dot) {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentcolor;
-}
-
-.root :global(.bug-priority-chip) {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: var(--srf-tone-bg, var(--srf-chip));
-  color: var(--srf-tone-text, var(--srf-chip-text));
-}
-
-.root :global(.bug-muted-cell) {
-  font-size: 13px;
-}
-
-.root :global(.bug-time-cell) {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-
-
-/* —— 详情页 —— */
-.root:global(.bugs-detail-page) {
-  min-height: 100%;
-}
-
-.root :global(.bugs-detail-topbar) {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.root :global(.bug-detail-actions) {
-  white-space: nowrap;
-}
-
-.root :global(.bug-detail-cols) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-@media (max-width: 1100px) {
-  .root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 1fr); }
-}
-
-.root :global(.bug-detail-panel) {
-  padding: 14px 16px;
-  margin-bottom: 12px;
-}
-
-.root :global(.bug-panel-title) {
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--srf-text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.root :global(.bug-meta-list) {
-  margin: 0;
-  display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  row-gap: 14px;
-  font-size: 13px;
-  line-height: 1.6;
+/* —— 详情面板与元信息 —— */
+.root :global(.bug-panel-title)::before {
+  content: '';
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--srf-accent);
 }
 
 .root :global(.bug-meta-list) dt {
@@ -148,281 +41,134 @@
   color: var(--srf-text);
   min-width: 0;
   word-break: break-all;
+  text-align: right;
 }
 
-.root :global(.bug-link-text) {
+.root :global(.bug-context-list) { display: block; }
+
+.root :global(.bug-context-list) dt {
+  padding: 12px 12px 4px;
+  background: var(--srf-hover);
+  border: 1px solid var(--srf-card-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+}
+
+.root :global(.bug-context-list) dd {
+  padding: 0 12px 12px;
+  margin-bottom: 12px;
+  text-align: left;
+  background: var(--srf-hover);
+  border: 1px solid var(--srf-card-border);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.root :global(.bug-context-list) dd:last-child { margin-bottom: 0; }
+
+.root :global(.bug-evidence-preview) img,
+.root :global(.bug-evidence-preview) video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  margin-top: 12px;
+}
+
+.root :global(.bug-evidence-file-info) > span,
+.root :global(.bug-evidence-file-info) > button {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.root :global(.bug-evidence-file-info) button {
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--srf-accent);
+  cursor: pointer;
+  text-align: left;
 }
 
+.root :global(.bug-evidence-file-info) small {
+  display: block;
+  color: var(--srf-text-muted);
+  margin-top: 4px;
+}
+
+.root :global(.bug-sidebar-indicator)::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
 
 /* —— 动态流 —— */
-.root :global(.bug-activity-list) {
-  margin: 8px 0 0;
-  padding: 0 0 0 8px;
-  list-style: none;
+.root :global(.bug-activity-item)::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--srf-accent);
 }
 
-.root :global(.bug-activity-item) {
-  padding: 0 0 22px 22px;
-  border-top: 0;
-  position: relative;
-  border-left: 1px solid var(--srf-card-border);
-}
+.root :global(.bug-detail-history) :global(.bug-activity-head),
+.root :global(.bug-detail-discussion) :global(.bug-activity-head) { gap: 6px 8px; }
 
+.root :global(.bug-detail-history) :global(.bug-activity-time),
+.root :global(.bug-detail-discussion) :global(.bug-activity-time) { flex-basis: 100%; margin-left: 0; font-size: 11px; }
 
-.root :global(.bug-activity-head) {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 13px;
-}
+.root :global(.bug-detail-history) :global(.bug-activity-content),
+.root :global(.bug-detail-discussion) :global(.bug-activity-content) { overflow-wrap: anywhere; }
 
-.root :global(.bug-activity-actor) {
-  font-weight: 600;
-  color: var(--srf-text);
-}
-
-.root :global(.bug-activity-action) {
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.bug-activity-status) {
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--srf-chip);
-  color: var(--srf-chip-text);
-  font-size: 12px;
-}
-
-.root :global(.bug-activity-time) {
-  margin-left: auto;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.root :global(.bug-activity-content) {
-  margin: 6px 0 0;
-  padding: 8px 10px;
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-hover);
-  color: var(--srf-text);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.root :global(.bug-activity-changes) {
-  margin: 6px 0 0;
-  padding-left: 18px;
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-}
-
-.root :global(.bug-activity-empty) {
-  font-size: 13px;
-}
-
-.root :global(.bug-comment-composer) {
-  margin-bottom: 10px;
-}
-
-/* 列表和详情沿用公共平面卡片与主题。 */
-.root :global(.bugs-toolbar-actions) { margin-left: auto; }
-.root :global(.bugs-filters) { flex: 1; }
-
-.root :global(.bug-title-text) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.root :global(.bug-list-number), .root :global(.bug-time-cell) {
-  color: var(--srf-text-muted); font-size: 12px;
-  font-family: var(--app-font-sans);
-}
-.root :global(.bug-list-number) { flex: none; white-space: nowrap; line-height: 20px; }
-.root :global(.bug-status-pill) {
-  padding: 2px 8px; border: 1px solid var(--srf-tone-border, var(--srf-card-border));
-  font-size: 11px; font-weight: 500; line-height: 16px;
-}
-.root :global(.bugs-filter-popover) { display: flex; flex-direction: column; gap: 12px; width: 280px; }
-.root :global(.bugs-filter-popover) :global(.api-filter-field) { display: flex; align-items: center; gap: 8px; }
-.root :global(.bugs-filter-popover) :global(.bug-filter-label) { color: var(--srf-text-muted); flex: 0 0 64px; font-size: 12px; }
-.root :global(.bugs-filter-popover) > :global(.bug-filter-label) { flex: none; }
-.root :global(.bugs-filter-popover) :global(.business-filter-select) { flex: 1; min-width: 0; }
-
-.root :global(.bug-row-actions) { white-space: nowrap; }
-.root:global(.bugs-detail-page) :global(.api-automation-content) { min-width: 0; }
-:global(.app-shell):global(.app-shell-macos) .root :global(.bug-detail-panel) { background: var(--srf-card); border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); box-shadow: none; backdrop-filter: none; }
-.root :global(.bug-detail-title) { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
-.root :global(.bug-detail-main) :global(.bug-detail-panel) {
-  padding: 20px 24px;
-}
-
-.root :global(.bug-panel-title)::before { content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--srf-accent); }
-.root :global(.bug-section-count) { font-size: 12px; font-weight: 400; color: var(--srf-text-muted); }
-.root :global(.bug-detail-panel) :global(.rich-text-viewer) { min-height: 100px; }
-
-
-.root :global(.bug-activity-item)::before { content: ''; position: absolute; left: -4px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--srf-accent); }
-.root :global(.bug-activity-item):last-child { padding-bottom: 0; border-left-color: transparent; }
-.root :global(.bug-history-diff) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .root :global(.bug-activity-changes) summary { cursor: pointer; color: var(--srf-accent); }
-@media (max-width: 720px) {
-  .root :global(.bugs-search-field) { width: 100%; }
-  .root :global(.bug-detail-actions) { flex-basis: 100%; }
-  .root :global(.bug-history-diff) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.bug-detail-main) :global(.bug-detail-panel) { padding: 16px; }
-}
-.root :global(.bug-column-options) { display: flex; flex-direction: column; gap: 10px; }
-.root :global(.api-filter-field-label) { color: var(--srf-text-secondary); background: transparent; padding: 0; }
 
-/* List presentation pilot: scoped to the Bug page until visual approval. */
-.root :global(.bug-muted-cell) { color: var(--srf-text-secondary); }
-
-.root :global(.bug-name-icon) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }
-
-
-/* 缺陷详情：操作栏与双栏阅读布局，数据及操作沿用现有业务能力。 */
-.root :global(.bugs-detail-topbar) { gap: 12px; }
-.root :global(.bug-detail-actions) { margin-left: auto; }
-.root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 2.15fr) minmax(300px, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
-.root :global(.bug-detail-main), .root :global(.bug-detail-side) { min-width: 0; }
-.root :global(.bug-detail-panel) { margin-bottom: 20px; }
-.root :global(.bug-detail-main) :global(.bug-detail-panel) { padding: 20px; }
-.root :global(.bug-detail-side) :global(.bug-detail-panel) { padding: 20px; }
-.root :global(.bug-detail-breadcrumb) { display: flex; gap: 10px; align-items: center; color: var(--srf-text-muted); font: 11px ui-monospace, monospace; overflow-wrap: anywhere; }
-.root :global(.bug-detail-summary) h1 { margin: 14px 0 10px; font-size: 22px; line-height: 1.5; font-weight: 600; color: var(--srf-text); overflow-wrap: anywhere; }
-.root :global(.bug-detail-subtitle) { color: var(--srf-text-muted); font-size: 12px; }
-.root :global(.bug-panel-title) { padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--srf-divider); font-size: 14px; }
-.root :global(.bug-panel-title)::before { height: 16px; }
-.root :global(.bug-meta-list) { grid-template-columns: 100px minmax(0, 1fr); row-gap: 18px; font-size: 12px; }
-.root :global(.bug-meta-list) dd { text-align: right; }
-.root :global(.bug-context-list) { display: block; }
-.root :global(.bug-context-list) dt { padding: 12px 12px 4px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-bottom: 0; border-radius: 6px 6px 0 0; font-size: 11px; }
-.root :global(.bug-context-list) dd { padding: 0 12px 12px; margin-bottom: 12px; text-align: left; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-top: 0; border-radius: 0 0 6px 6px; }
-.root :global(.bug-context-list) dd:last-child { margin-bottom: 0; }
-.root :global(.bug-attachment-list),
-.root :global(.bug-evidence-upload) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.root :global(.bug-attachment-item) { min-width: 0; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 8px; gap: 8px; }
-.root :global(.bug-evidence-icon) { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 6px; color: var(--srf-accent); background: var(--srf-accent-soft); }
-.root :global(.bug-attachment-item) :global(.ant-btn) { min-width: 0; flex: 1; }
-.root :global(.bug-attachment-item) :global(.ant-btn) > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-.root :global(.bug-attachment-size) { font-size: 11px; }
-.root :global(.bug-detail-primary-action) { --button-current-bg: var(--srf-accent); --button-current-border: var(--srf-accent); --button-current-text: var(--srf-on-accent); --button-current-hover: var(--srf-accent-strong); --button-current-hover-border: var(--srf-accent-strong); }
-@media (max-width: 1100px) {
-  .root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.bug-detail-side) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-}
-@media (max-width: 720px) {
-  .root :global(.bug-detail-side), .root :global(.bug-attachment-list) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.bug-detail-actions) { margin-left: 0; }
-  .root :global(.bug-detail-summary) h1 { font-size: 18px; }
-}
-
-.root :global(.bug-detail-cols) { width: 100%; min-width: 0; }
-.root :global(.bug-sidebar-indicator) { display: inline-flex; align-items: center; gap: 6px; color: var(--srf-tone-text); }
-.root :global(.bug-sidebar-indicator)::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.root :global(.bug-sidebar-person) { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.root :global(.bug-person-avatar) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--srf-accent); color: var(--srf-on-accent); font-size: 11px; }
-.root :global(.bug-attachment-item) :global(.ant-btn) { justify-content: flex-start; }
-/* 应用外壳禁止滚动，详情必须拥有独立且有界的滚动容器。 */
-:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) > :global(.api-automation-content) { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: block; }
-.root :global(.bugs-detail-topbar) { position: sticky; top: 0; z-index: 3; background: var(--srf-card); }
-.root :global(.bug-detail-section-heading) { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--srf-divider); padding-bottom: 12px; margin-bottom: 16px; }
-.root :global(.bug-detail-section-heading) :global(.bug-panel-title) { border: 0; margin: 0; padding: 0; }
-.root :global(.bug-description-raw) { max-height: 480px; overflow: auto; padding: 16px; background: var(--srf-hover); color: var(--srf-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
-.root :global(.bug-evidence-layout) { display: grid; gap: 16px; }
-.root :global(.bug-evidence-layout):global(.has-preview) { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
-.root :global(.bug-evidence-preview) { min-width: 0; padding: 12px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-radius: 8px; }
-.root :global(.bug-evidence-preview) img, .root :global(.bug-evidence-preview) video { display: block; width: 100%; max-height: 360px; object-fit: contain; margin-top: 12px; }
-.root :global(.bug-evidence-caption) { font-size: 12px; color: var(--srf-text-secondary); overflow-wrap: anywhere; }
-.root :global(.bug-evidence-files) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.root :global(.bug-evidence-files) li { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 6px; min-width: 0; }
-.root :global(.bug-evidence-file-info) { flex: 1; min-width: 0; font-size: 12px; }
-.root :global(.bug-evidence-file-info) > span, .root :global(.bug-evidence-file-info) > button { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.root :global(.bug-evidence-file-info) button { border: 0; padding: 0; background: transparent; color: var(--srf-accent); cursor: pointer; text-align: left; }
-.root :global(.bug-evidence-file-info) small { display: block; color: var(--srf-text-muted); margin-top: 4px; }
-@media (max-width: 720px) {
-  .root :global(.bug-evidence-layout):global(.has-preview) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.bug-detail-section-heading) { flex-wrap: wrap; }
-}
-
-.root :global(.bug-detail-history), .root :global(.bug-detail-discussion) { grid-column: 1 / -1; }
-.root :global(.bug-detail-history) :global(.bug-activity-head), .root :global(.bug-detail-discussion) :global(.bug-activity-head) { gap: 6px 8px; }
-.root :global(.bug-detail-history) :global(.bug-activity-time), .root :global(.bug-detail-discussion) :global(.bug-activity-time) { flex-basis: 100%; margin-left: 0; font-size: 11px; }
-.root :global(.bug-detail-history) :global(.bug-activity-content), .root :global(.bug-detail-discussion) :global(.bug-activity-content) { overflow-wrap: anywhere; }
+/* —— 内联编辑表单 —— */
 .root :global(.bug-inline-form) :global(.bug-detail-summary) :global(.ant-form-item) { margin: 14px 0; }
-.root :global(.bug-inline-form) :global(.bug-meta-list) :global(.ant-form-item), .root :global(.bug-inline-form) :global(.bug-context-list) :global(.ant-form-item) { margin: 0; }
+.root :global(.bug-inline-form) :global(.bug-meta-list) :global(.ant-form-item),
+.root :global(.bug-inline-form) :global(.bug-context-list) :global(.ant-form-item) { margin: 0; }
 .root :global(.bug-inline-form) :global(.bug-detail-side) :global(.ant-select) { width: 100%; text-align: left; }
 .root :global(.bug-inline-form) :global(.rich-text-content) :global(.tiptap) { min-height: 320px; max-height: none; }
 
+/* —— 描述模板按钮 —— */
+.root :global(.bug-description-templates) button {
+  border: 0;
+  border-radius: 4px;
+  padding: 3px 8px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  cursor: pointer;
+  font: inherit;
+}
 
-.root :global(.bug-description-heading) { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
-.root :global(.bug-description-label) { color: var(--srf-text); font-size: 13px; }
-.root :global(.bug-description-label) > span { color: var(--srf-danger); }
-.root :global(.bug-description-templates) { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 11px; color: var(--srf-text-secondary); }
-.root :global(.bug-description-templates) button { border: 0; border-radius: 4px; padding: 3px 8px; background: var(--srf-accent-soft); color: var(--srf-accent); cursor: pointer; font: inherit; }
 .root :global(.bug-description-templates) button:hover { background: var(--srf-count-badge); }
 .root :global(.bug-description-templates) button:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
 
-/* ===== 原 bug-form.module.css ===== */
-
-/* 新建/编辑缺陷弹窗；根类由弹窗 rootClassName 提供。 */
-
-/* 新建缺陷：居中编辑面板，沿用应用主题，正文滚动而操作区保持可见。 */
+/* —— 新建/编辑缺陷弹窗 —— */
 .root :global(.ant-modal) { max-width: calc(100vw - 32px); padding-bottom: 0; }
 .root :global(.ant-modal-container) { padding: 0; overflow: hidden; border-radius: 14px; background: var(--srf-card); }
 .root :global(.ant-modal-header) { margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--srf-divider); background: var(--srf-card); }
-.root :global(.bug-form-heading) { display: flex; align-items: flex-start; gap: 12px; padding-right: 28px; }
-.root :global(.bug-form-heading-icon) { display: flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 8px; background: var(--srf-accent-soft); }
-.root :global(.bug-form-heading) h2 { margin: 0 0 4px; font-size: 18px; line-height: 24px; color: var(--srf-text); }
-.root :global(.bug-form-heading) p { margin: 0; font-size: 12px; font-weight: 400; line-height: 18px; color: var(--srf-text-muted); }
 .root :global(.ant-modal-body) { max-height: calc(100dvh - 230px); overflow-y: auto; padding: 16px 20px; }
 .root :global(.ant-form-item) { margin-bottom: 12px; }
 .root :global(.ant-form-item-label) { padding-bottom: 6px; }
-.root :global(.bug-form-row) { display: grid; gap: 12px; }
-.root :global(.bug-form-row-two) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.root :global(.bug-form-row-four) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.root :global(.bug-form-row) > * { min-width: 0; }
+.root :global(.ant-form-item-label) > label { font-size: 13px; }
 .root :global(.ant-input), .root :global(.ant-select), .root :global(.ant-segmented) { width: 100%; }
 .root :global(.ant-segmented) { background: var(--srf-hover); }
 .root :global(.ant-segmented-item-label) { padding-inline: 6px; font-size: 12px; }
-.root :global(.bug-form-field-hint) { display: block; margin-top: 6px; color: var(--srf-text-muted); font-size: 12px; }
 .root :global(.ant-modal-footer) { margin: 0; padding: 12px 20px; border-top: 1px solid var(--srf-divider); background: var(--srf-hover); }
-.root :global(.bug-form-footer) { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.root :global(.bug-form-footer-hint) { font-size: 12px; color: var(--srf-text-muted); text-align: left; }
-.root :global(.bug-form-footer-actions) { display: flex; gap: 8px; flex-shrink: 0; }
-.root :global(.bug-form-attachments) { margin-bottom: 0; }
-.root :global(.ant-upload-drag) :global(.ant-upload-btn) { padding: 12px 16px; }
-.root :global(.ant-upload-drag) p:global(.ant-upload-drag-icon) { margin: 0; }
-.root :global(.ant-upload-drag) p:global(.ant-upload-drag-icon) :global(.anticon) { font-size: 24px; }
-.root :global(.ant-upload-drag) p:global(.ant-upload-text) { margin: 4px 0; font-size: 13px; }
-.root :global(.ant-upload-drag) p:global(.ant-upload-hint) { font-size: 12px; }
-@media (max-width: 760px) {
-  .root :global(.bug-form-row-four) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .root :global(.ant-modal-header), .root :global(.ant-modal-body), .root :global(.ant-modal-footer) { padding: 16px; }
-}
-@media (max-width: 480px) {
-  .root :global(.bug-form-row-two), .root :global(.bug-form-row-four) { grid-template-columns: minmax(0, 1fr); }
-  .root :global(.bug-form-footer-hint) { display: none; }
-  .root :global(.bug-form-footer) { justify-content: flex-end; }
-}
 .root :global(.ant-input),
 .root :global(.ant-select-outlined),
-.root :global(.ant-segmented) {
-  background: var(--srf-accent-soft);
-  border-color: var(--srf-card-border);
-  border-radius: 6px;
-}
-.root :global(.ant-segmented-item-selected) {
-  color: var(--srf-accent);
-  font-weight: 600;
-}
-
-/* 对齐参考稿的紧凑标题栏、实色动作与横向证据区。 */
+.root :global(.ant-segmented) { background: var(--srf-accent-soft); border-color: var(--srf-card-border); border-radius: 6px; }
+.root :global(.ant-segmented-item-selected) { color: var(--srf-accent); font-weight: 600; }
 .root :global(.ant-modal-mask) { backdrop-filter: blur(3px); }
-.root :global(.bug-form-title-line) { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.root :global(.bug-form-sprint-badge) { padding: 2px 8px; border-radius: 4px; background: var(--srf-count-badge); color: var(--srf-accent-strong); font-size: 11px; line-height: 18px; }
-.root :global(.bug-form-heading-icon) { color: var(--srf-accent); font-size: 22px; }
-.root :global(.ant-form-item-label) > label { font-size: 13px; }
 .root :global(.rich-text-toolbar) { background: var(--srf-accent-soft); }
 .root :global(.bug-form-priority) :global(.ant-segmented-item-selected) { background: var(--srf-accent-strong); color: var(--srf-on-accent); box-shadow: none; }
 .root :global(.bug-form-severity):global(.is-severe) :global(.ant-segmented-item-selected) { color: var(--srf-danger); background: var(--srf-hover); box-shadow: inset 0 0 0 1px var(--srf-danger); }
@@ -433,8 +179,14 @@
   --button-current-hover: var(--srf-accent);
   --button-current-hover-border: var(--srf-accent);
   --button-current-active: var(--srf-accent-strong);
-  min-width: 160px;
 }
+
+/* —— 附件上传 —— */
+.root :global(.ant-upload-drag) :global(.ant-upload-btn) { padding: 12px 16px; }
+.root :global(.ant-upload-drag) p:global(.ant-upload-drag-icon) { margin: 0; }
+.root :global(.ant-upload-drag) p:global(.ant-upload-drag-icon) :global(.anticon) { font-size: 24px; }
+.root :global(.ant-upload-drag) p:global(.ant-upload-text) { margin: 4px 0; font-size: 13px; }
+.root :global(.ant-upload-drag) p:global(.ant-upload-hint) { font-size: 12px; }
 .root :global(.bug-evidence-upload) :global(.ant-upload-drag) { background: var(--srf-hover); border-color: var(--srf-accent-border); border-radius: 6px; }
 .root :global(.bug-evidence-upload) :global(.ant-upload-drag-container) { display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; text-align: left; }
 .root :global(.bug-evidence-upload) p:global(.ant-upload-drag-icon) { grid-row: span 2; display: flex; align-items: center; justify-content: center; background: var(--srf-count-badge); border-radius: 5px; }
@@ -445,15 +197,10 @@
   .root :global(.bug-evidence-upload) { grid-template-columns: minmax(0, 1fr); }
 }
 
-.root :global(.bug-form-project) { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 12px; border: 1px solid var(--srf-card-border); border-radius: 6px; background: var(--srf-accent-soft); color: var(--srf-text); cursor: default; }
-.root :global(.bug-form-project) > span:not(:global(.anticon)) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.root :global(.bug-form-project-icon) { color: var(--srf-accent); }
-.root :global(.bug-form-project-lock) { margin-left: auto; color: var(--srf-text-muted); }
-
-/* ===== 原 bug-import.module.css ===== */
-
-/* 禅道 Bug 导入弹窗；根类由弹窗 className 提供。 */
-
+/* —— 禅道导入弹窗 —— */
+.root :global(.ant-steps) { flex: 0 0 auto; }
+.root :global(.bug-import-bulk) :global(.ant-select) { width: 160px; }
+.root :global(.bug-import-scroll) :global(.ant-table-cell) :global(.ant-select) { width: 100%; }
 .root :global(.ant-modal-body) {
   height: min(680px, calc(100dvh - 180px));
   display: flex;
@@ -461,12 +208,6 @@
   gap: 16px;
   overflow: hidden;
 }
-.root :global(.ant-steps) { flex: 0 0 auto; }
-.root :global(.bug-import-step) { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 0; }
-.root :global(.bug-import-scroll) { flex: 1; min-height: 0; overflow: auto; }
-.root :global(.bug-import-bulk) { flex: 0 0 auto; }
-.root :global(.bug-import-bulk) :global(.ant-select) { width: 160px; }
-.root :global(.bug-import-scroll) :global(.ant-table-cell) :global(.ant-select) { width: 100%; }
-.root :global(.bug-import-title) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.root :global(.bug-import-check) { width: 100%; }
-.root :global(.bug-import-footer) { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 760px) {
+  .root :global(.ant-modal-header), .root :global(.ant-modal-body), .root :global(.ant-modal-footer) { padding: 16px; }
+}

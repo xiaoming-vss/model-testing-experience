@@ -10,14 +10,14 @@ export function BugListToolbar({ model }: { model: Model }) {
     keyword, setKeyword, bugsQuery, setCreateOpen, setImportOpen } = model
   return (
           <div className="panel-header api-panel-header bugs-toolbar tp-list-toolbar">
-            <div className="api-filter-group bugs-filters">
+            <div className="api-filter-group bugs-filters flex-1">
               <h1 className="tp-list-title">Bug 列表</h1>
               <Popover trigger="click" placement="bottomLeft" title="筛选与显示" content={<BugListFilters model={model} />}>
                 <Button type="text" icon={<FilterOutlined />} aria-label="筛选与显示">
                   筛选{(model.status || model.confirmed !== undefined || model.resolution || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}
                 </Button>
               </Popover>
-              <div className="api-filter-field bugs-search-field">
+              <div className="api-filter-field bugs-search-field w-72 min-w-0 max-w-full max-[720.01px]:w-full">
                 <Input
                   className="api-filter-input bugs-search-input"
                   allowClear
@@ -29,7 +29,7 @@ export function BugListToolbar({ model }: { model: Model }) {
               </div>
             </div>
 
-            <Space size={8} className="bugs-toolbar-actions tp-refresh-actions">
+            <Space size={8} className="bugs-toolbar-actions tp-refresh-actions ml-auto">
               <Tooltip title="刷新 Bug 列表">
                 <ProjectActionButton
                   action="bug_read"
@@ -71,11 +71,11 @@ function BugListFilters({ model }: { model: Model }) {
   const { status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity,
     assigneeUserId, setAssigneeUserId, membersQuery, optionalColumns, setOptionalColumns } = model
   return (
-              <div className="bugs-filter-popover">
-              <div className="api-filter-field">
-                <span className="bug-filter-label">状态</span>
+              <div className="bugs-filter-popover flex w-[280px] flex-col gap-3">
+              <div className="api-filter-field flex items-center gap-2">
+                <span className="bug-filter-label flex-[0_0_64px] text-xs text-[var(--srf-text-muted)]">状态</span>
                 <Select
-                  className="api-filter-select business-filter-select"
+                  className="api-filter-select business-filter-select min-w-0 flex-1"
                   allowClear
                   value={status || undefined}
                   options={Object.entries(BUG_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
@@ -83,22 +83,22 @@ function BugListFilters({ model }: { model: Model }) {
                   onChange={(value) => setStatus(value ?? '')}
                 />
               </div>
-              <div className="api-filter-field">
-                <span className="bug-filter-label">确认情况</span>
+              <div className="api-filter-field flex items-center gap-2">
+                <span className="bug-filter-label flex-[0_0_64px] text-xs text-[var(--srf-text-muted)]">确认情况</span>
                 <Select allowClear aria-label="确认情况" value={confirmed === undefined ? undefined : Number(confirmed)}
                   options={[{ value: 0, label: '未确认' }, { value: 1, label: '已确认' }]} placeholder="全部"
                   onChange={(value) => setConfirmed(value === undefined ? undefined : value === 1)} />
               </div>
-              <div className="api-filter-field">
-                <span className="bug-filter-label">解决方案</span>
+              <div className="api-filter-field flex items-center gap-2">
+                <span className="bug-filter-label flex-[0_0_64px] text-xs text-[var(--srf-text-muted)]">解决方案</span>
                 <Select allowClear aria-label="解决方案筛选" value={resolution || undefined}
                   options={Object.entries(BUG_RESOLUTION_LABELS).map(([value, label]) => ({ value, label }))}
                   placeholder="全部" onChange={(value) => setResolution(value ?? '')} />
               </div>
-              <div className="api-filter-field">
-                <span className="bug-filter-label">严重程度</span>
+              <div className="api-filter-field flex items-center gap-2">
+                <span className="bug-filter-label flex-[0_0_64px] text-xs text-[var(--srf-text-muted)]">严重程度</span>
                 <Select
-                  className="api-filter-select business-filter-select"
+                  className="api-filter-select business-filter-select min-w-0 flex-1"
                   allowClear
                   value={severity || undefined}
                   options={Object.entries(BUG_SEVERITY_LABELS).map(([value, label]) => ({ value, label }))}
@@ -106,10 +106,10 @@ function BugListFilters({ model }: { model: Model }) {
                   onChange={(value) => setSeverity(value ?? '')}
                 />
               </div>
-              <div className="api-filter-field">
-                <span className="bug-filter-label">责任人</span>
+              <div className="api-filter-field flex items-center gap-2">
+                <span className="bug-filter-label flex-[0_0_64px] text-xs text-[var(--srf-text-muted)]">责任人</span>
                 <Select
-                  className="api-filter-select business-filter-select"
+                  className="api-filter-select business-filter-select min-w-0 flex-1"
                   showSearch
                   allowClear
                   optionFilterProp="label"
@@ -122,9 +122,9 @@ function BugListFilters({ model }: { model: Model }) {
                   onChange={(value) => setAssigneeUserId(value ?? '')}
                 />
               </div>
-                <span className="bug-filter-label">附加显示列</span>
+                <span className="bug-filter-label flex-none text-xs text-[var(--srf-text-muted)]">附加显示列</span>
                 <Checkbox.Group
-                  value={optionalColumns} onChange={setOptionalColumns} className="bug-column-options"
+                  value={optionalColumns} onChange={setOptionalColumns} className="bug-column-options flex flex-col gap-2.5"
                   options={[{ label: '所属需求', value: 'requirement' }, { label: '更新时间', value: 'updatedAt' },
                     { label: '关联测试单', value: 'order' }, { label: '关联用例', value: 'case' }]} />
                 <Button onClick={model.resetFilters}>清空筛选</Button>

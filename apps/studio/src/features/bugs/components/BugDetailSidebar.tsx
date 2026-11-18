@@ -14,16 +14,16 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
   bug: Bug; projectName?: string; sprintNames: Map<string, string>; resolveUserName: (id: string) => string
 }) {
   return (
-          <div className="bug-detail-side">
-            <section className="bug-detail-panel">
-              <h2 className="bug-panel-title">基本属性</h2>
-              <dl className="bug-meta-list">
+          <div className="bug-detail-side min-w-0 max-[1100.01px]:grid max-[1100.01px]:grid-cols-2 max-[1100.01px]:gap-4 max-[720.01px]:grid-cols-1">
+            <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+              <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">基本属性</h2>
+              <dl className="bug-meta-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed">
                 <dt>所属项目</dt>
                 <dd>{projectName ?? bug.projectId}</dd>
                 <dt>严重程度</dt>
-                <dd>{editors?.severity ?? <span className={`bug-sidebar-indicator ${bug.severity === 'critical' || bug.severity === 'serious' ? 'tone-red' : 'tone-amber'}`}>{BUG_SEVERITY_LABELS[bug.severity] ?? bug.severity}</span>}</dd>
+                <dd>{editors?.severity ?? <span className={`bug-sidebar-indicator inline-flex items-center gap-1.5 text-[var(--srf-tone-text)] ${bug.severity === 'critical' || bug.severity === 'serious' ? 'tone-red' : 'tone-amber'}`}>{BUG_SEVERITY_LABELS[bug.severity] ?? bug.severity}</span>}</dd>
                 <dt>优先级</dt>
-                <dd>{editors?.priority ?? <span className={`bug-sidebar-indicator tone-${getBugPriorityTone(bug.priority)}`}>{BUG_PRIORITY_LABELS[bug.priority] ?? bug.priority}</span>}</dd>
+                <dd>{editors?.priority ?? <span className={`bug-sidebar-indicator inline-flex items-center gap-1.5 text-[var(--srf-tone-text)] tone-${getBugPriorityTone(bug.priority)}`}>{BUG_PRIORITY_LABELS[bug.priority] ?? bug.priority}</span>}</dd>
                 <dt>确认情况</dt>
                 <dd>{bug.confirmed ? '已确认' : '未确认'}</dd>
                 {bug.resolution && <><dt>解决方案</dt><dd>{BUG_RESOLUTION_LABELS[bug.resolution] ?? bug.resolution}</dd></>}
@@ -32,7 +32,7 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
                 <dt>创建人</dt>
                 <dd><UserDisplayName name={resolveUserName(bug.reporterUserId)} /></dd>
                 <dt>责任人</dt>
-                <dd className="bug-sidebar-person"><span className="bug-person-avatar" aria-hidden="true">{resolveUserName(bug.assigneeUserId).slice(0, 1).toUpperCase()}</span><UserDisplayName name={resolveUserName(bug.assigneeUserId)} /></dd>
+                <dd className="bug-sidebar-person flex items-center justify-end gap-1.5"><span className="bug-person-avatar inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[var(--srf-accent)] text-[11px] text-[var(--srf-on-accent)]" aria-hidden="true">{resolveUserName(bug.assigneeUserId).slice(0, 1).toUpperCase()}</span><UserDisplayName name={resolveUserName(bug.assigneeUserId)} /></dd>
                 <dt>发现迭代</dt>
                 <dd>{sprintNames.get(bug.foundSprintId) ?? '-'}</dd>
                 <dt>计划修复迭代</dt>
@@ -46,13 +46,13 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
               </dl>
             </section>
 
-            <section className="bug-detail-panel">
-              <h2 className="bug-panel-title">关联上下文与追溯</h2>
-              <dl className="bug-meta-list bug-context-list">
+            <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+              <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">关联上下文与追溯</h2>
+              <dl className="bug-meta-list bug-context-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed">
                 <dt>所属需求</dt>
                 <dd>
                   {editors?.requirement ?? (bug.requirementId && canReadContext ? (
-                    <Link className="bug-link-text" to={`/requirements/${bug.requirementId}`}>{bug.requirementName || bug.requirementId}</Link>
+                    <Link className="bug-link-text text-[var(--srf-accent)]" to={`/requirements/${bug.requirementId}`}>{bug.requirementName || bug.requirementId}</Link>
                   ) : (
                     <Text type="secondary">{bug.requirementName || (bug.requirementId ? '已关联需求' : '未关联需求')}</Text>
                   ))}
@@ -60,7 +60,7 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
                 <dt>关联测试单</dt>
                 <dd>
                   {bug.sourceOrderId && canReadContext ? (
-                    <Link className="bug-link-text" to={`/test-orders/${bug.sourceOrderId}`}>
+                    <Link className="bug-link-text text-[var(--srf-accent)]" to={`/test-orders/${bug.sourceOrderId}`}>
                       {bug.sourceOrderName || bug.sourceOrderId}
                     </Link>
                   ) : (

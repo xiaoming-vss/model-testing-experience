@@ -203,7 +203,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
       className={`bug-import-modal ${bugStyles.root}`}
       onCancel={close}
       footer={results ? <Button type="primary" onClick={close}>完成</Button> : (
-        <div className="bug-import-footer">
+        <div className="bug-import-footer flex flex-wrap items-center justify-between gap-2">
           <Typography.Text type="secondary">
             {step === 0 ? `已选 ${selected.length}／${MAX_IMPORT_SELECTION} 条` : `可导入 ${readyToImport.length} 条，待完善 ${blocked.length} 条`}
           </Typography.Text>
@@ -218,7 +218,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
     >
       {!results && <Steps size="small" current={step} items={[{ title: '选择 Bug' }, { title: '确认导入' }]} />}
       {results ? (
-        <Space className="bug-import-scroll" orientation="vertical" size="middle" style={{ width: '100%' }}>
+        <Space className="bug-import-scroll min-h-0 flex-1 overflow-auto" orientation="vertical" size="middle" style={{ width: '100%' }}>
           {results.map((item) => (
             <Alert
               key={item.remoteBugId}
@@ -237,7 +237,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
           ))}
         </Space>
       ) : step === 0 ? (
-        <div className="bug-import-step">
+        <div className="bug-import-step flex min-h-0 flex-1 flex-col gap-3">
           <Space wrap>
             <Select
               aria-label="候选状态筛选"
@@ -275,7 +275,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
           <Typography.Text type="secondary">
             已选 {selected.length} 条，每批最多导入 {MAX_IMPORT_SELECTION} 条；每页条数仅控制候选展示。
           </Typography.Text>
-          <div className="bug-import-scroll">
+          <div className="bug-import-scroll min-h-0 flex-1 overflow-auto">
           <Table<ZentaoBugCandidate>
             size="small"
             rowKey="remoteBugId"

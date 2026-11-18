@@ -49,34 +49,34 @@ export function BugActivityFeed({
 }) {
   if (items.length === 0) {
     return (
-      <Text type="secondary" className="bug-activity-empty">
+      <Text type="secondary" className="bug-activity-empty text-[13px]">
         {emptyText}
       </Text>
     )
   }
   return (
-    <ul className="bug-activity-list">
+    <ul className="bug-activity-list m-0 mt-2 list-none py-0 pl-2">
       {items.map((activity) => (
-        <li key={activity.activityId} className="bug-activity-item">
-          <div className="bug-activity-head">
-            <span className="bug-activity-actor"><UserDisplayName name={resolveUserName(activity.actorUserId)} /></span>
-            <span className="bug-activity-action">{activitySummary(activity, resolveUserName)}</span>
+        <li key={activity.activityId} className="bug-activity-item relative border-l border-[var(--srf-card-border)] pb-[22px] pl-[22px] last:border-l-transparent last:pb-0">
+          <div className="bug-activity-head flex flex-wrap items-baseline gap-2 text-[13px]">
+            <span className="bug-activity-actor font-semibold text-[var(--srf-text)]"><UserDisplayName name={resolveUserName(activity.actorUserId)} /></span>
+            <span className="bug-activity-action text-[var(--srf-text-secondary)]">{activitySummary(activity, resolveUserName)}</span>
             {activity.kind === 'status_change' && activity.toStatus ? (
-              <span className="bug-activity-status">{activity.fromStatus ? `${activity.detail.fromConfirmed === undefined ? getBugStatusLabel(activity.fromStatus) : getBugStateLabel({ status: activity.fromStatus, confirmed: activity.detail.fromConfirmed, resolution: activity.detail.fromResolution })} → ` : ''}{activity.detail.toConfirmed === undefined ? getBugStatusLabel(activity.toStatus) : getBugStateLabel({ status: activity.toStatus, confirmed: activity.detail.toConfirmed, resolution: activity.detail.toResolution })}</span>
+              <span className="bug-activity-status rounded-full bg-[var(--srf-chip)] px-2 text-xs text-[var(--srf-chip-text)]">{activity.fromStatus ? `${activity.detail.fromConfirmed === undefined ? getBugStatusLabel(activity.fromStatus) : getBugStateLabel({ status: activity.fromStatus, confirmed: activity.detail.fromConfirmed, resolution: activity.detail.fromResolution })} → ` : ''}{activity.detail.toConfirmed === undefined ? getBugStatusLabel(activity.toStatus) : getBugStateLabel({ status: activity.toStatus, confirmed: activity.detail.toConfirmed, resolution: activity.detail.toResolution })}</span>
             ) : null}
-            <span className="bug-activity-time">{formatTime(pickCreatedAt(activity))}</span>
+            <span className="bug-activity-time ml-auto whitespace-nowrap text-xs text-[var(--srf-text-muted)]">{formatTime(pickCreatedAt(activity))}</span>
           </div>
-          {activity.detail.rejectReason && <p className="bug-activity-content">拒绝原因：{BUG_REJECT_REASON_LABELS[activity.detail.rejectReason] ?? activity.detail.rejectReasonLabel}</p>}
-          {activity.detail.toResolution && <p className="bug-activity-content">解决方案：{BUG_RESOLUTION_LABELS[activity.detail.toResolution] ?? activity.detail.toResolution}{activity.detail.resolvedBuild ? `；解决版本：${activity.detail.resolvedBuild}` : ''}{activity.detail.duplicateBug ? `；重复 Bug ID：${activity.detail.duplicateBug}` : ''}</p>}
+          {activity.detail.rejectReason && <p className="bug-activity-content mt-1.5 whitespace-pre-wrap break-words rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] px-2.5 py-2 text-[var(--srf-text)]">拒绝原因：{BUG_REJECT_REASON_LABELS[activity.detail.rejectReason] ?? activity.detail.rejectReasonLabel}</p>}
+          {activity.detail.toResolution && <p className="bug-activity-content mt-1.5 whitespace-pre-wrap break-words rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] px-2.5 py-2 text-[var(--srf-text)]">解决方案：{BUG_RESOLUTION_LABELS[activity.detail.toResolution] ?? activity.detail.toResolution}{activity.detail.resolvedBuild ? `；解决版本：${activity.detail.resolvedBuild}` : ''}{activity.detail.duplicateBug ? `；重复 Bug ID：${activity.detail.duplicateBug}` : ''}</p>}
           {activity.content ? (
-            <p className="bug-activity-content">{activity.content}</p>
+            <p className="bug-activity-content mt-1.5 whitespace-pre-wrap break-words rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] px-2.5 py-2 text-[var(--srf-text)]">{activity.content}</p>
           ) : null}
           {activity.kind === 'edit' && (activity.detail.changes ?? []).length > 0 ? (
-            <ul className="bug-activity-changes">
+            <ul className="bug-activity-changes mt-1.5 pl-[18px] text-xs text-[var(--srf-text-secondary)]">
               {(activity.detail.changes ?? []).map((change) => (
                 <li key={`${activity.activityId}-${change.field}`}>
                   {change.field === 'descriptionHtml' ? <details><summary>问题描述已修改 · 查看前后内容</summary>
-                    <div className="bug-history-diff"><div><strong>修改前</strong><RichTextViewer html={change.from} /></div>
+                    <div className="bug-history-diff mt-3 grid grid-cols-2 gap-3 max-[720.01px]:grid-cols-1"><div><strong>修改前</strong><RichTextViewer html={change.from} /></div>
                       <div><strong>修改后</strong><RichTextViewer html={change.to} /></div></div>
                   </details> : describeChange(change)}
                 </li>

@@ -148,15 +148,15 @@ function RequirementDocxPreview({
   }, [documentUrl, previewUrl, requirementId, token, previewAttempt])
 
   return (
-    <div className="requirement-document-preview-shell">
+    <div className="requirement-document-preview-shell flex h-full w-full min-h-0 flex-1 overflow-hidden">
       {loading ? (
-        <div className="requirement-document-preview-state">
+        <div className="requirement-document-preview-state flex min-h-[220px] flex-col items-center justify-center gap-2.5 text-[13px] text-[var(--testing-text-muted)]">
           <Spin />
           <span>文档预览加载中...</span>
         </div>
       ) : null}
       {error ? (
-        <div className="requirement-document-preview-state error">
+        <div className="requirement-document-preview-state error flex min-h-[220px] flex-col items-center justify-center gap-2 text-[13px] text-[var(--testing-text-muted)]">
           <span role="alert">{error}</span>
           <Button onClick={() => setPreviewAttempt(attempt => attempt + 1)}>重试预览</Button>
           <Button type="link" loading={downloadMutation.isPending} onClick={() => downloadMutation.mutate()}>
@@ -166,7 +166,7 @@ function RequirementDocxPreview({
       ) : null}
       <div
         ref={containerRef}
-        className={`requirement-document-docx-host${loading ? ' loading' : ''}${error ? ' hidden' : ''}`}
+        className={`requirement-document-docx-host min-h-0 w-full flex-1 overflow-auto rounded-none border-0 bg-[var(--app-surface)] shadow-none${loading ? ' loading' : ''}${error ? ' hidden' : ''}`}
       />
     </div>
   )
@@ -226,22 +226,22 @@ function RequirementTextPreview({ previewUrl, richText = false }: { previewUrl: 
   }, [previewUrl, token, previewAttempt])
 
   return (
-    <div className="requirement-document-text-host">
+    <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
       {loading ? (
-        <div className="requirement-document-preview-state">
+        <div className="requirement-document-preview-state flex min-h-[220px] flex-col items-center justify-center gap-2.5 text-[13px] text-[var(--testing-text-muted)]">
           <Spin />
           <span>文本预览加载中...</span>
         </div>
       ) : null}
       {error ? (
-        <div className="requirement-document-preview-state error">
+        <div className="requirement-document-preview-state error flex min-h-[220px] flex-col items-center justify-center gap-2 text-[13px] text-[var(--testing-text-muted)]">
           <span role="alert">{error}</span>
           <Button onClick={() => setPreviewAttempt(attempt => attempt + 1)}>重试预览</Button>
         </div>
       ) : null}
       {!loading && !error ? (
         richText ? <RichTextViewer html={content} ariaLabel="需求正文" /> :
-        <div className="requirement-document-text-article">{content || '暂无源文件内容'}</div>
+        <div className="requirement-document-text-article box-border block min-h-full w-full min-w-0 max-w-full whitespace-pre-wrap break-words bg-[var(--app-surface)] p-6 text-[15px] leading-[1.84] text-[var(--description-text)] [font-family:var(--description-font)]">{content || '暂无源文件内容'}</div>
       ) : null}
     </div>
   )
@@ -259,8 +259,8 @@ type RequirementDocumentPreviewContentProps = {
 
 function RequirementPreviewPane({ children }: { children: ReactNode }) {
   return (
-    <section className="requirement-document-pane">
-      <div className="requirement-document-pane-body">{children}</div>
+    <section className="requirement-document-pane flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[8px] border border-[var(--app-testing-control-disabled-border)] bg-[var(--app-surface)]">
+      <div className="requirement-document-pane-body flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[var(--app-surface)]">{children}</div>
     </section>
   )
 }
@@ -311,7 +311,7 @@ export function RequirementDocumentPreviewContent({
   }
 
   const documentPreviewContent = (
-    <div className={`requirement-document-modal-stage${isWord ? ' docx-mode' : ' text-mode'}`}>
+    <div className={`requirement-document-modal-stage flex h-full w-full min-h-0 min-w-0 max-w-full flex-none overflow-hidden bg-transparent p-0${isWord ? ' docx-mode' : ' text-mode'}`}>
       {isWord && (documentUrl || requirementId) ? (
         <RequirementDocxPreview
           requirementId={requirementId}
@@ -322,28 +322,28 @@ export function RequirementDocumentPreviewContent({
       ) : !isWord && documentUrl ? (
         <RequirementTextPreview key={previewUrl} previewUrl={previewUrl} richText={documentType === 'richtext'} />
       ) : !isWord && documentText ? (
-        <div className="requirement-document-text-host">
-          <article className="requirement-document-text-article">{documentText}</article>
+        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
+          <article className="requirement-document-text-article box-border block min-h-full w-full min-w-0 max-w-full whitespace-pre-wrap break-words bg-[var(--app-surface)] p-6 text-[15px] leading-[1.84] text-[var(--description-text)] [font-family:var(--description-font)]">{documentText}</article>
         </div>
       ) : (
-        <div className="requirement-document-text-host">
-          <div className="requirement-document-text-article">暂无源文件</div>
+        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
+          <div className="requirement-document-text-article box-border block min-h-full w-full min-w-0 max-w-full whitespace-pre-wrap break-words bg-[var(--app-surface)] p-6 text-[15px] leading-[1.84] text-[var(--description-text)] [font-family:var(--description-font)]">暂无源文件</div>
         </div>
       )}
     </div>
   )
 
   return (
-    <div className={`requirement-document-modal${embedded ? ' requirement-document-inline' : ''} ${detailStyles.root}`}>
+    <div className={`requirement-document-modal flex min-h-0 flex-1 flex-col gap-0${embedded ? ' requirement-document-inline' : ''} ${detailStyles.root}`}>
       {!embedded ? <header className="requirement-document-modal-toolbar">
-        <div className="requirement-document-modal-toolbar-main">
-          {!embedded ? <div className="requirement-document-modal-title-row">
-            <FileWordOutlined className="requirement-document-modal-title-icon" />
-            <div className="requirement-document-modal-title">需求文档</div>
+        <div className="requirement-document-modal-toolbar-main flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
+          {!embedded ? <div className="requirement-document-modal-title-row flex items-center gap-2.5">
+            <FileWordOutlined className="requirement-document-modal-title-icon inline-flex text-[21px] text-[var(--app-testing-control-accent)]" />
+            <div className="requirement-document-modal-title text-[20px] font-bold leading-[28px] tracking-normal text-[var(--testing-text)]">需求文档</div>
           </div> : null}
-          <div className="requirement-document-modal-meta">
-            <span className="requirement-document-type-chip">{documentTypeLabel}</span>
-            <span className="requirement-document-file-name" title={documentName}>
+          <div className="requirement-document-modal-meta flex w-full min-w-0 items-center justify-start gap-2.5 overflow-hidden whitespace-nowrap text-[13px] text-[var(--testing-text-muted)]">
+            <span className="requirement-document-type-chip inline-flex h-6 items-center justify-center rounded-[6px] border border-[var(--app-testing-control-hover-border)] bg-[var(--app-testing-control-hover-bg)] px-2.5 text-xs font-semibold leading-[18px] tracking-[0.02em] text-[var(--app-testing-control-accent)]">{documentTypeLabel}</span>
+            <span className="requirement-document-file-name block min-w-0 max-w-[min(52vw,760px)] flex-[0_1_auto] truncate text-[13px] leading-[20px] text-[var(--app-list-header-text)]" title={documentName}>
               {documentName}
             </span>
           </div>
@@ -351,7 +351,7 @@ export function RequirementDocumentPreviewContent({
         {documentUrl || requirementId ? (
           <Button
             type="link"
-            className="requirement-document-download-link"
+            className="requirement-document-download-link inline-flex h-[34px] flex-none items-center gap-2 self-center rounded-[7px] border border-[var(--app-testing-control-selected-border)] bg-[var(--app-surface)] px-[13px] text-[13px] font-semibold text-[var(--app-testing-control-accent)] no-underline shadow-none transition-[transform,border-color,background-color] duration-200 hover:border-[var(--app-testing-control-focus-border)] hover:bg-[var(--app-testing-control-selected-bg)] hover:no-underline"
             loading={downloadMutation.isPending}
             onClick={handleDownload}
           >
@@ -361,7 +361,7 @@ export function RequirementDocumentPreviewContent({
         ) : null}
       </header> : null}
       {downloadMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadMutation.error)} /> : null}
-      <div className="requirement-document-workspace">
+      <div className="requirement-document-workspace grid min-h-[520px] h-[calc(100vh-176px)] grid-cols-1 flex-1 overflow-hidden bg-[var(--app-testing-control-disabled-bg)] p-0">
         <RequirementPreviewPane>
           {documentPreviewContent}
         </RequirementPreviewPane>

@@ -51,8 +51,8 @@ export function BugDetailPage() {
 
 
   const activityPanels = <>
-            <section className="bug-detail-panel bug-detail-history">
-              <h2 className="bug-panel-title">处理记录 <span className="bug-section-count">{statusChanges.length}</span></h2>
+            <section className="bug-detail-panel bug-detail-history col-span-full mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+              <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">处理记录 <span className="bug-section-count text-xs font-normal text-[var(--srf-text-muted)]">{statusChanges.length}</span></h2>
               {activitiesQuery.error && <Alert type="error" showIcon title="处理记录加载失败" action={<Button onClick={() => activitiesQuery.refetch()}>重试</Button>} />}
               <BugActivityFeed
                 items={statusChanges}
@@ -60,9 +60,9 @@ export function BugDetailPage() {
                 emptyText="还没有流转记录"
               />
             </section>
-            <section className="bug-detail-panel bug-detail-discussion">
-              <h2 className="bug-panel-title">评论与动态</h2>
-              <div className="bug-comment-composer">
+            <section className="bug-detail-panel bug-detail-discussion col-span-full mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+              <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">评论与动态</h2>
+              <div className="bug-comment-composer mb-2.5">
                 <Input
                   aria-label="评论输入框"
                   placeholder="写下评论，回车发送"
@@ -100,12 +100,12 @@ export function BugDetailPage() {
         <BugDetailHeader bug={bug} onBack={() => goBackOrFallback(navigate, '/testing?tab=bugs')}
           onTransition={setTransitionAction} onEdit={() => setEditOpen(true)} onTransfer={() => setTransferOpen(true)} />
 
-        <div className="bug-detail-cols">
-          <div className="bug-detail-main">
-            <section className="bug-detail-panel bug-detail-summary">
-              <div className="bug-detail-breadcrumb">{projectQuery.data?.name || bug.projectId} <span>/</span> {formatBugNo(bug.bugNo)}</div>
-              <h1>{bug.title}</h1>
-              <div className="bug-detail-subtitle"><UserDisplayName name={resolveUserName(bug.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(bug))}</div>
+        <div className="bug-detail-cols mt-5 grid w-full min-w-0 grid-cols-[minmax(0,2.15fr)_minmax(300px,1fr)] items-start gap-5 max-[1100.01px]:grid-cols-1">
+          <div className="bug-detail-main min-w-0">
+            <section className="bug-detail-panel bug-detail-summary mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+              <div className="bug-detail-breadcrumb flex items-center gap-2.5 break-words font-mono text-[11px] text-[var(--srf-text-muted)]">{projectQuery.data?.name || bug.projectId} <span>/</span> {formatBugNo(bug.bugNo)}</div>
+              <h1 className="mb-2.5 mt-3.5 break-words text-[22px] font-semibold leading-normal text-[var(--srf-text)] max-[720.01px]:text-[18px]">{bug.title}</h1>
+              <div className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]"><UserDisplayName name={resolveUserName(bug.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(bug))}</div>
             </section>
             <BugDescriptionView html={bug.descriptionHtml} />
             {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} projectId={bug.projectId} canWrite={canWrite} />}
