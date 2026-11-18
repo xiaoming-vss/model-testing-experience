@@ -50,10 +50,6 @@ body {
     color 0.25s ease;
 }
 
-button, input, select, textarea {
-  font-family: inherit;
-}
-
 a {
   color: var(--app-link);
 }

@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import surfaceTokens from '@/shared/styles/surface-tokens.css?raw'
 import listTableCss from '@/shared/styles/list-table.css?raw'
+import { unwrapCssLayer } from '@/test/unwrapCssLayer'
+
+const unlayeredSurfaceTokens = unwrapCssLayer(surfaceTokens, 'components')
 
 function computedListSurface(pageClass: string, tableClass: string) {
-  document.head.innerHTML = `<style>${surfaceTokens}\n${listTableCss}</style>`
+  document.head.innerHTML = `<style>${unlayeredSurfaceTokens}\n${listTableCss}</style>`
   document.body.innerHTML = `
     <div class="app-shell app-shell-macos">
       <main class="${pageClass} tp-list-surface">

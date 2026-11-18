@@ -104,22 +104,22 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 需求详情页的页面高度链、面包屑、主/侧栏骨架与窄屏堆叠由 `RequirementDetailPage` / `RequirementDetailHeader` 的 utility 负责；`requirements/styles/requirement-detail.module.css` 只保留链接表面、侧栏动画、画布与文档容器深层结构，根节点挂 `.root`。
 - 个人设置页与独立修改密码页共用 `profile/styles/profile-settings.module.css`，该 Module 只保留渐变、卡片表面与 AntD 深层结构；布局、间距和排版由两页的 Tailwind utility 负责，修改密码页不再有单独 Module。`ChangePasswordPage` 对 profile Module 的跨 feature 导入是结构门禁的显式豁免。
 - 禅道 MCP 卡片不再有独立 Module；标题、状态、实例省略与间距均由 `ZentaoMcpServiceCard.tsx` 的 utility 表达。
-- `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。
+- `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。`src/index.css` 不再重复声明控件 `font-family`，避免未分层规则压过 `font-mono`。
 - 阶段 14 后 `src/features` 下不再有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
 - TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责，两个原 Module 已删除。
-- 共享 `tp-list-toolbar` 的搜索框宽度已迁到页面 `w-72` utility；工具栏表面与最小高度仍由未分层共享规则提供。`.api-filter-field { min-width: 0 }` 仍会压过 utility，UI 列表的 256px 下限因此保留在 feature Module。
+- 共享 `tp-list-toolbar` 的搜索框宽度已迁到页面 `w-72` utility；工具栏表面、最小高度与 `.api-filter-field`/`.api-filter-group`/`.api-filter-field-label` 原语位于 `@layer components`，utility 可在页面按需覆盖。UI 列表搜索框用 `min-w-64 max-narrow:w-full max-narrow:min-w-0` 表达原 256px 下限。
 
 ### 公共表格与按钮
 
 - `shared/styles/list-table.css` 是表头和数据行尺寸、底色、悬停背景的共用实现，颜色取自 `surface-tokens.css` 的 `--srf-list-*`。页面保留业务类名并声明 `tp-list-surface`，表格保留业务类名并声明 `tp-list-table`；使用表格的入口显式引入这两个样式文件。列内容、边框及圆角的现有优先级仍由 feature 维护。
-- 按钮外观由 `app/styles/buttons.css` 的 `app-buttons` 层统一负责。页面保留尺寸、排布与边框结构，不再重复声明已经被该层覆盖的文字色、背景、阴影和字重。
-- 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
+- 按钮外观由 `app/styles/buttons.css` 的 `app-buttons` 层统一负责。`app-buttons` 已加入 `tailwind.css` 的层顺序（位于 `components` 与 `utilities` 之间）；页面保留尺寸、排布与边框结构，不再重复声明已经被该层覆盖的文字色、背景、阴影和字重。
+- 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义，并放在 `@layer components`。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`shell-boundary.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表与软件仓库管理在 `interface-library.module.css`；方法签、OpenAPI 导入、详情顶栏/编辑器壳、编辑器内容区分别在同目录 `interface-method` / `interface-openapi` / `interface-detail` / `interface-editor` Module。页面根与 Modal/Drawer 根同时挂五个 `.scope`，保持原单文件内的规则顺序。
 - UI 测试集详情顶栏归 `ui-detail-topbar.module.css`，板面/控制条/窄屏归 `ui-detail-shell.module.css`；页面根同时挂五个详情 Module 的作用域。步骤编辑器和测试集抽屉的窄屏规则仍归 `ui-suite.module.css`，阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
 - Sprint 详情页只保留卡片/健康带表面、图表色块与报告 Markdown 在 `sprint-overview.module.css` / `sprint-dashboard.module.css`，两者按顺序导入；页面网格、工具栏、指标与断点由 `SprintDetailPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的 `projects-overview.module.css` 保留空态、状态色、焦点与 macOS 皮肤，需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
-列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对，jsdom 尚不能模拟 CSS layer 的完整级联。
+列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
 
 ### 共享数据工具
 

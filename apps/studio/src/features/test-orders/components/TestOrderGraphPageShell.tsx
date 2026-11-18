@@ -30,12 +30,12 @@ export function TestOrderGraphPageShell({ order, projectName, sprintName, childr
         <section className="test-order-graph-page-heading" aria-label="测试单概况">
           <h1>用例图谱</h1>
           {order ? <>
-            <span className="tp-tone-tag tone-blue">{order.name}</span>
+            <span className="tp-tone-tag whitespace-normal tone-blue">{order.name}</span>
             {order.testedVersion ? <span className="test-order-graph-page-secondary">被测版本 {order.testedVersion}</span> : null}
             <span className="test-order-graph-page-secondary">已执行 {order.entriesExecuted ?? 0} / {order.entriesTotal ?? 0}</span>
             <div className="test-order-graph-page-counts">
               {[{ status: 'failed', count: order.entriesFailed ?? 0 }, { status: 'pending', count: pending }].map(({ status, count }) => (
-                <span key={status} className={`tp-tone-tag tone-${getTestOrderEntryStatusTone(status)}`}>
+                <span key={status} className={`tp-tone-tag whitespace-normal tone-${getTestOrderEntryStatusTone(status)}`}>
                   {getTestOrderEntryStatusMeta(status).label} {count}
                 </span>
               ))}

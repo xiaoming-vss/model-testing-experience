@@ -15,36 +15,6 @@
   --mac-glass-blue: var(--legacy-mac-glass-blue);
 }
 
-.app-shell.app-shell-base-services,
-.app-shell.app-shell-base-services > .ant-layout,
-.app-shell.app-shell-base-services .app-content {
-  background:
-    radial-gradient(circle at 18% 0%, var(--app-glass-glow), transparent 26%),
-    var(--mac-glass-page) !important;
-}
-
-.app-shell.app-shell-base-services .app-header.compact-header {
-  border-bottom-color: var(--mac-glass-border) !important;
-  background: var(--mac-glass-header) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: none !important;
-}
-
-.app-shell.app-shell-base-services .project-selector-wrap {
-  border-color: var(--mac-glass-border);
-  background: var(--mac-glass-panel) !important;
-  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
-}
-
-.app-shell.app-shell-base-services .app-header-actions .ant-btn-circle {
-  color: var(--mac-glass-muted) !important;
-}
-
-.app-shell.app-shell-base-services .project-select .ant-select-selector {
-  color: var(--mac-glass-text) !important;
-}
-
 /* Additional roles used by the global shell. */
 .app-shell.app-shell-macos {
   --mac-glass-card: var(--legacy-mac-glass-card);
@@ -53,7 +23,6 @@
 }
 
 .app-shell.app-shell-macos,
-.app-shell.app-shell-macos > .ant-layout,
 .app-shell.app-shell-macos .app-content {
   background:
     radial-gradient(circle at 18% 0%, var(--app-glass-page-glow), transparent 26%),
@@ -75,7 +44,6 @@
 }
 
 .app-shell.app-shell-macos .app-header.compact-header {
-  height: 56px;
   padding-inline: var(--app-page-gutter);
   border-bottom-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-header) !important;
@@ -85,10 +53,7 @@
 }
 
 .app-shell.app-shell-macos .project-selector-wrap {
-  padding: 0 12px;
-  border: 1px solid var(--mac-glass-border);
   border-radius: 10px;
-  background: var(--app-surface) !important;
   box-shadow: none !important;
 }
 
@@ -160,7 +125,7 @@
   min-height: calc(100vh - 214px);
 }
 .app-shell.app-shell-macos .sprint-card-scroll {
-  background: transparent !important;
+  background: transparent;
 }
 .app-shell.app-shell-macos .sprint-card .ant-card-body {
   height: 100%;
@@ -196,38 +161,16 @@
   white-space: nowrap;
 }
 
-/* Persistent feedback contact in the center of the shared navigation bar. */
-.app-shell .app-header.compact-header .app-header-main {
-  flex: 0 1 auto;
-}
-
 @media (max-width: 1400px) {
   .app-shell.app-shell-macos .app-header.compact-header {
-    height: auto;
-    min-height: 56px;
     padding-block: 8px;
   }
 }
 
 /* Keep the scope controls together; wrap whole groups when space is limited. */
 @media (max-width: 900px) {
-  .app-shell.app-shell-macos .app-header.compact-header {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
-  }
-
-  .app-shell .app-header.compact-header .app-header-main {
-    flex: 1 1 100%;
-    min-width: 0;
-  }
-
   .app-shell.app-shell-macos .project-selector-wrap {
-    width: 100%;
     flex-wrap: wrap;
-    gap: 4px 8px;
-    padding: 4px 12px;
     border-radius: 12px;
   }
 }

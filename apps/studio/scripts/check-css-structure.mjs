@@ -214,7 +214,7 @@ const globalCss = cssFiles
 
 const tailwind = cssText.get(join(srcRoot, 'shared', 'styles', 'tailwind.css')) ?? ''
 const entryCss = cssText.get(join(srcRoot, 'index.css')) ?? ''
-const layerOk = /@layer\s+theme,\s*base,\s*antd,\s*reset,\s*components,\s*utilities;/.test(tailwind)
+const layerOk = /@layer\s+theme,\s*base,\s*antd,\s*reset,\s*components,\s*app-buttons,\s*utilities;/.test(tailwind)
   && /@import\s+["']tailwindcss\/utilities\.css["']\s+layer\(utilities\)/.test(tailwind)
   && /@import\s+["']antd\/dist\/reset\.css["']\s+layer\(reset\)/.test(entryCss)
 

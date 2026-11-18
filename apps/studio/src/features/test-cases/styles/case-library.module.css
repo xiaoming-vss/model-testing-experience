@@ -131,15 +131,6 @@
   font-size: 11px;
 }
 
-/* 长类型在单元格内省略；共享 .tp-tone-tag 是 inline-flex，这里恢复用例库原有的
-   inline-block 省略行为，完整文本通过原生标题保留。 */
-.root :global(.case-library-type-tag) {
-  display: inline-block;
-  box-sizing: border-box;
-  max-width: 100%;
-  vertical-align: middle;
-}
-
 /* ===== 优先级色块 ===== */
 
 /* 颜色取自共享九色盘（P0→red / P1→amber / P2→blue / P3→slate），这里只管盒子。

@@ -23,11 +23,6 @@
   font-weight: 500;
 }
 
-/* 共享 .api-filter-field 的 min-width: 0 未分层，utility 无法覆盖；这里保留 256px 下限。 */
-.scope :global(.ui-suite-list-search-field) {
-  min-width: 256px;
-}
-
 .scope :global(.ui-suite-list-search-input.ant-input-affix-wrapper) {
   border-radius: var(--srf-radius-control);
 }
@@ -82,10 +77,3 @@
 }
 
 /* ===== 窄屏 ===== */
-
-@media (max-width: 900px) {
-  .scope :global(.ui-suite-list-search-field) {
-    min-width: 0;
-    width: 100%;
-  }
-}

@@ -611,7 +611,7 @@ export function CaseLibraryPage() {
         ellipsis: true,
         render: (_, item) =>
           item.caseType ? (
-            <span title={item.caseType} className={`tp-tone-tag case-library-type-tag tone-${caseTypeTone(item.caseType)}`}>
+            <span title={item.caseType} className={`tp-tone-tag case-library-type-tag inline-block align-middle max-w-full tone-${caseTypeTone(item.caseType)}`}>
               {item.caseType}
             </span>
           ) : (
@@ -728,7 +728,7 @@ export function CaseLibraryPage() {
             <div className="api-filter-group case-library-filters flex flex-wrap items-center gap-2">
               <h1 className="tp-list-title">用例库</h1>
               <div className="api-filter-field">
-                <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">需求</span>
+                <span className="api-filter-field-label">需求</span>
                 <Select
                   className="api-filter-select business-filter-select"
                   aria-label="筛选需求"
@@ -747,7 +747,7 @@ export function CaseLibraryPage() {
                 />
               </div>
               <div className="api-filter-field">
-                <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">用例类型</span>
+                <span className="api-filter-field-label">用例类型</span>
                 <Select
                   className="api-filter-select business-filter-select"
                   aria-label="筛选用例类型"

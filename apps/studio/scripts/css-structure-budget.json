@@ -82,9 +82,9 @@
       "selectors": 4
     },
     "src/app/styles/shell-header.css": {
-      "rules": 54,
-      "declarations": 134,
-      "selectors": 74
+      "rules": 46,
+      "declarations": 107,
+      "selectors": 63
     },
     "src/app/styles/shell.css": {
       "rules": 71,
@@ -297,9 +297,9 @@
       "selectors": 48
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 25,
-      "declarations": 73,
-      "selectors": 27
+      "rules": 24,
+      "declarations": 69,
+      "selectors": 26
     },
     "src/features/test-cases/styles/case-push.module.css": {
       "rules": 5,
@@ -317,9 +317,9 @@
       "selectors": 12
     },
     "src/features/test-orders/styles/test-order-graph.module.css": {
-      "rules": 22,
-      "declarations": 80,
-      "selectors": 23
+      "rules": 21,
+      "declarations": 79,
+      "selectors": 22
     },
     "src/features/test-orders/styles/test-order-verdict.module.css": {
       "rules": 21,
@@ -372,9 +372,9 @@
       "selectors": 166
     },
     "src/features/ui-automation/styles/ui-list.module.css": {
-      "rules": 14,
-      "declarations": 37,
-      "selectors": 14
+      "rules": 12,
+      "declarations": 34,
+      "selectors": 12
     },
     "src/features/ui-automation/styles/ui-suite.module.css": {
       "rules": 92,
@@ -382,9 +382,9 @@
       "selectors": 119
     },
     "src/index.css": {
-      "rules": 9,
-      "declarations": 25,
-      "selectors": 25
+      "rules": 8,
+      "declarations": 24,
+      "selectors": 21
     },
     "src/shared/components/RichTextEditor/rich-text-editor.css": {
       "rules": 40,
@@ -463,7 +463,7 @@
     },
     "src/shared/styles/list-table.css": {
       "rules": 23,
-      "declarations": 71,
+      "declarations": 67,
       "selectors": 33
     },
     "src/shared/styles/pagination.css": {
@@ -482,9 +482,9 @@
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 69,
-      "declarations": 309,
-      "selectors": 73
+      "rules": 65,
+      "declarations": 303,
+      "selectors": 68
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,

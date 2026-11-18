@@ -68,10 +68,6 @@
   font-weight: 600;
 }
 
-.root :global(.test-order-graph-page-heading) :global(.tp-tone-tag) {
-  white-space: normal;
-}
-
 .root :global(.test-order-graph-page-secondary) {
   color: var(--srf-text-secondary);
   font-size: 12px;

@@ -137,38 +137,36 @@
   font-size: 12px;
 }
 
-.tp-surface .tp-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--srf-chip-text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-  cursor: pointer;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease;
-}
+@layer components {
+  .tp-surface .tp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--srf-chip-text);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    cursor: pointer;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease;
+  }
 
-.tp-surface .tp-chip:hover {
-  background: var(--srf-chip);
-}
+  .tp-surface .tp-chip:hover {
+    background: var(--srf-chip);
+  }
 
-.tp-surface .tp-chip.active {
-  border-color: var(--srf-accent-border);
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent);
-  font-weight: 600;
-}
+  .tp-surface .tp-chip.active {
+    border-color: var(--srf-accent-border);
+    background: var(--srf-accent-soft);
+    color: var(--srf-accent);
+    font-weight: 600;
+  }
 
-.tp-surface .tp-chip-count {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .tp-surface .tp-selection {
@@ -182,21 +180,23 @@
 }
 
 /** 色调胶囊：用例类型标签与测试单状态胶囊共用同一套底色 / 描边 / 文字色。 */
-.tp-surface .tp-tone-tag {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 2px 8px;
-  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
-  border-radius: 999px;
-  background: var(--srf-tone-bg, var(--srf-chip));
-  color: var(--srf-tone-text, var(--srf-chip-text));
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 16px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+@layer components {
+  .tp-surface .tp-tone-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 2px 8px;
+    border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+    border-radius: 999px;
+    background: var(--srf-tone-bg, var(--srf-chip));
+    color: var(--srf-tone-text, var(--srf-chip-text));
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* 存量分离布局的兼容板面；新列表／卡片页必须追加 tp-list-panel。
@@ -244,52 +244,43 @@
 
 /* 四个测试列表的筛选卡片唯一实现。旧 panel-header 规则显式排除 tp-list-toolbar，
    页面只补内部排布，不再通过高权重或 !important 重写这里的尺寸与表面。 */
-.tp-surface .tp-list-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 56px;
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 10px 16px;
-  gap: 8px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--app-list-toolbar-bg, var(--srf-card));
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
+@layer components {
+  .tp-surface .tp-list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 56px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 10px 16px;
+    gap: 8px;
+    border: 1px solid var(--srf-card-border);
+    border-radius: var(--srf-radius-card);
+    background: var(--app-list-toolbar-bg, var(--srf-card));
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 
-/* 全站列表筛选控件共用尺寸；页面不得重复定义同类控件的几何规则。
-   搜索框宽度由各页面 utility 的 w-72 决定，这里只保留输入框铺满与筛选项排布。 */
-.tp-surface .tp-list-toolbar .api-filter-field {
-  gap: 8px;
-}
+  /* 全站列表筛选控件共用尺寸；页面不得重复定义同类控件的几何规则。
+     搜索框宽度由各页面 utility 的 w-72 决定，这里只保留输入框铺满与筛选项排布。 */
+  .tp-surface .tp-list-toolbar .api-filter-field-label {
+    margin: 0;
+    padding: 0;
+    line-height: 18px;
+  }
 
-.tp-surface .tp-list-toolbar .api-filter-field-label {
-  margin: 0;
-  padding: 0;
-  line-height: 18px;
-}
+  .tp-surface .tp-list-toolbar .api-filter-input {
+    width: 100%;
+  }
 
-.tp-surface .tp-list-toolbar .business-filter-select {
-  width: 180px;
-}
-
-.tp-surface .tp-list-toolbar .api-filter-input {
-  width: 100%;
-}
-
-.tp-surface .tp-list-toolbar :is(.api-filter-group, .api-panel-head-main, .ui-suite-list-toolbar-filters) {
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tp-surface .tp-list-toolbar {
-  flex-wrap: wrap;
+  .tp-surface .tp-list-toolbar :is(.api-filter-group, .api-panel-head-main, .ui-suite-list-toolbar-filters) {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 }
 
 /* 列表标题始终位于工具栏起始位置，同类页面共用排版。 */
@@ -384,7 +375,6 @@
   overflow: hidden;
 }
 
-:root:root .app-shell.app-shell-macos .tp-surface .tp-list-panel .tp-list-scroll,
 .tp-surface .tp-list-panel .tp-list-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -396,8 +386,8 @@
 
 /* Refresh and primary actions stay on the right when a toolbar wraps. */
 .tp-surface .tp-refresh-actions {
-  margin-inline-start: auto !important;
-  justify-content: flex-end !important;
+  margin-inline-start: auto;
+  justify-content: flex-end;
 }
 
 /*
@@ -481,30 +471,32 @@
   line-height: 18px;
 }
 
-.api-filter-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
+@layer components {
+  .api-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
 
-.api-filter-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
+  .api-filter-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
 
-.api-filter-field-label {
-  flex: 0 0 auto;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--app-environment-option-selected);
-  color: var(--app-request-summary-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 600;
-  white-space: nowrap;
+  .api-filter-field-label {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--app-environment-option-selected);
+    color: var(--app-request-summary-text);
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 }
 
 .api-collection-grid {
@@ -528,8 +520,7 @@
 }
 
 .api-collection-description {
-  margin-bottom: 0 !important;
-  color: var(--app-request-overview-text-muted);
+  margin-bottom: 0;
   font-size: 12px;
   line-height: 18px;
   font-weight: 400;
@@ -540,7 +531,6 @@
 }
 
 .api-collection-inline-value {
-  color: var(--tp-text);
   font-size: 14px;
   line-height: 22px;
   font-weight: 500;

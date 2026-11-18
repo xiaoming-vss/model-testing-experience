@@ -43,14 +43,10 @@
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
-  border-start-start-radius: 8px !important;
-  border-end-start-radius: 8px !important;
   border-top-left-radius: 8px !important;
   border-bottom-left-radius: 8px !important;
 }
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
-  border-start-end-radius: 8px !important;
-  border-end-end-radius: 8px !important;
   border-top-right-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
 }

@@ -4,7 +4,7 @@
  * Ant Design 通过 StyleProvider layer 注入 @layer antd；AntD reset 单独进入 reset layer，
  * 保持它压过组件库默认样式、但让 utilities 能覆盖它的既有优先级。
  */
-@layer theme, base, antd, reset, components, utilities;
+@layer theme, base, antd, reset, components, app-buttons, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);

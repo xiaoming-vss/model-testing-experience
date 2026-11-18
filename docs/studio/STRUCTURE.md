@@ -153,10 +153,11 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
   合计 **(0,6,0)**——与 `shared/styles/surface-tokens.css` 里那条 `.tp-board` 覆盖（(0,2,0)）相比权重更高，
   顺序一变板面就会重新拿到玻璃底 + 内高光 + 28px 阴影，表现为内容区凭空多出一层容器。
   修法是多带 `.app-shell-macos .testing-page` 前缀抬到 (0,7,0)，不再依赖 import 顺序。
-- 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；旧 `.panel-header` / `.api-panel-header` 的容器规则通过 `:not(:where(.tp-list-toolbar))` 排除它。页面只补排布，不再复制尺寸与表面，公共工具栏规则不再需要 `!important`。
+- 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；旧 `.panel-header` / `.api-panel-header` 的容器规则通过 `:not(:where(.tp-list-toolbar))` 排除它。页面只补排布，不再复制尺寸与表面，公共工具栏规则不再需要 `!important`。阶段 20 起这些规则位于 `@layer components`；仅去掉 `!important` 而不分层仍会压过 utility。
 - 筛选标签 `.api-filter-field-label`：旧外壳给它铺了蓝底小胶囊，设计稿里是裸的弱化文字。
   在 `surface-tokens.css` 里按 `.tp-surface` 收掉，不动那条旧规则——它同时作用于测试单的「加入用例」弹窗，
-  那个弹窗不在 `tp-surface` 里，不该跟着变。
+  那个弹窗不在 `tp-surface` 里，不该跟着变。阶段 20 把 `.api-filter-field` / `.api-filter-field-label` 与工具栏原语移入
+  `@layer components`，页面 utility 现在可以覆盖它们的默认值。
 
 判据可以量化：外层板面不增加底色 / 描边 / 阴影；筛选工具栏应有白底与描边、无额外阴影。DevTools 禁用对应规则
 再回读 `getComputedStyle` 即可确认是哪一条赢的。

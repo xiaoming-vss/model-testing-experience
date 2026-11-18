@@ -83,7 +83,7 @@ export function UiSuiteListToolbar({
           </div>
         ) : null}
 
-        <div className="api-filter-field ui-suite-list-search-field w-72 max-w-full">
+        <div className="api-filter-field ui-suite-list-search-field w-72 min-w-64 max-w-full max-narrow:w-full max-narrow:min-w-0">
           <Input
             ref={keywordInputRef}
             className="api-filter-input ui-suite-list-search-input"
