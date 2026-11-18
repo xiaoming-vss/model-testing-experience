@@ -249,7 +249,7 @@ function CanvasInner(props: CanvasProps) {
     })
     setEdges(graph.edges)
   }, [graph, setNodes, setEdges])
-  return <div ref={frameRef} className="gc-canvas-frame" aria-label="需求生成流程"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+  return <div ref={frameRef} className="gc-canvas-frame relative flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--app-bg)] max-[900.01px]:h-[min(60vh,600px)] max-[900.01px]:min-h-[380px] max-[900.01px]:flex-none" aria-label="需求生成流程"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
     nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} minZoom={0.5} maxZoom={1.5} onInit={flow => {
       const width = frameRef.current?.clientWidth ?? 1650
       const height = frameRef.current?.clientHeight ?? 1000

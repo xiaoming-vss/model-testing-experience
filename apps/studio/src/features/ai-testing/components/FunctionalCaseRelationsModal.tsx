@@ -8,7 +8,6 @@ import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { FunctionalCaseRelationsViewer } from './FunctionalCaseRelationsViewer'
 import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
 import chainStyles from '../styles/generation-chain.module.css'
-import relationsStyles from '../styles/relations.module.css'
 
 /** 用例图谱弹窗：从功能测试「完整用例」的派生节点打开，图谱绑定该运行的 caseRelations。 */
 export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, disabled, chooseConnection, embedded = false, inspectorContainer, inspectorActionContainer }: {
@@ -47,17 +46,17 @@ export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, dis
       </Tooltip>
   </>
   const sidebarActions = open && sidebarMode && inspectorActionContainer ? createPortal(
-    <section className="gc-inspector-review gc-inspector-reading-tools"><h3>运行</h3>
-      <p className="gc-relations-meta" role="status">{generating ? '图谱生成中，完成后自动刷新' : failed ? '生成失败，可重新运行' : ready ? '完整用例已审核，可生成图谱' : '等待完整用例审核通过'}</p>
+    <section className="gc-inspector-review gc-inspector-reading-tools flex flex-col gap-3 border-t border-[var(--app-surface-border)] bg-[var(--app-list-toolbar-bg)] p-4"><h3 className="m-0 text-[12px] font-semibold">运行</h3>
+      <p className="gc-relations-meta m-0 text-[12px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]" role="status">{generating ? '图谱生成中，完成后自动刷新' : failed ? '生成失败，可重新运行' : ready ? '完整用例已审核，可生成图谱' : '等待完整用例审核通过'}</p>
       <div className="gc-modal-actions">{action}</div>
     </section>, inspectorActionContainer,
   ) : null
   return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={onClose} footer={null}
     width="min(2000px, calc(100vw - 56px))" centered mask={{ closable: false }} destroyOnHidden
-    rootClassName={`${chainStyles.scope} ${relationsStyles.scope}`}
+    rootClassName={chainStyles.scope}
     className={`ai-relations-modal generation-chain-relations-modal${sidebarMode ? ' gc-relations-inspector' : ''}`} title="用例图谱">
-    {!sidebarMode ? <div className="gc-relations-toolbar">{action}</div> : null}
-    {runId ? <div className="gc-relations-body">
+    {!sidebarMode ? <div className="gc-relations-toolbar flex items-center justify-end gap-3 pb-2.5">{action}</div> : null}
+    {runId ? <div className={`gc-relations-body${sidebarMode ? ' flex min-h-0 flex-1 overflow-hidden' : ' h-[min(76dvh,900px)] min-h-[360px]'}`}>
       <FunctionalCaseRelationsViewer key={runId} taskId={taskId} runId={runId} embedded={sidebarMode} controlsContainer={inspectorContainer} />
     </div> : null}
   </GenerationArtifactFrame>{sidebarActions}</>

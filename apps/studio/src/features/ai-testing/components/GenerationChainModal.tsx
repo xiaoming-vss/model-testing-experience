@@ -43,16 +43,12 @@ import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 import chainStyles from '../styles/generation-chain.module.css'
 import canvasStyles from '../styles/generation-canvas.module.css'
 import caseArtifactStyles from '../styles/artifact-cases.module.css'
-import apiArtifactStyles from '../styles/artifact-api.module.css'
-import miscArtifactStyles from '../styles/artifact-misc.module.css'
 import uiStageStyles from '../styles/ui-stage-visual.module.css'
 
 const artifactScopes = [
   chainStyles.scope,
   canvasStyles.scope,
   caseArtifactStyles.scope,
-  apiArtifactStyles.scope,
-  miscArtifactStyles.scope,
   uiStageStyles.scope,
 ].join(' ')
 
@@ -94,14 +90,14 @@ function VersionHistory({ stage, versions, onPick, onDelete, activeVersion, late
   latestId?: string
   canWrite: boolean
 }) {
-  return <div className="gc-history" role="dialog" aria-label={`${stage.label} 版本历史`}>
-    <div className="gc-history-head"><strong>版本历史</strong><span>{versions.length ? `共 ${versions.length} 个已通过版本` : '还没有已通过版本'}</span></div>
-    {versions.length ? versions.map(version => <div className={`gc-history-row${activeVersion === version.versionId ? ' is-active' : ''}`} key={version.versionId}>
-      <button type="button" className="gc-history-main" onClick={() => onPick(version.versionId)}>
-        <span className="gc-version-chip">{version.label}</span>
-        <span className="gc-history-copy">
-          <strong>{version.summary}</strong>
-          <small>{formatTime(version.createdAt)}{version.reviewerUserId ? ` · ${version.reviewerUserId}` : ''}</small>
+  return <div className="gc-history w-[min(380px,82vw)] max-h-[360px] overflow-auto" role="dialog" aria-label={`${stage.label} 版本历史`}>
+    <div className="gc-history-head flex items-baseline justify-between gap-2 px-1 pb-2 pt-0.5"><strong className="text-[12px]">版本历史</strong><span className="text-[11px] text-[var(--app-surface-text-muted)]">{versions.length ? `共 ${versions.length} 个已通过版本` : '还没有已通过版本'}</span></div>
+    {versions.length ? versions.map(version => <div className={`gc-history-row flex items-center gap-1.5 border-t border-[var(--app-surface-divider)] p-1${activeVersion === version.versionId ? ' is-active bg-[var(--app-accent-surface)]' : ''}`} key={version.versionId}>
+      <button type="button" className="gc-history-main flex min-w-0 flex-1 cursor-pointer items-center gap-[7px] rounded-[6px] border-0 bg-transparent p-1 text-left font-[inherit] text-inherit hover:bg-[var(--app-surface-hover)]" onClick={() => onPick(version.versionId)}>
+        <span className="gc-version-chip flex-none rounded-[5px] bg-[var(--app-surface-chip)] px-[5px] font-mono text-[10px] text-[var(--app-accent)]">{version.label}</span>
+        <span className="gc-history-copy flex min-w-0 flex-1 flex-col gap-px">
+          <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]">{version.summary}</strong>
+          <small className="text-[10px] text-[var(--app-surface-text-muted)]">{formatTime(version.createdAt)}{version.reviewerUserId ? ` · ${version.reviewerUserId}` : ''}</small>
         </span>
         {version.versionId === latestId ? <Tag color="success">最新</Tag> : null}
       </button>
@@ -109,7 +105,7 @@ function VersionHistory({ stage, versions, onPick, onDelete, activeVersion, late
         onConfirm={() => onDelete(version.versionId)}>
         <Button size="small" type="text" danger aria-label={`删除版本 ${version.label}`} icon={<DeleteOutlined />} />
       </Popconfirm> : null}
-    </div>) : <div className="gc-history-empty">审核通过后才会产生版本。</div>}
+    </div>) : <div className="gc-history-empty px-2 py-[18px] text-center text-[12px] text-[var(--app-surface-text-muted)]">审核通过后才会产生版本。</div>}
   </div>
 }
 
@@ -170,18 +166,18 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   const upstreamMissing = upstreamFields.some(field => field.missing)
 
   const controls = <div className="gc-title-tools flex min-w-0 flex-wrap items-center gap-1.5">
-    {!inline && versionOptions.length ? <div className="gc-version-buttons" role="group" aria-label="选择版本">
+    {!inline && versionOptions.length ? <div className="gc-version-buttons flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="选择版本">
       {versionOptions.map(option => <button key={option.key} type="button"
-        className={`gc-version-button${versionKey === option.key ? ' is-active' : ''}`}
+        className={`gc-version-button inline-flex h-[27px] cursor-pointer items-center gap-1 rounded-[7px] border px-[9px] font-mono text-[11px] ${versionKey === option.key ? 'is-active border-[var(--app-accent-border)] bg-[var(--app-accent-surface)] font-semibold text-[var(--app-accent)]' : 'border-[var(--app-surface-border)] bg-[var(--app-surface)] text-[var(--app-surface-text-muted)] hover:border-[var(--app-accent-border)] hover:text-[var(--app-accent)]'}`}
         aria-pressed={versionKey === option.key}
         onClick={() => { setVersionKey(option.key); setDiffOpen(false) }}>
         {option.label}
-        {option.key === latestId ? <span className="gc-latest-dot" aria-label="最新版本" /> : null}
+        {option.key === latestId ? <span className="gc-latest-dot h-[5px] w-[5px] rounded-full bg-[var(--app-result-success)]" aria-label="最新版本" /> : null}
       </button>)}
     </div> : null}
     {upstreamFields.length ? <Popover trigger="click" placement="bottomLeft" content={
-      <div className="gc-upstream-panel">
-        {upstreamFields.map(field => <div className="gc-upstream-field" key={field.name}>
+      <div className="gc-upstream-panel flex w-[min(380px,80vw)] flex-col gap-2.5">
+        {upstreamFields.map(field => <div className="gc-upstream-field flex flex-col gap-1 text-[11px] text-[var(--app-surface-text-muted)]" key={field.name}>
           <span>上游 · {field.label}</span>
           <Select size="small" value={upstream[field.name]} options={field.options} placeholder="请选择已通过版本"
             aria-label={`上游 · ${field.label}`}
@@ -192,16 +188,16 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
         </div>)}
       </div>
     }>
-      <Button size="small" className={`gc-upstream-trigger${upstreamMissing ? ' has-missing' : ''}`} aria-label="选择上游版本">
-        <span className="gc-upstream-trigger-text">上游 {upstreamSummary}</span>
-        <DownOutlined className="gc-upstream-caret" />
+      <Button size="small" className={`gc-upstream-trigger inline-flex max-w-[min(460px,40vw)] items-center gap-1.5${upstreamMissing ? ' has-missing border-[var(--app-danger-border)] text-[var(--app-profile-danger-text)]' : ''}`} aria-label="选择上游版本">
+        <span className="gc-upstream-trigger-text min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">上游 {upstreamSummary}</span>
+        <DownOutlined className="gc-upstream-caret text-[10px]" />
       </Button>
     </Popover> : null}
     {comparisonId ? <Button size="small" type={isDiff ? 'primary' : 'default'} ghost={!isDiff} icon={<DiffOutlined />}
       aria-pressed={isDiff}
       onClick={() => { setDiffOpen(!diffOpen); if (!diffOpen) setMode('raw') }}>
       对比 {comparisonContent ? (versionKey === 'draft' ? stage.draft?.baseVersionLabel : '上一版') : ''}
-      {isDiff ? <span className="gc-diff-count"><b>+{diffCounts.add}</b><i>−{diffCounts.remove}</i></span> : null}
+      {isDiff ? <span className="gc-diff-count ml-1 inline-flex gap-1 font-mono text-[10px] [&_b]:font-semibold [&_b]:text-[var(--app-result-success-text)] [&_i]:font-semibold [&_i]:not-italic [&_i]:text-[var(--app-profile-danger-text)]"><b>+{diffCounts.add}</b><i>−{diffCounts.remove}</i></span> : null}
     </Button> : null}
     {!stageRunning && stage.versions.length ? <Popover open={historyOpen} onOpenChange={setHistoryOpen} trigger="click" placement="bottomRight"
       content={<VersionHistory stage={stage} versions={stage.versions} latestId={latestId}
@@ -324,17 +320,17 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     {!stageRunning && stage.latestVersion?.imported ? <span className="gc-trace-chip is-ok"><CheckCircleFilled /> 已导入正式资产</span> : null}
   </div>
 
-  const footer = <div className="gc-modal-footer">
-    <div className="gc-footer-row">
-      <div className="gc-footer-status">
+  const footer = <div className="gc-modal-footer flex flex-col gap-2">
+    <div className="gc-footer-row flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="gc-footer-status flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
         {!embedded ? trace : null}
-        {!stageRunning && workspace.editingDirty ? <div className="gc-modal-meta is-warn">修改尚未保存，保存后才能审核。</div> : null}
-        {versionKey !== 'draft' && selectedVersion?.createdAt ? <div className="gc-modal-meta">
+        {!stageRunning && workspace.editingDirty ? <div className="gc-modal-meta is-warn flex flex-wrap items-center gap-1.5 p-0 text-[11px] text-[var(--app-status-warning-text)]">修改尚未保存，保存后才能审核。</div> : null}
+        {versionKey !== 'draft' && selectedVersion?.createdAt ? <div className="gc-modal-meta flex flex-wrap items-center gap-1.5 p-0 text-[11px] text-[var(--app-surface-text-muted)]">
           <ClockCircleOutlined /> {selectedVersion.label} · {formatTime(selectedVersion.createdAt)} · {selectedVersion.reviewerUserId || '系统'}
           {selectedVersion.imported ? ' · 已导入' : ''}
         </div> : null}
       </div>
-      {revisionOpen ? null : <div className="gc-modal-actions">
+      {revisionOpen ? null : <div className="gc-modal-actions ml-auto flex flex-wrap items-center justify-end gap-2">
         {!embedded ? <Button onClick={onClose}>关闭</Button> : null}
         {uiSurface && chain.runId ? <ProjectActionButton action="execute" disabled={busy} onClick={() => setInputsOpen(true)}>更换输入并重新生成</ProjectActionButton> : null}
         {canImport ? <ProjectActionButton action="execute" type="primary" ghost onClick={openImport}>导入此版本</ProjectActionButton> : null}
@@ -398,8 +394,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     <section className="gc-inspector-section"><h3>阅读工具</h3>{readingControls}</section>
   </div>, inspectorContainer) : null
   const inspectorActions = embedded && (open || (showApiRunInInspector && chain.kind === 'api' && !hasDraft)) && inspectorActionContainer && !revisionOpen ? createPortal(
-    <section className="gc-inspector-review gc-inspector-reading-tools">
-      <div className="gc-inspector-review-heading"><h3>{revisionOpen ? '继续优化' : '阶段操作'}</h3>
+    <section className="gc-inspector-review gc-inspector-reading-tools flex flex-col gap-3 border-t border-[var(--app-surface-border)] bg-[var(--app-list-toolbar-bg)] p-4">
+      <div className="gc-inspector-review-heading flex items-center justify-between gap-2"><h3 className="m-0 text-[12px] font-semibold">{revisionOpen ? '继续优化' : '阶段操作'}</h3>
         {versionDetail.isFetching ? <Spin size="small" /> : null}
       </div>
       {footer}
@@ -425,8 +421,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     </div>}
   >
     {!embedded ? readingControls : null}
-    <div className={`gc-workspace revision-workspace${revisionOpen ? ' is-revising' : ''}`}>
-      <div className={`${embedded ? "gc-reading-body" : "gc-source"}${revisionOpen ? " revision-source" : ""}`}>
+    <div className={`gc-workspace revision-workspace flex min-h-0 min-w-0 flex-1${revisionOpen ? ' is-revising' : ''}`}>
+      <div className={`${embedded ? "gc-reading-body" : "gc-source"}${embedded ? ' flex min-h-0 min-w-0 flex-col overflow-hidden' : ' flex min-h-0 min-w-0 flex-1 flex-col px-6 pt-3'}${revisionOpen ? " revision-source" : ""}`}>
         {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '来源仓库或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
         {invalidDraft ? <Alert showIcon type="warning" title="产物已作废"
           description={stage.draft?.invalidatedReason || '该产物依赖的上游版本已被删除，不能继续审核或优化，请重新生成。'} /> : null}
@@ -434,10 +430,10 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
           title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
         {stage.blockedReason ? <Alert showIcon type="info" title={stage.blockedReason} /> : null}
 
-        {!embedded && !stageRunning ? <div className="gc-artifact-head">
-          <div>
-            <strong>{versionKey === 'draft' ? '待审核产物' : selectedVersion ? `${selectedVersion.label} 已通过版本` : '阶段产物'}</strong>
-            <span>{versionKey === 'draft' ? stage.draft?.summary : selectedVersion?.summary ?? stage.latestVersion?.summary}</span>
+        {!embedded && !stageRunning ? <div className="gc-artifact-head flex flex-none flex-wrap items-center gap-2 pb-[7px] pt-[9px]">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <strong className="text-[12px]">{versionKey === 'draft' ? '待审核产物' : selectedVersion ? `${selectedVersion.label} 已通过版本` : '阶段产物'}</strong>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--app-surface-text-muted)]">{versionKey === 'draft' ? stage.draft?.summary : selectedVersion?.summary ?? stage.latestVersion?.summary}</span>
           </div>
           {versionDetail.isFetching ? <Spin size="small" /> : null}
         </div> : null}
@@ -448,7 +444,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         <div ref={modePanelRef} className={artifactScrollClass}>
           {reviewStage && !stageHasContent && !stageRunning ? <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-2 p-6">
             <p className="mb-1 mt-0 text-[13px] leading-[1.7] text-app-surface-text-muted">运行需求评审后，这里会显示问题登记表、覆盖度和评审结论。评审仅提示问题，不阻断材料整理。</p>
-          </div> : !stageHasContent ? (stage.state === 'running' && !stage.moduleGeneration ? <div className="gc-stage-loading" role="status" aria-live="polite">
+          </div> : !stageHasContent ? (stage.state === 'running' && !stage.moduleGeneration ? <div className="gc-stage-loading flex h-full min-h-[240px] flex-1 flex-col items-center justify-center gap-2.5 p-6 text-[12px] text-[var(--app-surface-text-muted)]" role="status" aria-live="polite">
             <Spin /><span>正在生成{stage.label}</span>
           </div> : null) : isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
@@ -479,10 +475,10 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
                     : <ChainVisualArtifact content={workingContent} />}
         </div>
 
-        {!chain.configured ? <div className="gc-empty-panel">
+        {!chain.configured ? <div className="gc-empty-panel mt-3 flex flex-col items-start gap-1.5 rounded-[10px] border border-dashed border-[var(--app-surface-border)] p-[18px] text-[var(--app-surface-text-muted)]">
           <ExclamationCircleOutlined />
-          <strong>还没有配置{chain.label}任务</strong>
-          <span>先设置生成方式和输入材料，再运行首个阶段。</span>
+          <strong className="text-[13px] text-[var(--app-surface-text)]">还没有配置{chain.label}任务</strong>
+          <span className="text-[12px]">先设置生成方式和输入材料，再运行首个阶段。</span>
           <Button type="primary" onClick={() => onOpenLegacy(chain.kind)}>前往设置</Button>
         </div> : null}
       </div>

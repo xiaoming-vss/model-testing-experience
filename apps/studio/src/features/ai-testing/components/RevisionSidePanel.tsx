@@ -47,7 +47,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
   const attachmentsEnabled = Boolean(onAddAttachment && onRemoveAttachment)
   const sourceHint = sourceEditable ? '包含左侧尚未保存的修改，优化完成后仍需审核确认。' : '基于当前待审核产物重新生成，优化完成后仍需审核确认。'
   const canAdd = attachmentsEnabled && Boolean(projectId) && !loading && imageAttachments.length + uploading < MAX_ATTACHMENTS
-  const actions = <div className="revision-footer-actions"><Button disabled={loading} onClick={onCancel}>取消优化</Button><ProjectActionButton action="execute" type="primary" loading={loading} disabled={busy || !connectionId || !revisionInstructionText(value)} onClick={() => connectionId && onSubmit(connectionId)}>提交优化</ProjectActionButton></div>
+  const actions = <div className="revision-footer-actions flex justify-end gap-2"><Button disabled={loading} onClick={onCancel}>取消优化</Button><ProjectActionButton action="execute" type="primary" loading={loading} disabled={busy || !connectionId || !revisionInstructionText(value)} onClick={() => connectionId && onSubmit(connectionId)}>提交优化</ProjectActionButton></div>
 
   async function uploadImages(files: File[]) {
     if (loading || !onAddAttachment) return
@@ -96,7 +96,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     event.preventDefault()
     void uploadImages(files)
   }}>
-    <header><strong>继续优化</strong><span>对照左侧当前内容，补充修改要求</span></header>
+    <header className="flex flex-col gap-1.5"><strong className="text-[17px]">继续优化</strong><span className="text-[12px] text-[var(--ai-text-secondary,var(--app-list-label))]">对照左侧当前内容，补充修改要求</span></header>
     {draft && draft.questions.length > 0 ? <div className="revision-questions">
       <div className="revision-question-progress"><span>已填写 {answered} / {draft.questions.length}</span><span>未填写 {draft.questions.length - answered}</span></div>
       <div className="revision-question-track" aria-hidden="true"><span style={{ width: `${answered / draft.questions.length * 100}%` }} /></div>
@@ -110,7 +110,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     <Input.TextArea id="revision-side-instruction" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
     </>}
     {attachmentsEnabled ? <>
-      <div className="revision-attachments" role="group" aria-label="优化图片">
+      <div className="revision-attachments flex flex-wrap items-center gap-2" role="group" aria-label="优化图片">
         {imageAttachments.map(attachment => <div className="revision-attachment" key={attachment.fileId} title={attachment.name}>
           {attachment.previewUrl ? <img src={attachment.previewUrl} alt={attachment.name} /> : <PictureOutlined aria-hidden="true" />}
           <button type="button" aria-label={`移除图片 ${attachment.name}`} disabled={loading} onClick={() => onRemoveAttachment?.(attachment.fileId)}>×</button>
@@ -122,9 +122,9 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
           if (files.length) void uploadImages(files)
         }} />
       </div>
-      {uploading > 0 ? <span className="revision-side-hint">图片上传中…</span> : null}
-      <span className="revision-side-hint">支持 PNG/JPEG，最多 {MAX_ATTACHMENTS} 张、单张 {MAX_IMAGE_BYTES / 1024 / 1024} MB，需所选模型支持图片输入；图片随本次优化提交，作为补充依据。{sourceHint}</span>
-    </> : <span className="revision-side-hint">{sourceHint}</span>}
+      {uploading > 0 ? <span className="revision-side-hint text-[12px] text-[var(--ai-text-secondary,var(--app-list-label))]">图片上传中…</span> : null}
+      <span className="revision-side-hint text-[12px] text-[var(--ai-text-secondary,var(--app-list-label))]">支持 PNG/JPEG，最多 {MAX_ATTACHMENTS} 张、单张 {MAX_IMAGE_BYTES / 1024 / 1024} MB，需所选模型支持图片输入；图片随本次优化提交，作为补充依据。{sourceHint}</span>
+    </> : <span className="revision-side-hint text-[12px] text-[var(--ai-text-secondary,var(--app-list-label))]">{sourceHint}</span>}
     <label>本次使用的模型</label>
     {connections.isLoading ? <Spin /> : connections.error ? <Alert type="error" showIcon title={getErrorMessage(connections.error)} /> : <Select aria-label="本次使用的模型" value={connectionId} disabled={loading} placeholder={choices.length ? '请选择本人 LLM 授权' : '暂无可用授权，请在基础服务中配置'} options={choices.map(item => ({ value: item.connectionId, label: `${item.name} · ${item.modelId}` }))} onChange={setSelectedId} />}
     {footerContainer === undefined ? actions : footerContainer ? createPortal(actions, footerContainer) : null}

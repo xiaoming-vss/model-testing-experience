@@ -14,7 +14,6 @@ import {
   ArtifactStat,
   ArtifactTabs,
 } from '@/shared/components/ArtifactView'
-import miscArtifactStyles from '../styles/artifact-misc.module.css'
 import { cx } from '@/shared/utils/cx'
 import { toRecord, toRecordArray } from '@/shared/utils/value'
 import { toDisplayText } from '../utils/functionalOutput'
@@ -430,7 +429,7 @@ export function RequirementReviewView({ content }: { content: string }) {
     coverage: COVERAGE_ITEMS.length,
   }
 
-  return <div className={cx('flex min-h-0 flex-1 flex-col bg-app-surface', miscArtifactStyles.requirementReviewRoot)}>
+  return <div className={cx('requirementReviewRoot flex min-h-0 flex-1 flex-col bg-app-surface')}>
     <ArtifactTabs
       ariaLabel="需求评审"
       active={tab}

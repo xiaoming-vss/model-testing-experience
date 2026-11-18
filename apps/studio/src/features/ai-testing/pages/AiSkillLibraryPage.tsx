@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { skillFolder } from '../api/skills.api'
 import '@/shared/styles/surface-tokens.css'
-import aiPageStyles from '../styles/ai-page.module.css'
+import taskStyles from '../styles/ai-task-detail.module.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems, type AiSkillLibraryItem, type UploadAiSkillPayload } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -101,8 +101,8 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
 
   const content = (
     <>
-      <div className="workbench-tabs ai-skill-library-tabs">
-        <section className="workbench-panel workbench-board-panel ai-skill-library-panel tp-board tp-list-panel">
+      <div className="workbench-tabs ai-skill-library-tabs [&_.ai-skill-library-panel.workbench-panel]:m-0">
+        <section className="workbench-panel workbench-board-panel ai-skill-library-panel tp-board tp-list-panel m-[12px_var(--app-page-gutter)_16px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-[var(--ai-border)] bg-[var(--ai-surface)]">
           <div className="tp-list-toolbar">
             <h1 className="tp-list-title">Skill库</h1>
             <Space wrap size={8}>
@@ -249,10 +249,10 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
     </>
   )
 
-  if (embedded) return <div className={`ai-testing-page tp-list-surface ai-skill-library-page tp-surface ${aiPageStyles.scope}`}>{content}</div>
+  if (embedded) return <div className={`ai-testing-page tp-list-surface ai-skill-library-page tp-surface flex min-h-0 flex-1 flex-col ${taskStyles.scope}`}>{content}</div>
 
   return (
-    <div className={`workbench-page ai-testing-page tp-list-surface ai-skill-library-page ${aiPageStyles.scope}`}>
+    <div className={`workbench-page ai-testing-page tp-list-surface ai-skill-library-page flex min-h-0 flex-1 flex-col ${taskStyles.scope}`}>
       {content}
     </div>
   )

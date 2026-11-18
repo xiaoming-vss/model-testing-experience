@@ -1,41 +1,13 @@
-/* 功能测试产物：用例名称树、用例浏览器与生成用例审核字段。 */
+/* 功能测试产物：用例名称树、用例浏览器与生成用例审核字段。
+ * 页面骨架、阅读区与字段排版已迁到组件 utility；这里保留 React Flow 节点、
+ * 选中动效、悬停关联入口以及产物 API 视图的 AntD 深层规则。 */
 
 .scope { --ai-artifact-cases-scope: 1; }
 
 /* 测试点树：节点、连线和编辑状态。 */
-.scope :global(.ai-case-name-tree) {
-  min-height: 260px;
-  padding: 12px;
-  border: 1px solid var(--app-frame-divider-soft);
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 24px 24px, var(--app-graph-canvas-glow), transparent 26px),
-    var(--app-graph-canvas-bg);
-  overflow: auto;
-}
-
-.scope :global(.ai-case-name-tree.expanded) {
-  min-height: min(58vh, 560px);
-}
-
-.scope :global(.ai-case-name-tree-stats) {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
 .scope :global(.ai-case-name-tree-stats .ant-tag) {
   margin-inline-end: 0;
   border-radius: 999px;
-}
-
-.scope :global(.ai-case-name-tree-export) {
-  margin-left: auto;
-  flex: 0 0 auto;
 }
 
 .scope :global(.ai-case-name-tree-root),
@@ -99,12 +71,6 @@
 }
 
 /* 可编辑候选用例的测试点：末尾悬停显示删除操作。 */
-.scope :global(.ai-case-flow-node-shell) {
-  position: relative;
-  display: inline-flex;
-  max-width: 360px;
-}
-
 .scope :global(.ai-case-flow-node-shell.has-delete .ai-case-name-tree-node.point) {
   padding-right: 38px;
 }
@@ -133,11 +99,7 @@
   background: var(--ant-color-error-bg);
 }
 
-.scope :global(.ai-case-tree-passthrough) { display: contents; }
-
 /* React Flow keeps the existing tree cards while providing the graph viewport. */
-.scope :global(.ai-case-name-tree) { display: flex; flex-direction: column; overflow: hidden; }
-.scope :global(.ai-case-name-tree-stats) { position: relative; flex: 0 0 auto; }
 .scope :global(.ai-case-flow-canvas) { position: relative; flex: 1 1 auto; min-width: 0; min-height: 220px; }
 .scope :global(.ai-case-flow-canvas > .react-flow) { position: absolute; inset: 0; background: transparent; }
 .scope :global(.ai-case-flow-canvas .react-flow__node) { width: max-content; max-width: 360px; font: inherit; pointer-events: all; }
@@ -188,100 +150,16 @@
   }
 }
 
-/* 测试点树：隐藏统计标签时保留导出按钮，并给节点关联入口留出位置。 */
-.scope :global(.ai-case-name-tree-stats.is-minimal) { align-items: center; gap: 8px; }
-.scope :global(.ai-case-name-tree-hint) {
-  color: var(--app-surface-text-muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
 .scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.point) { padding-right: 88px; }
 .scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.model),
 .scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.test-model),
 .scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-root) { padding-right: 34px; }
 
-.scope :global(.ai-case-flow-relation-trigger) {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  z-index: 2;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 0;
-  border: 1px solid var(--app-surface-border);
-  border-radius: 5px;
-  background: var(--app-surface-hover);
-  color: var(--app-surface-text-muted);
-  font-size: 10px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease, color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
-}
-
-/* 关联入口默认隐藏，节点悬停或键盘聚焦时出现，避免树图被按钮铺满。 */
-.scope :global(.ai-case-flow-node-shell:hover .ai-case-flow-relation-trigger),
-.scope :global(.ai-case-flow-node-shell:focus-within .ai-case-flow-relation-trigger) {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.scope :global(.ai-case-flow-relation-trigger:hover),
-.scope :global(.ai-case-flow-relation-trigger:focus-visible) {
-  border-color: var(--app-accent);
-  background: var(--app-accent-surface);
-  color: var(--app-accent);
-}
-
-.scope :global(.ai-case-flow-relation-trigger.is-point) {
-  width: auto;
-  padding: 0 6px;
-  color: var(--app-accent);
-}
-
-.scope :global(.ai-case-flow-relation-trigger.is-point .anticon) { font-size: 9px; }
-
-/* 触屏没有悬停态，关联入口保持常显。 */
-@media (hover: none) {
-  .scope :global(.ai-case-flow-relation-trigger) { opacity: 1; pointer-events: auto; }
-}
-
-.scope :global(.ai-generated-case-browser) {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
-  height: 100%;
-  min-height: 0;
-  color: var(--ai-text);
-}
-.scope :global(.ai-generated-case-map) { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; padding: 12px; }
-.scope :global(.ai-generated-case-map > .ai-case-name-tree) { flex: 1; min-height: 0; border: 0; border-radius: 0; }
 .scope :global(.ai-generated-case-map .ai-case-name-tree-node[role='button']) { cursor: pointer; text-align: left; }
 .scope :global(.ai-generated-case-map .ai-case-name-tree-node.is-selected),
 .scope :global(.ai-generated-case-map .ai-case-name-tree-node[role='button']:focus-visible) {
   outline: 2px solid var(--ai-blue); outline-offset: 2px; background: var(--ai-accent-soft);
 }
-.scope :global(.ai-generated-case-reading) { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--ai-border, var(--app-frame-divider)); }
-.scope :global(.ai-generated-case-reading-scroll) { flex: 1; min-height: 0; overflow: auto; padding: 20px 24px; }
-.scope :global(.ai-generated-case-breadcrumb) { color: var(--ai-text-secondary); margin: 0 0 20px; font-size: 12px; }
-.scope :global(.ai-generated-case-reading header > strong) { display: block; margin-top: 12px; font-size: 18px; line-height: 1.6; }
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields) { display: block; border: 0; background: none; padding: 0; }
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields > section) { border: 0; border-top: 1px solid var(--ai-border, var(--app-frame-divider)); padding: 20px 0; margin-top: 20px; }
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields ol) { padding-left: 22px; }
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields li),
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields p) { font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
-@media (max-width: 900px) {
-  .scope :global(.ai-generated-case-browser) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(220px, 1fr) minmax(220px, 1fr); }
-  .scope :global(.ai-generated-case-reading) { border-left: 0; border-top: 1px solid var(--ai-border, var(--app-frame-divider)); }
-  .scope :global(.ai-generated-case-reading-scroll) { padding: 16px; }
-}
-
-.scope :global(.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields > section + section) { border-left: 0; }
 
 .scope :global(.ai-generated-case-map .ai-case-name-tree-root) { max-width: 160px; }
 .scope :global(.ai-generated-case-map .ai-case-name-tree-node.model) { max-width: 180px; }
@@ -289,18 +167,10 @@
 .scope :global(.ai-generated-case-map .ai-case-name-tree-node.point) { width: 280px; max-width: 280px; }
 
 /* The tree fills the space previously occupied by the toolbar. */
-.scope :global(.ai-case-tree-shell) { display: contents; }
 .scope :global(.ai-generated-case-map .ai-case-tree-shell > .ai-case-name-tree) {
   flex: 1; min-height: 0; border: 0; border-radius: 0;
   overflow-anchor: none;
 }
-
-.scope :global(.ai-generated-case-meta) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
-.scope :global(.ai-generated-case-meta .ant-tag) { margin: 0; padding-inline: 8px; line-height: 24px; font-size: 12px; }
-.scope :global(.ai-generated-case-browser .ai-generated-case-meta .ai-generated-cases-review-index) { padding: 2px 10px; line-height: 24px; }
-
-.scope :global(.ai-generated-case-editor) { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-.scope :global(.ai-generated-case-editor label) { display: flex; flex-direction: column; gap: 8px; }
 
 /* 候选用例展示：标签与字段排版。 */
 .scope :global(.ai-generated-cases-review-tag.is-id) {
@@ -310,86 +180,76 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.scope :global(.ai-generated-cases-review-index) {
-  width: 32px;
-  height: 28px;
-  flex: 0 0 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ai-blue);
-  background: var(--ai-accent-soft);
-  border-radius: 7px;
-  font-size: 13px;
-  line-height: 28px;
-  font-weight: 800;
-}
-
-.scope :global(.ai-generated-cases-review-fields) {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-}
-
-.scope :global(.ai-generated-cases-review-fields > section) {
-  min-width: 0;
-  padding: 10px 12px;
-  color: var(--ai-text-secondary);
-  background: var(--ai-panel-soft);
-  border: 1px solid var(--app-review-divider);
-  border-radius: 9px;
-}
-
-.scope :global(.ai-generated-cases-review-field-title) {
-  margin-bottom: 7px;
-  padding-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--ai-text);
-  font-size: 12px;
-  line-height: 18px;
-  border-bottom: 1px solid var(--ai-border);
-}
-
-.scope :global(.ai-generated-cases-review-field-title .anticon) {
-  color: var(--ai-blue);
-}
-
-.scope :global(.ai-generated-cases-review-fields > section.steps .ai-generated-cases-review-field-title .anticon),
-.scope :global(.ai-generated-cases-review-fields > section.expected .ai-generated-cases-review-field-title .anticon) {
-  color: var(--srf-tone-text, var(--ai-blue));
-}
-
-.scope :global(.ai-generated-cases-review-fields :is(p, ol)) {
-  margin: 0;
-  color: var(--ai-text-secondary);
-  font-size: 12px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.scope :global(.ai-generated-cases-review-fields ol) {
-  padding-left: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  counter-reset: ai-case-field;
-}
-
-.scope :global(.ai-generated-cases-review-fields ol li) {
-  counter-increment: ai-case-field;
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-}
-
 .scope :global(.ai-generated-cases-review-fields ol li::before) {
   content: counter(ai-case-field) '.';
   flex: 0 0 auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   color: var(--ai-text-muted);
+}
+
+/* ===== 产物 API 视图：AntD Tag 间距与折叠摘要 ===== */
+
+.scope :global(.api-config-visual-variable-row .ant-tag),
+.scope :global(.api-config-visual-method-line .ant-tag),
+.scope :global(.api-config-visual-rule-title .ant-tag),
+.scope :global(.api-design-visual-patches li .ant-tag) {
+  margin-inline-end: 0;
+}
+
+.scope :global(.api-design-visual-case-head > :last-child) {
+  margin-left: auto;
+}
+
+.scope :global(.api-design-visual-case.is-collapsed .api-design-visual-intent) {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+/* ===== 仓库画像与运行进度：AntD 表格深层规则 ===== */
+
+.scope :global(.repository-profile-table .ant-table-expanded-row > td) {
+  background: var(--app-surface-hover);
+}
+
+.scope :global(.repository-profile-detail-grid > div) {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope :global(.module-generation-row .anticon-spin) {
+    animation: none;
+  }
+}
+
+/* 仓库画像阅读区沿用产物阅读弹窗的内距。 */
+.scope :global(.gc-artifact-scroll.is-profile-reading) {
+  padding: 16px 24px 24px;
+}
+
+/* 产物宿主：需求评审/范围分析嵌入生成链滚动区时改由内容自己管理滚动。 */
+.scope :global(.gc-workspace > .gc-reading-body > .gc-artifact-scroll:is(.is-requirement-review, .is-requirement-analysis)) { margin: 0; }
+.scope :global(.gc-artifact-scroll.is-requirement-review:has(> .requirementReviewRoot)) {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -24px;
+  padding: 0;
+  border-top: 0;
+  overflow: hidden;
+}
+
+.scope :global(.gc-artifact-scroll.is-requirement-analysis:has(> .testScopeRoot)) {
+  overflow: hidden;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .scope :global(.gc-artifact-scroll.is-requirement-analysis:has(> .testScopeRoot)) {
+    overflow: auto;
+  }
 }

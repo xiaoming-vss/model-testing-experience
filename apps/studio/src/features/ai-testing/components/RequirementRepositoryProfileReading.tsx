@@ -18,9 +18,9 @@ export function RequirementRepositoryProfileReading({
           ) : selectedVersion?.profile ? (
             <RepositoryProfileReportView profile={selectedVersion.profile} />
           ) : selectedVersion?.resultYaml ? (
-            <pre className="ai-task-code-block repository-profile-raw">{selectedVersion.resultYaml}</pre>
+            <pre className="ai-task-code-block repository-profile-raw max-h-[60vh] overflow-auto">{selectedVersion.resultYaml}</pre>
           ) : (
-            <div className="gc-profile-reading-empty">
+            <div className="gc-profile-reading-empty flex min-h-[320px] items-center justify-center">
               <Empty
                 description="仓库画像分析 skill 尚未接入，暂无可展示内容"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}

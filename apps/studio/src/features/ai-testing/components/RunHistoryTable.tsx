@@ -74,7 +74,7 @@ export function RunHistoryTable<T>({
           title: '创建时间',
           key: 'createdAt',
           minWidth: columnMinWidths.createdAt,
-          render: (_: unknown, row: T) => <span className="ai-task-run-table-time">{formatTime(getCreatedAt(row) ?? undefined)}</span>,
+          render: (_: unknown, row: T) => <span className="ai-task-run-table-time inline-flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ai-text-secondary)]">{formatTime(getCreatedAt(row) ?? undefined)}</span>,
         }]
       : []),
     {
@@ -100,7 +100,7 @@ export function RunHistoryTable<T>({
             const data = resolveRow(row)
             const comment = getReviewComment?.(data)
             return (
-              <span className="ai-task-run-table-time">
+              <span className="ai-task-run-table-time inline-flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ai-text-secondary)]">
                 <span>{formatTime(getReviewedAt(data) ?? undefined)}</span>
                 {comment ? <RunReviewNoteButton comment={comment} /> : null}
               </span>
@@ -114,7 +114,7 @@ export function RunHistoryTable<T>({
           key: 'importedAt',
           minWidth: columnMinWidths.importedAt,
           render: (_: unknown, row: T) => (
-            <span className="ai-task-run-table-time">{formatTime(getImportedAt(resolveRow(row)) ?? undefined)}</span>
+            <span className="ai-task-run-table-time inline-flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ai-text-secondary)]">{formatTime(getImportedAt(resolveRow(row)) ?? undefined)}</span>
           ),
         }]
       : []),
@@ -157,11 +157,11 @@ export function RunHistoryTable<T>({
 
 export function RunIdCell({ index, runId }: { index: number; runId?: string }) {
   return (
-    <span className="ai-task-run-table-id" onClick={(event) => event.stopPropagation()}>
-      <span className="ai-task-run-table-index">#{index + 1}</span>
+    <span className="ai-task-run-table-id inline-flex min-w-0 items-center gap-2" onClick={(event) => event.stopPropagation()}>
+      <span className="ai-task-run-table-index flex-none text-[12px] font-semibold text-[var(--ai-text-muted)]">#{index + 1}</span>
       <Tooltip title={runId || '未命名记录'}>
         <Typography.Text
-          className="ai-task-run-table-id-text"
+          className="ai-task-run-table-id-text font-mono text-[12px] text-[var(--ai-text)]"
           copyable={runId ? { text: runId, tooltips: ['复制运行 ID', '已复制'] } : false}
         >
           {runId ? runId.slice(0, 8) : '未命名'}
@@ -185,14 +185,14 @@ export function RunRowActions({
 }) {
   const menu: MenuProps = { items: menuItems, onClick: ({ key }) => onMenuAction?.(key) }
   return (
-    <div className="ai-task-run-table-actions">
+    <div className="ai-task-run-table-actions inline-flex flex-wrap items-center justify-end gap-1.5">
       {inline}
       {children}
       {menuItems.length > 0 ? (
         <Dropdown trigger={['click']} destroyPopupOnHide menu={menu}>
           <Button
             size="small"
-            className="ai-task-run-table-more"
+            className="ai-task-run-table-more text-[var(--ai-text-secondary)]"
             aria-label="更多操作"
             icon={<MoreOutlined />}
             onClick={(event) => event.stopPropagation()}
@@ -205,8 +205,8 @@ export function RunRowActions({
 
 export function RunReviewNoteButton({ comment }: { comment: string }) {
   return (
-    <Popover trigger="click" placement="bottomRight" content={<div className="ai-task-run-review-comment">{comment}</div>}>
-      <button type="button" className="ai-task-run-review-note-btn" onClick={(event) => event.stopPropagation()}>
+    <Popover trigger="click" placement="bottomRight" content={<div className="ai-task-run-review-comment max-w-[320px] whitespace-pre-wrap break-words text-[13px] leading-5 text-[var(--ai-text)]">{comment}</div>}>
+      <button type="button" className="ai-task-run-review-note-btn cursor-pointer border-0 bg-transparent p-0 text-[12px] leading-[18px] text-[var(--ai-blue)] hover:text-[var(--app-terminal-link)]" onClick={(event) => event.stopPropagation()}>
         审核备注
       </button>
     </Popover>

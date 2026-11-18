@@ -1,8 +1,153 @@
-/* AI 任务详情、代码风险报告与运行记录列表。 */
+/* AI 测试页外壳、任务详情、运行记录与代码风险报告。
+ * 页面布局、版本列表、运行表格单元与状态流水线已迁到组件 utility；
+ * 这里保留 AI 页面 token、AntD 卡片/表格深层规则、CodeMirror 适配与弹窗尺寸。 */
 
 .scope { --ai-task-detail-scope: 1; }
 
-/* 运行记录与代码风险报告的基础布局，供需求详情的代码风险工作区使用。 */
+/* ===== AI 测试页 token 与外壳 ===== */
+
+.scope:global(.ai-testing-page) {
+  --ai-code-surface:
+    linear-gradient(180deg, var(--app-card-gradient-start), var(--app-task-code-gradient-end)),
+    var(--app-card-gradient-start);
+  --ai-code-text: var(--app-task-code-text);
+  --ai-fold-card: var(--app-glass-surface-62);
+  --ai-fold-card-expanded: var(--app-task-fold-expanded);
+  --ai-fold-head: var(--app-glass-surface-78);
+  --ai-fold-body: var(--app-task-fold-body);
+  --ai-popover-surface:
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-task-card-gradient-end)),
+    var(--app-glass-surface-98);
+  --ai-popover-arrow: var(--app-glass-surface-98);
+}
+
+.scope:global(.ai-testing-page) {
+  --ai-border: var(--app-glass-border-emphasis);
+  --ai-border-strong: var(--app-glass-border-emphasis-strong);
+  --ai-panel: var(--app-glass-surface-62);
+  --ai-panel-soft: var(--app-glass-surface-48);
+  --ai-panel-hover: var(--app-glass-surface-78);
+  --ai-accent: var(--app-glass-accent);
+  --ai-accent-soft: var(--app-glass-accent-tint);
+  --ai-blue: var(--app-glass-accent);
+  --ai-text: var(--app-glass-text);
+  --ai-text-secondary: var(--app-glass-text-description);
+  --ai-text-muted: var(--app-glass-text-caption);
+  --ai-hover-text: var(--app-task-glass-link-hover);
+  --ai-active-text: var(--app-glass-text);
+  --ai-surface: var(--app-glass-surface-70);
+  --ai-card: var(--app-glass-surface-66);
+  --ai-card-border: var(--app-glass-border-strong);
+  --ai-card-hover-border: var(--app-glass-card-border-hover);
+  --ai-card-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 12px 28px var(--app-glass-shadow-workspace);
+  background:
+    radial-gradient(circle at 18% 4%, var(--app-task-page-glow-primary), transparent 26%),
+    radial-gradient(circle at 78% 0%, var(--app-task-page-glow-secondary), transparent 24%),
+    var(--app-glass-page);
+}
+
+:global(.app-shell-macos) .scope:global(.ai-testing-page) {
+  --ai-border: var(--app-glass-divider);
+  --ai-border-strong: var(--app-glass-border-emphasis-strong);
+  --ai-panel: var(--app-glass-surface-68);
+  --ai-panel-soft: var(--app-glass-surface-56);
+  --ai-panel-hover: var(--app-glass-surface-82);
+  --ai-accent: var(--app-glass-link);
+  --ai-accent-soft: var(--app-glass-accent-soft);
+  --ai-blue: var(--app-glass-link);
+  --ai-text: var(--app-glass-text);
+  --ai-text-secondary: var(--app-glass-text-description);
+  --ai-text-muted: var(--app-glass-text-caption);
+  --ai-hover-text: var(--app-glass-link-hover);
+  --ai-active-text: var(--app-glass-text);
+  --ai-surface: var(--app-glass-surface-68);
+  --ai-card: var(--app-glass-surface-72);
+  --ai-card-border: var(--app-glass-divider);
+  --ai-card-hover-border: var(--app-glass-action-border);
+}
+
+/* ===== CodeMirror 折叠与行号 ===== */
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.readonly .json-editor-shell) {
+  box-shadow: none;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.foldable .json-editor-codemirror .cm-foldGutter) {
+  display: block;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.foldable .json-editor-codemirror .cm-gutters) {
+  min-width: 68px;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.readonly .json-editor-codemirror .cm-scroller) {
+  min-height: inherit;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.foldable .json-editor-codemirror .cm-lineNumbers .cm-gutterElement) {
+  min-width: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.foldable .json-editor-codemirror .cm-foldGutter .cm-gutterElement) {
+  width: 24px;
+  min-width: 24px;
+  padding: 0 6px 0 2px;
+  font-size: 14px;
+  line-height: 24px;
+  color: var(--ai-text-secondary);
+  cursor: pointer;
+}
+
+.scope:global(.ai-testing-page) :global(.json-editor-wrap.foldable .json-editor-codemirror .cm-foldGutter .cm-gutterElement:hover) {
+  color: var(--ai-active-text);
+}
+
+.scope:global(.ai-testing-page) :global(.panel-header.api-panel-header) {
+  min-height: 58px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--app-glass-border-strong);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  background: var(--app-glass-surface-54);
+}
+
+.scope:global(.ai-testing-page) :global(.panel-header .ant-typography) {
+  color: var(--ai-text);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.scope:global(.ai-testing-page) :global(.action-btn-create.ant-btn-primary) {
+  border: 0;
+  border-radius: 10px;
+}
+
+/* workbench-panel 未分层，utility 的 margin/radius 会被压过，保留宿主规则。 */
+.scope :global(.ai-skill-library-panel) { margin: 12px var(--app-page-gutter) 16px; border-radius: 18px; }
+.scope :global(.ai-skill-library-tabs .ai-skill-library-panel.workbench-panel) { margin: 0; }
+
+:global(.app-shell-macos) .scope:global(.ai-testing-page) :global(.workbench-tabs) {
+  padding: 12px var(--app-page-gutter) 16px;
+  gap: 12px;
+}
+
+:global(.app-shell-macos) .scope:global(.ai-testing-page.ai-skill-library-page) :global(.ai-skill-library-panel) {
+  border: 1px solid var(--app-glass-divider);
+  background: var(--app-glass-surface-68);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
+}
+
+/* ===== 任务详情卡片与代码块 ===== */
+
 .scope :global(.ai-task-detail-card .ant-card-body) {
   display: flex;
   flex-direction: column;
@@ -42,128 +187,14 @@
   padding: 18px;
 }
 
-/* ===== 运行记录：审核备注 ===== */
-
-.scope :global(.ai-task-run-review-note-btn) {
-  padding: 0;
-  border: 0;
-  color: var(--ai-blue);
-  background: transparent;
-  font-size: 12px;
-  line-height: 18px;
-  cursor: pointer;
-}
-
-.scope :global(.ai-task-run-review-note-btn:hover) {
-  color: var(--app-terminal-link);
-}
-
-.scope :global(.ai-task-run-review-comment) {
-  max-width: 320px;
-  color: var(--ai-text);
-  font-size: 13px;
-  line-height: 20px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* ===== 代码风险分析 ===== */
-
-.scope :global(.code-risk-report) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.scope :global(.code-risk-report-block) {
-  width: 100%;
-}
+/* ===== 代码风险报告：AntD Descriptions 标签宽度 ===== */
 
 .scope :global(.code-risk-report-header .ant-descriptions-item-label) {
   width: 96px;
 }
 
-.scope :global(.code-risk-report-repositories) {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+/* ===== 运行记录：AntD table 深层结构 ===== */
 
-.scope :global(.code-risk-report-sha) {
-  max-width: 260px;
-}
-
-.scope :global(.code-risk-report-overview-summary) {
-  margin-bottom: 10px;
-}
-
-.scope :global(.code-risk-report-overview-metric) {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.scope :global(.code-risk-report-overview-value) {
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.scope :global(.code-risk-report-overview-label) {
-  color: var(--app-result-empty);
-  font-size: 12px;
-}
-
-.scope :global(.code-risk-report-risks),
-.scope :global(.code-risk-report-cases),
-.scope :global(.code-risk-report-gaps) {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.scope :global(.code-risk-report-risk),
-.scope :global(.code-risk-report-case),
-.scope :global(.code-risk-report-gap) {
-  padding: 8px 10px;
-  border: 1px solid var(--app-document-rule);
-  border-radius: 8px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.scope :global(.code-risk-report-risk-location),
-.scope :global(.code-risk-report-case-title) {
-  font-weight: 500;
-}
-
-.scope :global(.code-risk-report-risk-reason),
-.scope :global(.code-risk-report-case-impact) {
-  flex-basis: 100%;
-  padding-left: 2px;
-}
-
-.scope :global(.code-risk-report-gap) {
-  flex-direction: column;
-  gap: 2px;
-}
-
-.scope :global(.code-risk-report-gap-title) {
-  margin: 0 0 2px;
-  font-size: 14px;
-}
-
-.scope :global(.code-risk-report-gap-suggestion) {
-  margin: 0;
-}
-
-/* 运行记录：表格 + 生成→审核→导入 状态流水线 */
 .scope :global(.ai-task-run-table .ant-table) {
   background: transparent;
 }
@@ -199,166 +230,9 @@
   box-shadow: inset 3px 0 0 var(--ai-accent);
 }
 
-.scope :global(.ai-task-run-table-id) {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.scope :global(.ai-task-run-table-index) {
-  color: var(--ai-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  flex: 0 0 auto;
-}
-
-.scope :global(.ai-task-run-table-id-text) {
-  color: var(--ai-text);
-  font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-.scope :global(.ai-task-run-table-time) {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ai-text-secondary);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.scope :global(.ai-task-run-table-actions) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.scope :global(.ai-task-run-table-more) {
-  color: var(--ai-text-secondary);
-}
-
-.scope :global(.ai-task-run-pipeline) {
-  --run-pipeline-done: var(--app-pipeline-done);
-  --run-pipeline-fail: var(--app-pipeline-failed);
-  --run-pipeline-idle: var(--app-pipeline-idle);
-  --run-pipeline-current: var(--app-pipeline-current);
-  --run-pipeline-link: var(--app-pipeline-link);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.scope :global(.ai-task-run-pipeline-track) {
-  display: inline-flex;
-  align-items: center;
-}
-
-.scope :global(.ai-task-run-pipeline-dot) {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--run-pipeline-idle);
-  flex: 0 0 auto;
-}
-
-.scope :global(.ai-task-run-pipeline-dot.is-done) {
-  background: var(--run-pipeline-done);
-}
-
-.scope :global(.ai-task-run-pipeline-dot.is-fail) {
-  background: var(--run-pipeline-fail);
-}
-
-.scope :global(.ai-task-run-pipeline-dot.is-current) {
-  width: 7px;
-  height: 7px;
-  background: var(--ai-card);
-  border: 2px solid var(--run-pipeline-current);
-}
-
-.scope :global(.ai-task-run-pipeline-link) {
-  width: 20px;
-  height: 2px;
-  margin: 0 4px;
-  background: var(--run-pipeline-idle);
-  opacity: 0.6;
-}
-
-.scope :global(.ai-task-run-pipeline-link.is-done) {
-  background: var(--run-pipeline-link);
-  opacity: 0.75;
-}
-
-/* 阶段标签较长时在列内换行，避免溢出到相邻的「产物」列造成挤压。 */
-.scope :global(.ai-task-run-pipeline-meta) {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-height: 22px;
-}
-
-.scope :global(.ai-task-run-pipeline-label.ant-tag) {
-  margin-inline-end: 0;
-}
-
-.scope :global(.ai-task-run-pipeline-repair) {
-  color: var(--app-result-warning-text);
-  font-size: 12px;
-  line-height: 18px;
-  cursor: help;
-  white-space: nowrap;
-}
-
-.scope :global(.ai-task-run-artifacts) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.scope :global(.ai-task-run-artifact) {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 9px;
-  border-radius: 10px;
-  font-size: 11px;
-  line-height: 18px;
-  background: var(--ai-panel-soft);
-  color: var(--ai-text-secondary);
-  border: 1px solid transparent;
-}
-
-.scope :global(button.ai-task-run-artifact) {
-  cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease;
-}
-
-.scope :global(button.ai-task-run-artifact:hover) {
-  color: var(--ai-hover-text);
-  background: var(--ai-accent-soft);
-}
-
-.scope :global(.ai-task-run-artifact.off) {
-  background: transparent;
-  border-style: dashed;
-  border-color: var(--ai-border-strong);
-  color: var(--ai-text-muted);
-}
-
 /* 运行记录的公共列表皮肤；不继承旧任务详情表格的表面与选中竖线。 */
-.scope :global(.ai-task-run-list .ai-task-run-table-id) { display: inline-flex; align-items: center; gap: 8px; }
 .scope :global(.ai-task-run-list .ai-task-run-table-index) { color: var(--srf-text-muted); font-size: 12px; font-weight: 400; }
 .scope :global(.ai-task-run-list .ai-task-run-table-id-text) { color: var(--app-list-name); font-size: 13px; font-weight: 500; }
-.scope :global(.ai-task-run-list .ai-task-run-list-status) { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .scope :global(.ai-task-run-list .ai-task-run-artifacts) { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .scope :global(.ai-task-run-list .ai-task-run-artifacts .ai-task-run-artifact) { height: auto; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--app-list-name); font-size: 12px; line-height: 20px; }
 .scope :global(.ai-task-run-list .ai-task-run-artifacts button.ai-task-run-artifact:hover) { color: var(--app-list-name-hover); text-decoration: underline; }
@@ -367,20 +241,55 @@
 
 .scope :global(.ai-task-run-list .ai-task-run-table-time) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 20px; color: var(--srf-text-muted); white-space: nowrap; }
 
-/* ===== 原 requirement-design.module.css ===== */
+/* 阶段标签较长时在列内换行，避免溢出到相邻的「产物」列造成挤压。 */
+.scope :global(.ai-task-run-pipeline-label.ant-tag) {
+  margin-inline-end: 0;
+}
 
-/* 需求详情里的生成工作区布局。 */
+/* ===== 需求详情里的生成工作区 ===== */
 
-.scope { --ai-requirement-design-scope: 1; }
-
-.scope :global(.ai-requirement-design) { display: flex; flex-direction: column; gap: 0; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; color: var(--srf-text); }
-.scope :global(.ai-requirement-design-history) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
-.scope :global(.ai-requirement-design .ant-table-wrapper) { flex: 1 1 auto; min-height: 0; margin: 0; overflow: auto; }
-.scope :global(.ai-requirement-design .ant-empty) { padding: 32px 16px; }
-.scope :global(.ai-requirement-design-panel > .ant-alert) { flex: 0 0 auto; margin: 0 0 8px; }
-.scope :global(.ai-requirement-design-history > .ant-empty) { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .scope :global(.ai-requirement-design .tp-list-table tr.ai-task-run-table-row-active) { --srf-list-row-bg: var(--srf-accent-soft); --srf-list-row-hover: var(--srf-accent-soft); }
-.scope :global(.ai-requirement-design-history) { border: 0; border-radius: 0; background: transparent; }
-.scope :global(.ai-requirement-design-panel) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
-.scope :global(.ai-requirement-design-panel[hidden]) { display: none; }
-.scope :global(.ai-requirement-design-history .ant-table-wrapper) { padding: 16px; }
+
+/* ===== UI 生成弹窗：AntD Modal 尺寸与滚动 ===== */
+
+.scope :global(.gc-ui-input-modal :is(.ant-modal-container, .ant-modal-content)),
+.scope:global(.llm-connection-select-modal-expanded) :global(:is(.ant-modal-container, .ant-modal-content)) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+}
+
+.scope :global(.gc-ui-input-modal .ant-modal-body) {
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 4px;
+}
+
+.scope :global(.ui-source-repo-title .ant-tag),
+.scope :global(.ui-source-repo-all .ant-tag) {
+  margin-inline-end: 0;
+}
+
+@media (max-width: 640px) {
+  .scope :global(.gc-ui-input-steps .ant-steps-item-title) { font-size: 12px; }
+}
+
+.scope:global(.llm-connection-select-modal-expanded) :global(.ant-modal-body) {
+  min-height: 0;
+  overflow: auto;
+}
+
+.scope:global(.llm-connection-select-modal-expanded) :global(.ant-modal-header),
+.scope:global(.llm-connection-select-modal-expanded) :global(.ant-modal-footer) {
+  flex: 0 0 auto;
+}
+
+/* 模型连接选择弹窗。 */
+.scope:global(.llm-connection-select-modal) :global(:is(.ant-modal-container, .ant-modal-content)) {
+  overflow: hidden;
+}
+
+.scope:global(.llm-connection-select-modal) :global(.ant-modal-header),
+.scope:global(.llm-connection-select-modal) :global(.ant-modal-footer) {
+  background: transparent;
+}

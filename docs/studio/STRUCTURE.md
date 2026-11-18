@@ -110,7 +110,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 基础层颜色整理：`layout.css`、`legacy-surface.css`、`features/projects/styles/sprint-overview.module.css` / `sprint-overview.module.css` 与 `shell.css` / `shell-header.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
 
-AI 的 `ai-page.module.css`、`ai-task-detail.module.css` 与 API/UI 自动化的详情 Module 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
+AI 的 `ai-task-detail.module.css` 与 API/UI 自动化的详情 Module 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
 
 其余页面 CSS（基础服务、测试、登录、个人设置及 AI 审核等）也只消费颜色变量；局部变量继续保持原来的选择器和作用域。四个新版列表的阴影颜色通过 `--srf-shadow-color` 引用基础色盘。`scripts/check-theme-colors.mjs` 扫描所有源码 CSS 的声明，禁止在登记文件的自定义属性以外新增十六进制、颜色函数或具名颜色，包括 `var()` 的裸色备用值；忽略注释、字符串和变量名，允许 `transparent` / `currentColor`。CSS 检查不验证语义去重、变量可达性或浏览器视觉效果。
 
@@ -167,7 +167,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 顺带记两处**浅色下早已存在**的名称样式分歧，此前被深色规则（统一写了 `line-height: 22px`）掩盖，
 深色退役后由 `listNameConsistency.test.ts` 的注释记录、未纳入断言：AI 任务列表名称行高 22px，其余三页 20px
-（原 `ai-testing/styles/index.css`，阶段 8 后由 `ai-page.module.css` 持有，同一选择器有 20px 与 22px 两条规则，后者胜出）；名称颜色在 jsdom 下不稳定
+（原 `ai-testing/styles/index.css`，阶段 8 后由 `ai-page.module.css` 持有，阶段 33 并入 `ai-task-detail.module.css`；同一选择器有 20px 与 22px 两条规则，后者胜出）；名称颜色在 jsdom 下不稳定
 （两条 `!important` 规则相争时 jsdom 按出现顺序而非优先级裁决，浏览器按优先级，五页都是 `#3f6fc6`）。
 
 **设计稿里没有对应数据或动作的元素一律不做**，避免为了像设计稿而编造字段：

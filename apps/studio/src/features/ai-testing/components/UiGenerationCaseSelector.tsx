@@ -42,10 +42,10 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
   const selected = new Set(value ?? [])
   const visibleSelected = filtered.filter(item => selected.has(item.caseId)).length
   const busy = query.isFetching || query.isError
-  return <section className="ui-generation-case-selector" aria-label="来源功能用例">
+  return <section className="ui-generation-case-selector mb-5 flex min-w-0 flex-col gap-2.5" aria-label="来源功能用例">
     {showIntro ? <><Typography.Text strong>来源功能用例</Typography.Text>
     <Typography.Text type="secondary">默认选中当前需求全部正式功能用例。筛选不改变已选内容，生成时依次审核 JSON、JSON 和 YAML。</Typography.Text></> : null}
-    <div className="ui-generation-case-filters">
+    <div className="ui-generation-case-filters grid grid-cols-2 gap-2.5 max-[600.01px]:grid-cols-1 [&>*]:w-full [&>*]:min-w-0">
       <Select mode="multiple" allowClear maxTagCount={1} aria-label="按用例集筛选" placeholder="全部用例集" options={suites}
         value={suiteIds} onChange={ids => { setSuiteIds(ids); setPage(1) }} optionFilterProp="label" />
       <Input.Search allowClear aria-label="搜索用例" placeholder="搜索用例标题或编号" value={search}
@@ -70,7 +70,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
         { title: '用例名称', dataIndex: 'title', ellipsis: true },
         { title: '用例集', dataIndex: 'suiteName', width: '28%', ellipsis: true },
       ]} />
-    <div className="table-footer ui-generation-case-pagination"><ListPagination current={page} pageSize={pageSize} total={filtered.length} loading={query.isFetching}
+    <div className="table-footer ui-generation-case-pagination min-h-[42px] px-3 py-1.5"><ListPagination current={page} pageSize={pageSize} total={filtered.length} loading={query.isFetching}
       onChange={(next, size) => { setPage(next); setPageSize(size) }} /></div>
     {query.error ? <Alert showIcon type="error" title={getErrorMessage(query.error)} action={<Button size="small" onClick={() => { void query.refetch() }}>重新读取</Button>} /> : null}
     {query.isSuccess && value?.some(id => !query.data.some(item => item.caseId === id)) ? <Alert showIcon type="warning"

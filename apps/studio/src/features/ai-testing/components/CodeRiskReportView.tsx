@@ -55,7 +55,7 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
       title: '基线 → Head SHA',
       key: 'commits',
       render: (_, repository) => (
-        <Text type="secondary" className="code-risk-report-sha" ellipsis>
+        <Text type="secondary" className="code-risk-report-sha max-w-[260px]" ellipsis>
           {repository.baselineCommit || 'none'} → {repository.headCommit || '-'}
         </Text>
       ),
@@ -72,7 +72,7 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
   }
 
   return (
-    <div className="code-risk-report">
+    <div className="code-risk-report flex flex-col gap-3">
       <Card className="ai-task-detail-card code-risk-report-header" size="small">
         <Descriptions column={1} size="small">
           <Descriptions.Item label="分析时间">{formatTime(report.analyzedAt ?? undefined)}</Descriptions.Item>
@@ -80,7 +80,7 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
             {repositoryRows.length === 0 ? (
               <Text type="secondary">-</Text>
             ) : (
-              <ul className="code-risk-report-repositories">
+              <ul className="code-risk-report-repositories m-0 flex list-disc flex-col gap-0.5 pl-[18px]">
                 {repositoryRows.map((repository) => (
                   <li key={repository.key}>
                     {repository.repositoryId || '-'}（{repository.branch || '-'}）· 基线 {repository.baselineCommit || 'none'} → head{' '}
@@ -93,17 +93,17 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
         </Descriptions>
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="变更概览">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="变更概览">
         {overviewBlocks.length === 0 && repositoryRows.length === 0 ? (
           <Empty description="暂无变更概览" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <>
             {overviewBlocks.length > 0 ? (
-              <Space size={16} wrap className="code-risk-report-overview-summary">
+              <Space size={16} wrap className="code-risk-report-overview-summary mb-2.5">
                 {overviewBlocks.map((block) => (
-                  <span key={block.key} className="code-risk-report-overview-metric">
-                    <span className="code-risk-report-overview-value">{block.value}</span>
-                    <span className="code-risk-report-overview-label">{block.label}</span>
+                  <span key={block.key} className="code-risk-report-overview-metric inline-flex items-baseline gap-1.5">
+                    <span className="code-risk-report-overview-value text-[22px] font-semibold">{block.value}</span>
+                    <span className="code-risk-report-overview-label text-[12px] text-[var(--app-result-empty)]">{block.label}</span>
                   </span>
                 ))}
               </Space>
@@ -121,18 +121,18 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
         )}
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="风险点清单">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="风险点清单">
         {risks.length === 0 ? (
           <Empty description="暂无风险点" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <ul className="code-risk-report-risks">
+          <ul className="code-risk-report-risks m-0 flex list-none flex-col gap-2 p-0">
             {risks.map((risk, index) => {
               const levelMeta = getRiskLevelMeta(risk.level)
               return (
-                <li key={index} className="code-risk-report-risk">
+                <li key={index} className="code-risk-report-risk flex flex-wrap items-start gap-2 rounded-[8px] border border-[var(--app-document-rule)] px-2.5 py-2">
                   <Tag color={levelMeta.color}>{levelMeta.label}</Tag>
-                  <span className="code-risk-report-risk-location">{risk.location || '-'}</span>
-                  <Text type="secondary" className="code-risk-report-risk-reason">
+                  <span className="code-risk-report-risk-location font-medium">{risk.location || '-'}</span>
+                  <Text type="secondary" className="code-risk-report-risk-reason basis-full pl-0.5">
                     {risk.reason || '-'}
                   </Text>
                 </li>
@@ -142,17 +142,17 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
         )}
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="受影响已有用例">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="受影响已有用例">
         {affectedCases.length === 0 ? (
           <Empty description="暂不受影响的已有用例" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <ul className="code-risk-report-cases">
+          <ul className="code-risk-report-cases m-0 flex list-none flex-col gap-2 p-0">
             {affectedCases.map((item, index) => (
-              <li key={index} className="code-risk-report-case">
+              <li key={index} className="code-risk-report-case flex flex-wrap items-start gap-2 rounded-[8px] border border-[var(--app-document-rule)] px-2.5 py-2">
                 <Tag color="geekblue">{getCaseTypeLabel(item.caseType)}</Tag>
-                <span className="code-risk-report-case-title">{item.title || item.caseId || '-'}</span>
+                <span className="code-risk-report-case-title font-medium">{item.title || item.caseId || '-'}</span>
                 {item.suiteName ? <Tag>{item.suiteName}</Tag> : null}
-                <Text type="secondary" className="code-risk-report-case-impact">
+                <Text type="secondary" className="code-risk-report-case-impact basis-full pl-0.5">
                   {item.impact || '-'}
                 </Text>
               </li>
@@ -161,17 +161,17 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
         )}
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="覆盖缺口与建议">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="覆盖缺口与建议">
         {coverageGaps.length === 0 ? (
           <Empty description="暂无覆盖缺口" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <ul className="code-risk-report-gaps">
+          <ul className="code-risk-report-gaps m-0 flex list-none flex-col gap-2 p-0">
             {coverageGaps.map((gap, index) => (
-              <li key={index} className="code-risk-report-gap">
-                <Title level={5} className="code-risk-report-gap-title">
+              <li key={index} className="code-risk-report-gap flex flex-col gap-0.5 rounded-[8px] border border-[var(--app-document-rule)] px-2.5 py-2">
+                <Title level={5} className="code-risk-report-gap-title m-0 mb-0.5 text-[14px]">
                   {gap.gap || '-'}
                 </Title>
-                <Paragraph className="code-risk-report-gap-suggestion">
+                <Paragraph className="code-risk-report-gap-suggestion m-0">
                   <Text type="secondary">建议：</Text>
                   {gap.suggestion || '-'}
                 </Paragraph>
@@ -210,7 +210,7 @@ function CodeRiskContextReceiptView({
       title: '基线 → HEAD',
       key: 'commits',
       render: (_, repository) => (
-        <Text type="secondary" className="code-risk-report-sha" ellipsis>
+        <Text type="secondary" className="code-risk-report-sha max-w-[260px]" ellipsis>
           {repository.baseCommit || 'none'} → {repository.headCommit || '-'}
         </Text>
       ),
@@ -225,7 +225,7 @@ function CodeRiskContextReceiptView({
   }))
 
   return (
-    <div className="code-risk-report">
+    <div className="code-risk-report flex flex-col gap-3">
       <Alert
         showIcon
         type="info"
@@ -255,7 +255,7 @@ function CodeRiskContextReceiptView({
         </Descriptions>
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="仓库与代码版本">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="仓库与代码版本">
         {rows.length === 0 ? (
           <Empty description="暂无仓库回执" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
@@ -269,14 +269,14 @@ function CodeRiskContextReceiptView({
         )}
       </Card>
 
-      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="模型读取的文件">
+      <Card className="ai-task-detail-card code-risk-report-block w-full" size="small" title="模型读取的文件">
         {(receipt.filesRead ?? []).length === 0 ? (
           <Text type="secondary">模型未列出读取文件</Text>
         ) : (
-          <ul className="code-risk-report-cases">
+          <ul className="code-risk-report-cases m-0 flex list-none flex-col gap-2 p-0">
             {(receipt.filesRead ?? []).map((file, index) => (
-              <li key={`${file}-${index}`} className="code-risk-report-case">
-                <Text className="code-risk-report-case-title">{file}</Text>
+              <li key={`${file}-${index}`} className="code-risk-report-case flex flex-wrap items-start gap-2 rounded-[8px] border border-[var(--app-document-rule)] px-2.5 py-2">
+                <Text className="code-risk-report-case-title font-medium">{file}</Text>
               </li>
             ))}
           </ul>

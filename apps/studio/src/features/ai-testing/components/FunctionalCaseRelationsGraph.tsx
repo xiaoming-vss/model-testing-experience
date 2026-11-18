@@ -89,18 +89,18 @@ const EDGE_COLORS = {
 
 function ZoomReadout() {
   const zoom = useStore((state) => state.transform[2])
-  return <span className="ai-relations-zoom-value">{Math.round(zoom * 100)}%</span>
+  return <span className="ai-relations-zoom-value min-w-[42px] text-center text-[12px] tabular-nums text-[var(--ant-color-text-secondary)]">{Math.round(zoom * 100)}%</span>
 }
 
 function PanelSection({ label, items }: { label: string; items?: string[] }) {
   return (
-    <div className="panel-section">
-      <strong>{label}</strong>
+    <div className="panel-section mt-1 flex flex-col gap-1.5">
+      <strong className="text-[12px]">{label}</strong>
       {!items || items.length === 0 ? (
-        <p className="panel-empty">无</p>
+        <p className="panel-empty m-0 text-[12px] text-[var(--ant-color-text-tertiary)]">无</p>
       ) : (
-        <ol className="panel-list">
-          {items.map((item, index) => <li key={index}>{item}</li>)}
+        <ol className="panel-list m-0 flex list-none flex-col gap-1 p-0 pl-[18px] text-[12px] leading-[1.5] text-[var(--ant-color-text)]">
+          {items.map((item, index) => <li className="break-all" key={index}>{item}</li>)}
         </ol>
       )}
     </div>
@@ -309,7 +309,7 @@ function RelationsGraphInner({
 
   if (!data || !model || !layout || model.nodes.length === 0) {
     return (
-      <div className="ai-relations-graph" ref={wrapperRef}>
+      <div className="ai-relations-graph relative flex h-full min-w-0 overflow-hidden bg-[var(--ant-color-bg-container)]" ref={wrapperRef}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={data ? '图谱暂无用例节点' : '图谱数据暂不可解析，请在 json 页签查看原始数据'}
@@ -321,7 +321,7 @@ function RelationsGraphInner({
   const selectedCaseMeta = selectedMeta ? caseMetaById.get(selectedMeta.caseId) ?? null : null
 
   return (
-    <div className="ai-relations-graph" ref={wrapperRef}>
+    <div className="ai-relations-graph relative flex h-full min-w-0 overflow-hidden bg-[var(--ant-color-bg-container)]" ref={wrapperRef}>
       <ReactFlow
         nodes={nodes}
         edges={routedEdges}
@@ -365,34 +365,34 @@ function RelationsGraphInner({
           }}
         />
       </ReactFlow>
-      <div className="ai-relations-hint">
+      <div className="ai-relations-hint pointer-events-none absolute left-3.5 top-3 z-[5] rounded-full border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-3 py-[5px] text-[11.5px] text-[var(--ant-color-text-secondary)] shadow-[0_1px_3px_var(--app-glass-request-shadow-selected)]">
         {routing.error ? <>部分连线尚未完成，已显示的连线会保留 <Button size="small" type="link" style={{ pointerEvents: 'auto' }} onClick={routing.retry}>重试</Button></>
           : routing.blockedEdgeIds.length ? `${routing.blockedEdgeIds.length} 条关联暂无不穿越主线的路径，请调整节点位置；这些关联尚未绘制`
           : routing.pending ? `正在调整连线（已显示 ${[...edgePaths.values()].filter(Boolean).length}/${layout.edges.length}），可继续拖动用例`
             : '拖拽空白平移 · 滚轮缩放 · 拖动用例调整位置 · 松手后连线自动避让'}
       </div>
-      <div className="ai-relations-zoom">
+      <div className="ai-relations-zoom absolute bottom-3.5 left-3.5 z-[5] flex items-center gap-px rounded-full border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-[5px] py-[3px] shadow-[0_1px_3px_var(--app-glass-request-shadow-selected)]">
         <Button type="text" size="small" aria-label="缩小" icon={<MinusOutlined />} onClick={() => flow.zoomOut({ duration: 120 })} />
         <ZoomReadout />
         <Button type="text" size="small" aria-label="放大" icon={<PlusOutlined />} onClick={() => flow.zoomIn({ duration: 120 })} />
         <Button type="text" size="small" aria-label="适应画布" icon={<ExpandOutlined />} onClick={() => fitView()} />
       </div>
       {selectedMeta ? (
-        <aside className="ai-relations-panel" style={{ width: panelWidth, maxWidth: 'calc(100% - 24px)' }}>
-          <header className="panel-head">
+        <aside className="ai-relations-panel absolute bottom-3 right-3 top-3 z-[6] flex w-[296px] flex-col gap-2 overflow-y-auto rounded-[12px] border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] p-3.5 shadow-[0_6px_22px_var(--app-editor-popover-shadow)]" style={{ width: panelWidth, maxWidth: 'calc(100% - 24px)' }}>
+          <header className="panel-head flex items-center justify-between text-[12px] text-[var(--ant-color-text-secondary)]">
             <span>选中用例 / {padCaseNumber(selectedMeta.number)}</span>
             <Button size="small" type="text" aria-label="关闭选中用例面板" onClick={() => setSelectedId(null)}>×</Button>
           </header>
           {renderCaseDetails ? renderCaseDetails(selectedMeta.caseId) : <>
-          <div className="panel-tags">
+          <div className="panel-tags flex flex-wrap gap-1">
             <Tag color={selectedMeta.onMainPath ? 'blue' : 'default'}>{selectedMeta.onMainPath ? '主线用例' : selectedMeta.isolated ? '独立用例' : '分支用例'}</Tag>
             {selectedCaseMeta?.priority ? <Tag color="orange">P{selectedCaseMeta.priority}</Tag> : null}
             {selectedCaseMeta?.caseType ? <Tag color="cyan">{selectedCaseMeta.caseType}</Tag> : null}
           </div>
-          <h3 className="panel-title">{selectedMeta.title}</h3>
-          <p className="panel-uuid">{selectedMeta.caseId}</p>
-          {selectedMeta.module ? <p className="panel-meta">模块：{selectedMeta.module}</p> : null}
-          {model.paths.length > 1 ? <p className="panel-meta">业务主线：主线 {selectedMeta.pathIndex + 1}</p> : null}
+          <h3 className="panel-title m-0 break-all text-[14px] leading-[1.5]">{selectedMeta.title}</h3>
+          <p className="panel-uuid m-0 break-all font-mono text-[11px] text-[var(--ant-color-text-tertiary)]">{selectedMeta.caseId}</p>
+          {selectedMeta.module ? <p className="panel-meta m-0 text-[12px] text-[var(--ant-color-text-secondary)]">模块：{selectedMeta.module}</p> : null}
+          {model.paths.length > 1 ? <p className="panel-meta m-0 text-[12px] text-[var(--ant-color-text-secondary)]">业务主线：主线 {selectedMeta.pathIndex + 1}</p> : null}
           <PanelSection label="前置条件" items={selectedCaseMeta?.precondition} />
           <PanelSection label="测试步骤" items={selectedCaseMeta?.testSteps} />
           <PanelSection label="预期结果" items={selectedCaseMeta?.expectedResults} />

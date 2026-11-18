@@ -37,7 +37,7 @@ export function RequirementCodeRiskPanel({ workspace, canWrite }: {
     {workspace.personalLlm.dialog}
     {workspace.personalGitlab.dialog}
     {workspace.runsError ? <Alert showIcon type="error" title={getErrorMessage(workspace.runsError)} action={<Button onClick={workspace.refresh}>重试读取</Button>} /> : null}
-    <section className="ai-requirement-design-history">
+    <section className="ai-requirement-design-history flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 rounded-none bg-transparent [&>.ant-empty]:flex [&>.ant-empty]:flex-1 [&>.ant-empty]:flex-col [&>.ant-empty]:items-center [&>.ant-empty]:justify-center [&_.ant-table-wrapper]:m-0 [&_.ant-table-wrapper]:min-h-0 [&_.ant-table-wrapper]:flex-1 [&_.ant-table-wrapper]:overflow-auto [&_.ant-table-wrapper]:p-4">
       {workspace.runsLoading ? <Spin /> : workspace.pagedRows.length ? <RunHistoryTable appearance="list" className="tp-list-table" rows={workspace.pagedRows} getRunId={row => row.runId} selectedRunId={workspace.selectedRunId}
         resolveRow={row => row} onSelect={workspace.setSelectedRunId} pagination={pagination}
         getCreatedAt={row => row.createdAt}

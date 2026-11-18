@@ -5,7 +5,7 @@ import type { UiGenerationRunInputs, UiGenerationSourceInputs } from '../api/gen
 import { useUiGenerationSourceSelection } from '../hooks/useUiGenerationSourceSelection'
 import { UiGenerationCaseSelector } from './UiGenerationCaseSelector'
 import { UiGenerationSourceConfig, type UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
-import uiGenerationStyles from '../styles/ui-generation.module.css'
+import taskStyles from '../styles/ai-task-detail.module.css'
 
 const steps = [{ title: '选择源码' }, { title: '选择用例' }, { title: '核对配置' }]
 
@@ -63,7 +63,7 @@ export function UiGenerationInputsModal({
     setStep(next)
   }
 
-  const footer = <div className="gc-ui-input-actions">
+  const footer = <div className="gc-ui-input-actions flex flex-wrap justify-end gap-2 border-t border-[var(--app-surface-divider)] pt-3">
     <Button onClick={onClose} disabled={saving}>取消</Button>
     {step > 0 ? <Button onClick={() => changeStep(step - 1)} disabled={saving}>上一步</Button> : null}
     {step === 0 ? <Button type="primary" disabled={!canContinueSource || busy} onClick={() => changeStep(1)}>下一步：选择用例</Button>
@@ -74,21 +74,21 @@ export function UiGenerationInputsModal({
   </div>
 
   return <Modal open centered destroyOnHidden title={refreshInputs ? '更换输入并重新生成' : '配置 UI 测试生成'}
-    width={880} className="gc-ui-input-modal" rootClassName={uiGenerationStyles.scope} mask={{ closable: false }} closable={!saving}
+    width={880} className="gc-ui-input-modal" rootClassName={taskStyles.scope} mask={{ closable: false }} closable={!saving}
     onCancel={() => { if (!saving) onClose() }} footer={footer}>
-    <div ref={stepTop}><Steps className="gc-ui-input-steps" size="small" responsive={false} current={step} items={steps} /></div>
+    <div ref={stepTop}><Steps className="gc-ui-input-steps m-0 mb-5" size="small" responsive={false} current={step} items={steps} /></div>
     {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}
     {busy && !saving ? <Alert showIcon type="info" title="UI 测试正在运行，请等待本次运行结束。" /> : null}
     {step === 0 ? <UiGenerationSourceConfig requirementId={requirementId} optionsState={sourceOptions}
       selection={selection} resolved={resolved} disabled={saving || busy}
       onProfileVersionChange={setProfileVersionId} onRepositoryChange={setRepositoryId} onCommitModeChange={setCommitMode}
       onOpenProfile={onOpenProfile ? () => { onClose(); onOpenProfile() } : undefined} /> : null}
-    {step === 1 ? <fieldset disabled={saving || busy} className="gc-ui-input-cases gc-ui-input-step-panel">
+    {step === 1 ? <fieldset disabled={saving || busy} className="gc-ui-input-cases gc-ui-input-step-panel m-0 mt-4 min-w-0 border-0 p-0 [&_.ui-generation-case-selector]:mb-0">
       <UiGenerationCaseSelector requirementId={requirementId} open value={ids} onChange={setIds} onReady={setReady}
         showIntro={false} tableHeight={320} />
     </fieldset> : null}
-    {step === 2 ? <div className="gc-ui-input-confirm gc-ui-input-step-panel">
-      <dl className="gc-ui-input-summary">
+    {step === 2 ? <div className="gc-ui-input-confirm gc-ui-input-step-panel mt-4 grid gap-4">
+      <dl className="gc-ui-input-summary m-0 grid grid-cols-[110px_minmax(0,1fr)] overflow-hidden rounded-[8px] border border-[var(--app-surface-divider)] [&>*]:m-0 [&>*]:border-b [&>*]:border-[var(--app-surface-divider)] [&>*]:px-3 [&>*]:py-2.5 [&>:nth-last-child(-n+2)]:border-b-0 [&_dd]:min-w-0 [&_dd]:[overflow-wrap:anywhere] [&_dt]:bg-[var(--app-surface-hover)] [&_dt]:text-[var(--app-surface-text-muted)] max-[640.01px]:grid-cols-[82px_minmax(0,1fr)]">
         <dt>画像版本</dt><dd>{version?.label ?? '未选择'}</dd>
         <dt>前端仓库</dt><dd>{repository?.pathWithNamespace ?? '未选择'}</dd>
         <dt>分支</dt><dd>{repository?.branch || '未记录'}</dd>

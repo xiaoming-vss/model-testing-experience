@@ -14,7 +14,7 @@ export function RunListStatus({ run, stages, stageTag }: {
   stageTag?: ReactNode
 }) {
   const model = getRunPipelineModel(run, { stages })
-  return <div className="ai-task-run-list-status">
+  return <div className="ai-task-run-list-status flex flex-wrap items-center gap-2">
     <Tooltip title={model.stages.map(stage => `${stage.label}：${stage.tooltip}`).join('；')}>
       <span className={`tp-tone-tag ${toneClass[model.statusTone]}`}>{model.statusLabel}</span>
     </Tooltip>

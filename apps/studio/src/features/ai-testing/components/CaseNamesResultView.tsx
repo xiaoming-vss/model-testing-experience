@@ -53,7 +53,7 @@ function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
     >
       <button
         type="button"
-        className={`ai-case-flow-relation-trigger nodrag${node.kind === 'point' ? ' is-point' : ''}`}
+        className={`ai-case-flow-relation-trigger nodrag absolute right-[7px] top-[7px] z-[2] inline-flex cursor-pointer items-center justify-center gap-[3px] rounded-[5px] border border-[var(--app-surface-border)] bg-[var(--app-surface-hover)] p-0 text-[10px] leading-none text-[var(--app-surface-text-muted)] opacity-0 pointer-events-none transition-[opacity,color,border-color,background-color] duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:border-[var(--app-accent)] hover:bg-[var(--app-accent-surface)] hover:text-[var(--app-accent)] focus-visible:border-[var(--app-accent)] focus-visible:bg-[var(--app-accent-surface)] focus-visible:text-[var(--app-accent)] [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 [&_.anticon]:text-[9px] ${node.kind === 'point' ? 'is-point w-auto px-1.5 text-[var(--app-accent)]' : 'h-5 w-5'}`}
         title="查看关联"
         aria-label={`查看关联：${node.title}`}
         onClick={event => event.stopPropagation()}
@@ -65,7 +65,7 @@ function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
   ) : null
   return <>
     {node.kind !== 'root' && <Handle type="target" position={Position.Left} className="ai-case-flow-handle" />}
-    <div className={`ai-case-flow-node-shell${data.onDelete ? ' has-delete' : ''}${hasRelations ? ' has-relation' : ''}`}>
+    <div className={`ai-case-flow-node-shell group relative inline-flex max-w-[360px]${data.onDelete ? ' has-delete' : ''}${hasRelations ? ' has-relation' : ''}`}>
       <CaseNameTreeNodeView node={node} className={className} selected={data.selected} selectionTick={data.selectionTick} onSelect={data.onSelect} />
       {relationTrigger}
       {data.onDelete ? <Button type="text" size="small" className="ai-case-name-tree-node-delete nodrag" icon={<DeleteOutlined aria-hidden />} title="删除测试点" aria-label={`删除测试点：${node.title}`} onClick={() => data.onDelete?.(node.id)} /> : null}
@@ -185,19 +185,19 @@ export function CaseNameTreeView({
   }
 
   return (
-    <div className={treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'}>
+    <div className={`${treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'} contents`}>
 
-      <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}`}>
+      <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree flex flex-col overflow-hidden rounded-[14px] border border-[var(--app-frame-divider-soft)] bg-[radial-gradient(circle_at_24px_24px,var(--app-graph-canvas-glow),transparent_26px),var(--app-graph-canvas-bg)] p-3 ${expanded ? 'expanded min-h-[min(58vh,560px)]' : 'min-h-[260px]'}`}>
       {treeData
-        ? (showSaveImage || toolbarHint ? <div className="ai-case-name-tree-stats is-minimal">
-          {toolbarHint ? <span className="ai-case-name-tree-hint">{toolbarHint}</span> : null}
-          {showSaveImage ? <ProjectActionButton action="write" className="ai-case-name-tree-export" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton> : null}
+        ? (showSaveImage || toolbarHint ? <div className="ai-case-name-tree-stats is-minimal relative z-[2] mb-3.5 flex flex-none items-center gap-2 [&_.ant-tag]:m-0 [&_.ant-tag]:rounded-full">
+          {toolbarHint ? <span className="ai-case-name-tree-hint text-[11px] leading-[1.5] text-[var(--app-surface-text-muted)]">{toolbarHint}</span> : null}
+          {showSaveImage ? <ProjectActionButton action="write" className="ai-case-name-tree-export ml-auto flex-none" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton> : null}
         </div> : null)
-        : <div className={`ai-case-name-tree-stats${hideStats ? ' is-minimal' : ''}`}>
-          {hideStats ? <span className="ai-case-name-tree-hint">点击节点上的「查看关联」查看依据</span> : <>
+        : <div className={`ai-case-name-tree-stats relative z-[2] mb-3.5 flex flex-none items-center [&_.ant-tag]:m-0 [&_.ant-tag]:rounded-full${hideStats ? ' is-minimal gap-2' : ' gap-1.5'}`}>
+          {hideStats ? <span className="ai-case-name-tree-hint text-[11px] leading-[1.5] text-[var(--app-surface-text-muted)]">点击节点上的「查看关联」查看依据</span> : <>
             <Tag color="green">model {counts?.models ?? 0}</Tag><Tag color="cyan">test_model {counts?.testModels ?? 0}</Tag><Tag color="blue">test_points {counts?.testPoints ?? 0}</Tag>
           </>}
-          <ProjectActionButton action="write" className="ai-case-name-tree-export" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton>
+          <ProjectActionButton action="write" className="ai-case-name-tree-export ml-auto flex-none" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton>
         </div>}
       <RelationPopoverContext.Provider value={{ openId: openRelationId, setOpenId: setOpenRelationId }}>
         <CaseTreeFlow tree={tree} selectedNodeId={selectedNodeId} selectionTick={selectionTick} onSelect={onNodeSelect} onToggle={toggle} onDelete={onDeleteNode} renderRelations={renderRelations} highlightedNodeIds={highlightedNodeIds} fitViewOnMount={fitViewOnMount} canvasRef={canvasRef} flowRef={flowRef} />

@@ -55,21 +55,16 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ### AI 测试样式归属
 
-文件统一放在 `src/features/ai-testing/styles/`。阶段 8 已把原全局 CSS 全部迁为根作用域 Module：需求详情页根节点挂生成链/画布/产物/图谱/UI 生成/阶段可视化的 `.scope`，Skill 库与各弹窗根分别挂对应 Module 的 `.scope`；组件不再直接引入全局 CSS。原 `index.css` 只保留为 `ai-page.module.css` 中的 Skill 页页面层。
+文件统一放在 `src/features/ai-testing/styles/`。阶段 8 已把原全局 CSS 全部迁为根作用域 Module；阶段 33 再把页面壳、产物 API、关系图谱、UI 生成与阶段可视化布局整体迁入组件 utility，10 个 Module 收缩为 5 个。需求详情页根节点挂生成链/画布/产物/阶段可视化的 `.scope`，Skill 库页面与各弹窗根挂任务详情 Module 的 `.scope`；组件不再直接引入全局 CSS，页面层 token 保留在 `ai-task-detail.module.css` 的 `.ai-testing-page` 上。
 
 > 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；存量整改顺序、阶段目标与验收口径见 [CSS 整改与迁移计划](css-migration-plan.md)。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
-| `ai-page.module.css` | Skill 页 token、页面表面、工作台间距与面板皮肤 |
-| `ai-task-detail.module.css` | 需求详情里的生成工作区布局、运行记录与代码风险报告；代码风险弹窗根挂作用域 |
-| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚与继续优化侧栏 |
+| `ai-task-detail.module.css` | AI 页面 token/表面、CodeMirror 折叠、任务卡与运行表、需求生成工作区、UI 生成与模型连接弹窗 |
+| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚、继续优化侧栏与关系图谱/查看器 |
 | `generation-canvas.module.css` | 生成画布、阶段卡片、阅读态与阶段检查器 |
-| `artifact-cases.module.css` | 用例名称树、用例浏览器与生成用例审核字段 |
-| `artifact-api.module.css` | API 配置结果与 API 用例设计产物 |
-| `artifact-misc.module.css` | 仓库画像、模块生成进度、YAML 问题列表与产物滚动宿主适配 |
-| `relations.module.css` | 用例关系图谱、节点与查看器；需求详情与测试单图谱共用 |
-| `ui-generation.module.css` | UI 生成来源、输入弹窗、用例选择器与模型连接弹窗 |
+| `artifact-cases.module.css` | 用例名称树、用例浏览器、生成用例审核字段与仓库画像 |
 | `ui-stage-visual.module.css` | UI 三阶段可视化（Surface / Design / YAML）、产物视图切换与复制控制条及深色覆盖 |
 
 需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/run-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。

@@ -32,13 +32,13 @@ function HierarchyGraphView({ model, caseMeta, onSelectionChange, handleRef, ren
   useEffect(() => { onSelectionChange?.(selectedCaseId) }, [selectedCaseId, onSelectionChange])
   useEffect(() => () => onSelectionChange?.(null), [onSelectionChange])
   const visibleCases = new Set([...view.layout?.nodes.values() ?? []].map((node) => node.meta.caseId)).size
-  return <div className="ai-relations-hierarchy">
-    <div className="ai-hierarchy-body">
+  return <div className="ai-relations-hierarchy flex h-full min-h-0 min-w-0 flex-col bg-[var(--ant-color-bg-container)]">
+    <div className="ai-hierarchy-body flex min-h-0 min-w-0 flex-1 max-[768.01px]:flex-col">
       <HierarchyGraphCanvas graph={graph} canvasRef={viewport.canvasRef} onSelect={view.select} onFit={() => viewport.fitView()} controls={<HierarchyGraphToolbar view={view} />} />
       {selected ? <HierarchyCaseDetails selected={selected} model={model} meta={caseMeta.get(selected.meta.caseId)} width={panelWidth}
         onClose={() => view.select(null)} onNavigate={view.navigate} renderCaseDetails={renderCaseDetails} /> : null}
     </div>
-    <footer className="ai-hierarchy-footer" aria-live="polite"><span>当前显示 {visibleCases}/{model.nodes.length} 个用例 · {graph.drawnCount}/{model.edges.length} 条关联</span>
+    <footer className="ai-hierarchy-footer flex flex-none flex-wrap justify-between gap-2 border-t border-[var(--ant-color-border-secondary)] px-3 py-2 text-[12px] text-[var(--ant-color-text-secondary)]" aria-live="polite"><span>当前显示 {visibleCases}/{model.nodes.length} 个用例 · {graph.drawnCount}/{model.edges.length} 条关联</span>
       <span>{graph.routing.pending ? '正在调整其余关联连线' : '拖动空白平移 · 滚轮缩放 · 点击用例聚焦关联'}</span></footer>
   </div>
 }
@@ -47,6 +47,6 @@ export function HierarchicalCaseRelationsGraph({ content, casesContent, ...props
   const data = useMemo(() => parseCaseRelationsContent(content), [content])
   const caseMeta = useMemo(() => parseDetailedCaseMeta(casesContent), [casesContent])
   const model = useMemo(() => data ? buildRelationsGraphModel(data, caseMeta) : null, [data, caseMeta])
-  if (!model?.nodes.length) return <div className="ai-relations-graph"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={data ? '图谱暂无用例节点' : '图谱数据暂不可解析，请在 json 页签查看原始数据'} /></div>
+  if (!model?.nodes.length) return <div className="ai-relations-graph relative flex h-full min-w-0 overflow-hidden bg-[var(--ant-color-bg-container)]"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={data ? '图谱暂无用例节点' : '图谱数据暂不可解析，请在 json 页签查看原始数据'} /></div>
   return <HierarchyGraphView key={content} model={model} caseMeta={caseMeta} {...props} />
 }

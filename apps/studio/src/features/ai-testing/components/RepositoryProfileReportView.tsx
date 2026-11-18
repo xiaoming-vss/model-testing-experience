@@ -57,9 +57,9 @@ export function RepositoryProfileReportView({
   }
 
   return (
-    <div className="repository-profile-report">
+    <div className="repository-profile-report flex flex-col gap-3">
       <Card className="ai-task-detail-card repository-profile-summary" size="small" title="整体画像">
-        <Paragraph className="repository-profile-summary-text">{profile.overallSummary}</Paragraph>
+        <Paragraph className="repository-profile-summary-text m-0">{profile.overallSummary}</Paragraph>
       </Card>
       <Card className="ai-task-detail-card repository-profile-table-card" size="small" title="仓库角色">
         <Table<RepositoryProfileRepository>
@@ -71,7 +71,7 @@ export function RepositoryProfileReportView({
           pagination={false}
           expandable={{
             expandedRowRender: repository => (
-              <div className="repository-profile-details">
+              <div className="repository-profile-details flex flex-col gap-3 px-0.5 py-1">
                 {profileErrors[repository.repositoryId] ? (
                   <Alert
                     showIcon
@@ -93,20 +93,20 @@ export function RepositoryProfileReportView({
 
 function DescriptionsGrid({ repository }: { repository: RepositoryProfileRepository }) {
   return (
-    <dl className="repository-profile-detail-grid">
+    <dl className="repository-profile-detail-grid m-0 grid grid-cols-2 gap-x-6 gap-y-3 max-[900.01px]:grid-cols-1">
       <div>
-        <dt>仓库 ID</dt>
-        <dd>
+        <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">仓库 ID</dt>
+        <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">
           <Text code>{repository.repositoryId}</Text>
         </dd>
       </div>
       <div>
-        <dt>置信度</dt>
-        <dd>{formatProfileConfidence(repository.confidence)}</dd>
+        <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">置信度</dt>
+        <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">{formatProfileConfidence(repository.confidence)}</dd>
       </div>
       <div>
-        <dt>技术栈</dt>
-        <dd>
+        <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">技术栈</dt>
+        <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">
           {repository.techStack.length ? (
             <Space size={4} wrap>
               {repository.techStack.map(item => (
@@ -119,8 +119,8 @@ function DescriptionsGrid({ repository }: { repository: RepositoryProfileReposit
         </dd>
       </div>
       <div>
-        <dt>关键目录</dt>
-        <dd>
+        <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">关键目录</dt>
+        <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">
           {repository.keyPaths.length ? (
             <Space size={4} wrap>
               {repository.keyPaths.map(item => (
@@ -135,10 +135,10 @@ function DescriptionsGrid({ repository }: { repository: RepositoryProfileReposit
         </dd>
       </div>
       <div>
-        <dt>证据</dt>
-        <dd>
+        <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">证据</dt>
+        <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">
           {repository.evidence.length ? (
-            <ul className="repository-profile-evidence">
+            <ul className="repository-profile-evidence m-0 pl-[18px]">
               {repository.evidence.map(item => (
                 <li key={item}>{item}</li>
               ))}

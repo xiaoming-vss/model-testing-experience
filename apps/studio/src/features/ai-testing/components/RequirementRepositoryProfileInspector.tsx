@@ -21,7 +21,7 @@ export function RequirementRepositoryProfileInspector({
     : selectedInputVersion?.label ?? '未记录'
 
   return (
-    <div className="gc-profile-inspector">
+    <div className="gc-profile-inspector flex flex-col gap-[18px]">
       {workspace.personalLlm.dialog}
       {workspace.personalGitlab.dialog}
 
@@ -52,7 +52,7 @@ export function RequirementRepositoryProfileInspector({
             ))}
           </div>
         ) : (
-          <p className="gc-inspector-hint">尚无画像版本。</p>
+          <p className="gc-inspector-hint m-0 text-[12px] leading-[1.7] text-[var(--app-surface-text-muted)]">尚无画像版本。</p>
         )}
       </section>
 
@@ -63,7 +63,7 @@ export function RequirementRepositoryProfileInspector({
           <span className="gc-trace-chip">关联软件仓库<b>{workspace.bindings.length} 个</b></span>
         </div>
         {workspace.bindings.length ? (
-          <div className="gc-profile-binding-list">
+          <div className="gc-profile-binding-list mt-2 flex flex-wrap gap-1">
             {workspace.bindings.map(binding => (
               <Tag key={binding.softwareRepositoryId}>
                 {binding.softwareRepositoryName}
@@ -71,7 +71,7 @@ export function RequirementRepositoryProfileInspector({
             ))}
           </div>
         ) : !workspace.bindingsLoading ? (
-          <p className="gc-inspector-hint">
+          <p className="gc-inspector-hint m-0 text-[12px] leading-[1.7] text-[var(--app-surface-text-muted)]">
             该需求未关联软件仓库，请先在需求列表完成「软件仓库」关联。
           </p>
         ) : null}

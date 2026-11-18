@@ -92,29 +92,29 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
             </>
           ) : null}
           {activeTab === 'json' ? <div className="ai-relations-json-actions" ref={setJsonToolbar} /> : null}
-          {activeTab === 'graph' ? <span className="ai-relations-page-legend ml-1 inline-flex items-center gap-3.5 text-[12px] text-[var(--ant-color-text-secondary)]">
-            <span className="legend-item"><i className="legend-line solid" aria-hidden />主线 / 后续</span>
-            <span className="legend-item"><i className="legend-line dashed" aria-hidden />分支</span>
+          {activeTab === 'graph' ? <span className="ai-relations-page-legend ml-1 inline-flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px] text-[var(--ant-color-text-secondary)]">
+            <span className="legend-item inline-flex items-center gap-1.5"><i className="legend-line solid inline-block h-0 w-5 border-t-2 border-[var(--app-review-arrow-active)]" aria-hidden />主线 / 后续</span>
+            <span className="legend-item inline-flex items-center gap-1.5"><i className="legend-line dashed inline-block h-0 w-5 border-t-2 border-dashed border-[var(--app-review-arrow)]" aria-hidden />分支</span>
           </span> : null}
   </>
   const sidebarTools = embedded && controlsContainer ? createPortal(
-    <section className="gc-inspector-section gc-relations-controls"><h3>阅读工具</h3>
+    <section className="gc-inspector-section gc-relations-controls flex flex-col gap-2.5"><h3>阅读工具</h3>
       {tools}
-      <p className="gc-relations-meta">{stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线 · ` : ''}运行 {runId.slice(0, 8)}</p>
+      <p className="gc-relations-meta m-0 text-[12px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">{stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线 · ` : ''}运行 {runId.slice(0, 8)}</p>
     </section>, controlsContainer,
   ) : null
 
   return (
     <ProjectAccessScope resourceError={taskQuery.error} projectId={taskQuery.data?.projectId ?? ''}>
-      <div className={`ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-[var(--ant-color-bg-layout)]${embedded ? " is-embedded" : ""}`}>
+      <div className={`ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden${embedded ? " is-embedded bg-[var(--app-surface)]" : " rounded-lg border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-layout)]"}`}>
         {sidebarTools}
         {!embedded ? <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2.5 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-[9px]">
           {onBack ? (
             <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={onBack}>返回任务</Button>
           ) : null}
           <div className="ai-relations-page-heading flex min-w-0 flex-col gap-px">
-            <span className="t1">{taskQuery.data?.name || '功能测试用例生成'} · 用例图谱</span>
-            <span className="t2">
+            <span className="t1 overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-semibold">{taskQuery.data?.name || '功能测试用例生成'} · 用例图谱</span>
+            <span className="t2 text-[11.5px] tabular-nums text-[var(--ant-color-text-secondary)]">
               {stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线 · ` : ''}
               运行 {runId ? runId.slice(0, 8) : '-'}
             </span>
@@ -124,7 +124,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
         </div> : null}
 
         {failed ? <Alert type="error" showIcon title={run?.status === 'canceled' ? '图谱生成已取消' : '图谱生成失败'} description={run?.errorMessage || '本次图谱未生成成功，请重试。'} /> : null}
-        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 [&>*]:min-w-0 [&>*]:flex-1">
+        <div ref={viewRef} className="ai-relations-page-body relative flex min-h-0 flex-1 [&>.ant-empty]:m-0 [&>.ant-empty]:flex [&>.ant-empty]:flex-col [&>.ant-empty]:items-center [&>.ant-empty]:justify-center [&>*]:min-w-0 [&>*]:flex-1">
           {loading ? (
             <div className="ai-relations-page-loading flex items-center justify-center"><Spin /></div>
           ) : runQuery.error ? (

@@ -21,10 +21,6 @@ import taskStyles from '@/features/ai-testing/styles/ai-task-detail.module.css'
 import chainStyles from '@/features/ai-testing/styles/generation-chain.module.css'
 import canvasStyles from '@/features/ai-testing/styles/generation-canvas.module.css'
 import caseArtifactStyles from '@/features/ai-testing/styles/artifact-cases.module.css'
-import apiArtifactStyles from '@/features/ai-testing/styles/artifact-api.module.css'
-import miscArtifactStyles from '@/features/ai-testing/styles/artifact-misc.module.css'
-import relationsStyles from '@/features/ai-testing/styles/relations.module.css'
-import uiGenerationStyles from '@/features/ai-testing/styles/ui-generation.module.css'
 import uiStageStyles from '@/features/ai-testing/styles/ui-stage-visual.module.css'
 
 export function RequirementDetailPage() {
@@ -105,7 +101,7 @@ export function RequirementDetailPage() {
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
-    <div className={`requirement-detail-page tp-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-transparent p-[var(--app-page-gutter)] pb-4 text-[var(--srf-text)] ${detailStyles.root} ${taskStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope}`}>
+    <div className={`requirement-detail-page tp-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-transparent p-[var(--app-page-gutter)] pb-4 text-[var(--srf-text)] ${detailStyles.root} ${taskStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope}`}>
       <div className="requirement-detail-layout flex min-h-0 min-w-0 flex-1 gap-3 max-narrow:flex-col max-narrow:overflow-auto">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
         <section className="requirement-detail-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--srf-card)] max-narrow:flex-none">

@@ -5,7 +5,7 @@ export type HierarchyView = ReturnType<typeof useRelationsHierarchyView>
 
 export function HierarchyGraphToolbar({ view }: { view: HierarchyView }) {
   if (!view.canExpand) return null
-  return <div className="ai-hierarchy-toolbar">
+  return <div className="ai-hierarchy-toolbar absolute right-3 top-3 z-[5]">
     <Button size="small" onClick={view.toggleAll}>{view.allExpanded ? '折叠全部' : '展开全部'}</Button>
   </div>
 }

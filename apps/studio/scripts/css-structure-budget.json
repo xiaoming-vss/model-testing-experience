@@ -30,7 +30,7 @@
   ],
   "crossFeatureCssImports": [
     "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/styles/profile-settings.module.css",
-    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/relations.module.css"
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/generation-chain.module.css"
   ],
   "orphanCss": [],
   "sharedModuleViolations": [],
@@ -75,55 +75,30 @@
       "declarations": 11,
       "selectors": 5
     },
-    "src/features/ai-testing/styles/ai-page.module.css": {
-      "rules": 22,
-      "declarations": 119,
-      "selectors": 22
-    },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
-      "rules": 77,
-      "declarations": 252,
-      "selectors": 83
-    },
-    "src/features/ai-testing/styles/artifact-api.module.css": {
-      "rules": 67,
-      "declarations": 294,
-      "selectors": 80
+      "rules": 50,
+      "declarations": 164,
+      "selectors": 54
     },
     "src/features/ai-testing/styles/artifact-cases.module.css": {
-      "rules": 79,
-      "declarations": 291,
-      "selectors": 89
-    },
-    "src/features/ai-testing/styles/artifact-misc.module.css": {
-      "rules": 41,
-      "declarations": 101,
-      "selectors": 44
+      "rules": 44,
+      "declarations": 136,
+      "selectors": 53
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
-      "rules": 206,
-      "declarations": 636,
-      "selectors": 235
+      "rules": 178,
+      "declarations": 520,
+      "selectors": 207
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 254,
-      "declarations": 856,
-      "selectors": 262
-    },
-    "src/features/ai-testing/styles/relations.module.css": {
-      "rules": 79,
-      "declarations": 330,
-      "selectors": 82
-    },
-    "src/features/ai-testing/styles/ui-generation.module.css": {
-      "rules": 74,
-      "declarations": 238,
-      "selectors": 79
+      "rules": 157,
+      "declarations": 526,
+      "selectors": 166
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
-      "rules": 437,
-      "declarations": 1057,
-      "selectors": 546
+      "rules": 158,
+      "declarations": 395,
+      "selectors": 188
     },
     "src/features/api-automation/styles/api-detail-rules.module.css": {
       "rules": 14,
@@ -327,37 +302,13 @@
     }
   },
   "duplicateBodies": {
-    "07c0f4cdaa7aa123": {
-      "count": 2,
-      "sample": "position: relative;display: flex;flex: 1 1 auto;min-width: 0;min-height: 0"
-    },
     "098709f4ca244421": {
       "count": 2,
       "sample": "height: 100dvh;min-height: 0;overflow: hidden"
     },
-    "134af927e2a224d0": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;align-items: stretch"
-    },
-    "168eee1f679a9977": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 8px"
-    },
-    "1b55041854203af8": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 6px;margin-top: 12px"
-    },
     "2106d9af6ccfaa56": {
       "count": 2,
       "sample": "display: flex;align-items: center;gap: 10px;min-width: 0"
-    },
-    "26b9a3ba04ba009d": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 6px;min-width: 0"
-    },
-    "2adc3dcdcc63441e": {
-      "count": 2,
-      "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "2e2e45e2d4ca13fb": {
       "count": 2,
@@ -367,17 +318,9 @@
       "count": 4,
       "sample": "display: flex;align-items: center;gap: 8px"
     },
-    "37bf457a62a94b20": {
-      "count": 2,
-      "sample": "margin-left: auto;color: var(--app-surface-text-muted);font-size: 11px"
-    },
     "41ff9fcb4194ebda": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;flex-direction: column;gap: 10px"
-    },
-    "440644315a04af4d": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;flex: 1 1 auto;min-height: 0;min-width: 0;overflow: hidden"
     },
     "528f9ebfeb41bb50": {
       "count": 2,
@@ -391,25 +334,9 @@
       "count": 2,
       "sample": "display: flex;align-items: center;gap: 10px;flex-wrap: wrap"
     },
-    "5f375a2bdb1ba064": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 12px"
-    },
-    "6747dfd794ecfb61": {
-      "count": 2,
-      "sample": "border-color: var(--app-accent-border);background: var(--app-accent-surface);color: var(--app-accent);font-weight: 600"
-    },
-    "73ddbd769bdeddf9": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 1px"
-    },
     "790b1e6d62087b78": {
       "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
-    },
-    "83bfbff9a699fecc": {
-      "count": 2,
-      "sample": "display: flex;justify-content: flex-end;gap: 8px"
     },
     "8470710580857f2c": {
       "count": 2,
@@ -418,18 +345,6 @@
     "9222d9fe65fe3f15": {
       "count": 2,
       "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
-    },
-    "9f60b5ccb8682bf4": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 2px;min-width: 0"
-    },
-    "a4a1b7ce873e0af5": {
-      "count": 3,
-      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px"
-    },
-    "a8c592ec8463dd98": {
-      "count": 3,
-      "sample": "display: flex;flex-direction: column;gap: 12px"
     },
     "b55a347634ad307b": {
       "count": 2,
@@ -443,16 +358,8 @@
       "count": 3,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
     },
-    "c59d73221fa11066": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;overflow: hidden"
-    },
-    "c7184222151d0ba0": {
-      "count": 2,
-      "sample": "min-width: 0;overflow: hidden;font-size: 12px;text-overflow: ellipsis;white-space: nowrap"
-    },
     "c7777c6e868d5ddd": {
-      "count": 3,
+      "count": 2,
       "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "e0a80c835c3c40a9": {
@@ -463,21 +370,13 @@
       "count": 2,
       "sample": "height: 100%;min-height: 0;overflow: hidden"
     },
-    "e5b6bf9b5b1696ce": {
-      "count": 3,
-      "sample": "margin: 0;font-size: 12px;font-weight: 600"
-    },
     "ee75574833000445": {
       "count": 2,
       "sample": "background: var(--srf-chip);border-radius: 4px;padding: 1px 4px;font-size: 13px"
     },
     "fbbb9331ecfd8380": {
-      "count": 5,
+      "count": 4,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
-    },
-    "fce376b002f77271": {
-      "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;gap: 4px;margin-top: 8px"
     }
   }
 }

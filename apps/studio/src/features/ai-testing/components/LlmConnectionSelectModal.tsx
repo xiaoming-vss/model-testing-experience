@@ -1,5 +1,5 @@
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import uiGenerationStyles from '../styles/ui-generation.module.css'
+import taskStyles from '../styles/ai-task-detail.module.css'
 import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Input, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'
 import { useQuery } from '@tanstack/react-query'
@@ -76,7 +76,7 @@ export function LlmConnectionSelectModal({
     <Modal
       mask={{ closable: false }}
       centered
-      rootClassName={`llm-connection-select-modal${children ? ' llm-connection-select-modal-expanded' : ''} ${uiGenerationStyles.scope}`}
+      rootClassName={`llm-connection-select-modal${children ? ' llm-connection-select-modal-expanded' : ''} ${taskStyles.scope}`}
       // 模型选择可能由层级为 PopupBase + 200 的优化弹窗触发。
       zIndex={token.zIndexPopupBase + 300}
       title="选择本人 LLM 授权"

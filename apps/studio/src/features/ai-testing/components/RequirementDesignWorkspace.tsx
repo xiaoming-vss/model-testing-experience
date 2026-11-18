@@ -29,8 +29,8 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
     if (next === 'codeRisk') { setRiskOpen(true); return }
     if (canWrite && (next === 'api' || next === 'ui')) setConfigureKind(next)
   }
-  return <div className="ai-requirement-design tp-surface tp-list-surface">
-    <div className="ai-requirement-design-panel ai-requirement-generation-panel">
+  return <div className="ai-requirement-design tp-surface tp-list-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden text-[var(--srf-text)] [&_.ant-empty]:px-4 [&_.ant-empty]:py-8">
+    <div className="ai-requirement-design-panel ai-requirement-generation-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
     </div>
     <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width="min(2000px, calc(100vw - 56px))" centered destroyOnHidden
