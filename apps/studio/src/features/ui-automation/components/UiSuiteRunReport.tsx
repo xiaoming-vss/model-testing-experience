@@ -4,6 +4,37 @@ import { ActionButton } from '@/shared/components/ActionButton'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { cx } from '@/shared/utils/cx'
 import styles from '@/shared/styles/run-view.module.css'
+import {
+  runReportContentClass,
+  runReportContentInnerClass,
+  runReportHeadActionsClass,
+  runReportHeadClass,
+  runReportHeadMainClass,
+  runReportInlineMetaClass,
+  runReportItemArrowClass,
+  runReportItemBodyClass,
+  runReportItemClass,
+  runReportItemHeadClass,
+  runReportItemMetaClass,
+  runReportItemOrderClass,
+  runReportItemTitleClass,
+  runReportLayoutClass,
+  runReportListClass,
+  runReportMetaClass,
+  runReportScrollClass,
+  runReportStaticClass,
+  runReportSummaryErrorClass,
+  runReportSummaryFailedClass,
+  runReportSummaryGridClass,
+  runReportSummaryItemClass,
+  runReportSummarySkippedClass,
+  runReportSummarySuccessClass,
+  runReportTitleClass,
+  runResultAlertClass,
+  runResultBlockClass,
+  runResultPreClass,
+  runResultPreCompactClass,
+} from '@/shared/utils/surfaceClasses'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import {
   uiSuiteRunReportViewOptions,
@@ -69,16 +100,16 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
       ) : suiteRunReportQuery.isLoading && !suiteRunReport ? (
         <Empty description="测试集报告加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : suiteRunReport ? (
-        <div className="api-collection-run-report-layout">
-          <div className="api-collection-run-report-static">
-            <div className="api-collection-run-report-head">
-              <div className="api-collection-run-report-head-main">
-                <div className="api-collection-run-report-title">
+        <div className={runReportLayoutClass}>
+          <div className={runReportStaticClass}>
+            <div className={runReportHeadClass}>
+              <div className={runReportHeadMainClass}>
+                <div className={runReportTitleClass}>
                   <Text strong>运行结果</Text>
                   <Tag color={getExecutionStatusMeta(suiteRunReport.status).color}>{getExecutionStatusMeta(suiteRunReport.status).label}</Tag>
                   <RunWaitingReason status={suiteRunReport.status} />
                 </div>
-                <div className="api-collection-run-report-meta">
+                <div className={runReportMetaClass}>
                   <span>开始：{formatTime(suiteRunReport.startedAt)}</span>
                   <span>结束：{formatTime(suiteRunReport.finishedAt)}</span>
                   <span>总耗时：{suiteRunReport.durationMs ?? 0} ms</span>
@@ -86,41 +117,41 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
                   <span>{suiteRunReport.tracePath ? <StoredFileDownload path={suiteRunReport.tracePath} label="下载 Trace" /> : "Trace：-"}</span>
                 </div>
               </div>
-              <div className="api-collection-run-report-head-actions">
+              <div className={runReportHeadActionsClass}>
                 <ActionButton operation="refresh" onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>刷新报告</ActionButton>
                 {canStop ? <StopRunButton kind="ui-suite" runId={selectedSuiteRunId} status={suiteRunReport.status} /> : null}
               </div>
             </div>
 
-            <div className="api-collection-run-report-summary-grid">
-              <div className="api-collection-run-report-summary-item">
+            <div className={runReportSummaryGridClass}>
+              <div className={runReportSummaryItemClass}>
                 <span>总数</span>
                 <strong>{suiteRunReport.totalCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item success">
+              <div className={`${runReportSummaryItemClass} ${runReportSummarySuccessClass}`}>
                 <span>成功</span>
                 <strong>{suiteRunReport.successCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item failed">
+              <div className={`${runReportSummaryItemClass} ${runReportSummaryFailedClass}`}>
                 <span>失败</span>
                 <strong>{suiteRunReport.failedCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item error">
+              <div className={`${runReportSummaryItemClass} ${runReportSummaryErrorClass}`}>
                 <span>异常</span>
                 <strong>{suiteRunReport.errorCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item skipped">
+              <div className={`${runReportSummaryItemClass} ${runReportSummarySkippedClass}`}>
                 <span>跳过</span>
                 <strong>{suiteRunReport.skippedCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item">
+              <div className={runReportSummaryItemClass}>
                 <span>报告 ID</span>
                 <strong>{suiteRunReport.suiteRunId ?? '-'}</strong>
               </div>
             </div>
 
             {suiteRunReport.errorMessage ? (
-              <Alert showIcon type="error" title={suiteRunReport.errorMessage} className="api-case-run-result-alert" />
+              <Alert showIcon type="error" title={suiteRunReport.errorMessage} className={runResultAlertClass} />
             ) : null}
 
             <Segmented
@@ -131,11 +162,11 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
             />
           </div>
 
-          <div ref={viewRef} className="api-collection-run-report-scroll">
-            <div className="api-collection-run-report-content">
+          <div ref={viewRef} className={runReportScrollClass}>
+            <div className={`${runReportContentClass} ${runReportContentInnerClass}`}>
               {suiteRunReportView === 'snapshot' ? (
                 suiteRunReport.snapshot ? (
-                  <pre className="api-case-run-result-pre compact">{prettyPrintValue(suiteRunReport.snapshot)}</pre>
+                  <pre className={`${runResultPreClass} ${runResultPreCompactClass}`}>{prettyPrintValue(suiteRunReport.snapshot)}</pre>
                 ) : (
                   <Empty description="暂无运行快照" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 )
@@ -145,42 +176,42 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
               ) : (
-                <div className="api-collection-run-report-list">
+                <div className={runReportListClass}>
                   {orderedSuiteRunItems.map((item, index) => {
                     const itemKey = getUiTestSuiteRunItemKey(item, index)
                     const expanded = expandedSuiteRunItemIds.includes(itemKey)
                     const statusMeta = getExecutionStatusMeta(item.status)
 
                     return (
-                      <div key={itemKey} className={`api-collection-run-report-item${expanded ? ' expanded' : ''}`}>
-                        <button type="button" className="api-collection-run-report-item-head" onClick={() => toggleSuiteRunItem(itemKey)}>
-                          <div className="api-collection-run-report-item-title">
-                            <span className="api-collection-run-report-item-order">#{item.orderNo ?? index + 1}</span>
+                      <div key={itemKey} className={`${runReportItemClass}${expanded ? ' expanded' : ''}`}>
+                        <button type="button" className={runReportItemHeadClass} onClick={() => toggleSuiteRunItem(itemKey)}>
+                          <div className={runReportItemTitleClass}>
+                            <span className={runReportItemOrderClass}>#{item.orderNo ?? index + 1}</span>
                             <strong>{item.caseName || `用例 ${index + 1}`}</strong>
                             <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                             {item.continueOnFailure ? <Tag color="processing">失败后继续</Tag> : null}
                           </div>
-                          <div className="api-collection-run-report-item-meta">
+                          <div className={runReportItemMetaClass}>
                             <span>耗时：{item.durationMs ?? 0} ms</span>
                             <span>开始：{formatTime(item.startedAt)}</span>
                             <span>结束：{formatTime(item.finishedAt)}</span>
-                            <DownOutlined className={`api-collection-run-report-item-arrow${expanded ? ' expanded' : ''}`} />
+                            <DownOutlined className={`${runReportItemArrowClass}${expanded ? ' expanded' : ''}`} />
                           </div>
                         </button>
 
                         {expanded ? (
-                          <div className="api-collection-run-report-item-body">
-                            <div className="api-collection-run-report-item-inline-meta">
+                          <div className={runReportItemBodyClass}>
+                            <div className={runReportInlineMetaClass}>
                               <span>用例名称：{item.caseName || '-'}</span>
                               <span>itemId：{item.itemId || '-'}</span>
                               <span>当前 URL：{item.currentUrl || '-'}</span>
                               <span>步骤数：{item.stepResults?.length ?? 0}</span>
                               <span>失败后继续：{item.continueOnFailure ? '是' : '否'}</span>
                             </div>
-                            {item.errorMessage ? <Alert showIcon type="error" title={item.errorMessage} className="api-case-run-result-alert" /> : null}
-                            <div className="api-case-run-result-block">
+                            {item.errorMessage ? <Alert showIcon type="error" title={item.errorMessage} className={runResultAlertClass} /> : null}
+                            <div className={runResultBlockClass}>
                               {renderUiRunStepResultList(item.stepResults ?? [], '该用例暂无步骤结果')}
-                              {item.snapshot ? <pre className="api-case-run-result-pre compact">{prettyPrintValue(item.snapshot)}</pre> : null}
+                              {item.snapshot ? <pre className={`${runResultPreClass} ${runResultPreCompactClass}`}>{prettyPrintValue(item.snapshot)}</pre> : null}
                             </div>
                           </div>
                         ) : null}

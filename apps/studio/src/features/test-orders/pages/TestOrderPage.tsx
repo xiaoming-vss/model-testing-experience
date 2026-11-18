@@ -22,6 +22,7 @@ import { api, listItems, type TestOrder } from '@/services/api'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { message } from '@/shared/utils/feedback'
+import { entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
 import { TestOrderDrawer } from '../components/TestOrderDrawer'
 import {
@@ -250,7 +251,7 @@ export function TestOrderPage() {
         <ListSurface
           className="test-orders-list-panel"
           bodyClassName="test-orders-card-body"
-          scrollClassName="sprint-card-scroll test-orders-card-scroll"
+          scrollClassName="flex min-h-0 flex-col p-4 test-orders-card-scroll"
           toolbar={
             <div className="panel-header api-panel-header tp-list-toolbar">
               <div className="api-filter-group flex flex-wrap items-center gap-2">
@@ -313,19 +314,19 @@ export function TestOrderPage() {
           ) : undefined}
         >
           {!activeProjectId ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="请先选择项目" />
             </div>
           ) : !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="当前项目下暂无迭代" />
             </div>
           ) : ordersQuery.isLoading ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             </div>
           ) : total === 0 ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty
                 image={<AppstoreOutlined />}
                 description={
@@ -366,7 +367,7 @@ export function TestOrderPage() {
               </Empty>
             </div>
           ) : (
-            <div className="entity-card-grid">
+            <div className={`entity-card-grid ${entityCardGridClass}`}>
               {pageOrders.map(renderOrderCard)}
             </div>
           )}

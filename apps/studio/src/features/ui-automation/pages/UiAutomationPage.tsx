@@ -130,11 +130,11 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
 
           {!activeProjectId ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="请先选择项目" />
             </div>
           ) : !isRequirementLocked && !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="当前项目下暂无迭代" />
             </div>
           ) : (

@@ -1,68 +1,6 @@
-/* 富文本编辑器与只读渲染的共用样式。颜色一律走 tp-surface token。 */
-
-.rich-text-editor {
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-control);
-  background: var(--srf-card);
-  overflow: hidden;
-}
-
-.rich-text-editor.is-disabled {
-  opacity: 0.6;
-}
-
-.rich-text-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-wrap: wrap;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--srf-divider);
-  background: var(--srf-hover);
-}
-
-.rich-text-toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--srf-text-secondary);
-  cursor: pointer;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.rich-text-toolbar-button:hover:not(:disabled) {
-  background: var(--srf-chip);
-  color: var(--srf-text);
-}
-
-.rich-text-toolbar-button.is-active {
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
-}
-
-.rich-text-toolbar-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.rich-text-upload-hint {
-  margin-left: 8px;
-  font-size: 12px;
-  color: var(--srf-text-muted);
-}
-
-.rich-text-toolbar-expand {
-  margin-left: auto;
-}
-
-/* 编辑器卡片由宿主持有，放大时整体搬进弹框（is-expanded），内联/弹框共用同一实例。 */
-.rich-text-editor-host { min-width: 0; }
+/* 富文本、JSON / 文本编辑器的深层排版与第三方结构。
+ * 布局、间距、皮肤和按钮外观由组件 utility 负责；这里只保留 TipTap 正文、
+ * 只读渲染子元素与 CodeMirror 的内部结构，颜色走 tp-surface token。 */
 
 .rich-text-editor.is-expanded .rich-text-content .tiptap {
   min-height: 56vh;
@@ -81,32 +19,27 @@
   white-space: pre-wrap;
 }
 
-.rich-text-content .tiptap p:first-child {
-  margin-top: 0;
-}
+.rich-text-content .tiptap p:first-child,
+.rich-text-viewer p:first-child { margin-top: 0; }
 
-.rich-text-content .tiptap p:last-child {
-  margin-bottom: 0;
-}
+.rich-text-content .tiptap p:last-child,
+.rich-text-viewer p:last-child { margin-bottom: 0; }
 
 .rich-text-content .tiptap h2,
-.rich-text-content .tiptap h3 {
+.rich-text-content .tiptap h3,
+.rich-text-viewer h2,
+.rich-text-viewer h3 {
   margin: 12px 0 6px;
   font-weight: 600;
 }
 
-.rich-text-content .tiptap h2 {
-  font-size: 16px;
-}
-
-.rich-text-content .tiptap h3 {
-  font-size: 14px;
-}
+.rich-text-content .tiptap h2 { font-size: 16px; }
+.rich-text-content .tiptap h3 { font-size: 14px; }
 
 .rich-text-content .tiptap ul,
-.rich-text-content .tiptap ol {
-  padding-left: 20px;
-}
+.rich-text-content .tiptap ol,
+.rich-text-viewer ul,
+.rich-text-viewer ol { padding-left: 20px; }
 
 .rich-text-content .tiptap blockquote,
 .rich-text-viewer blockquote {
@@ -126,14 +59,16 @@
   white-space: pre-wrap;
 }
 
-.rich-text-content .tiptap code {
+.rich-text-content .tiptap code,
+.rich-text-viewer code {
   background: var(--srf-chip);
   border-radius: 4px;
   padding: 1px 4px;
   font-size: 13px;
 }
 
-.rich-text-content .tiptap pre code {
+.rich-text-content .tiptap pre code,
+.rich-text-viewer pre code {
   background: transparent;
   padding: 0;
 }
@@ -143,49 +78,6 @@
   max-width: 100%;
   border-radius: 6px;
   border: 1px solid var(--srf-card-border);
-}
-
-/* 只读渲染。 */
-.rich-text-viewer {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--srf-text);
-  word-break: break-word;
-}
-
-.rich-text-viewer.is-empty {
-  color: var(--srf-text-muted);
-}
-
-.rich-text-viewer p:first-child {
-  margin-top: 0;
-}
-
-.rich-text-viewer p:last-child {
-  margin-bottom: 0;
-}
-
-.rich-text-viewer h2,
-.rich-text-viewer h3 {
-  margin: 12px 0 6px;
-  font-weight: 600;
-}
-
-.rich-text-viewer ul,
-.rich-text-viewer ol {
-  padding-left: 20px;
-}
-
-.rich-text-viewer code {
-  background: var(--srf-chip);
-  border-radius: 4px;
-  padding: 1px 4px;
-  font-size: 13px;
-}
-
-.rich-text-viewer pre code {
-  background: transparent;
-  padding: 0;
 }
 
 .rich-text-viewer img:not([src]) {
@@ -217,10 +109,76 @@
   font-weight: 600;
 }
 
-.rich-text-content .tiptap .selectedCell {
-  background: var(--srf-accent-soft);
+.rich-text-content .tiptap .selectedCell { background: var(--srf-accent-soft); }
+
+/* JSON / 文本编辑器（CodeMirror）。 */
+.json-editor-codemirror .cm-editor {
+  width: 100%;
+  max-width: 100%;
+  background: var(--app-surface);
+  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 24px;
+  font-style: normal;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+  text-rendering: geometricPrecision;
 }
 
-.rich-text-editor input[type="file"] {
-  display: none;
+.json-editor-codemirror .cm-editor.cm-focused { outline: none; }
+
+.json-editor-codemirror .cm-scroller {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  min-height: 260px;
+}
+
+.json-editor-codemirror .cm-content,
+.json-editor-codemirror .cm-line { padding-inline: 0; }
+
+.json-editor-codemirror .cm-content,
+.json-editor-codemirror .cm-content *,
+.json-editor-codemirror .cm-line,
+.json-editor-codemirror .cm-line * {
+  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;
+  font-style: normal;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+}
+
+.json-editor-codemirror .cm-content { padding-block: 12px; }
+.json-editor-codemirror .cm-line { padding-left: 14px; }
+
+.json-editor-codemirror .cm-gutters {
+  min-width: 36px;
+  border-right: 1px solid var(--app-editor-gutter-border);
+  background: var(--app-surface);
+  color: var(--app-surface-text-muted);
+  font-size: 13px;
+}
+
+.json-editor-codemirror .cm-activeLine,
+.json-editor-codemirror .cm-activeLineGutter { background: transparent; }
+
+.json-editor-codemirror .cm-foldGutter { display: none; }
+
+.json-editor-codemirror .cm-lineNumbers .cm-gutterElement {
+  padding: 0 10px 0 8px;
+}
+
+.json-editor-codemirror .cm-matchingBracket {
+  color: var(--app-surface-text);
+  background: var(--app-editor-selection);
+  border-radius: 4px;
+}
+
+.json-editor-codemirror .cm-nonmatchingBracket {
+  color: var(--app-editor-error-text);
+}
+
+.json-editor-codemirror .cm-tooltip {
+  border-radius: 10px;
+  border-color: var(--app-editor-border);
+  box-shadow: 0 12px 32px var(--app-editor-popover-shadow);
 }

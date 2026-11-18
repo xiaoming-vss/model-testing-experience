@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–35 已完成；本文件是阶段 36 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **51 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
+> 2026-11-18。阶段 0–36 已完成；本文件是阶段 37 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **46 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,42 +8,38 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 51 | ≤ 45 | **-6** |
-| CSS 行数 | 9,638 | ≤ 9,000 | **-638** |
+| CSS 文件 | 46 | ≤ 45 | **-1** |
+| CSS 行数 | 8,493 | ≤ 9,000 | 已达标（余 507 行） |
 | `!important` | 95 | ≤ 100 | 已达标（数值） |
 | 长前缀 | 0 | 0 | 已达标 |
-| 重复规则体 | 14 | ≤ 60 | 已达标 |
+| 重复规则体 | 10 | ≤ 60 | 已达标 |
 | 单文件 > 600 行 | 0 | 0 | 已达标 |
 
 **先看结论，避免继续“一个模块一个模块”地漏：**
 
-1. **真正的缺口是文件数和行数，不是 `!important`。** 95 处 `!important` 中 85 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。后面不应为了数字机械去 `!important`。
-2. **只迁布局达不到行数目标。** 只迁布局仍覆盖不了 638 行的缺口；阶段 29–35 已实际验证，必须同时迁皮肤。要达标，颜色、字体、边框、圆角、阴影等皮肤声明也必须随 JSX utility 或共享 token 迁走，最终让大部分页面 Module 整体消失。
-3. **按当前文件边界，保留底座已经占 23 个文件 / 4,316 行：**
+1. **剩余缺口只有 1 个文件；行数已低于目标。** 95 处 `!important` 中 85 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。后面不应为了数字机械去 `!important`。
+2. **阶段 36 的共享组件迁移已把行数压到目标以下。** 7 个共享组件文件 1,448 行 → 2 个 304 行，删除 `base-services-connection`、`case-import`、`entity-card`、`legacy-surface`、`json-editor`；这是行数达标的主要来源。
+3. **按当前文件边界，保留底座占 23 个文件 / 4,316 行：**
    - 7 个 token 文件：1,847 行；
    - 9 个外壳/全局基础文件：1,565 行；
    - 7 个共享全局契约：904 行。
-4. 因此其余 **28 个页面/共享组件文件（5,322 行）必须压到 ≤22 个文件、≤4,684 行**：至少 **6 个文件要删除或并入宿主 Module**，约 **12.0% 的页面 CSS 行要消失**。这是阶段 36–38 的硬约束。
-5. 14 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随页面批次顺手合并。完整列表见附录 B。
+4. 其余 **23 个页面/共享组件文件（4,178 行）** 已低于原 ≤22 文件、≤4,684 行的行数目标；文件数差 1，由阶段 37 把 `table-row-dividers` / `list-name` 并入 `list-table` 后达到总数 ≤45，不再为了 B 类单独制造合并。
+5. 10 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随批次顺手合并。完整列表见附录 B。
 
 ## 二、动作分类
 
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
-| **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 3 | 360 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 25 | 4,962 |
+| **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 0 | 0 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 23 | 4,178 |
 | **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 16 | 2,469 |
 | **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
 
-> A 类不是“删掉就完事”：必须先把对应 JSX 的布局与可迁移皮肤换成 utility，确认无消费方后再删文件。B 类中标注“删除候选”的文件，在皮肤迁完后同样要转 A；否则文件数目标无法达成。
+> A 类已清零。B 类剩余文件均已只保留深层皮肤或跨页面共享结构；阶段 37 只收缩 C 类，不再新增页面迁移。
 
-### A 类：3 个确定删除/并入候选（360 行）
+### A 类：已完成（0 个文件）
 
-| 文件 | 行 | 删除前必须迁走的内容 |
-| --- | ---: | --- |
-| `shared/styles/base-services-connection.module.css` | 195 | 61 条布局 + 35 条皮肤；0 条深层规则 |
-| `shared/styles/case-import.module.css` | 63 | 28 条纯布局 + 3 条皮肤；5 条深层规则 |
-| `shared/styles/legacy-surface.css` | 102 | 37 条布局 + 12 条皮肤；遗留全局类 |
+`shared/styles/base-services-connection.module.css`（195）、`shared/styles/case-import.module.css`（63）、`shared/styles/legacy-surface.css`（102）已随阶段 36 删除；`entity-card.css`、`json-editor.module.css` 也已并入共享 utility / 富文本编辑器深层样式。
 
 ### C 类：16 个全局契约（2,469 行）
 
@@ -55,7 +51,7 @@
 
 ## 三、完整文件清单（按页面族）
 
-> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 51 个文件均已列入，没有省略项；阶段 29–35 删除的 15 个文件不再保留条目。
+> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 46 个文件均已列入，没有省略项；阶段 29–36 删除的 20 个文件不再保留条目。
 
 
 ### 一、外壳与全局基础
@@ -162,19 +158,14 @@
 
 ### 九、共享组件
 
-富文本、连接表单、导入弹窗、实体卡片、JSON 编辑器、运行报告与遗留表面。
+富文本 / JSON 编辑器的深层排版与运行报告弹窗的 AntD 结构。连接表单、导入弹窗、实体卡片与遗留表面已在阶段 36 删除。
 
-**7 个文件 / 1,448 行 / 463 条布局声明 / 283 条皮肤声明**
+**2 个文件 / 304 行 / 深层与共享结构**
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/components/RichTextEditor/rich-text-editor.css` | 226 | 11 / 37 | 56 | 3 | 0 | 2 | **B** | 共享富文本；跨页面，最后与 run-view 一起动 |
-| `shared/styles/base-services-connection.module.css` | 195 | 42 / 19 | 35 | 0 | 0 | 0 | **A** | 195 行、0 条深层规则；整文件迁 utility 后删除 |
-| `shared/styles/case-import.module.css` | 63 | 28 / 0 | 3 | 5 | 0 | 2 | **A** | 63 行、纯布局 28 条；整文件迁 utility 后删除 |
-| `shared/styles/entity-card.css` | 166 | 31 / 29 | 41 | 0 | 0 | 1 | **B** | 共享卡片原语；迁布局，皮肤进 token |
-| `shared/styles/json-editor.module.css` | 138 | 18 / 13 | 36 | 1 | 0 | 1 | **B** | 共享 JSON 编辑器；保留编辑器皮肤 |
-| `shared/styles/legacy-surface.css` | 102 | 31 / 6 | 12 | 0 | 0 | 2 | **A** | 102 行遗留表面；类可迁 utility/共享层后删除 |
-| `shared/styles/run-view.module.css` | 558 | 113 / 85 | 100 | 6 | 0 | 4 | **B** | 共享运行报告 558 行；跨 API/UI/测试单，最后迁 |
+| `shared/components/RichTextEditor/rich-text-editor.css` | 184 | — | — | 多 | 0 | 1 | **B** | 富文本 TipTap 正文与 CodeMirror 内部结构的共用深层样式 |
+| `shared/styles/run-view.module.css` | 120 | — | — | 多 | 0 | 0 | **B** | 运行报告 Segmented/Modal 结构、报告变量与产物视图伪元素 |
 
 ### 十、共享全局契约
 
@@ -222,11 +213,11 @@
 | 33 | AI 测试/生成链全部 10 个 Module | 3,759 | ≤ 1,450 | 10 → 5 | **已完成（1,449 行）**：三个产物 Module 与关系/UI 生成并入宿主；画布、生成链、阶段可视化、任务详情全量迁 utility；删除 `ai-page`、`artifact-api`、`artifact-misc`、`relations`、`ui-generation` | 高 |
 | 34 | 用例 / Bug / 需求 3 个 Module | 1,465 | ≤ 650 | 3 → 3 | **已完成（527 行）**：表格、筛选、详情、活动流、表单骨架、文档预览布局迁 utility；保留 AntD / DOCX 深层结构与高度链 | 高 |
 | 35 | 基础服务 / Auth / 个人设置 / Projects 6 个 Module | 1,142 | ≤ 450 | 6 → 4 | **已完成（449 行）**：登录/个人设置合并为共享 `account` Module，删除 `profile-settings`；项目概览并入 Sprint 看板，删除 `projects-overview`；环境抽屉、动态值选择与禅道绑定只留 AntD 深层规则 | 中 |
-| 36 | 共享组件 7 个文件 | 1,448 | ≤ 450 | 7 → 2 | 删 `case-import`、`base-services-connection`、`legacy-surface`；实体卡片/JSON 编辑器并入共享原语；保留富文本与运行报告 | 高 |
+| 36 | 共享组件 7 个文件 | 1,448 | ≤ 450 | 7 → 2 | **已完成（304 行）**：基础服务连接、导入弹窗、实体卡片、遗留表面与 JSON 编辑器 Module 删除，布局/皮肤进共享 utility；保留富文本与运行报告深层结构 | 高 |
 | 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | 只做死规则、重复体、可替代 `!important`；把 `table-row-dividers` 与 `list-name` 并入 `list-table` | 高 |
 | 38 | 收口 | — | ≤ 9,000 / ≤ 45 | 44 | 全量复测、ratchet 两个基线、清理无消费者 token、更新本文与迁移计划 | 低 |
 
-**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 450 + 2,100 + 1,847（token）= **8,271 行**；文件目标 **44**（≤45，留 1 个文件余量）。达标线是排期目标，最终以实际数字为准；如果某阶段只完成布局迁移，必须在阶段 38 前补做皮肤迁出，否则目标不成立。
+**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 304（阶段 36 实际）+ 2,100 + 1,847（token）= **8,125 行**；文件目标 **44**（≤45，留 1 个文件余量）。阶段 36 后行数已提前低于 9,000，剩余只差 1 个文件由阶段 37 的 C 类合并补足；最终以实际数字为准。
 
 ### 各阶段完成口径
 
@@ -265,13 +256,13 @@
 - 全局按钮/表格/表面契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
 - 页面 Module 剩余 10 处随阶段 35/38 处理；全局 85 处随阶段 37 处理，优先合并同体规则和删死规则，而不是硬去 `!important`。
 
-## 六、重复规则体（14 组）
+## 六、重复规则体（10 组）
 
-结构门禁口径 14 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
+结构门禁口径 10 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
 
 - 不单独立项，不为了把 44 降到 0 而合并语义不同的选择器。
 - 页面批次里如果同一规则体落在同一宿主/同一 utility 能表达，就合并；否则保留。
-- 附录 B 列出全部 14 组的成员选择器，供批次内查重，不要求逐组清零。
+- 附录 B 列出全部 10 组的成员选择器，供批次内查重，不要求逐组清零。
 
 ## 七、附录
 
@@ -369,26 +360,22 @@
   - `border-bottom: 1px solid var(--app-list-row-border) !important`
 
 
-### 附录 B：全部 14 组重复规则体
+### 附录 B：全部 10 组重复规则体
 
 > 每组列出所有成员（文件 → 选择器）。只用于查重，不表示必须合并。
 
 1. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css → :global(.app-shell):has(.root)`
 2. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/sprint-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
-3. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`；`src/shared/styles/json-editor.module.css → .toolbarActions`
+3. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`
 4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
 5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
 6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar), .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quick-filters`
 7. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
-8. `src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-state) > div`；`src/shared/styles/run-view.module.css → .root :global(.api-collection-run-history-layout), .root :global(.api-collection-run-history-list)`
-9. `src/features/test-orders/styles/test-order-workspace.module.css → .root:global(.tp-surface) :global(.test-order-workspace), .root :global(.api-automation-content)`；`src/shared/styles/case-import.module.css → .root :global(.ant-modal-body)`
-10. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
-11. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
-12. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
-13. `src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-content .tiptap code`；`src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-viewer code`
-14. `src/shared/styles/legacy-surface.css → .requirement-panel-head`；`src/shared/styles/surface-tokens.css → .api-filter-group`
+8. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
+9. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
+10. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
 ## 八、执行顺序建议
 
-1. **阶段 29–35（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects）已完成**，当前 51 文件 / 9,638 行；继续 36（共享组件）。
-2. **36（共享组件）**：7 个文件 1,448 → ≤450；删除 `case-import`、`base-services-connection`、`legacy-surface`，实体卡片/JSON 编辑器并入共享原语。
-3. **最后 37–38（全局契约与收口）**：只收缩，不整体迁移；所有 `!important` 变更都在这里做，避免和页面迁移混在一起难以回滚。
+1. **阶段 29–36（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件）已完成**，当前 46 文件 / 8,493 行；继续 37（全局契约）。
+2. **37（全局契约）**：16 个文件 2,469 → ≤2,100、16 → 14；把 `table-row-dividers` 与 `list-name` 并入 `list-table`，只删死规则、合并同体规则、减少可替代的 `!important`。
+3. **最后 38（收口）**：全量复测、ratchet 基线、清理无消费者 token、更新文档；不整体迁移全局契约。

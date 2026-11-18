@@ -3,7 +3,6 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/case-import.module.css'
 import { UploadOutlined } from '@ant-design/icons'
 import { Segmented, Upload } from 'antd'
 
@@ -34,13 +33,18 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
       confirmLoading={importApiCasesMutation.isPending}
       okButtonProps={{ className: 'action-btn-save' }}
       onOk={handleImportApiCases}
-      rootClassName={cx('api-case-import-modal-root', styles.root)}
+      rootClassName={cx('api-case-import-modal-root')}
       className="api-case-import-modal-shell"
+      style={{ maxWidth: 'calc(100vw - 32px)' }}
+      classNames={{
+        container: 'flex max-h-[calc(100vh-40px)] flex-col overflow-hidden',
+        body: 'min-h-0 flex-1 overflow-hidden',
+      }}
       destroyOnHidden
     >
-      <div className={styles.modal}>
+      <div className="flex max-h-[calc(100vh-148px)] w-full min-w-0 flex-col gap-3">
         <Segmented
-          className={styles.mode}
+          className="w-full"
           value={caseImportMode}
           options={[
             { label: '上传 YAML', value: 'upload' },
@@ -49,7 +53,7 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
           onChange={(value) => setCaseImportMode(value as CaseImportMode)}
         />
         {caseImportMode === 'upload' ? (
-          <div className={styles.upload}>
+          <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
             <Upload.Dragger
               accept=".yaml,.yml"
               maxCount={1}
@@ -72,12 +76,12 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
               <p className="ant-upload-text">点击或拖拽 YAML 文件到这里</p>
               <p className="ant-upload-hint">仅支持 .yaml / .yml，导入时会自动绑定到当前 Collection。</p>
             </Upload.Dragger>
-            <div className={styles.hint}>后端会直接解析 YAML，前端不做字段预解析。</div>
+            <div className="text-xs leading-[18px] text-[var(--tp-text-secondary)]">后端会直接解析 YAML，前端不做字段预解析。</div>
           </div>
         ) : (
-          <div className={styles.editor}>
-            <div className={styles.hint}>直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
-            <TextCodeEditor value={importYamlText} onChange={setImportYamlText} language="yaml" minHeight={280} />
+          <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
+            <div className="text-xs leading-[18px] text-[var(--tp-text-secondary)]">直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
+            <TextCodeEditor value={importYamlText} onChange={setImportYamlText} language="yaml" height="clamp(240px, 48vh, 420px)" />
           </div>
         )}
       </div>

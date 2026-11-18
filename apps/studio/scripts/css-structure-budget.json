@@ -12,12 +12,10 @@
     "src/index.css",
     "src/shared/components/RichTextEditor/rich-text-editor.css",
     "src/shared/styles/chart-tokens.css",
-    "src/shared/styles/entity-card.css",
     "src/shared/styles/foundation-tokens.css",
     "src/shared/styles/github-dark-foundation.css",
     "src/shared/styles/github-dark-tokens.css",
     "src/shared/styles/indigo-amber-light-tokens.css",
-    "src/shared/styles/legacy-surface.css",
     "src/shared/styles/list-name.css",
     "src/shared/styles/list-table.css",
     "src/shared/styles/pagination.css",
@@ -180,34 +178,19 @@
       "selectors": 21
     },
     "src/shared/components/RichTextEditor/rich-text-editor.css": {
-      "rules": 37,
-      "declarations": 104,
-      "selectors": 47
+      "rules": 32,
+      "declarations": 89,
+      "selectors": 53
     },
     "src/shared/styles/account.module.css": {
       "rules": 23,
       "declarations": 61,
       "selectors": 29
     },
-    "src/shared/styles/base-services-connection.module.css": {
-      "rules": 27,
-      "declarations": 96,
-      "selectors": 28
-    },
-    "src/shared/styles/case-import.module.css": {
-      "rules": 9,
-      "declarations": 31,
-      "selectors": 13
-    },
     "src/shared/styles/chart-tokens.css": {
       "rules": 2,
       "declarations": 40,
       "selectors": 2
-    },
-    "src/shared/styles/entity-card.css": {
-      "rules": 19,
-      "declarations": 101,
-      "selectors": 19
     },
     "src/shared/styles/foundation-tokens.css": {
       "rules": 2,
@@ -229,16 +212,6 @@
       "declarations": 288,
       "selectors": 6
     },
-    "src/shared/styles/json-editor.module.css": {
-      "rules": 21,
-      "declarations": 67,
-      "selectors": 26
-    },
-    "src/shared/styles/legacy-surface.css": {
-      "rules": 14,
-      "declarations": 49,
-      "selectors": 14
-    },
     "src/shared/styles/list-name.css": {
       "rules": 3,
       "declarations": 12,
@@ -255,9 +228,9 @@
       "selectors": 20
     },
     "src/shared/styles/run-view.module.css": {
-      "rules": 78,
-      "declarations": 298,
-      "selectors": 93
+      "rules": 18,
+      "declarations": 56,
+      "selectors": 19
     },
     "src/shared/styles/scrollbars.css": {
       "rules": 5,
@@ -295,17 +268,9 @@
       "count": 2,
       "sample": "height: 100dvh;min-height: 0;overflow: hidden"
     },
-    "2106d9af6ccfaa56": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 10px;min-width: 0"
-    },
     "300b373f254ffd3c": {
-      "count": 3,
-      "sample": "display: flex;align-items: center;gap: 8px"
-    },
-    "41ff9fcb4194ebda": {
       "count": 2,
-      "sample": "display: flex;flex-direction: column;gap: 10px"
+      "sample": "display: flex;align-items: center;gap: 8px"
     },
     "528f9ebfeb41bb50": {
       "count": 2,
@@ -323,10 +288,6 @@
       "count": 2,
       "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
     },
-    "b9c0f9c571daf401": {
-      "count": 2,
-      "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
-    },
     "c3a767a35bba8500": {
       "count": 3,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
@@ -338,10 +299,6 @@
     "e38e5eb24a0f8a06": {
       "count": 2,
       "sample": "height: 100%;min-height: 0;overflow: hidden"
-    },
-    "ee75574833000445": {
-      "count": 2,
-      "sample": "background: var(--srf-chip);border-radius: 4px;padding: 1px 4px;font-size: 13px"
     },
     "fbbb9331ecfd8380": {
       "count": 4,

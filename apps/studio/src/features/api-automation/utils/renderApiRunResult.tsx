@@ -14,6 +14,17 @@ import {
 } from '@/services/api'
 import { Empty, Tag } from 'antd'
 import { type ReactNode } from 'react'
+import {
+  runResultListClass,
+  runResultMetaItemClass,
+  runResultPreClass,
+  runResultPreCompactClass,
+  runResultRowClass,
+  runResultRowFailedClass,
+  runResultRowMetaClass,
+  runResultRowTitleClass,
+  runResultSubsectionClass,
+} from '@/shared/utils/surfaceClasses'
 
 export function renderRunResultContent(params: {
   view: RunResultView
@@ -41,7 +52,7 @@ export function renderRunResultContent(params: {
     }
 
     return (
-      <pre className="api-case-run-result-pre compact">
+      <pre className={`${runResultPreClass} ${runResultPreCompactClass}`}>
         {JSON.stringify(
           {
             url: request?.url,
@@ -65,7 +76,7 @@ export function renderRunResultContent(params: {
     }
 
     return (
-      <pre className="api-case-run-result-pre compact">
+      <pre className={`${runResultPreClass} ${runResultPreCompactClass}`}>
         {JSON.stringify(parseMaybeJsonValue(response?.body), null, 2)}
       </pre>
     )
@@ -73,28 +84,28 @@ export function renderRunResultContent(params: {
 
   if (view === 'extract') {
     return (
-      <div className="api-case-run-result-subsection">
+      <div className={runResultSubsectionClass}>
         {currentExtractResults.length === 0 ? (
           <Empty description={emptyExtractDescription} image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div className="api-case-run-result-list">
+          <div className={runResultListClass}>
             {currentExtractResults.map((item, index) => (
-              <div key={`${item.extractRuleId ?? index}`} className={`api-case-run-result-row${item.success ? '' : ' failed'}`}>
-                <div className="api-case-run-result-row-title">
+              <div key={`${item.extractRuleId ?? index}`} className={`${runResultRowClass}${item.success ? '' : ` ${runResultRowFailedClass}`}`}>
+                <div className={runResultRowTitleClass}>
                   <strong>{item.name ?? `提取 ${index + 1}`}</strong>
                   <Tag color={item.success ? 'success' : 'error'}>{item.success ? '成功' : '失败'}</Tag>
                   {item.usedDefault ? <Tag color="gold">默认值</Tag> : null}
                 </div>
-                <div className="api-case-run-result-row-meta">
-                  <span className="api-case-run-result-meta-item">
+                <div className={runResultRowMetaClass}>
+                  <span className={runResultMetaItemClass}>
                     <strong>变量</strong>
                     <span>{formatOptionalValue(item.varKey)}</span>
                   </span>
-                  <span className="api-case-run-result-meta-item">
+                  <span className={runResultMetaItemClass}>
                     <strong>值</strong>
                     <span>{formatOptionalValue(item.value)}</span>
                   </span>
-                  <span className="api-case-run-result-meta-item">
+                  <span className={runResultMetaItemClass}>
                     <strong>信息</strong>
                     <span>{formatOptionalValue(item.errorMessage)}</span>
                   </span>
@@ -108,39 +119,39 @@ export function renderRunResultContent(params: {
   }
 
   return (
-    <div className="api-case-run-result-subsection">
+    <div className={runResultSubsectionClass}>
       {currentAssertResults.length === 0 ? (
         <Empty description={emptyAssertDescription} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div className="api-case-run-result-list">
+        <div className={runResultListClass}>
           {currentAssertResults.map((item, index) => (
-            <div key={`${item.assertRuleId ?? index}`} className={`api-case-run-result-row${item.success ? '' : ' failed'}`}>
-              <div className="api-case-run-result-row-title">
+            <div key={`${item.assertRuleId ?? index}`} className={`${runResultRowClass}${item.success ? '' : ` ${runResultRowFailedClass}`}`}>
+              <div className={runResultRowTitleClass}>
                 <strong>{item.name ?? `断言 ${index + 1}`}</strong>
                 <Tag color={item.success ? 'success' : 'error'}>{item.success ? '成功' : '失败'}</Tag>
               </div>
-              <div className="api-case-run-result-row-meta">
-                <span className="api-case-run-result-meta-item">
+              <div className={runResultRowMetaClass}>
+                <span className={runResultMetaItemClass}>
                   <strong>来源</strong>
                   <span>{assertSourceLabelMap[item.assertSource as ApiAssertSource] ?? formatOptionalValue(item.assertSource)}</span>
                 </span>
-                <span className="api-case-run-result-meta-item">
+                <span className={runResultMetaItemClass}>
                   <strong>比较</strong>
                   <span>{assertComparatorLabelMap[item.comparator as ApiAssertComparator] ?? formatOptionalValue(item.comparator)}</span>
                 </span>
-                <span className="api-case-run-result-meta-item">
+                <span className={runResultMetaItemClass}>
                   <strong>目标</strong>
                   <span>{formatOptionalValue(item.targetExpr)}</span>
                 </span>
-                <span className="api-case-run-result-meta-item">
+                <span className={runResultMetaItemClass}>
                   <strong>期望</strong>
                   <span>{formatOptionalValue(item.expectedValue)}</span>
                 </span>
-                <span className="api-case-run-result-meta-item">
+                <span className={runResultMetaItemClass}>
                   <strong>实际</strong>
                   <span>{formatOptionalValue(item.actualValue)}</span>
                 </span>
-                <span className="api-case-run-result-meta-item">
+                <span className={runResultMetaItemClass}>
                   <strong>信息</strong>
                   <span>{formatOptionalValue(item.errorMessage)}</span>
                 </span>

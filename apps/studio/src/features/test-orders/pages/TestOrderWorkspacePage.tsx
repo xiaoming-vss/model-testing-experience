@@ -362,7 +362,7 @@ export function TestOrderWorkspacePage() {
   return (
     <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root}`}>
       <div className="api-automation-content gap-3">
-        <div className="page-frame test-order-workspace tp-board">
+        <div className="w-full test-order-workspace tp-board">
           {orderQuery.error ? (
             <Alert showIcon type="error" title={getErrorMessage(orderQuery.error)} />
           ) : null}

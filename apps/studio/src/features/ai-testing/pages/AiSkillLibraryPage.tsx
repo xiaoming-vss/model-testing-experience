@@ -12,7 +12,21 @@ import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems, type AiSkillLibraryItem, type UploadAiSkillPayload } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/base-services-connection.module.css'
+import {
+  serviceCardActionsClass,
+  serviceCardBodyClass,
+  serviceCardClass,
+  serviceCardEmptyClass,
+  serviceCardGridClass,
+  serviceCardHeadClass,
+  serviceCardLabelClass,
+  serviceCardLoadingClass,
+  serviceCardMetaClass,
+  serviceCardScrollClass,
+  serviceCardTitleClass,
+  serviceCardTitleWrapClass,
+  serviceCardValueClass,
+} from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage } from '@/utils/format'
 
 const { Text } = Typography
@@ -121,17 +135,17 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
           {deleteSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(deleteSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {downloadSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className={cx('table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll', styles.root)}>
+          <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
             {!activeProjectId ? (
-              <div className="base-services-empty-card base-services-empty-card-list">
+              <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
                 <Empty description="请先选择项目，再进入 Skill库" />
               </div>
             ) : skillsQuery.isLoading ? (
-              <div className="sprint-card-loading">
+              <div className={cx('sprint-card-loading', serviceCardLoadingClass)}>
                 <Empty description="Skill库加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             ) : skills.length === 0 ? (
-              <div className="base-services-empty-card base-services-empty-card-list">
+              <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
                 <Empty description="当前项目下暂无 Skill" image={Empty.PRESENTED_IMAGE_SIMPLE}>
                   <ProjectActionButton action="manage" type="primary" operation="create" onClick={openUploadModal}>
                     上传第一个 Skill
@@ -139,35 +153,35 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
                 </Empty>
               </div>
             ) : (
-              <div className="api-collection-grid base-services-connection-grid">
+              <div className={serviceCardGridClass}>
                 {skills.map((skill) => {
                   const skillSpaceId = getSkillSpaceId(skill)
                   const isDefaultSkill = Boolean(skill.isDefault)
                   const skillName = skill.filename || '未命名技能'
                   return (
-                    <Card key={skillSpaceId} className="sprint-card api-collection-card base-services-connection-card">
-                      <div className="api-collection-card-top base-services-connection-head">
-                        <Space size={10} className="base-services-connection-title-wrap">
+                    <Card key={skillSpaceId} className={cx('base-services-connection-card', serviceCardClass)} classNames={{ body: serviceCardBodyClass }}>
+                      <div className={cx('base-services-connection-head', serviceCardHeadClass)}>
+                        <Space size={10} className={serviceCardTitleWrapClass}>
                           <AppIcon name="skills" size={24} />
-                          <Typography.Text strong className="base-services-connection-title" title={skillName}>
+                          <Typography.Text strong className={serviceCardTitleClass} title={skillName}>
                             {skillName}
                           </Typography.Text>
                         </Space>
                         <Tag color={isDefaultSkill ? 'blue' : 'default'}>{isDefaultSkill ? '系统默认' : '项目自定义'}</Tag>
                       </div>
-                      <div className="sprint-card-meta">
-                        <span className="sprint-card-label">文件数</span>
-                        <span className="api-collection-inline-value">{skill.fileCount ?? '-'}</span>
+                      <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                        <span className={serviceCardLabelClass}>文件数</span>
+                        <span className={serviceCardValueClass}>{skill.fileCount ?? '-'}</span>
                       </div>
-                      <div className="sprint-card-meta">
-                        <span className="sprint-card-label">大小</span>
-                        <span className="api-collection-inline-value">{formatSkillSize(skill.size)}</span>
+                      <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                        <span className={serviceCardLabelClass}>大小</span>
+                        <span className={serviceCardValueClass}>{formatSkillSize(skill.size)}</span>
                       </div>
-                      <div className="sprint-card-meta">
-                        <span className="sprint-card-label">最近更新</span>
-                        <span className="api-collection-inline-value">{formatTime(skill.updatedAt ?? skill.createdAt)}</span>
+                      <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                        <span className={serviceCardLabelClass}>最近更新</span>
+                        <span className={serviceCardValueClass}>{formatTime(skill.updatedAt ?? skill.createdAt)}</span>
                       </div>
-                      <div className="sprint-card-actions base-services-connection-actions">
+                      <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
                         <Tooltip title="下载">
                           <ActionButton
                             type="text"

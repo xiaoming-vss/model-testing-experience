@@ -11,7 +11,22 @@ import { listItems } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/base-services-connection.module.css'
+import {
+  serviceCardActionsClass,
+  serviceCardBodyClass,
+  serviceCardClass,
+  serviceCardEmptyClass,
+  serviceCardGridClass,
+  serviceCardHeadClass,
+  serviceCardLabelClass,
+  serviceCardMetaClass,
+  serviceCardScrollClass,
+  serviceCardShellClass,
+  serviceCardTitleClass,
+  serviceCardTitleWrapClass,
+  serviceCardUrlClass,
+  serviceCardValueClass,
+} from '@/shared/utils/surfaceClasses'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { api } from '@/services/api'
 import type {
@@ -89,37 +104,38 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
   return <>
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}
     {connectionsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(connectionsQuery.error)} /> : null}
-    <div className={cx('base-services-connection-shell', styles.root)}>
-      <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
+    <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
+      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
         {connectionsQuery.isPending ? (
-          <div className="sprint-card-loading"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="监控接入加载中..." /></div>
+          <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="监控接入加载中..." /></div>
         ) : connections.length === 0 ? (
-          <div className="base-services-empty-card base-services-empty-card-list">
+          <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={can('manage') ? '暂无监控接入，先创建后再发起性能测试' : '暂无监控接入，请项目所有者创建'}
             />
           </div>
         ) : (
-          <div className="api-collection-grid base-services-connection-grid">
+          <div className={serviceCardGridClass}>
             {paged.map((connection) => <Card
               key={connection.connectionId}
-              className="sprint-card api-collection-card base-services-connection-card"
+              className={cx('base-services-connection-card', serviceCardClass)}
+              classNames={{ body: serviceCardBodyClass }}
             >
-              <div className="api-collection-card-top base-services-connection-head">
-                <Space size={10} className="base-services-connection-title-wrap">
+              <div className={cx('base-services-connection-head', serviceCardHeadClass)}>
+                <Space size={10} className={serviceCardTitleWrapClass}>
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-app-accent-surface text-app-accent">
                     <ApiOutlined />
                   </span>
-                  <Text strong className="base-services-connection-title" title={connection.name}>{connection.name}</Text>
+                  <Text strong className={serviceCardTitleClass} title={connection.name}>{connection.name}</Text>
                 </Space>
                 <Tag color={connection.enabled ? 'success' : 'default'}>{connection.enabled ? '已启用' : '已停用'}</Tag>
               </div>
-              <Paragraph className="api-collection-description base-services-connection-url" title={connection.remoteWriteUrl} ellipsis>
+              <Paragraph className={serviceCardUrlClass} style={{ display: '-webkit-box' }} title={connection.remoteWriteUrl} ellipsis>
                 {connection.remoteWriteUrl}
               </Paragraph>
-              <div className="sprint-card-meta">
-                <span className="sprint-card-label">认证</span>
+              <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                <span className={serviceCardLabelClass}>认证</span>
                 <Space size={4} wrap>
                   <Tag>写入 {authLabels[connection.remoteWriteAuthType]}</Tag>
                   {connection.hasRemoteWriteCredentials
@@ -127,11 +143,11 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
                     : <Tag>无凭据</Tag>}
                 </Space>
               </div>
-              <div className="sprint-card-meta">
-                <span className="sprint-card-label">最近更新</span>
-                <span className="api-collection-inline-value">{formatTime(connection.updatedAt)}</span>
+              <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                <span className={serviceCardLabelClass}>最近更新</span>
+                <span className={serviceCardValueClass}>{formatTime(connection.updatedAt)}</span>
               </div>
-              <div className="sprint-card-actions base-services-connection-actions">
+              <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
                 <Tooltip title="编辑监控接入">
                   <ProjectActionButton
                     action="manage"

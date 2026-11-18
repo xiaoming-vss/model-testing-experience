@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import styles from '@/shared/styles/run-view.module.css'
+import { runResultRowClass, runResultRowTitleClass } from '@/shared/utils/surfaceClasses'
 import workspaceStyles from '../styles/test-order-workspace.module.css'
 import { SearchOutlined } from '@ant-design/icons'
 import {
@@ -379,7 +379,7 @@ export function AddCasesFromLibraryModal({
         title="用例详情"
         width={720}
         centered
-        rootClassName={`${styles.root} ${workspaceStyles.root}`}
+        rootClassName={workspaceStyles.root}
         footer={<Button onClick={() => setDetailItem(null)}>关闭</Button>}
         onCancel={() => setDetailItem(null)}
         destroyOnHidden
@@ -406,8 +406,8 @@ export function AddCasesFromLibraryModal({
             <Text type="secondary">暂无操作步骤</Text>
           ) : (
             detailContent.steps.map((step, index) => (
-              <div key={index} className="api-case-run-result-row test-order-step">
-                <div className="api-case-run-result-row-title">
+              <div key={index} className={`${runResultRowClass} test-order-step`}>
+                <div className={runResultRowTitleClass}>
                   <span className="test-order-step-no inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--app-glass-table-divider)] text-[11px] font-semibold text-[var(--tp-text-secondary,var(--app-shell-text-secondary))]">{index + 1}</span>
                   <span className="test-order-step-action flex-1 text-[13px]">{step.action}</span>
                 </div>

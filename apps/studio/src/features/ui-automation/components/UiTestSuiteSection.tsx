@@ -16,6 +16,7 @@ import { buildUiSuiteRunPayload } from '../utils/runHelpers'
 import { api, ApiError, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
 import { formatTime, getErrorMessage, normalizeUiTestSuiteId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
+import { entityCardBadgesClass, entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import { buildUiTestSuiteUpdatePayload } from '@/utils/updatePayload'
 
 const { Text } = Typography
@@ -290,10 +291,10 @@ export const UiTestSuiteSection = forwardRef<
         }
         onOpen={() => openSuiteCasePage(suiteId)}
       >
-        <div className="entity-card-badges">
+        <div className={`entity-card-badges ${entityCardBadgesClass}`}>
           <UiSuiteRunConfigCell suite={suite} />
         </div>
-        <p className={`entity-card-desc${suite.description ? '' : ' is-empty'}`} title={suiteDescription}>
+        <p className={`entity-card-desc ${entityCardDescClass}${suite.description ? '' : ` ${entityCardDescEmptyClass}`}`} title={suiteDescription}>
           {suiteDescription}
         </p>
       </EntityCard>
@@ -319,13 +320,13 @@ export const UiTestSuiteSection = forwardRef<
       {suitesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
       <div className="ui-suite-card-body tp-list-body">
-        <div className="sprint-card-scroll ui-suite-card-scroll tp-list-scroll">
+        <div className="flex min-h-0 flex-col p-4 ui-suite-card-scroll tp-list-scroll">
           {suitesQuery.isLoading ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
             </div>
           ) : filteredSuites.length === 0 ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty
                 image={<AppstoreOutlined />}
                 description={
@@ -349,7 +350,7 @@ export const UiTestSuiteSection = forwardRef<
               </Empty>
             </div>
           ) : (
-            <div className="entity-card-grid">
+            <div className={`entity-card-grid ${entityCardGridClass}`}>
               {pagedSuites.map(renderSuiteCard)}
             </div>
           )}

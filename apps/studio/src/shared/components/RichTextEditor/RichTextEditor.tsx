@@ -22,6 +22,9 @@ import { stripImageSources } from './utils'
 import '@/shared/styles/surface-tokens.css'
 import './rich-text-editor.css'
 
+const toolbarButtonClass = 'inline-flex h-7 w-7 cursor-pointer items-center justify-center whitespace-nowrap rounded-[6px] border-none bg-transparent text-[14px] text-[var(--srf-text-secondary)] transition-colors enabled:hover:bg-[var(--srf-chip)] enabled:hover:text-[var(--srf-text)] disabled:cursor-not-allowed disabled:opacity-50'
+const toolbarButtonActiveClass = 'bg-[var(--srf-accent-soft)] text-[var(--srf-accent-strong)]'
+
 /**
  * 平台统一富文本编辑器：受限工具栏 + 粘贴/选择图片上传到统一文件管线。
  *
@@ -195,7 +198,7 @@ export function RichTextEditor({
   }, [expanded, editor])
 
   if (!editor) {
-    return <div className="rich-text-editor rich-text-editor-loading" aria-label={ariaLabel} />
+    return <div className="rich-text-editor rich-text-editor-loading min-h-[160px] overflow-hidden rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]" aria-label={ariaLabel} />
   }
 
   type Command = { label: string; title: string; icon: React.ReactNode; active: boolean; run: () => void }
@@ -220,13 +223,13 @@ export function RichTextEditor({
   ]
 
   const editorSurface = (
-    <div className={`tp-surface rich-text-editor${disabled ? ' is-disabled' : ''}${expanded ? ' is-expanded' : ''}`}>
-      <div className="rich-text-toolbar" role="toolbar" aria-label="格式工具栏">
+    <div className={`tp-surface rich-text-editor overflow-hidden rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]${disabled ? ' opacity-60' : ''}${expanded ? ' is-expanded' : ''}`}>
+      <div className="rich-text-toolbar flex flex-wrap items-center gap-0.5 border-b border-[var(--srf-divider)] bg-[var(--srf-hover)] px-2 py-1" role="toolbar" aria-label="格式工具栏">
         {commands.map((command) => (
           <Tooltip key={command.label} title={command.title}>
             <button
               type="button"
-              className={`rich-text-toolbar-button${command.active ? ' is-active' : ''}`}
+              className={`rich-text-toolbar-button ${toolbarButtonClass}${command.active ? ` ${toolbarButtonActiveClass}` : ''}`}
               aria-label={command.title}
               aria-pressed={command.active}
               disabled={disabled}
@@ -239,7 +242,7 @@ export function RichTextEditor({
         <Tooltip title="插入图片（支持直接粘贴截图）">
           <button
             type="button"
-            className="rich-text-toolbar-button"
+            className={`rich-text-toolbar-button ${toolbarButtonClass}`}
             aria-label="插入图片"
             disabled={disabled || uploading || !projectId}
             onClick={() => fileInputRef.current?.click()}
@@ -247,11 +250,11 @@ export function RichTextEditor({
             <PictureOutlined />
           </button>
         </Tooltip>
-        {uploading ? <span className="rich-text-upload-hint">图片上传中…</span> : null}
+        {uploading ? <span className="rich-text-upload-hint ml-2 text-xs text-[var(--srf-text-muted)]">图片上传中…</span> : null}
         <Tooltip title={expanded ? '恢复内联编辑' : '放大编辑'}>
           <button
             type="button"
-            className="rich-text-toolbar-button rich-text-toolbar-expand"
+            className={`rich-text-toolbar-button rich-text-toolbar-expand ml-auto ${toolbarButtonClass}`}
             aria-label={expanded ? '恢复内联编辑' : '放大编辑'}
             aria-pressed={expanded}
             disabled={disabled}
@@ -277,7 +280,7 @@ export function RichTextEditor({
   )
 
   return (
-    <div className="rich-text-editor-host">
+    <div className="rich-text-editor-host min-w-0">
       <div ref={inlineSlotRef} />
       <Modal
         title="放大编辑"

@@ -7,7 +7,6 @@ import { Alert } from 'antd'
 import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { getApiCaseRunId } from '../utils/detailView'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/run-view.module.css'
 import { useMemo } from 'react'
 
 /*
@@ -75,7 +74,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
   }))
 
   return (
-    <div className={cx('api-wb-console flex h-full flex-col overflow-hidden bg-[var(--srf-hover)]', styles.root)} data-tab-motion-scope>
+    <div className={cx('api-wb-console flex h-full flex-col overflow-hidden bg-[var(--srf-hover)]')} data-tab-motion-scope>
       <div className="api-wb-console-banner flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-divider)] bg-[var(--srf-card)] px-4 py-2">
         <div className="api-wb-console-banner-main flex min-w-0 flex-wrap items-center gap-2.5">
           <span className="api-wb-console-title text-[12px] font-bold text-[var(--srf-text)]">请求结果</span>

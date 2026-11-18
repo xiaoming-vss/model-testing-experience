@@ -21,7 +21,7 @@ export function RichTextViewer({
 
   if (!html.trim()) {
     return (
-      <div className={`tp-surface rich-text-viewer is-empty ${className}`} aria-label={ariaLabel}>
+      <div className={`tp-surface rich-text-viewer is-empty text-[14px] leading-[1.7] text-[var(--srf-text-muted)] [word-break:break-word] ${className}`} aria-label={ariaLabel}>
         未填写内容
       </div>
     )
@@ -32,7 +32,7 @@ export function RichTextViewer({
       <button type="button" onClick={reload}>重新加载图片</button>
     </span>}
     <div
-      className={`tp-surface rich-text-viewer ${className}`}
+      className={`tp-surface rich-text-viewer text-[14px] leading-[1.7] text-[var(--srf-text)] [word-break:break-word] ${className}`}
       aria-label={ariaLabel}
       // 内容在入库前已由服务端白名单消毒，这里只负责展示。
       dangerouslySetInnerHTML={{ __html: content }}

@@ -6,7 +6,7 @@ import { yaml } from '@codemirror/lang-yaml'
 import { syntaxHighlighting } from '@codemirror/language'
 import { EditorView, keymap } from '@codemirror/view'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/json-editor.module.css'
+import '@/shared/components/RichTextEditor/rich-text-editor.css'
 import {
   codeEditorTheme,
   darkCodeEditorTheme,
@@ -48,8 +48,8 @@ export function TextCodeEditor({
   const showFoldGutter = foldable ?? resolvedLanguage !== 'plain'
 
   return (
-    <div className={cx('json-editor-wrap', styles.wrap, showFoldGutter && 'foldable', readOnly && 'readonly')}>
-      <div className={cx('json-editor-shell', styles.shell)}>
+    <div className={cx('json-editor-wrap flex w-full min-w-0 max-w-full flex-col gap-2', showFoldGutter && 'foldable', readOnly && 'readonly')}>
+      <div className={cx('json-editor-shell w-full min-w-0 max-w-full overflow-hidden rounded-[12px] border border-[var(--app-editor-border)] bg-[var(--app-surface)] transition-[border-color,box-shadow] duration-200 ease-[ease] focus-within:border-[var(--app-editor-border-focus)] focus-within:shadow-[0_0_0_3px_var(--app-editor-focus-ring)]')}>
         <CodeMirror
           value={value ?? ''}
           theme="none"
@@ -71,7 +71,7 @@ export function TextCodeEditor({
               'aria-readonly': String(readOnly),
             }),
           ]}
-          className={cx('json-editor-codemirror', styles.codemirror)}
+          className="json-editor-codemirror"
           editable={!readOnly}
           readOnly={readOnly}
           onChange={(nextValue) => onChange?.(nextValue)}

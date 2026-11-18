@@ -21,6 +21,38 @@ import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { cx } from '@/shared/utils/cx'
 import styles from '@/shared/styles/run-view.module.css'
 import {
+  runReportContentClass,
+  runReportContentInnerClass,
+  runReportHeadActionsClass,
+  runReportHeadClass,
+  runReportHeadMainClass,
+  runReportInlineMetaClass,
+  runReportItemArrowClass,
+  runReportItemBodyClass,
+  runReportItemClass,
+  runReportItemHeadClass,
+  runReportItemMetaClass,
+  runReportItemOrderClass,
+  runReportItemTitleClass,
+  runReportLayoutClass,
+  runReportListClass,
+  runReportListMoreClass,
+  runReportMetaClass,
+  runReportScrollClass,
+  runReportStaticClass,
+  runReportSummaryErrorClass,
+  runReportSummaryFailedClass,
+  runReportSummaryGridClass,
+  runReportSummaryItemClass,
+  runReportSummarySkippedClass,
+  runReportSummarySuccessClass,
+  runReportTitleClass,
+  runResultAlertClass,
+  runResultBlockClass,
+  runResultPreClass,
+  runResultPreCompactClass,
+} from '@/shared/utils/surfaceClasses'
+import {
   formatTime,
   getErrorMessage,
   normalizeEnvironmentId
@@ -59,7 +91,7 @@ const RUN_REPORT_PAGE_SIZE = 30
 
 function RunResultPanel({ view, children }: { view: RunResultView; children: React.ReactNode }) {
   const panelRef = useViewMotion(runResultViewOptions.findIndex(option => option.value === view))
-  return <div ref={panelRef} className="api-case-run-result-block">{children}</div>
+  return <div ref={panelRef} className={runResultBlockClass}>{children}</div>
 }
 
 export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, setCollectionRunReportOpen, setSelectedCollectionRunId, collectionRunReportQuery, collectionRunReport, environments, handleExportCollectionRunReportHtml, handleRefreshCollectionRunReport, refreshingCollectionRunReport, selectedCollectionRunId, collectionRunReportView, setCollectionRunReportView, orderedCollectionRunItems, expandedCollectionRunItemIds, collectionRunItemViews, toggleCollectionRunItem, handleCollectionRunItemViewChange, selectedCollectionRunSummary }: Props) {
@@ -91,16 +123,16 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
       ) : collectionRunReportQuery.isLoading && !collectionRunReport ? (
         <Empty description="API测试集报告加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : collectionRunReport ? (
-        <div className="api-collection-run-report-layout">
-          <div className="api-collection-run-report-static">
-            <div className="api-collection-run-report-head">
-              <div className="api-collection-run-report-head-main">
-                <div className="api-collection-run-report-title">
+        <div className={runReportLayoutClass}>
+          <div className={runReportStaticClass}>
+            <div className={runReportHeadClass}>
+              <div className={runReportHeadMainClass}>
+                <div className={runReportTitleClass}>
                   <Text strong>运行结果</Text>
                   <Tag color={getExecutionStatusMeta(collectionRunReport.status).color}>{getExecutionStatusMeta(collectionRunReport.status).label}</Tag>
                   <RunWaitingReason status={collectionRunReport.status} />
                 </div>
-                <div className="api-collection-run-report-meta">
+                <div className={runReportMetaClass}>
                   <span>
                     环境：
                     {environments.find((environment) => normalizeEnvironmentId(environment) === collectionRunReport.environmentId)?.name ??
@@ -112,7 +144,7 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                   <span>总耗时：{collectionRunReport.durationMs ?? 0} ms</span>
                 </div>
               </div>
-              <div className="api-collection-run-report-head-actions">
+              <div className={runReportHeadActionsClass}>
                 <ActionButton operation="refresh"
                   onClick={handleRefreshCollectionRunReport}
                   loading={refreshingCollectionRunReport}
@@ -125,35 +157,35 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
               </div>
             </div>
 
-            <div className="api-collection-run-report-summary-grid">
-              <div className="api-collection-run-report-summary-item">
+            <div className={runReportSummaryGridClass}>
+              <div className={runReportSummaryItemClass}>
                 <span>总数</span>
                 <strong>{collectionRunReport.totalCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item success">
+              <div className={`${runReportSummaryItemClass} ${runReportSummarySuccessClass}`}>
                 <span>成功</span>
                 <strong>{collectionRunReport.successCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item failed">
+              <div className={`${runReportSummaryItemClass} ${runReportSummaryFailedClass}`}>
                 <span>失败</span>
                 <strong>{collectionRunReport.failedCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item error">
+              <div className={`${runReportSummaryItemClass} ${runReportSummaryErrorClass}`}>
                 <span>异常</span>
                 <strong>{collectionRunReport.errorCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item skipped">
+              <div className={`${runReportSummaryItemClass} ${runReportSummarySkippedClass}`}>
                 <span>跳过</span>
                 <strong>{collectionRunReport.skippedCount ?? 0}</strong>
               </div>
-              <div className="api-collection-run-report-summary-item">
+              <div className={runReportSummaryItemClass}>
                 <span>报告 ID</span>
                 <strong>{collectionRunReport.collectionRunId ?? '-'}</strong>
               </div>
             </div>
 
             {collectionRunReport.errorMessage ? (
-              <Alert showIcon type="error" title={collectionRunReport.errorMessage} className="api-case-run-result-alert" />
+              <Alert showIcon type="error" title={collectionRunReport.errorMessage} className={runResultAlertClass} />
             ) : null}
 
             <Segmented
@@ -164,16 +196,16 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
             />
           </div>
 
-          <div ref={viewRef} className="api-collection-run-report-scroll">
-            <div className="api-collection-run-report-content">
+          <div ref={viewRef} className={runReportScrollClass}>
+            <div className={`${runReportContentClass} ${runReportContentInnerClass}`}>
               {collectionRunReportView === 'runtime' ? (
-                <pre className="api-case-run-result-pre compact">
+                <pre className={`${runResultPreClass} ${runResultPreCompactClass}`}>
                   {JSON.stringify(parseMaybeJsonValue(collectionRunReport.runtimeVarsJson), null, 2)}
                 </pre>
               ) : orderedCollectionRunItems.length === 0 ? (
                 <Empty description="暂无API测试集运行明细" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : (
-                <div className="api-collection-run-report-list">
+                <div className={runReportListClass}>
                   {visibleRunItems.map((item, index) => {
                     const itemKey = getCollectionRunItemKey(item, index)
                     const expanded = expandedCollectionRunItemIds.includes(itemKey)
@@ -183,32 +215,32 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                     const itemAssertResults = item.assertResults ?? []
 
                     return (
-                      <div key={itemKey} className={`api-collection-run-report-item${expanded ? ' expanded' : ''}`}>
-                        <button type="button" className="api-collection-run-report-item-head" onClick={() => toggleCollectionRunItem(itemKey)}>
-                          <div className="api-collection-run-report-item-title">
-                            <span className="api-collection-run-report-item-order">#{item.orderNo ?? index + 1}</span>
+                      <div key={itemKey} className={`${runReportItemClass}${expanded ? ' expanded' : ''}`}>
+                        <button type="button" className={runReportItemHeadClass} onClick={() => toggleCollectionRunItem(itemKey)}>
+                          <div className={runReportItemTitleClass}>
+                            <span className={runReportItemOrderClass}>#{item.orderNo ?? index + 1}</span>
                             <strong>{item.caseName || `用例 ${index + 1}`}</strong>
                             <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                             {item.continueOnFailure ? <Tag color="processing">失败后继续</Tag> : null}
                           </div>
-                          <div className="api-collection-run-report-item-meta">
+                          <div className={runReportItemMetaClass}>
                             <span>耗时：{item.durationMs ?? 0} ms</span>
                             <span>开始：{formatTime(item.startedAt)}</span>
                             <span>结束：{formatTime(item.finishedAt)}</span>
-                            <DownOutlined className={`api-collection-run-report-item-arrow${expanded ? ' expanded' : ''}`} />
+                            <DownOutlined className={`${runReportItemArrowClass}${expanded ? ' expanded' : ''}`} />
                           </div>
                         </button>
 
                         {expanded ? (
-                          <div className="api-collection-run-report-item-body">
-                            <div className="api-collection-run-report-item-inline-meta">
+                          <div className={runReportItemBodyClass}>
+                            <div className={runReportInlineMetaClass}>
                               <span>caseId：{item.caseId || '-'}</span>
                               <span>caseRunId：{item.caseRunId || '-'}</span>
                               <span>状态码：{item.response?.statusCode ?? '-'}</span>
                               <span>提取失败：{itemExtractResults.filter((result) => !result.success).length}</span>
                               <span>断言失败：{itemAssertResults.filter((result) => !result.success).length}</span>
                             </div>
-                            {item.errorMessage ? <Alert showIcon type="error" title={item.errorMessage} className="api-case-run-result-alert" /> : null}
+                            {item.errorMessage ? <Alert showIcon type="error" title={item.errorMessage} className={runResultAlertClass} /> : null}
                             <Segmented
                               className="api-case-run-result-segmented"
                               options={runResultViewOptions}
@@ -232,7 +264,7 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                     )
                   })}
                   {remainingRunItems > 0 ? (
-                    <div className="api-collection-run-report-list-more">
+                    <div className={runReportListMoreClass}>
                       <Button size="small" onClick={() => setVisibleItemCount(count => count + RUN_REPORT_PAGE_SIZE)}>
                         显示更多（还剩 {remainingRunItems} 条）
                       </Button>

@@ -1,5 +1,4 @@
 @import './layout.css';
-@import '../../shared/styles/legacy-surface.css';
 @import './shell.css';
 @import './shell-header.css';
 @import './antd-overrides.css';

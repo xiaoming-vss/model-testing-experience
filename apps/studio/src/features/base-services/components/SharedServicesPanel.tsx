@@ -14,7 +14,23 @@ import { ProjectAccessScope } from '@/features/projects/components/ProjectAccess
 import { listItems } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/base-services-connection.module.css'
+import {
+  serviceCardActionsClass,
+  serviceCardBodyClass,
+  serviceCardClass,
+  serviceCardEmptyClass,
+  serviceCardGridClass,
+  serviceCardHeadClass,
+  serviceCardLabelClass,
+  serviceCardMetaClass,
+  serviceCardScrollClass,
+  serviceCardShellClass,
+  serviceCardTitleClass,
+  serviceCardTitleWrapClass,
+  serviceCardUrlClass,
+  serviceCardValueClass,
+  serviceCardValueInlineClass,
+} from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { sharedServicesApi as api, type PersonalAuthorization, type ServiceConfiguration, type ServiceProvider, type SharedService } from '../api/sharedServices.api'
 
@@ -121,20 +137,20 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}
     {provider === 'mcp' && templates.isError && <Alert type="error" showIcon title={getErrorMessage(templates.error)} />}
     {query.isError && <Alert type="error" showIcon title={getErrorMessage(query.error)} />}
-    <div className={cx('base-services-connection-shell', styles.root)}>
-      <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
+    <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
+      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
         {query.isPending || (provider === 'mcp' && templates.isPending) ? (
-          <div className="sprint-card-loading"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>
+          <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>
         ) : services.length === 0 ? (
-          <div className="base-services-empty-card base-services-empty-card-list">
+          <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={can('manage') ? provider === 'mcp' ? '暂无 MCP，先新增 MCP，再配置本人授权' : '暂无服务，先创建服务，再单独授权' : '暂无服务，请项目所有者创建'} />
           </div>
         ) : (
-          <div className="api-collection-grid base-services-connection-grid">
+          <div className={serviceCardGridClass}>
             {pagedServices.map((resource) => {
               const authorized = resource.authorization.status === 'authorized'
               const authorizationLabel = resource.authorization.status === 'unauthorized' ? '授权' : '更新我的授权'
-              const actions = <div className="sprint-card-actions base-services-connection-actions">
+              const actions = <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
                   <Tooltip title={authorizationLabel}>
                     <Button type="text" shape="circle" className="app-action app-action-icon app-action-save" aria-label={authorizationLabel} icon={<SafetyCertificateOutlined />} disabled={saving} onClick={() => { credentials.resetFields(); setAuthorization(resource) }}></Button>
                   </Tooltip>
@@ -147,26 +163,26 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
                   </Popconfirm>
                 </div>
               if (provider === 'mcp') return <ZentaoMcpServiceCard key={resource.serviceId} resource={resource} checking={query.isFetching} onRefresh={refresh} actions={actions} />
-              return <Card key={resource.serviceId} className="sprint-card api-collection-card base-services-connection-card">
-                <div className="api-collection-card-top base-services-connection-head">
-                  <Space size={10} className="base-services-connection-title-wrap">
+              return <Card key={resource.serviceId} className={cx('base-services-connection-card', serviceCardClass)} classNames={{ body: serviceCardBodyClass }}>
+                <div className={cx('base-services-connection-head', serviceCardHeadClass)}>
+                  <Space size={10} className={serviceCardTitleWrapClass}>
                     <AppIcon name={provider} size={24} />
-                    <Typography.Text strong className="base-services-connection-title" title={resource.name}>{resource.name}</Typography.Text>
+                    <Typography.Text strong className={serviceCardTitleClass} title={resource.name}>{resource.name}</Typography.Text>
                   </Space>
                   <Tag color={authorized ? 'success' : resource.authorization.status === 'invalid' ? 'error' : 'default'}>{stateLabels[resource.authorization.status]}</Tag>
                 </div>
-                <Typography.Paragraph className="api-collection-description base-services-connection-url" title={resource.baseUrl}>{resource.baseUrl}</Typography.Paragraph>
-                {provider === 'llm' && <div className="sprint-card-meta api-collection-meta-inline">
-                  <span className="sprint-card-label">模型 ID</span>
-                  <span className="api-collection-inline-value">{resource.modelId || '-'}</span>
+                <Typography.Paragraph className={serviceCardUrlClass} style={{ display: '-webkit-box' }} title={resource.baseUrl}>{resource.baseUrl}</Typography.Paragraph>
+                {provider === 'llm' && <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                  <span className={serviceCardLabelClass}>模型 ID</span>
+                  <span className={serviceCardValueInlineClass}>{resource.modelId || '-'}</span>
                 </div>}
-                <div className="sprint-card-meta">
-                  <span className="sprint-card-label">我的授权</span>
-                  <span className="api-collection-inline-value">{authorized ? '可使用' : '未授权'}</span>
+                <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                  <span className={serviceCardLabelClass}>我的授权</span>
+                  <span className={serviceCardValueClass}>{authorized ? '可使用' : '未授权'}</span>
                 </div>
-                <div className="sprint-card-meta">
-                  <span className="sprint-card-label">最近授权</span>
-                  <span className="api-collection-inline-value">{formatTime(resource.authorization.lastAuthAt ?? undefined)}</span>
+                <div className={cx('sprint-card-meta', serviceCardMetaClass)}>
+                  <span className={serviceCardLabelClass}>最近授权</span>
+                  <span className={serviceCardValueClass}>{formatTime(resource.authorization.lastAuthAt ?? undefined)}</span>
                 </div>
                 {actions}
               </Card>

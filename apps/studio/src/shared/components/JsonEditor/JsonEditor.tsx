@@ -13,7 +13,9 @@ import { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from
 import { message } from '@/shared/utils/feedback'
 import { cx } from '@/shared/utils/cx'
 import { codeEditorTheme, darkCodeEditorTheme, jsonEditorHighlightStyle } from '../codeEditorTheme'
-import styles from '@/shared/styles/json-editor.module.css'
+import '@/shared/components/RichTextEditor/rich-text-editor.css'
+
+const toolbarButtonClass = 'inline-flex h-[30px] items-center gap-1.5 rounded-[8px] px-[10px]'
 
 function tryFormatJson(value?: string) {
   if (!value?.trim()) {
@@ -176,10 +178,10 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
 
   /* `toolbar` 传 null 表示编辑器外壳不自带工具条——宿主把动作条画在编辑器之外（如请求体面板）。 */
   const editorToolbar = toolbar === undefined ? (
-    <div className={cx('json-editor-toolbar', styles.toolbar)}>
-      <div className={cx('json-editor-toolbar-actions', styles.toolbarActions)}>
+    <div className="json-editor-toolbar border-b border-[var(--app-editor-header-border)] bg-[var(--app-editor-header-bg)] px-3 py-2">
+      <div className="json-editor-toolbar-actions flex items-center gap-2">
         {showCopy && <Button
-          className={cx('json-editor-toolbar-btn', styles.toolbarBtn)}
+          className={`json-editor-toolbar-btn ${toolbarButtonClass}`}
           icon={<CopyOutlined />}
           onClick={handleCopy}
           disabled={!value?.trim()}
@@ -187,7 +189,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
           复制
         </Button>}
         <Button
-          className={cx('json-editor-toolbar-btn', styles.toolbarBtn)}
+          className={`json-editor-toolbar-btn ${toolbarButtonClass}`}
           icon={<DownloadOutlined />}
           onClick={handleDownload}
           disabled={!value?.trim()}
@@ -197,12 +199,14 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
       </div>
     </div>
   ) : toolbar === null ? null : (
-    <div className={cx('json-editor-toolbar', styles.toolbar)}>{toolbar}</div>
+    <div className="json-editor-toolbar border-b border-[var(--app-editor-header-border)] bg-[var(--app-editor-header-bg)] px-3 py-2">{toolbar}</div>
   )
 
   return (
-    <div className={cx('json-editor-wrap', styles.wrap, foldable && 'foldable', readOnly && 'readonly')}>
-      <div className={cx('json-editor-shell', styles.shell, !jsonState.valid && styles.invalid)}>
+    <div className={cx('json-editor-wrap flex w-full min-w-0 max-w-full flex-col gap-2', foldable && 'foldable', readOnly && 'readonly')}>
+      <div className={cx('json-editor-shell w-full min-w-0 max-w-full overflow-hidden rounded-[12px] border bg-[var(--app-surface)] transition-[border-color,box-shadow] duration-200 ease-[ease] focus-within:shadow-[0_0_0_3px_var(--app-editor-focus-ring)]', jsonState.valid
+        ? 'border-[var(--app-editor-border)] focus-within:border-[var(--app-editor-border-focus)]'
+        : 'border-[var(--app-editor-error-border)] shadow-[0_0_0_2px_var(--app-editor-error-ring)]')}>
         {toolbarContainer && editorToolbar ? createPortal(editorToolbar, toolbarContainer) : editorToolbar}
         <CodeMirror
           value={value ?? ''}
@@ -215,7 +219,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             highlightActiveLineGutter: false,
           }}
           extensions={editorExtensions}
-          className={cx('json-editor-codemirror', styles.codemirror)}
+          className="json-editor-codemirror"
           onCreateEditor={(view) => {
             editorViewRef.current = view
           }}

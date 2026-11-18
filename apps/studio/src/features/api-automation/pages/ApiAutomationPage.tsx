@@ -35,6 +35,7 @@ import {
 } from '@/utils/format'
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
 import { message } from '@/shared/utils/feedback'
+import { entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import '@/shared/styles/surface-tokens.css'
 
 type ApiAutomationPageScope = {
@@ -352,7 +353,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         onOpen={() => openCollectionDetail(collectionId)}
       >
         <p
-          className={`entity-card-desc${collection.description ? '' : ' is-empty'}`}
+          className={`entity-card-desc ${entityCardDescClass}${collection.description ? '' : ` ${entityCardDescEmptyClass}`}`}
           title={collectionDescription}
         >
           {collectionDescription}
@@ -368,7 +369,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
             <div className="api-test-header-main">
-              <div className="requirement-panel-head api-panel-head-main">
+              <div className="flex min-w-0 items-center gap-2.5 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5 api-panel-head-main">
                 <h1 className="tp-list-title">API测试</h1>
                 {!isRequirementLocked ? (
                   <div className="api-filter-group">
@@ -453,25 +454,25 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
 
           <div className="api-test-card-body tp-list-body">
-            <div className="sprint-card-scroll api-test-card-scroll tp-list-scroll">
+            <div className="flex min-h-0 flex-col p-4 api-test-card-scroll tp-list-scroll">
               {sprintsQuery.isLoading ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 </div>
               ) : !activeProjectId ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty description="请先选择项目" />
                 </div>
               ) : isRequirementLocked && !selectedRequirementId ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty description="当前需求不可用" />
                 </div>
               ) : collectionsQuery.isLoading ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty description="API测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 </div>
               ) : filteredCollections.length === 0 ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty
                     description={
                       keyword.trim()
@@ -491,7 +492,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                   </Empty>
                 </div>
               ) : (
-                <div className="entity-card-grid">
+                <div className={`entity-card-grid ${entityCardGridClass}`}>
                   {pagedCollections.map(renderCollectionCard)}
                 </div>
               )}

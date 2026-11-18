@@ -469,7 +469,7 @@ export function ProjectsPage() {
                   }}
                 />}>
                 {sprintsQuery.isLoading || requirementsQuery.isLoading ? (
-                  <div className="sprint-card-loading">
+                  <div className="grid min-h-[220px] place-items-center">
                     <Empty description="需求加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   </div>
                 ) : null}

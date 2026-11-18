@@ -1,7 +1,6 @@
 import { useId, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { isInteractiveCardTarget } from '@/shared/utils/cardNavigation'
 import { cx } from '@/shared/utils/cx'
-import '@/shared/styles/entity-card.css'
 
 export type EntityCardMetaItem = {
   label: ReactNode
@@ -55,15 +54,15 @@ export function EntityCard({
   }
 
   return (
-    <article className={cx('entity-card', className)} aria-labelledby={resolvedTitleId} onClick={onOpen ? handleCardClick : undefined}>
-      <div className="entity-card-main">
-        <div className="entity-card-title-row">
-          <TitleTag className="entity-card-title" id={resolvedTitleId}>{title}</TitleTag>
+    <article className={cx('entity-card flex min-h-[218px] min-w-0 cursor-pointer flex-col rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] text-[var(--srf-text)] shadow-none transition-[border-color,box-shadow,transform] duration-[180ms] ease-[ease] hover:-translate-y-0.5 hover:border-[var(--app-glass-action-border-hover)] hover:shadow-[0_12px_28px_var(--app-service-card-shadow-hover)]', className)} aria-labelledby={resolvedTitleId} onClick={onOpen ? handleCardClick : undefined}>
+      <div className="entity-card-main flex-1 px-4 pb-3 pt-[15px]">
+        <div className="entity-card-title-row mb-1.5 flex min-w-0 items-center gap-2.5">
+          <TitleTag className="entity-card-title m-0 min-w-0 flex-1 text-[14.5px] font-[650] leading-[22px] text-[var(--srf-text)] [&_a]:block [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:whitespace-nowrap [&_a]:text-inherit! [&_a:hover]:underline [&_a:hover]:underline-offset-4 [&_a:focus-visible]:rounded-[2px] [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_a:focus-visible]:outline-[var(--srf-accent)]" id={resolvedTitleId}>{title}</TitleTag>
           {status}
         </div>
         {children}
         {meta && meta.length > 0 ? (
-          <dl className="entity-card-meta">
+          <dl className="entity-card-meta m-0 grid grid-cols-2 gap-2.5 rounded-[8px] bg-[var(--srf-hover)] px-3 py-2.5 [&>div]:flex [&>div]:min-w-0 [&>div]:flex-col [&>div]:gap-0.5 [&_dt]:text-[9.5px] [&_dt]:font-normal [&_dt]:leading-[14px] [&_dt]:text-[var(--srf-text-secondary)] [&_dd]:m-0 [&_dd]:min-w-0 [&_dd]:overflow-hidden [&_dd]:text-ellipsis [&_dd]:whitespace-nowrap [&_dd]:text-[11.5px] [&_dd]:font-semibold [&_dd]:leading-[17px] [&_dd]:text-[var(--srf-text)] [&_dd]:[font-variant-numeric:tabular-nums]">
             {meta.map((item, index) => (
               <div key={index}>
                 <dt>{item.label}</dt>
@@ -73,10 +72,10 @@ export function EntityCard({
           </dl>
         ) : null}
       </div>
-      <footer className="entity-card-foot">
-        <div className={cx('entity-card-note', footerNoteClassName)}>{footerNote}</div>
+      <footer className="entity-card-foot mt-auto flex min-h-[43px] items-center justify-between gap-2 px-4 pb-2.5 pt-[9px]">
+        <div className={cx('entity-card-note min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10.5px] leading-[18px] text-[var(--srf-text-secondary)]', footerNoteClassName)}>{footerNote}</div>
         <div
-          className={cx('entity-card-actions', actionsClassName)}
+          className={cx('entity-card-actions flex flex-none items-center gap-0', actionsClassName)}
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >

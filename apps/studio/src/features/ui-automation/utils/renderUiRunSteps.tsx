@@ -12,41 +12,49 @@ import {
   formatTime
 } from '@/utils/format'
 import { Empty, Tag } from 'antd'
+import {
+  runResultListClass,
+  runResultMetaItemClass,
+  runResultRowClass,
+  runResultRowFailedClass,
+  runResultRowMetaClass,
+  runResultRowTitleClass,
+} from '@/shared/utils/surfaceClasses'
 
 export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index: number) {
   const stepStatus = getExecutionStatusMeta(stepResult.status)
 
   return (
-    <div key={`${stepResult.orderNo ?? index}-${stepResult.stepName ?? index}`} className={`api-case-run-result-row${stepResult.success === false ? ' failed' : ''}`}>
-      <div className="api-case-run-result-row-title">
+    <div key={`${stepResult.orderNo ?? index}-${stepResult.stepName ?? index}`} className={`${runResultRowClass}${stepResult.success === false ? ` ${runResultRowFailedClass}` : ''}`}>
+      <div className={runResultRowTitleClass}>
         <strong>{stepResult.stepName?.trim() || `步骤 ${stepResult.orderNo ?? index + 1}`}</strong>
         <Tag color={stepStatus.color}>{stepStatus.label}</Tag>
         {typeof stepResult.success === 'boolean' ? (
           <Tag color={stepResult.success ? 'success' : 'error'}>{stepResult.success ? '通过' : '失败'}</Tag>
         ) : null}
       </div>
-      <div className="api-case-run-result-row-meta">
-        <span className="api-case-run-result-meta-item">
+      <div className={runResultRowMetaClass}>
+        <span className={runResultMetaItemClass}>
           <strong>顺序</strong>
           <span>{formatOptionalValue(stepResult.orderNo)}</span>
         </span>
-        <span className="api-case-run-result-meta-item">
+        <span className={runResultMetaItemClass}>
           <strong>关键字</strong>
           <span>{formatOptionalValue(stepResult.keyword)}</span>
         </span>
-        <span className="api-case-run-result-meta-item">
+        <span className={runResultMetaItemClass}>
           <strong>开始</strong>
           <span>{formatTime(stepResult.startedAt)}</span>
         </span>
-        <span className="api-case-run-result-meta-item">
+        <span className={runResultMetaItemClass}>
           <strong>结束</strong>
           <span>{formatTime(stepResult.finishedAt)}</span>
         </span>
-        <span className="api-case-run-result-meta-item">
+        <span className={runResultMetaItemClass}>
           <strong>耗时</strong>
           <span>{formatOptionalValue(stepResult.durationMs ? `${stepResult.durationMs} ms` : stepResult.durationMs)}</span>
         </span>
-        <span className="api-case-run-result-meta-item">
+        <span className={runResultMetaItemClass}>
           <strong>实际值</strong>
           <span>{formatOptionalValue(stepResult.actualValue)}</span>
         </span>
@@ -99,5 +107,5 @@ export function renderUiRunStepResultList(stepResults: UiTestCaseRunStepResult[]
     return <Empty description={emptyDescription} image={Empty.PRESENTED_IMAGE_SIMPLE} />
   }
 
-  return <div className="api-case-run-result-list">{orderedStepResults.map(renderUiRunStepResult)}</div>
+  return <div className={runResultListClass}>{orderedStepResults.map(renderUiRunStepResult)}</div>
 }

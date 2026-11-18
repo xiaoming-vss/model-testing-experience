@@ -12,6 +12,7 @@ import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDra
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { formatTime, getErrorMessage, normalizeEnvironmentId } from '@/utils/format'
 import type { PerfSuiteSummary } from '../types'
@@ -189,7 +190,7 @@ export function PerformancePage() {
       </>}
       onOpen={() => navigate(`/performance/suites/${suite.suiteId}`)}
     >
-      <p className={`entity-card-desc${suite.description ? '' : ' is-empty'}`} title={suite.description}>
+      <p className={`entity-card-desc ${entityCardDescClass}${suite.description ? '' : ` ${entityCardDescEmptyClass}`}`} title={suite.description}>
         {suite.description || '暂无测试集描述'}
       </p>
       {suite.loadModels.length > 0 || suite.dataFileCount > 0 ? <div className="mt-2 flex flex-wrap gap-1">
@@ -205,7 +206,7 @@ export function PerformancePage() {
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
             <div className="api-test-header-main">
-              <div className="requirement-panel-head api-panel-head-main">
+              <div className="flex min-w-0 items-center gap-2.5 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5 api-panel-head-main">
                 <h1 className="tp-list-title">性能测试</h1>
                 <div className="api-filter-group">
                   <div className="api-filter-field">
@@ -269,11 +270,11 @@ export function PerformancePage() {
           {suitesQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
           <div className="api-test-card-body tp-list-body">
-            <div className="sprint-card-scroll api-test-card-scroll tp-list-scroll">
+            <div className="flex min-h-0 flex-col p-4 api-test-card-scroll tp-list-scroll">
               {suitesQuery.isPending ? (
-                <div className="sprint-card-loading"><Empty description="性能测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
+                <div className="grid min-h-[220px] place-items-center"><Empty description="性能测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
               ) : filteredSuites.length === 0 ? (
-                <div className="sprint-card-loading">
+                <div className="grid min-h-[220px] place-items-center">
                   <Empty
                     image={<AppstoreOutlined />}
                     description={<Space orientation="vertical" size={4}>
@@ -291,7 +292,7 @@ export function PerformancePage() {
                   </Empty>
                 </div>
               ) : (
-                <div className="entity-card-grid">{pagedSuites.map(renderSuiteCard)}</div>
+                <div className={`entity-card-grid ${entityCardGridClass}`}>{pagedSuites.map(renderSuiteCard)}</div>
               )}
             </div>
             <div className="table-footer api-test-footer">

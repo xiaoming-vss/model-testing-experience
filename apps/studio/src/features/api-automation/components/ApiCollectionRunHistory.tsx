@@ -12,7 +12,19 @@ import { Alert, Button, Empty, Modal, Tag } from 'antd'
 
 import type { ApiEnvironment } from '@/features/api-automation/types'
 import type { ListResponse } from '@/shared/api/request'
-import styles from '@/shared/styles/run-view.module.css'
+import {
+  runHistoryItemClass,
+  runHistoryItemErrorClass,
+  runHistoryItemIdClass,
+  runHistoryItemLinkClass,
+  runHistoryItemMainClass,
+  runHistoryItemMetaClass,
+  runHistoryItemSideClass,
+  runHistoryItemTitleClass,
+  runHistoryLayoutClass,
+  runHistoryListClass,
+  runHistoryMoreClass,
+} from '@/shared/utils/surfaceClasses'
 
 type Props = {
   collectionRunHistoryOpen: boolean
@@ -40,9 +52,8 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
       onCancel={() => setCollectionRunHistoryOpen(false)}
       destroyOnHidden
       className="api-collection-run-history-modal"
-      rootClassName={styles.root}
     >
-      <div className="api-collection-run-history-layout">
+      <div className={runHistoryLayoutClass}>
         {collectionRunHistoryQuery.error ? (
           <Alert showIcon type="error" title={getErrorMessage(collectionRunHistoryQuery.error)} />
         ) : collectionRunHistoryQuery.isLoading ? (
@@ -50,7 +61,7 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
         ) : collectionRunHistory.length === 0 ? (
           <Empty description="暂无运行记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div className="api-collection-run-history-list">
+          <div className={runHistoryListClass}>
             {collectionRunHistory.map((item, index) => {
               const statusMeta = getExecutionStatusMeta(item.status)
               const isLoading = loadingCollectionRunHistoryId === item.collectionRunId
@@ -61,17 +72,17 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
                 <button
                   key={item.collectionRunId ?? `collection-run-${index}`}
                   type="button"
-                  className="api-collection-run-history-item"
+                  className={runHistoryItemClass}
                   onClick={() => handleOpenCollectionRunHistoryItem(item)}
                   disabled={Boolean(loadingCollectionRunHistoryId)}
                 >
-                  <div className="api-collection-run-history-item-main">
-                    <div className="api-collection-run-history-item-title">
+                  <div className={runHistoryItemMainClass}>
+                    <div className={runHistoryItemTitleClass}>
                       <strong>{formatTime(item.startedAt || item.createdAt || item.updatedAt)}</strong>
                       <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                       <Tag>{environmentName}</Tag>
                     </div>
-                    <div className="api-collection-run-history-item-meta">
+                    <div className={runHistoryItemMetaClass}>
                       <span>总数：{item.totalCount ?? 0}</span>
                       <span>成功：{item.successCount ?? 0}</span>
                       <span>失败：{item.failedCount ?? 0}</span>
@@ -80,17 +91,17 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
                       <span>耗时：{item.durationMs ?? 0} ms</span>
                       <span>结束：{formatTime(item.finishedAt)}</span>
                     </div>
-                    {item.errorMessage ? <div className="api-collection-run-history-item-error">{item.errorMessage}</div> : null}
+                    {item.errorMessage ? <div className={runHistoryItemErrorClass}>{item.errorMessage}</div> : null}
                   </div>
-                  <div className="api-collection-run-history-item-side">
-                    <span className="api-collection-run-history-item-id">{item.collectionRunId ?? '-'}</span>
-                    <span className="api-collection-run-history-item-link">{isLoading ? '加载中...' : '查看报告'}</span>
+                  <div className={runHistoryItemSideClass}>
+                    <span className={runHistoryItemIdClass}>{item.collectionRunId ?? '-'}</span>
+                    <span className={runHistoryItemLinkClass}>{isLoading ? '加载中...' : '查看报告'}</span>
                   </div>
                 </button>
               )
             })}
             {remainingCount > 0 ? (
-              <div className="api-collection-run-history-more">
+              <div className={runHistoryMoreClass}>
                 <Button
                   size="small"
                   loading={collectionRunHistoryQuery.isFetchingNextPage}

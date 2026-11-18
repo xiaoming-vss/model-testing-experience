@@ -6,6 +6,7 @@ import { getRequirementDocumentSummary, getRequirementDocumentTypeLabel, hasRequ
 import { normalizeRequirementId } from '@/utils/format'
 import { RequirementCodeSummary, RequirementCreatedTime } from './RequirementMetadata'
 import { EntityCard } from '@/shared/components/EntityCard'
+import { entityCardGridClass } from '@/shared/utils/surfaceClasses'
 
 export function RequirementCards<T extends Requirement & { sprintName: string }>({ requirements, renderActions, renderBinding }: {
   requirements: T[]
@@ -13,7 +14,7 @@ export function RequirementCards<T extends Requirement & { sprintName: string }>
   renderBinding?: (requirement: T) => ReactNode
 }) {
   const navigate = useNavigate()
-  return <div className="entity-card-grid requirements-card-grid" aria-label="需求列表">
+  return <div className={`entity-card-grid requirements-card-grid ${entityCardGridClass}`} aria-label="需求列表">
     {requirements.map(requirement => {
       const id = normalizeRequirementId(requirement)
       const openRequirement = () => {

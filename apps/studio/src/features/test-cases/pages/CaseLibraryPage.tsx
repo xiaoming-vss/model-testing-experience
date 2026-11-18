@@ -1,7 +1,6 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/case-import.module.css'
 import '@/shared/styles/list-table.css'
 import {
   AppstoreOutlined,
@@ -863,11 +862,11 @@ export function CaseLibraryPage() {
           ) : null}
 
           {!activeProjectId ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="请先选择项目" />
             </div>
           ) : sprintsQuery.error && sprints.length === 0 ? null : !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="当前项目下暂无迭代" />
             </div>
           ) : (
@@ -913,11 +912,11 @@ export function CaseLibraryPage() {
                           onClick={() => suitesQuery.refetch()}>重试测试集</ProjectActionButton>} />
                     ) : null}
                     {suitesQuery.isLoading ? (
-                      <div className="sprint-card-loading max-[1180.01px]:min-h-24">
+                      <div className="grid min-h-[220px] place-items-center max-[1180.01px]:min-h-24">
                         <Empty description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       </div>
                     ) : suitesQuery.error && suites.length === 0 ? null : visibleSuites.length === 0 ? (
-                      <div className="sprint-card-loading max-[1180.01px]:min-h-24">
+                      <div className="grid min-h-[220px] place-items-center max-[1180.01px]:min-h-24">
                         <Empty description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
                           {suiteFilter.trim() ? (
                             <ProjectActionButton action="read" onClick={() => setSuiteFilter('')}>清除测试集搜索</ProjectActionButton>
@@ -1054,7 +1053,7 @@ export function CaseLibraryPage() {
                     {hasCaseFilters ? <ProjectActionButton action="read" size="small" type="link" onClick={clearCaseFilters}>清除用例筛选</ProjectActionButton> : null}
                   </div>
                 </div>
-                <div className="table-body-scroll sprint-card-scroll case-library-table-scroll">
+                <div className="table-body-scroll flex min-h-0 flex-col p-4 case-library-table-scroll">
                   {casesQuery.error ? (
                     <Alert showIcon type="error" title="用例加载失败"
                       description={getErrorMessage(casesQuery.error)}
@@ -1062,11 +1061,11 @@ export function CaseLibraryPage() {
                         onClick={() => casesQuery.refetch()}>重试用例</ProjectActionButton>} />
                   ) : null}
                   {casesQuery.isLoading ? (
-                    <div className="sprint-card-loading">
+                    <div className="grid min-h-[220px] place-items-center">
                       <Empty description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                     </div>
                   ) : casesQuery.isError && cases.length === 0 ? null : cases.length === 0 ? (
-                    <div className="sprint-card-loading">
+                    <div className="grid min-h-[220px] place-items-center">
                       <Empty
                         image={<AppstoreOutlined />}
                         description={
@@ -1304,13 +1303,18 @@ export function CaseLibraryPage() {
         confirmLoading={importFunctionCasesMutation.isPending}
         okButtonProps={{ className: 'action-btn-save' }}
         onOk={handleImportFunctionCases}
-        rootClassName={cx('api-case-import-modal-root', styles.root)}
+        rootClassName={cx('api-case-import-modal-root')}
         className="api-case-import-modal-shell"
+        style={{ maxWidth: 'calc(100vw - 32px)' }}
+        classNames={{
+          container: 'flex max-h-[calc(100vh-40px)] flex-col overflow-hidden',
+          body: 'min-h-0 flex-1 overflow-hidden',
+        }}
         destroyOnHidden
       >
-        <div className={styles.modal}>
+        <div className="flex max-h-[calc(100vh-148px)] w-full min-w-0 flex-col gap-3">
           <Segmented
-            className={styles.mode}
+            className="w-full"
             value={caseImportMode}
             options={[
               { label: '上传 JSON', value: 'upload' },
@@ -1319,7 +1323,7 @@ export function CaseLibraryPage() {
             onChange={(value) => setCaseImportMode(value as CaseImportMode)}
           />
           {caseImportMode === 'upload' ? (
-            <div className={styles.upload}>
+            <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
               <Upload.Dragger
                 accept=".json"
                 maxCount={1}
@@ -1346,15 +1350,15 @@ export function CaseLibraryPage() {
               </Upload.Dragger>
             </div>
           ) : (
-            <div className={styles.editor}>
-              <div className={styles.hint}>
+            <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
+              <div className="text-xs leading-[18px] text-[var(--tp-text-secondary)]">
                 直接粘贴 JSON 内容，提交时前端会将文本包装成 `.json` 文件上传。
               </div>
               <TextCodeEditor
                 value={importJsonText}
                 onChange={setImportJsonText}
                 language="json"
-                minHeight={280}
+                height="clamp(240px, 48vh, 420px)"
               />
             </div>
           )}

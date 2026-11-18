@@ -129,7 +129,7 @@ Bug 列表。项目选择、顶部全局迭代选择与个人设置保留。Bug 
 ## 列表页卡片视图（测试单 / API 测试 / UI 测试 / 性能测试）
 
 2026-11-16 按用户选型，测试单、API 测试集、UI 测试集从表格改为与需求 / 迭代一致的实体卡片；性能测试沿用同一骨架。这些页面共用
-`shared/components/EntityCard.tsx` 与 `shared/styles/entity-card.css`；列表板面和页头分别由 `ListSurface`、`PageToolbar` 收敛，页面只提供主体内容与操作，不再各写卡片表面。
+`shared/components/EntityCard.tsx`（卡片表面 utility 内联）与 `shared/utils/surfaceClasses.ts` 的实体卡片网格/描述类串；列表板面和页头分别由 `ListSurface`、`PageToolbar` 收敛，页面只提供主体内容与操作，不再各写卡片表面。
 
 - 网格：`repeat(auto-fill, minmax(min(100%, 328px), 1fr))`、16px 间距、卡片最小高度 218px、12px 圆角、`--srf-card` 表面与 `--srf-card-border` 描边；悬停只改变描边、阴影与 2px 位移。
 - 结构：标题行（14.5px / 650、单行省略，标题链接进入详情；右侧可放状态胶囊）→ 主体 → 两列 meta 块（标签 9.5px / 值 11.5px，`--srf-hover` 底、8px 圆角）→ 43px footer（左侧最近更新时间，右侧操作）。

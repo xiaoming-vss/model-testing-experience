@@ -41,18 +41,18 @@ export function BugListPage() {
           ) : null}
 
           {!activeProjectId ? (
-            <div className="sprint-card-loading">
+            <div className="grid min-h-[220px] place-items-center">
               <Empty description="请先选择项目" />
             </div>
           ) : (
             <div className="bugs-table-card tp-list-body flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
               <div className="table-body-scroll bugs-table-scroll tp-list-scroll min-h-0 flex-1 overflow-auto">
                 {bugsQuery.isLoading ? (
-                  <div className="sprint-card-loading">
+                  <div className="grid min-h-[220px] place-items-center">
                     <Empty description="Bug 列表加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   </div>
                 ) : bugs.length === 0 ? (
-                  <div className="sprint-card-loading">
+                  <div className="grid min-h-[220px] place-items-center">
                     <Empty description="当前筛选范围内还没有 Bug" />
                   </div>
                 ) : (
