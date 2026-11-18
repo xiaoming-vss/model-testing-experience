@@ -37,7 +37,7 @@ export function ApiCollectionToolbar({
   onRunCollection,
 }: Props) {
   return (
-    <div className="api-wb-toolbar flex flex-none flex-wrap items-center justify-between gap-2.5 px-4 py-2.5">
+    <div className="api-wb-toolbar flex flex-none flex-wrap items-center justify-between gap-2.5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-4 py-2.5">
       <div className="api-wb-toolbar-main flex min-w-0 flex-wrap items-center gap-2.5">
         <Button
           type="text"
@@ -48,18 +48,18 @@ export function ApiCollectionToolbar({
           onClick={onBack}
         />
         <h1 className="api-wb-toolbar-title m-0 flex min-w-0 flex-wrap items-baseline gap-1.5 text-[14px] font-bold leading-[22px] text-[var(--srf-text)]">
-          <span className="api-wb-toolbar-label">Collection 详情:</span>
-          <span className="api-wb-toolbar-name">{collectionName}</span>
-          <span className="api-wb-toolbar-path">/ {requirementName} / {sprintName}</span>
+          <span className="api-wb-toolbar-label font-semibold text-[var(--srf-text-secondary)]">Collection 详情:</span>
+          <span className="api-wb-toolbar-name text-[var(--srf-text)]">{collectionName}</span>
+          <span className="api-wb-toolbar-path text-[12px] font-medium text-[var(--srf-text-muted)]">/ {requirementName} / {sprintName}</span>
         </h1>
         <span
-          className={`api-wb-toolbar-env${environmentBaseUrl ? '' : ' empty'}`}
+          className="api-wb-toolbar-env inline-flex max-w-[320px] items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-chip)] px-2 py-0.5 font-mono text-[11px] leading-[18px] text-[var(--srf-chip-text)]"
           title={environmentBaseUrl || '当前项目还没有可用环境'}
         >
-          <span className="api-wb-toolbar-env-dot" aria-hidden="true" />
+          <span className={`api-wb-toolbar-env-dot h-1.5 w-1.5 flex-none rounded-full ${environmentBaseUrl ? 'bg-[var(--srf-result-passed)]' : 'bg-[var(--srf-result-skipped)]'}`} aria-hidden="true" />
           {environmentBaseUrl || '未选择环境'}
         </span>
-        <span className="api-wb-toolbar-updated">更新 {updatedAt}</span>
+        <span className="api-wb-toolbar-updated text-[12px] text-[var(--srf-text-muted)]">更新 {updatedAt}</span>
       </div>
 
       <div className="api-wb-toolbar-actions flex flex-wrap items-center gap-2">

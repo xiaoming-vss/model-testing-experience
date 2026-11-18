@@ -131,7 +131,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 项目 / 迭代看板 | `features/projects/styles/projects-overview.module.css` + `sprint-overview.module.css`；页面网格与断点在 Projects/Sprint 页面 utility |
 | 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css` + `interface-editor.module.css` |
 | 测试单 | `features/test-orders/styles/test-orders-list.module.css` + `test-order-workspace.module.css` + `test-order-graph-execution.module.css`；工作台骨架与判定区排版在页面/组件 utility |
-| API 测试 | `features/api-automation/styles/api-list.module.css` + `api-detail-shell.module.css` + `api-detail-request.module.css` + `api-detail-rules.module.css`；详情两栏/顶栏/用例行布局在页面与组件 utility |
+| API 测试 | `features/api-automation/styles/api-detail-shell.module.css` + `api-detail-rules.module.css`；列表、详情两栏、顶栏、用例行、请求面板与后置操作布局在页面与组件 utility |
 | UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css` + `ui-detail-inspector.module.css`；列表/详情页面布局在组件 utility |
 | 性能测试 | 复用 `tp-*` 与 `shared/styles/entity-card.css`；新样式使用 Tailwind utility，不新增页面级全局 CSS |
 | TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
@@ -214,17 +214,17 @@ section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/ui-suit
 - 该测试同时锁定了三个文本域的 `aria-label`（前置条件 / 操作步骤 / 预期结果）与配对行为，改表单时不要动。
   `CaseLibraryPage.test.tsx` 依赖的保存按钮文案是「保存变更」（不是「保存」）。
 
-### API 测试集详情页（`detail-workbench-v2.css` / `detail-inspector-v2.css` / `detail-request-panels-v2.css`）
+### API 测试集详情页（`api-detail-shell.module.css` / `api-detail-rules.module.css`）
 
-API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 测试集名 + 需求 + 迭代 / 当前环境 / 运行记录 /
-运行测试集）+ 两栏（左栏用例列表卡片、右栏请求编辑与运行结果卡片）。样式按职责拆三个文件，都由
-`ApiCollectionDetailPage` 引入，选择器互不重叠：`detail-workbench-v2.css` 是板面、顶栏与左栏（361 行），
-`detail-inspector-v2.css` 是右栏的请求地址条与控制台（579 行），`detail-request-panels-v2.css` 是右栏
-「请求头 / 请求体」两个页签的面板（`api-wb-hdr-*` / `api-wb-body-*`）。页面结构也按同一刀切下去：
-`components/ApiCollectionToolbar.tsx`、`components/ApiCaseExplorer.tsx`、`components/ApiCaseRunConsole.tsx`
-各自负责一段，请求头与请求体两个页签分别由 `components/ApiCaseHeadersPanel.tsx`、
-`components/ApiCaseBodyPanel.tsx` 承担，`components/ApiCaseEditor.tsx` 只留请求地址条与页签编排；
-三段配置（环境 / 模板插入 / 后置操作）共用的 props 形状集中在 `components/apiCaseEditorProps.ts`。
+API 测试列表点测试集名称进来的页面：顶栏（返回 / 测试集名 + 需求 + 迭代 / 当前环境 / 运行记录 /
+运行测试集）+ 两栏（左栏用例列表卡片、右栏请求编辑与运行结果卡片）。阶段 30 后页面布局与可迁移皮肤全部在
+组件 utility；`api-detail-shell.module.css` 只留用例名称行、方法 Select、路径输入、Tabs、键值输入、请求头表
+与请求体 CodeMirror 的 AntD 深层规则，`api-detail-rules.module.css` 只留环境弹层、AntD 卡片/按钮、规则弹窗与
+JSON 编辑器玻璃外壳。页面结构按职责拆分：`components/ApiCollectionToolbar.tsx`、`components/ApiCaseExplorer.tsx`、
+`components/ApiCaseRunConsole.tsx` 各自负责一段，请求头与请求体两个页签分别由
+`components/ApiCaseHeadersPanel.tsx`、`components/ApiCaseBodyPanel.tsx` 承担，`components/ApiCaseEditor.tsx`
+只留请求地址条与页签编排；三段配置（环境 / 模板插入 / 后置操作）共用的 props 形状集中在
+`components/apiCaseEditorProps.ts`。
 
 - **左栏与右栏的类名换成 `api-wb-*`，但页面根节点仍保留 `api-collection-detail-page`**：`.api-case-sidebar`、
   `.api-case-nav-item`、`.api-case-editor-shell` 这一族类名同时被 UI 测试详情页与用例库使用，它们的规则
@@ -245,9 +245,8 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   `compressDocument()`；`toolbar={null}` 表示外壳不自带工具条，动作条由请求体面板画在编辑器之外。旧的
   `api-body-type-segmented` 与 `json-editor-toolbar-row/-side/-type/-link` 规则随旧实现从 API 详情样式
   删除（全仓库再无引用；阶段 7 后该层由 `api-detail-shell.module.css` 等 Module 持有）。
-- 覆盖全局按钮皮肤与输入框皮肤的规则必须按 S14 的写法带 `.app-shell-macos` +
-  `.api-collection-workbench-page` 前缀与 `!important`，否则与全局皮肤同权重、只靠 import 顺序决胜。
-  `styles/detailRequestPanels.test.ts` 锁住这条。
+- 请求面板不再覆盖全局按钮调色板；按钮外观由 `app/styles/buttons.css` 的公共层持有。
+  `styles/detailRequestPanels.test.ts` 锁住“无按钮调色覆盖”和 `--srf-*` tone token 契约。
 - 状态条与徽标都是真实计算结果：合法性用与校验规则同一份判断，大小按 UTF-8 字节数，行 / 列来自编辑器光标；
   结论色走 `.tone-green` / `.tone-red` 色盘。
 

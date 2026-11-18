@@ -14,11 +14,11 @@ export const ENV_VAR_TOKEN_SUFFIX = '}}'
 export const builtinTemplateFunctions = sharedBuiltinTemplateFunctions
 
 export const methodOptions: SelectProps['options'] = [
-  { label: <span className="api-method-label api-method-get">GET</span>, value: 'GET' },
-  { label: <span className="api-method-label api-method-post">POST</span>, value: 'POST' },
-  { label: <span className="api-method-label api-method-put">PUT</span>, value: 'PUT' },
-  { label: <span className="api-method-label api-method-delete">DELETE</span>, value: 'DELETE' },
-  { label: <span className="api-method-label api-method-patch">PATCH</span>, value: 'PATCH' },
+  { label: <span className="api-method-label font-bold text-[var(--app-http-method-get)]">GET</span>, value: 'GET' },
+  { label: <span className="api-method-label font-bold text-[var(--app-http-method-post)]">POST</span>, value: 'POST' },
+  { label: <span className="api-method-label font-bold text-[var(--app-http-method-put)]">PUT</span>, value: 'PUT' },
+  { label: <span className="api-method-label font-bold text-[var(--app-http-method-delete)]">DELETE</span>, value: 'DELETE' },
+  { label: <span className="api-method-label font-bold text-[var(--app-http-method-patch)]">PATCH</span>, value: 'PATCH' },
 ]
 
 export const bodyTypeOptions: Array<{ label: string; value: NonNullable<ApiCase['bodyType']> }> = [

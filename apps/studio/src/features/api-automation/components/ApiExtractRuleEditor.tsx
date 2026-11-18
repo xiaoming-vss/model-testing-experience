@@ -51,7 +51,7 @@ export function ApiExtractRuleEditor({ extractRuleModalOpen, editingExtractRule,
         <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入规则名称' }]}>
           <Input maxLength={120} />
         </Form.Item>
-        <div className="api-rule-form-grid">
+        <div className="api-rule-form-grid grid grid-cols-2 gap-x-3 max-narrow:grid-cols-1">
           <Form.Item name="enabled" label="启用" valuePropName="checked">
             <Switch />
           </Form.Item>
@@ -59,7 +59,7 @@ export function ApiExtractRuleEditor({ extractRuleModalOpen, editingExtractRule,
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
         </div>
-        <div className="api-rule-form-grid">
+        <div className="api-rule-form-grid grid grid-cols-2 gap-x-3 max-narrow:grid-cols-1">
           <Form.Item name="source" label="来源" rules={[{ required: true, message: '请选择来源' }]}>
             <Select options={extractSourceOptions} />
           </Form.Item>

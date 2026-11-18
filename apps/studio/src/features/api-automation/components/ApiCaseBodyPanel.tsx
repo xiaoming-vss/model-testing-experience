@@ -61,16 +61,16 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
   }
 
   return (
-    <div className="api-wb-body-panel" data-tab-motion-scope>
-      <div className="api-wb-body-bar">
-        <div className="api-wb-body-types" role="tablist" data-tab-motion-scoped aria-label="请求体类型">
+    <div className="api-wb-body-panel -mx-4 flex min-w-0 flex-col" data-tab-motion-scope>
+      <div className="api-wb-body-bar flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-card-border)] bg-[var(--srf-hover)] px-4 py-1">
+        <div className="api-wb-body-types flex flex-wrap items-center gap-1" role="tablist" data-tab-motion-scoped aria-label="请求体类型">
           {bodyTypeOptions.map((option) => (
             <button
               key={option.value}
               type="button"
               role="tab"
               aria-selected={option.value === bodyType}
-              className={`api-wb-body-type${option.value === bodyType ? ' active' : ''}`}
+              className={`api-wb-body-type cursor-pointer rounded-[4px] border-0 px-2 py-1 text-[12px] leading-4 transition-colors hover:text-[var(--srf-text)]${option.value === bodyType ? ' active bg-[var(--srf-card)] font-semibold text-[var(--srf-accent)]' : ' bg-transparent text-[var(--srf-text-secondary)]'}`}
               onClick={() => caseForm.setFieldValue('bodyType', option.value)}
             >
               {option.label}
@@ -78,10 +78,10 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
           ))}
         </div>
 
-        <div className="api-wb-body-actions">
+        <div className="api-wb-body-actions flex flex-wrap items-center gap-1">
           <button
             type="button"
-            className="api-wb-body-action"
+            className="api-wb-body-action inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-[var(--srf-chip)] px-2 py-1 text-[12px] leading-4 text-[var(--srf-text)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
             disabled={bodyType !== 'json'}
             onClick={() => guardJsonAction(handleFormatBodyJson, '格式化')}
           >
@@ -90,7 +90,7 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
           </button>
           <button
             type="button"
-            className="api-wb-body-action"
+            className="api-wb-body-action inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-[var(--srf-chip)] px-2 py-1 text-[12px] leading-4 text-[var(--srf-text)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
             disabled={bodyType !== 'json'}
             onClick={() => guardJsonAction(handleCompressBodyJson, '压缩')}
           >
@@ -103,16 +103,16 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
               placement: 'bottomLeft',
               onInsert: insertTemplateTextIntoJson,
               trigger: (
-                <button type="button" className="api-wb-body-action is-accent">
+                <button type="button" className="api-wb-body-action is-accent inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-transparent px-2 py-1 text-[12px] leading-4 text-[var(--srf-accent)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-accent)]">
                   <CodeOutlined />
                   插入变量 {'{{var}}'}
                 </button>
               ),
             })
             : null}
-          <span className="api-wb-body-action-divider" aria-hidden="true" />
+          <span className="api-wb-body-action-divider h-3 w-px bg-[var(--srf-card-border)]" aria-hidden="true" />
           {bodyType === 'json' ? (
-            <span className={`api-wb-body-validity tone-${jsonValid ? 'green' : 'red'}`}>
+            <span className={`api-wb-body-validity inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-1 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-${jsonValid ? 'green' : 'red'}`}>
               {jsonValid ? <CheckCircleFilled /> : <WarningFilled />}
               {jsonValid ? 'JSON Schema 合法' : 'JSON 语法错误'}
             </span>
@@ -165,32 +165,32 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
       ) : null}
 
       </div>
-      <div className="api-wb-body-status">
-        <div className="api-wb-body-status-main">
+      <div className="api-wb-body-status flex flex-wrap items-center justify-between gap-2 border-t border-[var(--srf-divider)] bg-[var(--srf-hover)] px-4 py-1 text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">
+        <div className="api-wb-body-status-main flex flex-wrap items-center gap-3">
           {bodyType === 'json' ? (
             jsonValid ? (
-              <span className="tone-green">
+              <span className="tone-green inline-flex items-center gap-1 font-mono font-medium text-[var(--srf-tone-text)]">
                 <CheckCircleFilled />
                 无语法错误
               </span>
             ) : (
-              <span className="tone-red">
+              <span className="tone-red inline-flex items-center gap-1 font-mono font-medium text-[var(--srf-tone-text)]">
                 <WarningFilled />
                 存在语法错误
               </span>
             )
           ) : (
-            <span className="is-muted">无需校验</span>
+            <span className="is-muted text-[var(--srf-text-muted)]">无需校验</span>
           )}
-          <span className="is-muted">大小: {sizeText}</span>
-          <span className="is-muted">格式: {bodyType === 'json' ? 'JSON' : '文本'}</span>
-          <span className="is-muted">编码: UTF-8</span>
+          <span className="is-muted text-[var(--srf-text-muted)]">大小: {sizeText}</span>
+          <span className="is-muted text-[var(--srf-text-muted)]">格式: {bodyType === 'json' ? 'JSON' : '文本'}</span>
+          <span className="is-muted text-[var(--srf-text-muted)]">编码: UTF-8</span>
         </div>
-        <div className="api-wb-body-status-side">
+        <div className="api-wb-body-status-side flex flex-wrap items-center gap-3">
           {bodyType === 'json' ? (
-            <span>行 {cursor.line}, 列 {cursor.column} (光标聚焦)</span>
+            <span className="font-mono">行 {cursor.line}, 列 {cursor.column} (光标聚焦)</span>
           ) : null}
-          <span className="is-muted">空格: {INDENT_WIDTH}</span>
+          <span className="is-muted text-[var(--srf-text-muted)]">空格: {INDENT_WIDTH}</span>
         </div>
       </div>
     </div>

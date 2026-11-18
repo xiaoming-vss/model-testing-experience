@@ -62,26 +62,26 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
   return (
     <Form.List name="headers">
       {(fields, { add, remove }) => (
-        <div className="api-wb-hdr-panel">
-          <div className="api-wb-hdr-toolbar">
-            <div className="api-wb-hdr-toolbar-main">
-              <span className="api-wb-hdr-toolbar-label">快捷注入:</span>
+        <div className="api-wb-hdr-panel -mx-4 flex min-w-0 flex-col">
+          <div className="api-wb-hdr-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-card-border)] bg-[var(--srf-hover)] px-4 py-2">
+            <div className="api-wb-hdr-toolbar-main flex flex-wrap items-center gap-1.5">
+              <span className="api-wb-hdr-toolbar-label mr-1 text-[11px] font-medium leading-4 text-[var(--srf-text-muted)]">快捷注入:</span>
               {headerQuickInjectPresets.map((preset) => (
                 <button
                   key={preset.key}
                   type="button"
-                  className="api-wb-hdr-preset"
+                  className="api-wb-hdr-preset inline-flex cursor-pointer items-center rounded-[4px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-2 py-0.5 text-[11px] leading-4 text-[var(--srf-chip-text)] transition-colors hover:border-[var(--srf-accent-border)] hover:bg-[var(--srf-accent-soft)] hover:text-[var(--srf-accent-strong)]"
                   onClick={() => add({ enabled: true, key: preset.key, value: preset.value })}
                 >
-                  <span className="api-wb-hdr-preset-plus">+</span>
+                  <span className="api-wb-hdr-preset-plus mr-1 font-bold text-[var(--srf-accent)]">+</span>
                   {preset.label}
                 </button>
               ))}
             </div>
-            <div className="api-wb-hdr-toolbar-side">
+            <div className="api-wb-hdr-toolbar-side flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                className="api-wb-hdr-tool"
+                className="api-wb-hdr-tool inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-transparent px-2 py-1 text-[11px] leading-4 text-[var(--srf-text-secondary)] transition-colors hover:bg-[var(--srf-card)] hover:text-[var(--srf-accent-strong)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
                 onClick={() => {
                   setRawEditorText(filledRows.map((row) => `${row.key ?? ''}: ${row.value ?? ''}`).join('\n'))
                   setRawEditorOpen(true)
@@ -90,10 +90,10 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                 <CodeOutlined />
                 批量编辑 / 格式转换 (RAW)
               </button>
-              <span className="api-wb-hdr-tool-divider" aria-hidden="true" />
+              <span className="api-wb-hdr-tool-divider h-3 w-px bg-[var(--srf-card-border)]" aria-hidden="true" />
               <button
                 type="button"
-                className="api-wb-hdr-tool is-danger"
+                className="api-wb-hdr-tool is-danger inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-transparent px-2 py-1 text-[11px] leading-4 text-[var(--srf-text-secondary)] transition-colors hover:bg-[var(--srf-card)] hover:text-[var(--srf-danger)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
                 disabled={filledRows.length === enabledCount}
                 onClick={() => applyHeaderRows(filledRows.filter((row) => row.enabled !== false))}
               >
@@ -104,16 +104,16 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
           </div>
 
           <div className="api-wb-hdr-table-wrap">
-            <table className="api-wb-hdr-table">
+            <table className="api-wb-hdr-table w-full table-fixed border-collapse">
               <colgroup>
-                <col className="api-wb-hdr-col-check" />
-                <col className="api-wb-hdr-col-key" />
+                <col className="api-wb-hdr-col-check w-10" />
+                <col className="api-wb-hdr-col-key w-[26%]" />
                 <col className="api-wb-hdr-col-value" />
-                <col className="api-wb-hdr-col-actions" />
+                <col className="api-wb-hdr-col-actions w-[84px]" />
               </colgroup>
               <thead>
                 <tr>
-                  <th className="api-wb-hdr-cell-check">
+                  <th className="api-wb-hdr-cell-check text-center">
                     <Checkbox
                       aria-label="全选 / 反选请求头"
                       checked={filledRows.length > 0 && enabledCount === filledRows.length}
@@ -126,7 +126,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                   </th>
                   <th>请求头名称 (Header Key)</th>
                   <th>请求头值 (Header Value)</th>
-                  <th className="api-wb-hdr-cell-actions">操作</th>
+                  <th className="api-wb-hdr-cell-actions text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,8 +135,8 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                   const { key: fieldKey, ...fieldProps } = field
 
                   return (
-                    <tr key={fieldKey} className="api-wb-hdr-row">
-                      <td className="api-wb-hdr-cell-check">
+                    <tr key={fieldKey} className="api-wb-hdr-row group hover:bg-[var(--srf-hover)]">
+                      <td className="api-wb-hdr-cell-check text-center">
                         <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" noStyle>
                           <Checkbox aria-label="启用该请求头" />
                         </Form.Item>
@@ -147,7 +147,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                         </Form.Item>
                       </td>
                       <td>
-                        <div className="api-wb-hdr-value-cell">
+                        <div className="api-wb-hdr-value-cell flex items-center gap-1">
                           <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
                             <Input
                               className="api-wb-hdr-input"
@@ -166,8 +166,8 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                           })}
                         </div>
                       </td>
-                      <td className="api-wb-hdr-cell-actions">
-                        <div className="api-wb-hdr-row-actions">
+                      <td className="api-wb-hdr-cell-actions text-right">
+                        <div className="api-wb-hdr-row-actions flex items-center justify-end gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                           <Tooltip title="复制当前行">
                             <Button
                               type="text"
@@ -196,8 +196,8 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                     </tr>
                   )
                 })}
-                <tr className="api-wb-hdr-row is-draft">
-                  <td className="api-wb-hdr-cell-check">
+                <tr className="api-wb-hdr-row is-draft bg-[var(--srf-hover)]">
+                  <td className="api-wb-hdr-cell-check text-center">
                     <Checkbox aria-label="启用新请求头" disabled />
                   </td>
                   <td>
@@ -228,8 +228,8 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                       }}
                     />
                   </td>
-                  <td className="api-wb-hdr-cell-actions">
-                    <span className="api-wb-hdr-draft-hint">回车添加</span>
+                  <td className="api-wb-hdr-cell-actions text-right">
+                    <span className="api-wb-hdr-draft-hint mr-2 text-[11px] text-[var(--srf-text-muted)]">回车添加</span>
                   </td>
                 </tr>
               </tbody>
@@ -253,7 +253,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
               handleRawEditorConfirm()
             }}
           >
-            <p className="api-wb-hdr-raw-tip">每行一个请求头，格式为「名称: 值」；应用后按输入顺序替换当前请求头。</p>
+            <p className="api-wb-hdr-raw-tip mb-2 text-[12px] text-[var(--srf-text-secondary)]">每行一个请求头，格式为「名称: 值」；应用后按输入顺序替换当前请求头。</p>
             <Input.TextArea
               rows={8}
               aria-label="请求头批量编辑内容"

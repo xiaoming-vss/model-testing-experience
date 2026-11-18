@@ -65,11 +65,11 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
   const remainingCount = cases.length - visibleCases.length
 
   return (
-    <section className="api-wb-explorer flex flex-col max-[1180.01px]:max-h-[460px]" aria-label="用例列表">
-      <div className="api-wb-explorer-head flex items-center justify-between gap-2 px-3 py-2.5">
+    <section className="api-wb-explorer flex min-h-0 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] max-[1180.01px]:max-h-[460px]" aria-label="用例列表">
+      <div className="api-wb-explorer-head flex items-center justify-between gap-2 border-b border-[var(--srf-divider)] px-3 py-2.5">
         <span className="api-wb-explorer-title inline-flex items-center gap-1.5 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">
           用例列表
-          <span className="api-wb-explorer-count">{cases.length}</span>
+          <span className="api-wb-explorer-count rounded-full bg-[var(--srf-count-badge)] px-1.5 font-mono text-[11px] font-medium leading-[18px] text-[var(--srf-accent-strong)]">{cases.length}</span>
         </span>
         <span className="api-wb-explorer-actions inline-flex items-center gap-0.5">
           <ProjectActionButton
@@ -95,7 +95,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
         </span>
       </div>
 
-      <div className="api-wb-explorer-search px-3 py-2.5">
+      <div className="api-wb-explorer-search border-b border-[var(--srf-divider)] px-3 py-2.5">
         <Input
           allowClear
           value={search}
@@ -136,7 +136,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
               return (
                 <div
                   key={caseId}
-                  className={`api-wb-case-item relative flex items-center justify-between gap-2 px-2 py-1.5 tone-${tone}${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
+                  className={`api-wb-case-item group relative flex items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border px-2 py-1.5 tone-${tone}${selected ? ' selected border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] before:absolute before:-left-px before:top-1/2 before:h-[22px] before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--srf-accent)] before:content-[""]' : ' border-transparent hover:border-[var(--srf-card-border)] hover:bg-[var(--srf-hover)]'}${draggingCaseId === caseId ? ' dragging opacity-50' : ''}${canReorder ? ' can-drag cursor-grab' : ' cursor-pointer'}`}
                   role="button"
                   tabIndex={0}
                   title={path}
@@ -162,11 +162,11 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                   }}
                 >
                   <span className="api-wb-case-item-head flex min-w-0 flex-auto items-center gap-1.5">
-                    <span className="api-wb-case-method">{item.method}</span>
+                    <span className="api-wb-case-method flex-none rounded-[4px] border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-[5px] font-mono text-[10px] font-bold leading-4 text-[var(--srf-tone-text)]">{item.method}</span>
                     <span className="api-wb-case-item-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-[18px] text-[var(--srf-text)]">{item.name}</span>
-                    {isDraft ? <span className="api-wb-case-draft">草稿</span> : null}
+                    {isDraft ? <span className="api-wb-case-draft rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 text-[10px] leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))]">草稿</span> : null}
                   </span>
-                  <span className="api-wb-case-item-actions">
+                  <span className={`api-wb-case-item-actions flex-none transition-opacity duration-150 ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
                     <Popconfirm
                       title={isDraft ? '确认丢弃这个未保存用例？' : '确认删除该用例？'}
                       onConfirm={() => {

@@ -78,30 +78,30 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
     <div className={cx('api-wb-console flex h-full flex-col overflow-hidden bg-[var(--srf-hover)]', styles.root)} data-tab-motion-scope>
       <div className="api-wb-console-banner flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-divider)] bg-[var(--srf-card)] px-4 py-2">
         <div className="api-wb-console-banner-main flex min-w-0 flex-wrap items-center gap-2.5">
-          <span className="api-wb-console-title">请求结果</span>
-          <span className={`api-wb-status tone-${tone}`}>
-            <span className="api-wb-status-dot" aria-hidden="true" />
+          <span className="api-wb-console-title text-[12px] font-bold text-[var(--srf-text)]">请求结果</span>
+          <span className={`api-wb-status inline-flex items-center gap-1.5 rounded-full border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-${tone}`}>
+            <span className="api-wb-status-dot h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
             {statusCode ? `${statusCode} · ` : ''}
             {statusMeta.label}
           </span>
           <RunWaitingReason status={status} />
           <span className="api-wb-console-meta flex flex-wrap items-center gap-2.5 text-[11px] text-[var(--srf-text-muted)]">
-            <span>耗时 <strong>{result.durationMs ?? 0} ms</strong></span>
-            <span>大小 <strong>{responseSize}</strong></span>
-            <span>环境 <strong>{environmentName}</strong></span>
-            <span>提取失败 <strong>{failedExtractCount}</strong></span>
+            <span>耗时 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{result.durationMs ?? 0} ms</strong></span>
+            <span>大小 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{responseSize}</strong></span>
+            <span>环境 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{environmentName}</strong></span>
+            <span>提取失败 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{failedExtractCount}</strong></span>
           </span>
         </div>
         <div className="api-wb-console-verdict">
           {canStop ? <StopRunButton kind="api-case" runId={getApiCaseRunId(result)} status={status} /> : null}
           {assertResults.length === 0 ? (
-            <span className="api-wb-assert-summary tone-slate">没有断言规则</span>
+            <span className="api-wb-assert-summary rounded-full border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-slate">没有断言规则</span>
           ) : failedAssertCount === 0 ? (
-            <span className="api-wb-assert-summary tone-green">
+            <span className="api-wb-assert-summary rounded-full border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-green">
               断言全部通过 ({passedAssertCount}/{assertResults.length})
             </span>
           ) : (
-            <span className="api-wb-assert-summary tone-red">
+            <span className="api-wb-assert-summary rounded-full border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-red">
               断言失败 {failedAssertCount}/{assertResults.length}
             </span>
           )}
@@ -109,7 +109,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
       </div>
 
       {result.errorMessage ? (
-        <Alert showIcon type="error" title={result.errorMessage} className="api-wb-console-alert" />
+        <Alert showIcon type="error" title={result.errorMessage} className="api-wb-console-alert mx-4 mt-2.5" />
       ) : null}
 
       <div className="api-wb-console-tabs flex flex-wrap items-center gap-4 border-b border-[var(--srf-divider)] bg-[var(--srf-card)] px-4" role="tablist" data-tab-motion-scoped>
@@ -119,11 +119,11 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
             type="button"
             role="tab"
             aria-selected={view === tab.value}
-            className={`api-wb-console-tab${view === tab.value ? ' active' : ''}`}
+            className={`api-wb-console-tab inline-flex cursor-pointer items-center gap-1.5 border-0 border-b-2 bg-transparent py-2 text-[12px] transition-colors hover:text-[var(--srf-text)]${view === tab.value ? ' active border-b-[var(--srf-accent)] font-semibold text-[var(--srf-accent)]' : ' border-b-transparent text-[var(--srf-text-secondary)]'}`}
             onClick={() => onViewChange(tab.value)}
           >
             {tab.label}
-            {tab.count > 0 ? <span className="api-wb-console-tab-count">{tab.count}</span> : null}
+            {tab.count > 0 ? <span className="api-wb-console-tab-count rounded-full bg-[var(--srf-chip)] px-[5px] font-mono text-[10px] leading-4 text-[var(--srf-text-secondary)]">{tab.count}</span> : null}
           </button>
         ))}
       </div>
@@ -134,12 +134,12 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
 
       <div className="api-wb-console-foot flex flex-wrap items-center gap-3.5 border-t border-[var(--srf-divider)] bg-[var(--srf-card)] px-4 py-2">
         {assertResults.length === 0 ? (
-          <span className="api-wb-console-foot-empty">没有断言结果</span>
+          <span className="api-wb-console-foot-empty text-[11px] text-[var(--srf-text-muted)]">没有断言结果</span>
         ) : (
           assertResults.map((item, index) => (
             <span
               key={item.assertRuleId ?? index}
-              className={`api-wb-console-foot-item${item.success ? '' : ' failed'}`}
+              className={`api-wb-console-foot-item text-[11px] ${item.success ? 'text-[var(--srf-result-passed)]' : 'failed text-[var(--srf-result-failed)]'}`}
             >
               {item.name ?? `断言 ${index + 1}`}（{item.success ? 'PASS' : 'FAIL'}）
             </span>

@@ -38,7 +38,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
 import shellStyles from '../styles/api-detail-shell.module.css'
-import requestStyles from '../styles/api-detail-request.module.css'
 import rulesStyles from '../styles/api-detail-rules.module.css'
 import {
   DRAFT_CASE_ID,
@@ -550,7 +549,7 @@ export function ApiCollectionDetailPage() {
 
     return (
       <span
-        className="api-env-var-picker-trigger-wrap"
+        className="api-env-var-picker-trigger-wrap inline-flex"
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
@@ -934,7 +933,7 @@ export function ApiCollectionDetailPage() {
   const handleCaseDragEnd = useCallback(() => setDraggingCaseId(null), [])
 
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
-    <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface ${shellStyles.scope} ${requestStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
+    <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface [--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] ${shellStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
       <div className="api-automation-content">
         <div className="page-frame api-collection-workbench tp-board min-h-0 flex-auto">
           {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}
@@ -989,14 +988,14 @@ export function ApiCollectionDetailPage() {
                 {runResult ? (
                   <>
                     <div
-                      className={`api-wb-splitter${isResizingEditor ? ' resizing' : ''}`}
+                      className={`api-wb-splitter group flex h-3 flex-none cursor-row-resize items-center gap-1.5 border-y border-[var(--srf-divider)] bg-[var(--srf-card)] px-4${isResizingEditor ? ' resizing' : ''}`}
                       role="separator"
                       aria-orientation="horizontal"
                       aria-label="调整请求编辑区与运行结果的高度"
                       onPointerDown={handleEditorSplitterPointerDown}
                     >
-                      <span className="api-wb-splitter-line" />
-                      <span className="api-wb-splitter-grip">⋯</span>
+                      <span className={`api-wb-splitter-line h-px flex-auto ${isResizingEditor ? 'bg-[var(--srf-accent)]' : 'bg-[var(--srf-card-border)] group-hover:bg-[var(--srf-accent)]'}`} />
+                      <span className="api-wb-splitter-grip text-[10px] leading-none text-[var(--srf-text-muted)]">⋯</span>
                     </div>
                     <div className="api-wb-console-pane flex min-h-0 flex-auto flex-col">
                       <div className="api-wb-console-scroll min-h-0 flex-auto overflow-hidden">

@@ -36,7 +36,6 @@ import {
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
 import { message } from '@/shared/utils/feedback'
 import '@/shared/styles/surface-tokens.css'
-import apiListStyles from '../styles/api-list.module.css'
 
 type ApiAutomationPageScope = {
   projectId?: string
@@ -363,7 +362,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }
 
   return (
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface ${apiListStyles.scope}`}>
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface [--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace]">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
@@ -374,7 +373,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                 {!isRequirementLocked ? (
                   <div className="api-filter-group">
                     <div className="api-filter-field">
-                      <span className="api-filter-field-label">需求</span>
+                      <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">需求</span>
                       <Select
                         className="api-filter-select business-filter-select"
                         value={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
@@ -390,9 +389,9 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                     </div>
                   </div>
                 ) : null}
-                <div className="api-inline-environment">
-                  <div className="api-environment-selector">
-                    <span className="api-environment-label">当前环境</span>
+                <div className="api-inline-environment flex flex-wrap items-center gap-[18px] pl-1.5 max-[1200px]:w-full max-[1200px]:pl-0 max-narrow:flex-col max-narrow:items-start max-narrow:gap-2.5">
+                  <div className="api-environment-selector flex items-center gap-2.5 max-narrow:w-full max-narrow:flex-col max-narrow:items-start">
+                    <span className="api-environment-label whitespace-nowrap text-[13px] leading-5 text-[var(--app-shell-text-muted)]">当前环境</span>
                     <Select
                       className="api-filter-select business-filter-select"
                       value={resolvedEnvironmentId}
@@ -413,7 +412,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                     className="api-filter-input api-test-search-input"
                     allowClear
                     prefix={<SearchOutlined />}
-                    suffix={<span className="api-test-search-hint">⌘K</span>}
+                    suffix={<span className="api-test-search-hint font-mono text-[10px] text-[var(--srf-text-muted)]">⌘K</span>}
                     placeholder="搜索测试集名称 / 描述"
                     value={keyword}
                     onChange={(event) => {
