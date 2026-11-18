@@ -36,6 +36,22 @@ type CanvasProps = {
   onOpenTab: (kind: 'content' | GenerationChainKind) => void
 }
 const ports = <><Handle type="target" position={Position.Left} className="gc-flow-handle" /><Handle type="target" position={Position.Top} id="top" className="gc-flow-handle" /><Handle type="source" position={Position.Right} className="gc-flow-handle" /><Handle type="source" position={Position.Bottom} id="bottom" className="gc-flow-handle" /></>
+const NODE_CLASS = 'gc-node relative flex flex-col gap-[5px] rounded-[10px] border border-[var(--gc-line)] p-[10px_11px] text-left [font:inherit] text-[var(--gc-text)] cursor-pointer transition-[border-color,box-shadow,transform] duration-[160ms]'
+const NODE_TOP_CLASS = 'gc-node-top flex items-center justify-between gap-1.5'
+const NODE_INDEX_CLASS = 'gc-node-index font-mono text-[10px] tracking-[0.06em] text-[var(--gc-muted)]'
+const NODE_STATE_CLASS = 'gc-node-state text-[10px] text-[var(--gc-muted)]'
+const NODE_MAIN_CLASS = 'gc-node-main flex min-w-0 items-center gap-1.5 [&_.anticon]:flex-none [&_.anticon]:text-[15px] [&_.anticon]:text-[var(--app-accent)]'
+const NODE_TITLE_CLASS = 'overflow-hidden text-[12px] text-ellipsis whitespace-nowrap'
+const NODE_META_CLASS = 'gc-node-meta flex min-w-0 items-center gap-[5px] text-[11px] text-[var(--gc-muted)]'
+const NODE_META_TEXT_CLASS = 'overflow-hidden text-ellipsis whitespace-nowrap'
+const NODE_VERSION_CLASS = 'gc-node-version flex-[0_0_auto] rounded-[5px] bg-[var(--app-surface-chip)] px-[5px] font-mono text-[10px] text-[var(--gc-muted)]'
+const DOC_NODE_CLASS = 'gc-document-node flex min-h-[76px] flex-col items-start gap-1 rounded-[10px] border border-solid border-[var(--gc-line)] bg-[var(--gc-surface)] p-[10px_12px] text-left [font:inherit] text-[var(--gc-text)] cursor-pointer'
+const LANE_EMPTY_CLASS = 'gc-lane-empty flex min-h-[76px] flex-col items-start gap-1 rounded-[10px] border border-dashed border-[var(--gc-line)] bg-[var(--gc-surface)] p-[10px_12px] text-left [font:inherit] text-[var(--gc-text)] cursor-pointer'
+const NODE_CAPTION_CLASS = 'font-mono text-[10px] tracking-[0.06em] text-[var(--gc-blue)]'
+const GROUP_CLASS = 'gc-flow-group relative box-border h-full w-full rounded-[10px] border border-transparent bg-[var(--gc-surface)] p-3.5'
+const SPECIAL_CLASS = 'gc-flow-special box-border h-full w-full rounded-[10px] border border-transparent bg-transparent p-3.5'
+const GROUP_HEADER_CLASS = 'gc-flow-group-header flex items-center gap-2 [&_small]:ml-auto [&_small]:text-[11px] [&_small]:text-[var(--app-surface-text-muted)] [&_strong]:text-[13px]'
+const GROUP_SELECT_CLASS = 'gc-flow-group-select cursor-pointer border-0 bg-transparent p-0 text-left [font:inherit]'
 function cardActions(data: CardActions) {
   return {
     onClick: (event: React.MouseEvent<HTMLButtonElement>) => data.onOpen(event.currentTarget),
@@ -43,11 +59,11 @@ function cardActions(data: CardActions) {
   }
 }
 function ChainGroup({ data }: NodeProps<GroupNode>) {
-  return <section className={`gc-flow-group${data.dim ? ' is-dim' : ''}${data.active ? ' is-selected' : ''}`} aria-label={data.label}
+  return <section className={`${GROUP_CLASS}${data.dim ? ' is-dim' : ''}${data.active ? ' is-selected' : ''}`} aria-label={data.label}
     onClick={event => { if (!(event.target as HTMLElement).closest('button')) data.onSelect?.() }}>
     <svg className="gc-flow-group-outline" aria-hidden="true"><rect x="0" y="0" rx="10" /></svg>
-    <div className="gc-flow-group-header">{data.onSelect ? <button type="button" className="gc-flow-group-select nodrag" aria-label={`选择${data.label}分组`} aria-pressed={Boolean(data.active)} onClick={data.onSelect}><strong>{data.label}</strong></button> : <strong>{data.label}</strong>}<small>{data.status}</small></div>
-    {data.unconfigured ? <div className="gc-flow-empty-card">{ports}<button type="button" className="gc-lane-empty nodrag" disabled={data.readOnlyUnconfigured} onClick={data.onConfigure}><span>未开始</span><strong>开始{data.label}</strong><small>{data.readOnlyUnconfigured ? '等待有编辑权限的成员初始化生成流程' : '先完成生成设置，再运行首阶段'}</small></button></div> : null}
+    <div className={GROUP_HEADER_CLASS}>{data.onSelect ? <button type="button" className={`${GROUP_SELECT_CLASS} nodrag`} aria-label={`选择${data.label}分组`} aria-pressed={Boolean(data.active)} onClick={data.onSelect}><strong>{data.label}</strong></button> : <strong>{data.label}</strong>}<small>{data.status}</small></div>
+    {data.unconfigured ? <div className="gc-flow-empty-card relative mt-2.5">{ports}<button type="button" className={`${LANE_EMPTY_CLASS} nodrag w-full min-h-[84px]`} disabled={data.readOnlyUnconfigured} onClick={data.onConfigure}><span className={NODE_CAPTION_CLASS}>未开始</span><strong className="text-[12px]">开始{data.label}</strong><small className="text-[11px] text-[var(--gc-muted)]">{data.readOnlyUnconfigured ? '等待有编辑权限的成员初始化生成流程' : '先完成生成设置，再运行首阶段'}</small></button></div> : null}
   </section>
 }
 function StageCard({ data }: NodeProps<StageNode>) {
@@ -59,41 +75,41 @@ function StageCard({ data }: NodeProps<StageNode>) {
       : stage.moduleGeneration.status === 'revising' ? '正在修订测试点'
         : `已完成 ${stage.moduleGeneration.modules.filter(module => module.status === 'completed').length}/${stage.moduleGeneration.modules.length} ${stage.moduleGeneration.stage === 'case_names' ? '个分组' : '个模块'}`
     : running ? '等待本次结果' : stage.draft?.summary ?? stage.latestVersion?.summary ?? stage.blockedReason ?? '暂无产物'
-  return <div className={`gc-flow-stage${data.dim ? ' is-dim' : ''}`}>{ports}<button type="button" className={`gc-node ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
-    <span className="gc-node-top"><span className="gc-node-index">{String(stage.order + 1).padStart(2, '0')}</span><span className="gc-node-state">{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
-    <span className="gc-node-main"><Icon aria-hidden /><strong>{stage.label}</strong></span><span className="gc-node-meta">{!running && !stage.draft && stage.latestVersion ? <span className="gc-node-version">{stage.latestVersion.label}</span> : null}<span>{summary}</span></span>
+  return <div className={`gc-flow-stage relative w-full${data.dim ? ' is-dim' : ''}`}>{ports}<button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
+    <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{String(stage.order + 1).padStart(2, '0')}</span><span className={NODE_STATE_CLASS}>{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
+    <span className={NODE_MAIN_CLASS}><Icon aria-hidden /><strong className={NODE_TITLE_CLASS}>{stage.label}</strong></span><span className={NODE_META_CLASS}>{!running && !stage.draft && stage.latestVersion ? <span className={NODE_VERSION_CLASS}>{stage.latestVersion.label}</span> : null}<span className={NODE_META_TEXT_CLASS}>{summary}</span></span>
   </button></div>
 }
 function SpecialCard({ data }: NodeProps<SpecialNode>) {
   const doc = data.kind === 'content'
-  return <section className={`gc-flow-special${doc ? ' is-document' : ''}`} aria-label={doc ? '需求文档' : '代码风险'}>{doc ? ports : null}
-    {!doc ? <div className="gc-flow-group-header"><strong>代码风险</strong><small>独立分析链</small></div> : null}
-    <button type="button" className={`${doc ? 'gc-document-node' : 'gc-lane-empty'}${data.active ? ' is-selected' : ''}`} aria-pressed={data.active} {...cardActions(data)}>
-      <span>{doc ? '需求材料' : '独立'}</span><strong>{doc ? <><FileTextOutlined aria-hidden /> 查看需求文档</> : '代码风险分析'}</strong><small>{doc ? '生成链读取这里的最新正文' : '查看代码风险运行报告'}</small>
+  return <section className={`${SPECIAL_CLASS}${doc ? ' is-document relative border-0 p-0' : ''}`} aria-label={doc ? '需求文档' : '代码风险'}>{doc ? ports : null}
+    {!doc ? <div className={GROUP_HEADER_CLASS}><strong>代码风险</strong><small>独立分析链</small></div> : null}
+    <button type="button" className={`${doc ? DOC_NODE_CLASS : LANE_EMPTY_CLASS}${data.active ? ' is-selected' : ''} ${doc ? 'mt-0' : 'mt-2.5'} w-full min-h-[72px]`} aria-pressed={data.active} {...cardActions(data)}>
+      <span className={NODE_CAPTION_CLASS}>{doc ? '需求材料' : '独立'}</span><strong className="text-[12px]">{doc ? <><FileTextOutlined aria-hidden /> 查看需求文档</> : '代码风险分析'}</strong><small className="text-[11px] text-[var(--gc-muted)]">{doc ? '生成链读取这里的最新正文' : '查看代码风险运行报告'}</small>
     </button>
   </section>
 }
 function RelationsCard({ data }: NodeProps<RelationsNode>) {
-  return <div className="gc-flow-stage">{ports}
-    <button type="button" className={`gc-node is-derived${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
+  return <div className="gc-flow-stage relative w-full">{ports}
+    <button type="button" className={`${NODE_CLASS} is-derived${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
       aria-label="用例图谱 · 派生" aria-pressed={data.active}>
-      <span className="gc-node-top"><span className="gc-node-index">{data.index}</span><span className="gc-node-state">派生</span></span>
-      <span className="gc-node-main"><ApartmentOutlined aria-hidden /><strong>用例图谱</strong></span>
-      <span className="gc-node-meta"><span>完整用例的关联图</span></span>
+      <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{data.index}</span><span className={NODE_STATE_CLASS}>派生</span></span>
+      <span className={NODE_MAIN_CLASS}><ApartmentOutlined aria-hidden /><strong className={NODE_TITLE_CLASS}>用例图谱</strong></span>
+      <span className={NODE_META_CLASS}><span className={NODE_META_TEXT_CLASS}>完整用例的关联图</span></span>
     </button>
   </div>
 }
 /** 仓库画像不是生成链阶段，但在需求分析分组内复用阶段卡片的尺寸、状态和运行动画。 */
 function ProfileCard({ data }: NodeProps<ProfileNode>) {
-  return <div className="gc-flow-stage">
+  return <div className="gc-flow-stage relative w-full">
     <Handle type="target" position={Position.Left} className="gc-flow-handle" />
     <Handle type="target" position={Position.Top} id="top" className="gc-flow-handle" />
     <Handle type="source" position={Position.Right} id="right" className="gc-flow-handle" />
-    <button type="button" className={`gc-node ${data.statusClass}${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
+    <button type="button" className={`${NODE_CLASS} ${data.statusClass}${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
       aria-label={`仓库画像 · ${data.statusLabel}`} aria-pressed={data.active} aria-busy={data.running}>
-      <span className="gc-node-top"><span className="gc-node-index">{data.index}</span><span className="gc-node-state">{data.running ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{data.statusLabel}</span></span>
-      <span className="gc-node-main"><ApartmentOutlined aria-hidden /><strong>仓库画像</strong></span>
-      <span className="gc-node-meta">{data.versionLabel ? <span className="gc-node-version">{data.versionLabel}</span> : null}<span>{data.meta}</span></span>
+      <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{data.index}</span><span className={NODE_STATE_CLASS}>{data.running ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{data.statusLabel}</span></span>
+      <span className={NODE_MAIN_CLASS}><ApartmentOutlined aria-hidden /><strong className={NODE_TITLE_CLASS}>仓库画像</strong></span>
+      <span className={NODE_META_CLASS}>{data.versionLabel ? <span className={NODE_VERSION_CLASS}>{data.versionLabel}</span> : null}<span className={NODE_META_TEXT_CLASS}>{data.meta}</span></span>
     </button>
   </div>
 }

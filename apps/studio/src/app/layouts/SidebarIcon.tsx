@@ -13,7 +13,7 @@ const shapes: Record<SidebarIconName, ReactNode> = {
 }
 
 export function SidebarIcon({ name }: { name: SidebarIconName }) {
-  return <svg className="sidebar-icon" viewBox="0 0 24 24" fill="none"
+  return <svg className="sidebar-icon h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
     aria-hidden="true" focusable="false">{shapes[name]}</svg>
 }

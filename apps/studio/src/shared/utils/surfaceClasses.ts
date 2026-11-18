@@ -49,6 +49,25 @@ export const serviceCardActionsClass =
 export const entityCardGridClass =
   'grid grid-cols-[repeat(auto-fill,minmax(min(100%,328px),1fr))] content-start gap-4'
 
+/** 列表/抽屉/选择弹窗共用的页脚表面；分页与文案排布由 pagination.css 维护。 */
+export const tableFooterClass =
+  'box-border flex flex-none flex-wrap items-center justify-between gap-x-4 gap-y-2 min-h-[58px] border-t border-[var(--app-surface-border)] bg-[var(--app-surface)] px-4 py-3'
+
+/** 选择器/小弹窗里的紧凑页脚，保留同一套 flex 与描边，只收尺寸。 */
+export const tableFooterCompactClass =
+  'box-border flex flex-none flex-wrap items-center justify-between gap-x-4 gap-y-2 min-h-[42px] border-t border-[var(--app-surface-border)] bg-[var(--app-surface)] px-3 py-1.5'
+
+/** 工作台页签容器：撑满剩余高度、纵向排列并承载页面内距。 */
+const workbenchTabsBaseClass = 'flex flex-auto min-h-0 flex-col gap-3 overflow-hidden'
+export const workbenchTabsClass = `${workbenchTabsBaseClass} px-[var(--app-page-gutter)] pt-3.5 pb-5`
+/** Sprint 看板沿用 12px 全向内距。 */
+export const workbenchTabsCompactClass = `${workbenchTabsBaseClass} p-3`
+/** AI Skill 库沿用 12px 上、16px 下的内距。 */
+export const workbenchTabsAiClass = `${workbenchTabsBaseClass} px-[var(--app-page-gutter)] pt-3 pb-4`
+
+/** 列表滚动承载层：滚动与表面色；flex/min-height 由各页面按结构声明。 */
+export const tableScrollClass = 'overflow-auto bg-[var(--app-surface)]'
+
 export const entityCardDescClass =
   'line-clamp-2 mb-3 min-h-9 overflow-hidden text-[11.5px] leading-[18px] text-[var(--srf-text-secondary)]'
 

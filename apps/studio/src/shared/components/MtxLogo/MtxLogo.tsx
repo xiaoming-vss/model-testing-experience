@@ -7,7 +7,7 @@ type MtxLogoProps = {
 }
 
 export function MtxLogo({ size = 28, className, title = 'MTX Logo' }: MtxLogoProps) {
-  const logoClassName = ['mtx-logo', className].filter(Boolean).join(' ')
+  const logoClassName = ['mtx-logo block text-[var(--app-logo-primary)] drop-shadow-[0_9px_18px_var(--app-logo-shadow)]', className].filter(Boolean).join(' ')
   const plateGradientId = `mtx-logo-plate-${useId().replace(/:/g, '')}`
 
   return (
@@ -23,14 +23,14 @@ export function MtxLogo({ size = 28, className, title = 'MTX Logo' }: MtxLogoPro
     >
       <defs>
         <linearGradient id={plateGradientId} x1="29" y1="1" x2="29" y2="57" gradientUnits="userSpaceOnUse">
-          <stop className="mtx-logo__plate-start" stopColor="#ffffff" />
-          <stop className="mtx-logo__plate-end" offset="1" stopColor="#f3f7fc" />
+          <stop stopColor="#ffffff" />
+          <stop offset="1" stopColor="#f3f7fc" />
         </linearGradient>
       </defs>
-      <rect className="mtx-logo__plate" x="1" y="1" width="56" height="56" rx="14" fill={`url(#${plateGradientId})`} />
-      <path className="mtx-logo__model" d="M15 39V20L25 31L35 20" />
-      <path className="mtx-logo__test" d="M22 20H42M32 20V41" />
-      <path className="mtx-logo__experience" d="M39 26L47 38M47 26L39 38" />
+      <rect x="1" y="1" width="56" height="56" rx="14" fill={`url(#${plateGradientId})`} stroke="var(--app-logo-border)" strokeWidth={1.2} />
+      <path d="M15 39V20L25 31L35 20" stroke="var(--app-logo-primary)" strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M22 20H42M32 20V41" stroke="var(--app-logo-model-text)" strokeWidth={4.1} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M39 26L47 38M47 26L39 38" stroke="var(--app-logo-secondary)" strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

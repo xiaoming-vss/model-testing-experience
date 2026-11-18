@@ -26,6 +26,8 @@ import {
   serviceCardTitleWrapClass,
   serviceCardUrlClass,
   serviceCardValueClass,
+  tableFooterClass,
+  tableScrollClass,
 } from '@/shared/utils/surfaceClasses'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { api } from '@/services/api'
@@ -105,7 +107,7 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}
     {connectionsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(connectionsQuery.error)} /> : null}
     <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
-      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
+      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass, tableScrollClass)}>
         {connectionsQuery.isPending ? (
           <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="监控接入加载中..." /></div>
         ) : connections.length === 0 ? (
@@ -186,7 +188,7 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
           </div>
         )}
       </div>
-      <div className="table-footer">
+      <div className={cx('table-footer', tableFooterClass)}>
         <ListPagination
           loading={connectionsQuery.isFetching}
           current={currentPage}

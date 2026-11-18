@@ -45,7 +45,6 @@
 
 .reportRoot {
   --tp-collection-run-report-modal-max-height: calc(100vh - 72px);
-  --tp-collection-run-report-scroll-max-height: clamp(240px, calc(100vh - 430px), 620px);
 }
 
 .reportRoot :global(.ant-modal-wrap) {

@@ -155,10 +155,10 @@ export function TopNavTabMenu<Key extends string>({
     window.setTimeout(() => { suppressHoverOpenRef.current = false }, 300)
   }
 
-  const menu = <nav ref={menuRef} className="top-nav-menu" aria-label={menuLabel}
+  const menu = <nav ref={menuRef} className="top-nav-menu flex items-center gap-1" aria-label={menuLabel}
     onKeyDown={handleMenuKeyDown} onBlur={handleMenuBlur}>
     {items.map(item => <Link key={item.key} to={hrefForItem(item.key)}
-      className="top-nav-menu-link"
+      className="top-nav-menu-link inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-lg border border-transparent px-4 text-[13px] leading-5 text-[var(--srf-text-secondary)] transition-[background-color,border-color,color] duration-[140ms] hover:bg-[var(--srf-list-row-hover)] hover:text-[var(--srf-text)] aria-[current=page]:border-[var(--app-accent-border)] aria-[current=page]:bg-[var(--app-accent-surface)] aria-[current=page]:font-semibold aria-[current=page]:text-[var(--app-accent)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--app-accent)]"
       aria-current={activeKey === item.key ? 'page' : undefined}
       onClick={handleSelectTab}>
       {item.label}
@@ -178,7 +178,7 @@ export function TopNavTabMenu<Key extends string>({
     styles={{ container: { padding: 8, border: '1px solid var(--app-glass-border-strong)', borderRadius: 12 } }}
   >
     <Link ref={triggerRef} to={resolvedTriggerHref}
-      className={`sidebar-link top-nav-menu-trigger${activeKey ? ' is-active' : ''}`}
+      className={`sidebar-link top-nav-menu-trigger group relative z-[1] inline-flex min-h-9 flex-none items-center gap-1.5 whitespace-nowrap rounded-lg px-3 pr-2 text-[13px] text-[var(--mac-glass-text)] hover:bg-[var(--button-quiet-hover-bg)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--mac-glass-blue)] max-[540px]:px-[9px]${activeKey ? ' is-active font-semibold text-[var(--app-accent)]' : ''}`}
       aria-current={activeKey ? 'page' : undefined}
       aria-expanded={open}
       title={label}
@@ -187,8 +187,8 @@ export function TopNavTabMenu<Key extends string>({
       onClick={handleTriggerClick}>
       <SidebarIcon name={icon} />
       <span className="sidebar-link-label">{label}</span>
-      {activeKey ? <span className="top-nav-menu-active-dot" aria-hidden="true" /> : null}
-      <DownOutlined className="top-nav-menu-caret" aria-hidden="true" />
+      {activeKey ? <span className="top-nav-menu-active-dot h-[5px] w-[5px] flex-none rounded-full bg-[var(--app-accent)]" aria-hidden="true" /> : null}
+      <DownOutlined className="top-nav-menu-caret h-2.5 w-2.5 flex-none text-[10px] text-[var(--app-shell-text-muted)] transition-transform duration-150 group-aria-expanded:rotate-180" aria-hidden="true" />
     </Link>
   </Popover>
 }

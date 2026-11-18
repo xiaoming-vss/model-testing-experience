@@ -6,6 +6,7 @@ import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { AppstoreOutlined, ArrowLeftOutlined, CodeOutlined, DesktopOutlined, FileTextOutlined } from '@ant-design/icons'
+import { workbenchTabsCompactClass } from '@/shared/utils/surfaceClasses'
 import { Alert, Button, Card, DatePicker, Drawer, Empty, Form, Input, Modal, Select, Space, Spin, Tooltip, Tag, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
@@ -240,7 +241,7 @@ function MiniProgress({
 }) {
   return (
     <span className="sprint-dashboard-progress flex min-w-0 flex-col gap-1.5">
-      <span className="sprint-dashboard-progress-meta flex items-baseline gap-1 text-[12px] leading-4 text-[var(--app-text-caption)]">
+      <span className="sprint-dashboard-progress-meta flex items-baseline gap-1 text-[12px] leading-4 text-[var(--app-text-caption)] [&_strong]:text-[var(--app-text-strong)]">
         <strong>{value}</strong>
         <span>({percentValue(value, total)}%)</span>
       </span>
@@ -323,7 +324,7 @@ function SeverityLine({
   color: string
 }) {
   return (
-    <div className="sprint-dashboard-severity-row grid grid-cols-[32px_minmax(0,1fr)_62px] items-center gap-2 text-[12px] leading-5 text-[var(--app-text-label)]">
+    <div className="sprint-dashboard-severity-row grid grid-cols-[32px_minmax(0,1fr)_62px] items-center gap-2 text-[12px] leading-5 text-[var(--app-text-label)] [&_strong]:text-right [&_strong]:font-semibold [&_strong]:text-[var(--app-text-strong)]">
       <span>{label}</span>
       <span className="sprint-dashboard-severity-track block h-1.5 w-full overflow-hidden rounded-full bg-[var(--app-progress-track)]">
         <span
@@ -992,8 +993,8 @@ export function SprintDetailPage() {
   return (<ProjectAccessScope projectId={projectId} resourceError={projectScopeError}>{(
     <div className={`workbench-page sprint-overview-page tp-surface overflow-hidden p-[var(--app-page-gutter)] ${sprintOverviewStyles.root} ${sprintOverviewStyles.root}`}>
       {sprintQuery.isLoading ? (
-        <div className="workbench-tabs">
-          <section className="workbench-panel sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel overflow-hidden">
+        <div className={`workbench-tabs ${workbenchTabsCompactClass}`}>
+          <section className="workbench-panel workbench-panel-flat sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel overflow-hidden">
             <Spin />
           </section>
         </div>
@@ -1059,9 +1060,9 @@ export function SprintDetailPage() {
             </div>
           </section>
 
-          <div className="workbench-tabs">
+          <div className={`workbench-tabs ${workbenchTabsCompactClass}`}>
 
-            <section className="workbench-panel sprint-overview-panel sprint-overview-panel-unified overflow-hidden">
+            <section className="workbench-panel workbench-panel-flat sprint-overview-panel sprint-overview-panel-unified overflow-hidden">
               <div className="sprint-overview-panel-body flex min-h-0 flex-1 flex-col overflow-auto p-4">
                 <div className="sprint-overview-layout grid min-h-0 grid-rows-[auto] content-start gap-4 max-[1200.01px]:flex max-[1200.01px]:flex-col min-[1281px]:min-h-0 min-[1281px]:flex-auto min-[1281px]:grid-rows-[auto_minmax(260px,1fr)_minmax(0,1.18fr)] min-[1281px]:content-stretch">
                   <SprintHealthSummary metrics={latestMetrics} />
@@ -1133,9 +1134,9 @@ export function SprintDetailPage() {
           </div>
         </section>
       ) : (
-        <div className="workbench-tabs">
+        <div className={`workbench-tabs ${workbenchTabsCompactClass}`}>
           {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
-          <section className="workbench-panel sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel overflow-hidden">
+          <section className="workbench-panel workbench-panel-flat sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel overflow-hidden">
             <Empty description="未找到迭代信息" />
           </section>
         </div>

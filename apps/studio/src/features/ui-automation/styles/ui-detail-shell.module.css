@@ -1,19 +1,5 @@
 /* UI 测试集详情壳：板面、顶栏输入、检查器统一卡片与流程骨架的深层皮肤。 */
 
-.scope { --ui-detail-shell-scope: 1; }
-
-/*
- * macOS 外壳给 .workbench-panel 铺了玻璃底；详情页不是 .testing-page 路由，
- * 需要这条更高权重的规则把板面还原成裸画布。
- */
-:global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board) {
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
 
 /* 折叠由 hidden 属性表达；步骤卡片是 flex 容器，需要压过作者样式。 */
 .scope [hidden] {
@@ -175,7 +161,6 @@
 
 /* ===== 原 ui-execution-flow.module.css：React Flow 深层皮肤 ===== */
 
-.scope { --ui-execution-flow-scope: 1; }
 
 /* 步骤流程嵌在左栏编辑器里：由剩余高度撑开，画布随卡片数量伸缩。 */
 .scope :global(.ui-flow-editor > .ui-flow) {

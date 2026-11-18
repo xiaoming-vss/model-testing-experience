@@ -2,7 +2,6 @@
  * 页面骨架、工具栏、版本列表、导入卡片与图谱浮层已迁到组件 utility；
  * 这里保留阶段卡片、React Flow 节点、差异高亮、动画与 AntD 深层规则。 */
 
-.scope { --ai-generation-chain-scope: 1; }
 
 /* Requirement generation panorama: blueprint map + stage version modal. */
 
@@ -22,42 +21,8 @@
   background-size: 24px 24px;
 }
 
-.scope :global(.gc-kicker) {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--gc-muted);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.scope :global(.gc-node) {
-  position: relative;
-  display: flex;
-  flex: 0 0 196px;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 96px;
-  padding: 10px 11px;
-  border: 1px solid var(--gc-line);
-  border-radius: 10px;
-  background: var(--gc-surface);
-  color: var(--gc-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-
 .scope :global(.gc-node:hover) { border-color: var(--gc-blue); box-shadow: 0 5px 16px var(--app-accent-soft); transform: translateY(-1px); }
 .scope :global(.gc-node:focus-visible) { outline: 2px solid var(--gc-blue); outline-offset: 2px; }
-.scope :global(.gc-node-top) { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.scope :global(.gc-node-index) { color: var(--gc-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; }
-.scope :global(.gc-node-state) { color: var(--gc-muted); font-size: 10px; }
-.scope :global(.gc-node > strong) { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.gc-node-meta) { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--gc-muted); font-size: 11px; }
-.scope :global(.gc-node-meta > span:last-child) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scope :global(.gc-node-version) { flex: 0 0 auto; padding: 0 5px; border-radius: 5px; background: var(--app-surface-chip); color: var(--gc-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .scope :global(.gc-node-version.is-muted) { opacity: 0.7; }
 
 .scope :global(.gc-node.is-approved) { border-color: color-mix(in srgb, var(--app-result-success) 28%, var(--gc-line)); background: linear-gradient(180deg, var(--app-testing-success-tag-bg), transparent 68%), var(--gc-surface); }
@@ -85,32 +50,8 @@
 .scope :global(.gc-node.is-empty > strong) { color: var(--gc-muted); font-weight: 500; }
 .scope :global(.gc-node.is-empty:hover) { border-style: solid; }
 
-.scope :global(.gc-document-node),
-.scope :global(.gc-lane-empty) {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-height: 76px;
-  padding: 10px 12px;
-  border: 1px dashed var(--gc-line);
-  border-radius: 10px;
-  background: var(--gc-surface);
-  color: var(--gc-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.scope :global(.gc-document-node) { border-style: solid; border-color: var(--gc-line); }
 .scope :global(.gc-document-node:hover),
 .scope :global(.gc-lane-empty:hover) { border-color: var(--gc-blue); background: var(--gc-blue-soft); }
-.scope :global(.gc-document-node > span),
-.scope :global(.gc-lane-empty > span) { color: var(--gc-blue); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; }
-.scope :global(.gc-document-node strong),
-.scope :global(.gc-lane-empty strong) { font-size: 12px; }
-.scope :global(.gc-document-node small),
-.scope :global(.gc-lane-empty small) { color: var(--gc-muted); font-size: 11px; }
 
 /* Modal */
 .scope :global(.generation-chain-modal .ant-modal-content) { display: flex; flex-direction: column; height: min(820px, calc(100dvh - 32px)); padding: 0; overflow: hidden; }
@@ -119,23 +60,9 @@
 .scope :global(.generation-chain-modal .ant-modal-footer) { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
 .scope :global(.generation-chain-modal .ant-modal-close) { top: 16px; right: 20px; }
 
-.scope :global(.gc-modal-title strong) { font-size: 16px; line-height: 1.35; }
-.scope :global(.gc-modal-title .gc-kicker) { margin: 0; }
 /* 阶段操作挂在标题栏：标题保持原样，版本/上游/对比/历史和显示模式开关同排。 */
 .scope :global(.generation-chain-modal .ant-modal-header.ai-artifact-mode-heading) { flex-wrap: wrap; gap: 8px 16px; }
 .scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 2; }
-.scope :global(.gc-state) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 21px;
-  padding: 0 8px;
-  border: 1px solid var(--app-surface-border);
-  border-radius: 999px;
-  color: var(--gc-muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
 .scope :global(.gc-state.is-ok) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
 .scope :global(.gc-state.is-warn) { border-color: var(--app-review-warning-border); background: var(--app-status-warning-bg); color: var(--app-status-warning-text); }
 .scope :global(.gc-state.is-danger) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
@@ -233,12 +160,11 @@
 .scope :global(.gc-import-record > .gc-import-case-ids) code { padding: 1px 5px; border-radius: 4px; background: var(--app-surface-chip); color: var(--app-surface-text); font-size: 10px; }
 .scope :global(.gc-import-record > .gc-import-case-ids) small { color: var(--app-surface-text-muted); font-size: 10px; }
 
-/* 继续优化侧栏：宽度拖拽、附件与问题分页保持独立状态样式。 */
+/* 继续优化侧栏：宽度拖拽、附件与问题分页保持独立状态样式。
+   工作区与侧栏的 flex 骨架同时是 jsdom 布局契约，保留基础声明。 */
 .scope :global(.revision-workspace) { display: flex; height: 100%; min-height: 0; min-width: 0; gap: 0; }
-.scope :global(.revision-source) { min-width: 0; width: 100%; height: 100%; min-height: 0; }
+.scope :global(.revision-side-panel) { display: flex; flex: 1; flex-direction: column; min-width: 240px; min-height: 0; gap: 12px; padding: 16px; overflow: auto; }
 .scope :global(.revision-workspace.is-revising > .revision-source) { width: var(--revision-source-width, 60%); min-width: 35%; max-width: 75%; overflow: auto; flex-shrink: 0; }
-.scope :global(.revision-side-panel) { min-width: 240px; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 12px; background: var(--ai-panel-soft, var(--app-revision-bg)); overflow: auto; }
-.scope :global(.revision-side-panel > textarea.ant-input) { flex: 1; min-height: 160px; resize: none; line-height: 1.8; }
 .scope :global(.revision-attachment) { position: relative; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; overflow: hidden; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 8px; background: var(--ai-panel, var(--app-revision-bg)); color: var(--ai-text-secondary, var(--app-list-label)); }
 .scope :global(.revision-attachment img) { width: 100%; height: 100%; object-fit: cover; }
 .scope :global(.revision-attachment button) { position: absolute; top: 2px; right: 2px; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--app-revision-attachment-scrim); color: var(--app-revision-attachment-on-scrim); font-size: 13px; line-height: 1; cursor: pointer; }
@@ -250,29 +176,14 @@
 }
 .scope :global(.revision-workspace.is-revising) { gap: 0; }
 .scope :global(.revision-workspace.is-revising > .revision-source) { resize: none; }
-.scope :global(.revision-divider) { flex: 0 0 20px; cursor: col-resize; touch-action: none; position: relative; }
 .scope :global(.revision-divider::after) { content: ''; position: absolute; top: 40%; bottom: 40%; left: 8px; width: 4px; border-radius: 4px; background: var(--ai-border, var(--app-revision-divider)); }
 .scope :global(.revision-divider:hover::after),
 .scope :global(.revision-divider:focus-visible::after) { background: var(--app-revision-divider-hover); }
 @media (max-width: 800px) { .scope :global(.revision-divider) { display: none; } .scope :global(.revision-workspace.is-revising) { gap: 16px; } }
 
-.scope :global(.revision-questions) { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.scope :global(.revision-question-progress) { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ai-text-secondary, var(--app-list-label)); }
-.scope :global(.revision-question-track) { height: 4px; overflow: hidden; border-radius: 4px; background: var(--ai-border, var(--app-revision-border)); }
-.scope :global(.revision-question-track span) { display: block; height: 100%; background: var(--ant-color-primary); }
-.scope :global(.revision-question-nav) { display: flex; flex-wrap: wrap; gap: 6px; }
-.scope :global(.revision-question-nav button) { min-width: 32px; height: 30px; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 6px; color: inherit; background: transparent; cursor: pointer; }
 .scope :global(.revision-question-nav button.is-current) { border-color: var(--ant-color-primary); color: var(--ant-color-primary); }
 .scope :global(.revision-question-nav button.is-answered) { font-weight: 700; }
-.scope :global(.revision-question-content) { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 14px; }
-.scope :global(.revision-question-content p) { margin: 8px 0 14px; line-height: 1.7; overflow-wrap: anywhere; }
-.scope :global(.revision-question-content label) { display: block; margin-bottom: 6px; }
-.scope :global(.revision-question-id) { font-size: 12px; color: var(--ant-color-primary); }
-.scope :global(.revision-question-pagination) { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.scope :global(.revision-question-pagination span) { margin-left: auto; color: var(--ai-text-secondary, var(--app-list-label)); font-size: 12px; }
-.scope :global(.revision-question-extra) { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 12px; }
-.scope :global(.revision-question-extra summary) { cursor: pointer; }
-.scope :global(.revision-question-extra textarea) { margin-top: 10px; }
+
 
 /* ===== 用例关系图谱：React Flow 节点与阅读浮层 ===== */
 

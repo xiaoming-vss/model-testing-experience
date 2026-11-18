@@ -15,13 +15,14 @@ import {
   resolveBaseServiceTab,
   type BaseServiceTab,
 } from '@/features/base-services/baseServiceTabs'
-import '../styles/sidebar.css'
 
 type TopNavMenuKey = 'testing' | 'assets' | 'services'
 
+const SIDEBAR_LINK_CLASS = 'sidebar-link relative z-[1] inline-flex min-h-9 flex-none items-center gap-[7px] whitespace-nowrap rounded-lg px-3 text-[13px] text-[var(--mac-glass-text)] hover:bg-[var(--button-quiet-hover-bg)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--mac-glass-blue)] max-[540px]:px-[9px]'
+
 export function AppNavigationBrand({ bugOnly = false }: { bugOnly?: boolean }) {
-  return <Link className="top-navigation-brand" to={bugOnly ? '/testing?tab=bugs' : '/projects'} aria-label={bugOnly ? 'MTX Bug列表' : 'MTX 迭代'}>
-    <MtxLogo size={32} /><span>MTX</span>
+  return <Link className="top-navigation-brand inline-flex h-[52px] flex-none items-center gap-2 text-[15px] font-bold text-[var(--mac-glass-text)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--mac-glass-blue)]" to={bugOnly ? '/testing?tab=bugs' : '/projects'} aria-label={bugOnly ? 'MTX Bug列表' : 'MTX 迭代'}>
+    <MtxLogo size={32} /><span className="max-[540px]:hidden">MTX</span>
   </Link>
 }
 
@@ -94,7 +95,7 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
   }
 
   function navLink(to: string, label: string, icon: SidebarIconName, active: boolean) {
-    return <Link key={to} to={to} className={`sidebar-link${active ? ' is-active' : ''}`}
+    return <Link key={to} to={to} className={`${SIDEBAR_LINK_CLASS}${active ? ' is-active font-semibold text-[var(--app-accent)]' : ''}`}
       aria-current={active ? 'page' : undefined} title={label}>
       <SidebarIcon name={icon} />
       <span className="sidebar-link-label">{label}</span>
@@ -102,9 +103,9 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
   }
 
   return (
-    <div className="app-top-navigation">
-      <nav ref={navigationRef} className="top-navigation-links" aria-label="主导航">
-        <span ref={indicatorRef} className="top-navigation-indicator" aria-hidden="true" />
+    <div className="app-top-navigation flex min-w-0 flex-1 items-center overflow-hidden pl-[5px] max-[1200px]:order-3 max-[1200px]:basis-full max-[1200px]:pl-0">
+      <nav ref={navigationRef} className="top-navigation-links relative flex min-w-0 items-center gap-1 overflow-x-auto" aria-label="主导航">
+        <span ref={indicatorRef} className="top-navigation-indicator pointer-events-none absolute left-0 h-7 rounded-lg bg-[var(--app-accent-surface)] opacity-0 [transition:transform_220ms_cubic-bezier(.2,.8,.2,1),width_220ms_cubic-bezier(.2,.8,.2,1),opacity_150ms_ease] motion-reduce:transition-none" aria-hidden="true" />
         {bugOnly ? navLink('/testing?tab=bugs', 'Bug列表', 'navBug', testingTab === 'bugs') : <>
           {(['sprints', 'requirements'] as const).map((board) => {
             const params = new URLSearchParams(inProjects ? search : '')

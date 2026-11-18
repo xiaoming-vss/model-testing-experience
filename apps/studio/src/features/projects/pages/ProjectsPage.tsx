@@ -3,6 +3,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { ListSurface } from '@/shared/components/ListSurface'
 import { PageToolbar } from '@/shared/components/PageToolbar'
+import { workbenchTabsClass } from '@/shared/utils/surfaceClasses'
 import projectsOverviewStyles from '../styles/sprint-overview.module.css'
 import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
@@ -385,7 +386,7 @@ export function ProjectsPage() {
       {projectsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(projectsQuery.error)} /> : null}
 
       {!projectsQuery.isLoading && projects.length === 0 ? (
-        <div className="workbench-empty">
+        <div className="workbench-empty mx-[var(--app-page-gutter)] my-6 grid min-h-[320px] place-items-center rounded-md border border-[var(--app-shell-border)] bg-[var(--app-surface)]">
           <Empty description="暂无项目，请先新建项目">
             <ActionButton type="primary" className="action-btn-create" operation="create" onClick={() => openProjectModal()}>
               新建项目
@@ -394,7 +395,7 @@ export function ProjectsPage() {
         </div>
       ) : (
         <>
-          <div className="workbench-tabs">
+          <div className={`workbench-tabs ${workbenchTabsClass}`}>
             {activeBoard === 'requirements' ? (
               <PageToolbar ariaLabel="需求列表标题" className="requirements-list-page-header"
                 title={<div className="requirements-list-heading flex min-w-0 flex-wrap items-center gap-2">

@@ -57,30 +57,11 @@
 }
 
 /* —— 文档预览工具栏与响应式内距 —— */
-.root :global(.requirement-document-modal-toolbar) {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  min-height: 72px;
-  align-items: center;
-  padding: 12px 64px 12px 16px;
-  border-bottom: 1px solid var(--app-list-row-border);
-  background: var(--app-surface);
-  backdrop-filter: none;
-}
-
 .root :global(.requirement-document-pane:fullscreen) {
   width: 100vw;
   height: 100vh;
   border: 0;
   border-radius: 0;
-}
-
-.root :global(.requirement-document-text-host) :global(.rich-text-viewer) {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 100%;
-  padding: 24px;
 }
 
 /* —— DOCX 渲染结构 —— */

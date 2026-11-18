@@ -25,6 +25,7 @@ import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { ApiError } from '@/services/api'
+import { MethodBadge } from '@/shared/components/MethodBadge'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
@@ -53,6 +54,7 @@ import {
   splitTags,
   syncPathParams,
 } from '../utils/interfaceForm'
+import { interfacePageRootClass } from '../pageClasses'
 import {
   firstTag,
   replaceFirstTag,
@@ -552,7 +554,7 @@ export function InterfaceDetailPage() {
               {!canWrite ? <Tag>只读成员 · 不可编辑</Tag> : null}
             </div>
             <div className="if-detail-meta flex min-w-0 items-center gap-1.5 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
-              <Tag className={`if-method if-method-${methodToneClass}`}>{draft.method}</Tag>
+              <MethodBadge method={draft.method} />
               <code className="text-[11px] text-[var(--srf-text-secondary)]">{draft.path || '未填写路径'}</code>
               <span className="if-meta-dot text-[var(--srf-text-muted)]">·</span>
               <span>{draft.softwareRepositoryName || selectedRepository?.name || '未选择软件仓库'}</span>
@@ -930,7 +932,7 @@ function InterfaceWorkspaceShell({
     <div className="workbench-page asset-library-page">
       <div className="asset-library-tab-panel">
         <div className="asset-library-tab-pane">
-          <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}${className ? ` ${className}` : ''}`}>
+          <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}${className ? ` ${className}` : ''}`}>
             {children}
           </div>
         </div>

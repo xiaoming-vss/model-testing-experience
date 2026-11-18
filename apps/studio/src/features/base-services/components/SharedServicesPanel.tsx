@@ -30,6 +30,8 @@ import {
   serviceCardUrlClass,
   serviceCardValueClass,
   serviceCardValueInlineClass,
+  tableFooterClass,
+  tableScrollClass,
 } from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { sharedServicesApi as api, type PersonalAuthorization, type ServiceConfiguration, type ServiceProvider, type SharedService } from '../api/sharedServices.api'
@@ -138,7 +140,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     {provider === 'mcp' && templates.isError && <Alert type="error" showIcon title={getErrorMessage(templates.error)} />}
     {query.isError && <Alert type="error" showIcon title={getErrorMessage(query.error)} />}
     <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
-      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
+      <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass, tableScrollClass)}>
         {query.isPending || (provider === 'mcp' && templates.isPending) ? (
           <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>
         ) : services.length === 0 ? (
@@ -190,7 +192,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
           </div>
         )}
       </div>
-      <div className="table-footer">
+      <div className={cx('table-footer', tableFooterClass)}>
         <ListPagination loading={query.isFetching || query.isError} current={page} pageSize={pageSize} total={services.length} onChange={(nextPage, nextSize) => { setPage(nextSize === pageSize ? nextPage : 1); setPageSize(nextSize) }} />
       </div>
     </div>

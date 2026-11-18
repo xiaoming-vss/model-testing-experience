@@ -6,18 +6,18 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import { useQueries } from '@tanstack/react-query'
-import { Button, Dropdown, Empty, Input, Spin, Tag } from 'antd'
+import { Button, Dropdown, Empty, Input, Spin } from 'antd'
 import { useMemo, useState } from 'react'
 import { listItems, listTotal } from '@/services/api'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
+import { MethodBadge } from '@/shared/components/MethodBadge'
 import {
   UNTAGGED_GROUP,
   groupItemsByTag,
   withEmptyGroups,
   type InterfaceGroup,
 } from '../utils/interfaceGroups'
-import { methodTone } from '../utils/interfaceForm'
 
 type Props = {
   repositories: SoftwareRepository[]
@@ -331,9 +331,7 @@ export function SoftwareRepositoryTree({
                                 title={`${item.name} ${item.path}`}
                                 onClick={() => onOpenInterface(item.interfaceId)}
                               >
-                                <Tag className={`if-method if-method-${methodTone(item.method)}`}>
-                                  {item.method}
-                                </Tag>
+                                <MethodBadge method={item.method} />
                                 <span className="if-app-child-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{item.name}</span>
                               </button>
                               {canManageInterfaces ? (

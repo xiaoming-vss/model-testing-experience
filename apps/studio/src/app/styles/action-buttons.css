@@ -2,9 +2,6 @@
    分层基础色板仍在 buttons.css。 */
 
 /* macOS simple-white button system for Project Overview, Testing, AI Testing, and Base Services. */
-.app-shell-macos :is(.project-overview-page, .testing-page, .ai-testing-page, .base-services-page) {
-  --mac-action-blue-border: var(--legacy-mac-action-blue-border);
-}
 
 /* Primary buttons across overview and testing sub-pages. */
 .app-shell-macos :is(.project-overview-page, .sprint-overview-page, .testing-page, .api-automation-page, .api-collection-detail-page, .functional-suite-detail-page, .ai-testing-page, .base-services-page) :is(.action-btn-create, .action-btn-save).ant-btn-primary,

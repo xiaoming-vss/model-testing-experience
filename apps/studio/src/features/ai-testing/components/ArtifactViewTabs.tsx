@@ -12,8 +12,8 @@ function useArtifactHeaderSlot() {
     const title = anchor.current?.closest('.ant-modal')?.querySelector('.ant-modal-header')
     if (!title) return
     const slot = document.createElement('div')
-    slot.className = 'ai-artifact-mode-slot'
-    title.classList.add('ai-artifact-mode-heading')
+    slot.className = 'ai-artifact-mode-slot shrink-0 font-normal'
+    title.classList.add('ai-artifact-mode-heading', 'flex', 'flex-wrap', 'items-center', 'justify-between', 'gap-3', 'min-h-7', 'pr-11', 'max-[640px]:gap-2', '[&>:first-child:not(.ai-artifact-mode-slot)]:min-w-0', '[&>:first-child:not(.ai-artifact-mode-slot)]:flex-1')
     title.append(slot)
     setTarget(slot)
     return () => {
@@ -40,7 +40,7 @@ export function ArtifactModeControls({ value, onChange, options, extra, copyText
   onChange: (value: string) => void
   options: { label: string; value: string }[]
 }) {
-  return <div className="ai-artifact-mode-controls">{extra}{copyText !== undefined && <CopyButton copyText={copyText} copyLabel={copyLabel} />}<Segmented aria-label="内容展示方式" size="small" value={value} onChange={onChange} options={options} /></div>
+  return <div className="ai-artifact-mode-controls flex items-center gap-2">{extra}{copyText !== undefined && <CopyButton copyText={copyText} copyLabel={copyLabel} />}<Segmented aria-label="内容展示方式" size="small" value={value} onChange={onChange} options={options} /></div>
 }
 
 export function ArtifactModeSwitch({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
@@ -53,5 +53,5 @@ export function ArtifactModeSwitch({ value, onChange, options, extra, copyText, 
 }) {
   const { anchor, target } = useArtifactHeaderSlot()
   const control = <ArtifactModeControls value={value} onChange={onChange} options={options} extra={extra} copyText={copyText} copyLabel={copyLabel} />
-  return <><span ref={anchor} hidden />{target ? createPortal(control, target) : <div className="ai-artifact-mode-toolbar">{control}</div>}</>
+  return <><span ref={anchor} hidden />{target ? createPortal(control, target) : <div className="ai-artifact-mode-toolbar flex shrink-0 justify-end mb-3">{control}</div>}</>
 }

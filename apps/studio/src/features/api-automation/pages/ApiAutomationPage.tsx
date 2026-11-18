@@ -1,5 +1,6 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { SearchOutlined, SettingOutlined } from '@ant-design/icons'
@@ -365,7 +366,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface [--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace]">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
             <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
@@ -498,7 +499,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
               )}
             </div>
 
-            <div className="table-footer api-test-footer">
+            <div className={`table-footer api-test-footer ${tableFooterClass}`}>
               <ListPagination loading={collectionsQuery.isFetching || collectionsQuery.isError}
                 current={page}
                 pageSize={pageSize}

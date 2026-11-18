@@ -84,7 +84,7 @@ export function GenerationChainImportModal({ workspace, open, onClose }: {
     className="generation-chain-import-modal"
     title={<div className="gc-import-title flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="gc-kicker">正式资产导入</span>
+        <span className="gc-kicker mb-1 block text-[11px] uppercase tracking-[0.08em] text-[var(--gc-muted)]">正式资产导入</span>
         <strong className="text-[16px] text-[var(--app-surface-text)]">导入 {label || '当前版本'}</strong>
       </div>
       <Tag color="blue"><ImportOutlined /> 版本级来源</Tag>

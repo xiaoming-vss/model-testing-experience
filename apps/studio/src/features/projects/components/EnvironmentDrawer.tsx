@@ -22,6 +22,7 @@ import {
 import type { TableProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from '@/shared/utils/cx'
+import { tableFooterClass, tableScrollClass } from '@/shared/utils/surfaceClasses'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import styles from '../styles/environment-drawer.module.css'
 import {
@@ -456,7 +457,7 @@ export function EnvironmentDrawer({
                   </Card>
                 ) : (
                   <Card className="api-environment-vars-card min-h-0 flex-auto flex flex-col">
-                    <div className="table-body-scroll api-environment-vars-scroll min-h-0 flex-auto">
+                    <div className={`table-body-scroll api-environment-vars-scroll min-h-0 flex-auto ${tableScrollClass}`}>
                       <Table<ApiEnvironmentVar>
                         rowKey={normalizeEnvironmentVarId}
                         loading={environmentVarsQuery.isLoading}
@@ -466,7 +467,7 @@ export function EnvironmentDrawer({
                         locale={{ emptyText: <Empty description={environmentVarSearch.trim() ? '没有匹配到变量' : '当前环境还没有变量'} /> }}
                       />
                     </div>
-                    <div className="table-footer api-environment-vars-footer">
+                    <div className={cx('table-footer api-environment-vars-footer', tableFooterClass)}>
                       <ListPagination loading={environmentVarsQuery.isFetching || environmentVarsQuery.isError}
                         current={environmentVarPage}
                         pageSize={environmentVarPageSize}

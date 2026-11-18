@@ -2,7 +2,6 @@
  * 需要与外壳高度链绑定的规则。页面布局、卡片、列表单元、详情栏与表单骨架
  * 已由 Bug* 组件的 Tailwind utility 负责。 */
 
-.root { --bugs-scope: 1; }
 
 /* —— 详情页高度链 —— */
 .root:global(.bugs-detail-page) { min-height: 100%; }
@@ -30,74 +29,6 @@
   height: 16px;
   border-radius: 2px;
   background: var(--srf-accent);
-}
-
-.root :global(.bug-meta-list) dt {
-  color: var(--srf-text-secondary);
-}
-
-.root :global(.bug-meta-list) dd {
-  margin: 0;
-  color: var(--srf-text);
-  min-width: 0;
-  word-break: break-all;
-  text-align: right;
-}
-
-.root :global(.bug-context-list) { display: block; }
-
-.root :global(.bug-context-list) dt {
-  padding: 12px 12px 4px;
-  background: var(--srf-hover);
-  border: 1px solid var(--srf-card-border);
-  border-bottom: 0;
-  border-radius: 6px 6px 0 0;
-  font-size: 11px;
-}
-
-.root :global(.bug-context-list) dd {
-  padding: 0 12px 12px;
-  margin-bottom: 12px;
-  text-align: left;
-  background: var(--srf-hover);
-  border: 1px solid var(--srf-card-border);
-  border-top: 0;
-  border-radius: 0 0 6px 6px;
-}
-
-.root :global(.bug-context-list) dd:last-child { margin-bottom: 0; }
-
-.root :global(.bug-evidence-preview) img,
-.root :global(.bug-evidence-preview) video {
-  display: block;
-  width: 100%;
-  max-height: 360px;
-  object-fit: contain;
-  margin-top: 12px;
-}
-
-.root :global(.bug-evidence-file-info) > span,
-.root :global(.bug-evidence-file-info) > button {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.root :global(.bug-evidence-file-info) button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--srf-accent);
-  cursor: pointer;
-  text-align: left;
-}
-
-.root :global(.bug-evidence-file-info) small {
-  display: block;
-  color: var(--srf-text-muted);
-  margin-top: 4px;
 }
 
 .root :global(.bug-sidebar-indicator)::before {
@@ -139,18 +70,6 @@
 .root :global(.bug-inline-form) :global(.rich-text-content) :global(.tiptap) { min-height: 320px; max-height: none; }
 
 /* —— 描述模板按钮 —— */
-.root :global(.bug-description-templates) button {
-  border: 0;
-  border-radius: 4px;
-  padding: 3px 8px;
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent);
-  cursor: pointer;
-  font: inherit;
-}
-
-.root :global(.bug-description-templates) button:hover { background: var(--srf-count-badge); }
-.root :global(.bug-description-templates) button:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
 
 /* —— 新建/编辑缺陷弹窗 —— */
 .root :global(.ant-modal) { max-width: calc(100vw - 32px); padding-bottom: 0; }

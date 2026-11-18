@@ -14,15 +14,15 @@
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell,
 :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell {
   height: 42px;
-  padding: 0 16px !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--app-list-header-border) !important;
-  border-radius: 0 !important;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid var(--app-list-header-border);
+  border-radius: 0;
   font-size: 12px;
   font-weight: 500;
-  color: var(--srf-list-header-text) !important;
-  background: var(--srf-list-header-bg) !important;
-  box-shadow: none !important;
+  color: var(--srf-list-header-text);
+  background: var(--srf-list-header-bg);
+  box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -30,41 +30,36 @@
 :root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
 :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   height: 48px;
-  padding: 8px 16px !important;
-  border-bottom: 1px solid var(--app-list-row-border) !important;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--app-list-row-border);
   font-size: 12px;
-  background: var(--srf-list-row-bg) !important;
+  background: var(--srf-list-row-bg);
   box-shadow: none;
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td,
 :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td {
-  background: var(--srf-list-row-hover) !important;
+  background: var(--srf-list-row-hover);
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
-  border-top-left-radius: 8px !important;
-  border-bottom-left-radius: 8px !important;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
 }
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
-  border-top-right-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell::before {
-  display: none !important;
+  display: none;
 }
 
-/* 操作列列头与贴边按钮组对齐：标题 span 与按钮组同宽并内部居中，
-   使“操作”二字位于按钮组正上方（按钮组本身右贴边）。 */
-.tp-actions-col-title {
-  display: inline-block;
-  text-align: center;
-}
+/* 操作列列头与贴边按钮组对齐：标题 span 的 inline-block / text-center 已由列头 utility 承担。 */
 
 /*
  * feature 列表的兼容钩子：用例库、Bug 列表、测试单执行条目与「加入用例」弹窗仍声明
  * functional-suite-list-table。表头、行高、分隔线与四角圆角由上面的 tp-list-table 契约负责；
- * 这里只补这些页面共用的正文颜色、字阶与名称列布局，避免页面各写一份 !important。
+ * 这里只补这些页面共用的正文颜色、字阶与名称列布局，避免页面各写一份。
  */
 .functional-test-page .functional-suite-list-table.ant-table-wrapper {
   width: 100%;
@@ -125,11 +120,6 @@
   color: var(--app-list-label);
 }
 
-.functional-suite-list-name {
-  width: 100%;
-  min-width: 0;
-}
-
 .functional-suite-list-name .ant-space-item:last-child {
   flex: 1 1 auto;
   min-width: 0;
@@ -147,23 +137,19 @@
   line-height: 20px;
 }
 
-.functional-suite-list-actions {
-  justify-content: flex-end;
-}
-
 /* 列表主名称的排版契约；原 list-name.css，随本文件加载。 */
 :root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name .ant-typography {
-  color: var(--app-list-name) !important;
-  font-family: Arial, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 400 !important;
-  line-height: 24px !important;
+  color: var(--app-list-name);
+  font-family: Arial, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 24px;
   cursor: pointer;
   text-decoration: none;
   text-underline-offset: 3px;
 }
 :root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(.ant-typography:hover, .ant-typography:focus-visible, a:focus-visible .ant-typography) {
-  color: var(--app-list-name-hover) !important;
+  color: var(--app-list-name-hover);
   text-decoration: underline;
 }
 :root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(a, button):focus-visible {

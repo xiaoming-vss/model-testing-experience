@@ -224,8 +224,8 @@ export function ApiInterfaceSelector({
   }
 
   return (
-    <div className="api-interface-selector">
-      <div className="api-interface-selector-scope">
+    <div className="api-interface-selector grid min-w-0 gap-2">
+      <div className="api-interface-selector-scope flex flex-wrap items-center gap-2">
         <Tag color={suggestionScope ? 'purple' : useAllRepositories ? 'default' : 'blue'}>
           {suggestionScope
             ? `画像建议仓库（${suggestedRepositoryIds.length}）`
@@ -236,7 +236,7 @@ export function ApiInterfaceSelector({
         {suggestedRepositoryIds.length && !suggestionScope ? (
           <button
             type="button"
-            className="api-interface-selector-scope-toggle"
+            className="api-interface-selector-scope-toggle cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-xs text-[var(--app-accent)] disabled:cursor-not-allowed disabled:text-[var(--app-surface-text-muted)]"
             disabled={disabled}
             onClick={() => switchScope('suggested')}
           >
@@ -246,7 +246,7 @@ export function ApiInterfaceSelector({
         {scopedRepositoryIds.length && !requirementScope ? (
           <button
             type="button"
-            className="api-interface-selector-scope-toggle"
+            className="api-interface-selector-scope-toggle cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-xs text-[var(--app-accent)] disabled:cursor-not-allowed disabled:text-[var(--app-surface-text-muted)]"
             disabled={disabled}
             onClick={() => switchScope('requirement')}
           >
@@ -256,7 +256,7 @@ export function ApiInterfaceSelector({
         {!useAllRepositories ? (
           <button
             type="button"
-            className="api-interface-selector-scope-toggle"
+            className="api-interface-selector-scope-toggle cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-xs text-[var(--app-accent)] disabled:cursor-not-allowed disabled:text-[var(--app-surface-text-muted)]"
             disabled={disabled}
             onClick={() => switchScope('project')}
           >
@@ -265,17 +265,17 @@ export function ApiInterfaceSelector({
         ) : null}
       </div>
       {suggestionScope ? (
-        <span className="api-interface-selector-hint">
+        <span className="api-interface-selector-hint text-xs leading-normal text-[var(--app-surface-text-muted)]">
           建议来自仓库画像，仅用于缩小接口范围；可切换范围选择其他软件仓库的接口。
         </span>
       ) : null}
       {requirementId && effectiveScope === 'requirement' && requirementScopeReady && !scopedRepositoryIds.length ? (
-        <span className="api-interface-selector-empty">
+        <span className="api-interface-selector-empty text-xs text-[var(--app-surface-text-muted)]">
           该需求尚未关联软件仓库，已展示项目全部接口。
         </span>
       ) : null}
       {repositoryOptions.length ? (
-        <div className="api-interface-selector-toolbar">
+        <div className="api-interface-selector-toolbar flex flex-wrap items-center gap-2">
           <Select
             allowClear
             aria-label="按软件仓库筛选"
@@ -283,6 +283,7 @@ export function ApiInterfaceSelector({
             disabled={disabled}
             value={repositoryFilter}
             options={repositoryOptions}
+            className="flex-[1_1_220px] min-w-[180px]"
             onChange={value => setRepositoryFilter(value || undefined)}
           />
           {tagOptions.length ? (
@@ -295,6 +296,7 @@ export function ApiInterfaceSelector({
               disabled={disabled}
               value={tagFilter}
               options={tagOptions}
+              className="flex-[1_1_220px] min-w-[180px]"
               onChange={value => setTagFilter(value || undefined)}
             />
           ) : null}
@@ -337,7 +339,7 @@ export function ApiInterfaceSelector({
         optionFilterProp="label"
       />
       {!loading && !bindingsLoading && !visibleInterfaces.length ? (
-        <span className="api-interface-selector-empty">
+        <span className="api-interface-selector-empty text-xs text-[var(--app-surface-text-muted)]">
           {keyword || repositoryFilter || tagFilter
             ? '没有匹配的接口'
             : suggestionScope

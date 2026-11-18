@@ -78,28 +78,28 @@ export function ApiGenerationSourcePanel({
               <p className="gc-inspector-summary">
                 来自仓库画像 {profileLabel}。建议仅用于筛选接口，生成时仍可选择其他软件仓库。
               </p>
-              <ul className="api-source-repo-list" aria-label="画像建议的后端仓库">
+              <ul className="api-source-repo-list m-0 grid list-none gap-1.5 p-0 min-w-0" aria-label="画像建议的后端仓库">
                 {backendRepositories.map(repository => {
                   const role = repositoryRoleMeta(repository.role)
                   return (
-                    <li key={repository.repositoryId} className="api-source-repo">
-                      <span className="api-source-repo-title">
-                        <strong>{repository.pathWithNamespace}</strong>
+                    <li key={repository.repositoryId} className="api-source-repo grid min-w-0 gap-[3px] rounded-lg border border-[var(--app-surface-border)] bg-[var(--app-surface)] p-[8px_10px]">
+                      <span className="api-source-repo-title flex min-w-0 flex-wrap items-center gap-1.5">
+                        <strong className="[overflow-wrap:anywhere]">{repository.pathWithNamespace}</strong>
                         <Tag color={role.color}>{role.label}</Tag>
                         {repository.repositoryId === recommendedRepositoryId ? (
                           <Tag>推荐</Tag>
                         ) : null}
                       </span>
-                      <span className="api-source-repo-meta">
+                      <span className="api-source-repo-meta text-xs leading-normal text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">
                         置信度 {formatProfileConfidence(repository.confidence)}
                       </span>
                       {repository.responsibilitySummary ? (
-                        <span className="api-source-repo-meta">
+                        <span className="api-source-repo-meta text-xs leading-normal text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">
                           {repository.responsibilitySummary}
                         </span>
                       ) : null}
                       {repository.keyPaths.length ? (
-                        <span className="api-source-repo-paths">
+                        <span className="api-source-repo-paths text-xs leading-normal text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">
                           {repository.keyPaths.join(' / ')}
                         </span>
                       ) : null}

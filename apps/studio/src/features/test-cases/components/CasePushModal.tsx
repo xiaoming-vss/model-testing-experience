@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { randomId } from '@/shared/utils/crypto'
 import { getErrorMessage } from '@/utils/format'
@@ -146,6 +147,6 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
         }} />}
       </>}
     </div>
-    {items && <div className="table-footer"><ListPagination current={page} pageSize={pageSize} total={items.length} loading={busy} onChange={(next, size) => { setPage(next); setPageSize(size) }} /></div>}
+    {items && <div className={`table-footer ${tableFooterClass}`}><ListPagination current={page} pageSize={pageSize} total={items.length} loading={busy} onChange={(next, size) => { setPage(next); setPageSize(size) }} /></div>}
   </ProjectActionModal>
 }

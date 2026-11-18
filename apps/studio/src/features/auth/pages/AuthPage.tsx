@@ -74,7 +74,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
           <section className="flex min-w-0 flex-col px-[86px] pt-[120px] pb-[54px] max-narrow:px-7 max-narrow:pt-[34px] max-narrow:pb-[30px]">
             <div className="mb-[30px] w-full">
-              <h1 className={cx(styles.title, 'm-0 text-[24px] font-bold leading-[34px]')}>{isLogin ? '欢迎回来' : '创建账号'}</h1>
+              <h1 className={cx('m-0 text-[24px] font-bold leading-[34px] text-[var(--app-auth-text)]')}>{isLogin ? '欢迎回来' : '创建账号'}</h1>
               <Text className="text-sm leading-[22px] text-[var(--app-auth-text-secondary)]">{isLogin ? '登录后继续你的测试设计工作' : '创建账号，开始你的模型测试体验'}</Text>
             </div>
 

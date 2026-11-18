@@ -166,7 +166,7 @@ export function PerformanceRunDetailPage() {
   return <ProjectAccessScope projectId={run?.projectId ?? ''}>
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board">
           <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 flex-wrap items-center gap-3">
               <Button

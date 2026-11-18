@@ -17,7 +17,7 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
           <div className="bug-detail-side min-w-0 max-[1100.01px]:grid max-[1100.01px]:grid-cols-2 max-[1100.01px]:gap-4 max-[720.01px]:grid-cols-1">
             <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
               <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">基本属性</h2>
-              <dl className="bug-meta-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed">
+              <dl className="bug-meta-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed [&_dd]:m-0 [&_dd]:min-w-0 [&_dd]:break-all [&_dd]:text-right [&_dd]:text-[var(--srf-text)] [&_dt]:text-[var(--srf-text-secondary)]">
                 <dt>所属项目</dt>
                 <dd>{projectName ?? bug.projectId}</dd>
                 <dt>严重程度</dt>
@@ -48,7 +48,7 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
 
             <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
               <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">关联上下文与追溯</h2>
-              <dl className="bug-meta-list bug-context-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed">
+              <dl className="bug-meta-list bug-context-list m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-y-[18px] text-xs leading-relaxed [&_dd]:m-0 [&_dd]:mb-3 [&_dd]:min-w-0 [&_dd]:break-all [&_dd]:rounded-b-[6px] [&_dd]:border [&_dd]:border-t-0 [&_dd]:border-[var(--srf-card-border)] [&_dd]:bg-[var(--srf-hover)] [&_dd]:px-3 [&_dd]:pb-3 [&_dd]:text-left [&_dd]:text-[var(--srf-text)] [&_dd:last-child]:mb-0 [&_dt]:rounded-t-[6px] [&_dt]:border [&_dt]:border-b-0 [&_dt]:border-[var(--srf-card-border)] [&_dt]:bg-[var(--srf-hover)] [&_dt]:px-3 [&_dt]:pb-1 [&_dt]:pt-3 [&_dt]:text-[11px] [&_dt]:text-[var(--srf-text-secondary)]">
                 <dt>所属需求</dt>
                 <dd>
                   {editors?.requirement ?? (bug.requirementId && canReadContext ? (

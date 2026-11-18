@@ -226,7 +226,7 @@ function RequirementTextPreview({ previewUrl, richText = false }: { previewUrl: 
   }, [previewUrl, token, previewAttempt])
 
   return (
-    <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
+    <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto [&_.rich-text-viewer]:box-border [&_.rich-text-viewer]:min-h-full [&_.rich-text-viewer]:w-full [&_.rich-text-viewer]:p-6">
       {loading ? (
         <div className="requirement-document-preview-state flex min-h-[220px] flex-col items-center justify-center gap-2.5 text-[13px] text-[var(--testing-text-muted)]">
           <Spin />
@@ -322,11 +322,11 @@ export function RequirementDocumentPreviewContent({
       ) : !isWord && documentUrl ? (
         <RequirementTextPreview key={previewUrl} previewUrl={previewUrl} richText={documentType === 'richtext'} />
       ) : !isWord && documentText ? (
-        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
+        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto [&_.rich-text-viewer]:box-border [&_.rich-text-viewer]:min-h-full [&_.rich-text-viewer]:w-full [&_.rich-text-viewer]:p-6">
           <article className="requirement-document-text-article box-border block min-h-full w-full min-w-0 max-w-full whitespace-pre-wrap break-words bg-[var(--app-surface)] p-6 text-[15px] leading-[1.84] text-[var(--description-text)] [font-family:var(--description-font)]">{documentText}</article>
         </div>
       ) : (
-        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto">
+        <div className="requirement-document-text-host min-h-0 min-w-0 w-full max-w-full flex-1 overflow-auto [&_.rich-text-viewer]:box-border [&_.rich-text-viewer]:min-h-full [&_.rich-text-viewer]:w-full [&_.rich-text-viewer]:p-6">
           <div className="requirement-document-text-article box-border block min-h-full w-full min-w-0 max-w-full whitespace-pre-wrap break-words bg-[var(--app-surface)] p-6 text-[15px] leading-[1.84] text-[var(--description-text)] [font-family:var(--description-font)]">暂无源文件</div>
         </div>
       )}
@@ -335,7 +335,7 @@ export function RequirementDocumentPreviewContent({
 
   return (
     <div className={`requirement-document-modal flex min-h-0 flex-1 flex-col gap-0${embedded ? ' requirement-document-inline' : ''} ${detailStyles.root}`}>
-      {!embedded ? <header className="requirement-document-modal-toolbar">
+      {!embedded ? <header className="requirement-document-modal-toolbar flex min-h-[72px] items-center justify-between gap-[18px] border-b border-[var(--app-list-row-border)] bg-[var(--app-surface)] px-4 py-3 pr-16 [backdrop-filter:none]">
         <div className="requirement-document-modal-toolbar-main flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
           {!embedded ? <div className="requirement-document-modal-title-row flex items-center gap-2.5">
             <FileWordOutlined className="requirement-document-modal-title-icon inline-flex text-[21px] text-[var(--app-testing-control-accent)]" />

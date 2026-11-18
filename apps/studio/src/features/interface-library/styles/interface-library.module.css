@@ -1,17 +1,9 @@
 /* 接口库列表、软件仓库树与详情共用的页面壳、AntD 深层规则和方法签。
  * 页面骨架、工具栏、树节点、抽屉表单与仓库表格排版已迁到组件 utility；
- * 这里只保留页面高度/内距、AntD 内部 DOM 与跨视图复用的方法签。 */
+ * 这里只保留 760px 以下的页面高度链、AntD 内部 DOM 与跨视图复用的方法签。 */
 
-.scope {
-  --if-scope: 1;
-}
-
-.pageRoot {
-  box-sizing: border-box;
-  gap: 12px;
-  padding: 12px var(--app-page-gutter) 16px;
-}
-
+/* 普通间距由 pageClasses.ts 的 utility 承担；这里只保留窄屏高度链，
+   因为 shell.css 的 .workbench-page 未分层，utility 无法覆盖它。 */
 /* 加载态根节点同时带 .workbench-page；未分层的 flex 会压过 grid utility。 */
 .scope:global(.if-detail-loading) {
   display: grid;
@@ -72,67 +64,12 @@
   color: var(--srf-text-secondary);
 }
 
-/* ===== 接口 HTTP 方法签：列表、导入预览与详情共用 ===== */
-
-.scope :global(.if-method) {
-  flex: 0 0 auto;
-  min-width: 48px;
-  margin: 0;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: var(--srf-chip);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 20px;
-  text-align: center;
-  letter-spacing: 0.02em;
-}
-
-.scope :global(.if-method.if-method-get) {
-  color: var(--app-http-method-get);
-  border-color: color-mix(in srgb, var(--app-http-method-get) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-get) 10%, var(--srf-card));
-}
-
-.scope :global(.if-method.if-method-post) {
-  color: var(--app-http-method-post);
-  border-color: color-mix(in srgb, var(--app-http-method-post) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-post) 10%, var(--srf-card));
-}
-
-.scope :global(.if-method.if-method-put) {
-  color: var(--app-http-method-put);
-  border-color: color-mix(in srgb, var(--app-http-method-put) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-put) 10%, var(--srf-card));
-}
-
-.scope :global(.if-method.if-method-patch) {
-  color: var(--app-http-method-patch);
-  border-color: color-mix(in srgb, var(--app-http-method-patch) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-patch) 10%, var(--srf-card));
-}
-
-.scope :global(.if-method.if-method-delete) {
-  color: var(--app-http-method-delete);
-  border-color: color-mix(in srgb, var(--app-http-method-delete) 30%, var(--srf-card-border));
-  background: color-mix(in srgb, var(--app-http-method-delete) 10%, var(--srf-card));
-}
-
-.scope :global(.if-method.if-method-head),
-.scope :global(.if-method.if-method-options),
-.scope :global(.if-method.if-method-other) {
-  color: var(--srf-text-secondary);
-  border-color: var(--srf-card-border);
-  background: var(--srf-chip);
-}
+/* ===== 接口 HTTP 方法签已迁到 shared/components/MethodBadge.tsx ===== */
 
 @media (max-width: 760px) {
   .pageRoot {
     height: auto;
     min-height: 100%;
     overflow: visible;
-    padding: 8px var(--app-page-gutter) 14px;
   }
 }

@@ -172,8 +172,7 @@
 /* 存量分离布局的兼容板面；新列表／卡片页必须追加 tp-list-panel。
    未迁移页面本身不承载表面，让内部卡片承载背景。
    .api-automation-content 已经给了页面内距，面板不再补一层。
-   shell-header.css 的 macOS 玻璃板面规则带 !important，所以下面还要用
-   .app-shell-macos .testing-page 前缀把权重压过去。 */
+   macOS 玻璃板面由 shell-header.css 的 .workbench-panel-flat 统一压平，页面不再写高权重覆盖。 */
 .tp-surface .tp-board,
 .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
   display: flex;
@@ -187,19 +186,6 @@
   overflow: visible;
 }
 
-/* app/styles/shell-header.css 的玻璃板面规则写成 `.app-shell-macos .workbench-panel`
-   （(0,2,0) + `!important`），与上面 `.tp-board` 那条同权重——同权重就靠样式表顺序决胜，
-   顺序一变玻璃底、内高光与 28px 阴影就会重新盖回来（表现为内容区多出一层容器）。
-   这里多带 `.app-shell-macos .testing-page` 前缀（(0,6,0)）并用 `!important` 压住玻璃层，顺序依赖就没有了。 */
-.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
 /* 筛选标签（「迭代」「需求」…）在旧外壳里是一枚蓝底小胶囊，设计稿里它是裸的弱化文字。
    这里统一收掉；不直接改那条旧规则，是因为它同时作用于测试单的「加入用例」弹窗，
    那个弹窗不在 tp-surface 里，不该跟着变。 */
@@ -209,7 +195,7 @@
 }
 
 /* 四个测试列表的筛选卡片唯一实现。旧 panel-header 规则显式排除 tp-list-toolbar，
-   页面只补内部排布，不再通过高权重或 !important 重写这里的尺寸与表面。 */
+   页面只补内部排布，不再通过高权重规则重写这里的尺寸与表面。 */
 @layer components {
   .tp-surface .tp-list-toolbar {
     display: flex;
@@ -274,12 +260,12 @@
   min-width: 0;
   gap: 0;
   padding: 0;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-card) !important;
-  background: var(--srf-card) !important;
-  box-shadow: none !important;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: none;
   overflow: hidden;
-  backdrop-filter: none !important;
+  backdrop-filter: none;
 }
 
 .tp-surface .tp-list-panel > .tp-list-toolbar {
@@ -306,7 +292,7 @@
   min-height: 0;
   min-width: 0;
   overflow: auto;
-  padding: 16px !important;
+  padding: 16px;
 }
 
 
@@ -321,9 +307,6 @@
  * 筛选控件与卡片皮肤。实际消费方包括测试、Bug、用例库、测试单、UI/API 自动化、
  * 基础服务、性能与 AI Skill 库；保留旧类名，等阶段 4 的共享原语替换。
  */
-.api-automation-page {
-  gap: 0;
-}
 
 .api-automation-content {
   flex: 1 1 auto;
@@ -348,10 +331,6 @@
 
 .api-panel-header:not(:where(.tp-list-toolbar)) {
   gap: 16px;
-}
-
-.api-panel-head-main {
-  flex-wrap: wrap;
 }
 
 @layer components {

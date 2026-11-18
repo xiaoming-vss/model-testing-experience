@@ -19,6 +19,7 @@ import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEdito
 import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
 import { ApiDesignDiagramView } from './ApiDesignDiagramView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
+import { GC_STATE_CLASS } from './generationClasses'
 import { GenerationChainImportModal } from './GenerationChainImportModal'
 import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
@@ -412,17 +413,17 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     className={`generation-chain-modal${revisionOpen ? ' is-revising' : ''}${embedded ? ' gc-inspector-reading' : ''}`}
     title={embedded ? stage.label : <div className="gc-modal-title flex min-w-0 flex-wrap items-center gap-3">
       <div className="gc-title-main flex min-w-0 flex-col gap-px">
-        <span className="gc-kicker">{chain.label} / 第 {stage.order + 1} 阶段</span>
+        <span className="gc-kicker mb-0 block text-[11px] uppercase tracking-[0.08em] text-[var(--gc-muted)]">{chain.label} / 第 {stage.order + 1} 阶段</span>
         <div className="gc-title-name flex flex-wrap items-center gap-2">
-          <strong>{stage.label}</strong>
-          <span className={`gc-state ${rejected ? 'is-danger' : stateClass(stage.state)}`}>{rejected ? '已退回' : stateCopy[stage.state] ?? stage.state}</span>
+          <strong className="text-[16px] leading-[1.35]">{stage.label}</strong>
+          <span className={`${GC_STATE_CLASS} ${rejected ? 'is-danger' : stateClass(stage.state)}`}>{rejected ? '已退回' : stateCopy[stage.state] ?? stage.state}</span>
         </div>
       </div>
     </div>}
   >
     {!embedded ? readingControls : null}
-    <div className={`gc-workspace revision-workspace flex min-h-0 min-w-0 flex-1${revisionOpen ? ' is-revising' : ''}`}>
-      <div className={`${embedded ? "gc-reading-body" : "gc-source"}${embedded ? ' flex min-h-0 min-w-0 flex-col overflow-hidden' : ' flex min-h-0 min-w-0 flex-1 flex-col px-6 pt-3'}${revisionOpen ? " revision-source" : ""}`}>
+    <div className={`gc-workspace revision-workspace flex h-full min-h-0 min-w-0 flex-1 gap-0${revisionOpen ? ' is-revising' : ''}`}>
+      <div className={`${embedded ? "gc-reading-body" : "gc-source"}${embedded ? ' flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden' : ' flex h-full min-h-0 w-full min-w-0 flex-1 flex-col px-6 pt-3'}${revisionOpen ? " revision-source" : ""}`}>
         {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '来源仓库或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
         {invalidDraft ? <Alert showIcon type="warning" title="产物已作废"
           description={stage.draft?.invalidatedReason || '该产物依赖的上游版本已被删除，不能继续审核或优化，请重新生成。'} /> : null}

@@ -7,7 +7,6 @@
     "src/app/styles/layout.css",
     "src/app/styles/shell-header.css",
     "src/app/styles/shell.css",
-    "src/app/styles/sidebar.css",
     "src/app/styles/theme.css",
     "src/index.css",
     "src/shared/components/RichTextEditor/rich-text-editor.css",
@@ -31,9 +30,9 @@
   "sharedModuleViolations": [],
   "files": {
     "src/app/styles/action-buttons.css": {
-      "rules": 7,
-      "declarations": 11,
-      "selectors": 19,
+      "rules": 6,
+      "declarations": 10,
+      "selectors": 18,
       "layoutDeclarations": 0
     },
     "src/app/styles/antd-overrides.css": {
@@ -44,33 +43,27 @@
     },
     "src/app/styles/buttons.css": {
       "rules": 27,
-      "declarations": 113,
+      "declarations": 98,
       "selectors": 37,
       "layoutDeclarations": 6
     },
     "src/app/styles/layout.css": {
-      "rules": 22,
-      "declarations": 76,
-      "selectors": 22,
-      "layoutDeclarations": 30
+      "rules": 15,
+      "declarations": 40,
+      "selectors": 15,
+      "layoutDeclarations": 19
     },
     "src/app/styles/shell-header.css": {
-      "rules": 40,
-      "declarations": 99,
-      "selectors": 49,
-      "layoutDeclarations": 40
+      "rules": 30,
+      "declarations": 82,
+      "selectors": 38,
+      "layoutDeclarations": 34
     },
     "src/app/styles/shell.css": {
-      "rules": 62,
-      "declarations": 166,
-      "selectors": 77,
-      "layoutDeclarations": 112
-    },
-    "src/app/styles/sidebar.css": {
-      "rules": 21,
-      "declarations": 89,
-      "selectors": 22,
-      "layoutDeclarations": 47
+      "rules": 40,
+      "declarations": 105,
+      "selectors": 52,
+      "layoutDeclarations": 70
     },
     "src/app/styles/theme.css": {
       "rules": 6,
@@ -79,70 +72,64 @@
       "layoutDeclarations": 3
     },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
-      "rules": 50,
-      "declarations": 164,
-      "selectors": 54,
-      "layoutDeclarations": 46
+      "rules": 48,
+      "declarations": 151,
+      "selectors": 52,
+      "layoutDeclarations": 44
     },
     "src/features/ai-testing/styles/artifact-cases.module.css": {
-      "rules": 44,
-      "declarations": 136,
-      "selectors": 53,
-      "layoutDeclarations": 63
+      "rules": 42,
+      "declarations": 131,
+      "selectors": 51,
+      "layoutDeclarations": 59
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
-      "rules": 178,
-      "declarations": 520,
-      "selectors": 207,
-      "layoutDeclarations": 266
+      "rules": 147,
+      "declarations": 417,
+      "selectors": 173,
+      "layoutDeclarations": 208
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 157,
-      "declarations": 526,
-      "selectors": 166,
-      "layoutDeclarations": 276
+      "rules": 121,
+      "declarations": 381,
+      "selectors": 126,
+      "layoutDeclarations": 208
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
-      "rules": 104,
-      "declarations": 166,
-      "selectors": 129,
-      "layoutDeclarations": 18
+      "rules": 96,
+      "declarations": 145,
+      "selectors": 121,
+      "layoutDeclarations": 0
     },
     "src/features/api-automation/styles/api-detail-rules.module.css": {
-      "rules": 9,
-      "declarations": 28,
-      "selectors": 11,
-      "layoutDeclarations": 7
+      "rules": 6,
+      "declarations": 17,
+      "selectors": 8,
+      "layoutDeclarations": 3
     },
     "src/features/api-automation/styles/api-detail-shell.module.css": {
-      "rules": 38,
-      "declarations": 91,
-      "selectors": 43,
+      "rules": 37,
+      "declarations": 90,
+      "selectors": 42,
       "layoutDeclarations": 21
     },
-    "src/features/base-services/styles/zentao-binding.module.css": {
-      "rules": 8,
-      "declarations": 27,
-      "selectors": 8,
-      "layoutDeclarations": 11
-    },
     "src/features/bugs/styles/bugs.module.css": {
-      "rules": 63,
-      "declarations": 174,
-      "selectors": 75,
-      "layoutDeclarations": 86
+      "rules": 49,
+      "declarations": 123,
+      "selectors": 59,
+      "layoutDeclarations": 68
     },
     "src/features/interface-library/styles/interface-detail.module.css": {
-      "rules": 13,
-      "declarations": 40,
-      "selectors": 20,
+      "rules": 12,
+      "declarations": 39,
+      "selectors": 19,
       "layoutDeclarations": 11
     },
     "src/features/interface-library/styles/interface-library.module.css": {
-      "rules": 20,
-      "declarations": 64,
-      "selectors": 22,
-      "layoutDeclarations": 19
+      "rules": 11,
+      "declarations": 28,
+      "selectors": 11,
+      "layoutDeclarations": 11
     },
     "src/features/projects/styles/environment-drawer.module.css": {
       "rules": 11,
@@ -151,39 +138,39 @@
       "layoutDeclarations": 22
     },
     "src/features/projects/styles/sprint-overview.module.css": {
-      "rules": 33,
-      "declarations": 92,
-      "selectors": 36,
-      "layoutDeclarations": 35
+      "rules": 29,
+      "declarations": 73,
+      "selectors": 32,
+      "layoutDeclarations": 33
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
-      "rules": 29,
-      "declarations": 71,
-      "selectors": 38,
-      "layoutDeclarations": 44
+      "rules": 27,
+      "declarations": 58,
+      "selectors": 36,
+      "layoutDeclarations": 34
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 23,
-      "declarations": 57,
-      "selectors": 27,
+      "rules": 22,
+      "declarations": 56,
+      "selectors": 26,
       "layoutDeclarations": 12
     },
     "src/features/test-orders/styles/test-order-workspace.module.css": {
-      "rules": 33,
-      "declarations": 89,
-      "selectors": 37,
-      "layoutDeclarations": 61
+      "rules": 9,
+      "declarations": 19,
+      "selectors": 11,
+      "layoutDeclarations": 17
     },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
-      "rules": 47,
-      "declarations": 135,
-      "selectors": 53,
+      "rules": 44,
+      "declarations": 127,
+      "selectors": 50,
       "layoutDeclarations": 40
     },
     "src/features/ui-automation/styles/ui-suite.module.css": {
-      "rules": 26,
-      "declarations": 60,
-      "selectors": 39,
+      "rules": 25,
+      "declarations": 59,
+      "selectors": 38,
       "layoutDeclarations": 30
     },
     "src/index.css": {
@@ -199,9 +186,9 @@
       "layoutDeclarations": 35
     },
     "src/shared/styles/account.module.css": {
-      "rules": 23,
-      "declarations": 61,
-      "selectors": 29,
+      "rules": 22,
+      "declarations": 60,
+      "selectors": 28,
       "layoutDeclarations": 15
     },
     "src/shared/styles/chart-tokens.css": {
@@ -212,7 +199,7 @@
     },
     "src/shared/styles/foundation-tokens.css": {
       "rules": 2,
-      "declarations": 534,
+      "declarations": 528,
       "selectors": 2,
       "layoutDeclarations": 0
     },
@@ -224,31 +211,31 @@
     },
     "src/shared/styles/github-dark-tokens.css": {
       "rules": 10,
-      "declarations": 200,
+      "declarations": 194,
       "selectors": 11,
       "layoutDeclarations": 0
     },
     "src/shared/styles/indigo-amber-light-tokens.css": {
       "rules": 6,
-      "declarations": 288,
+      "declarations": 282,
       "selectors": 6,
       "layoutDeclarations": 0
     },
     "src/shared/styles/list-table.css": {
-      "rules": 26,
-      "declarations": 79,
-      "selectors": 36,
-      "layoutDeclarations": 16
+      "rules": 23,
+      "declarations": 74,
+      "selectors": 33,
+      "layoutDeclarations": 12
     },
     "src/shared/styles/pagination.css": {
-      "rules": 14,
-      "declarations": 48,
-      "selectors": 20,
-      "layoutDeclarations": 29
+      "rules": 13,
+      "declarations": 37,
+      "selectors": 19,
+      "layoutDeclarations": 20
     },
     "src/shared/styles/run-view.module.css": {
       "rules": 18,
-      "declarations": 56,
+      "declarations": 55,
       "selectors": 19,
       "layoutDeclarations": 35
     },
@@ -259,10 +246,10 @@
       "layoutDeclarations": 2
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 40,
-      "declarations": 210,
-      "selectors": 43,
-      "layoutDeclarations": 82
+      "rules": 37,
+      "declarations": 202,
+      "selectors": 40,
+      "layoutDeclarations": 80
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
@@ -278,7 +265,7 @@
     },
     "src/shared/styles/ui-stage-visual-tokens.css": {
       "rules": 1,
-      "declarations": 87,
+      "declarations": 86,
       "selectors": 1,
       "layoutDeclarations": 0
     }
@@ -288,14 +275,6 @@
       "count": 2,
       "sample": "height: 100dvh;min-height: 0;overflow: hidden"
     },
-    "300b373f254ffd3c": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 8px"
-    },
-    "528f9ebfeb41bb50": {
-      "count": 2,
-      "sample": "overflow: hidden;font-size: 12px;text-overflow: ellipsis;white-space: nowrap"
-    },
     "58c9a32dd9adcce7": {
       "count": 2,
       "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
@@ -304,25 +283,13 @@
       "count": 2,
       "sample": "height: 100%;min-height: 0;display: flex;flex-direction: column;overflow: hidden"
     },
-    "9222d9fe65fe3f15": {
-      "count": 2,
-      "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
-    },
     "c3a767a35bba8500": {
       "count": 3,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
     },
-    "e0a80c835c3c40a9": {
-      "count": 2,
-      "sample": "border: 0;border-bottom: 1px solid var(--srf-card-border);border-radius: 0"
-    },
     "e38e5eb24a0f8a06": {
       "count": 2,
       "sample": "height: 100%;min-height: 0;overflow: hidden"
-    },
-    "fbbb9331ecfd8380": {
-      "count": 2,
-      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     }
   }
 }

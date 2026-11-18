@@ -78,7 +78,7 @@ export function TestOrderWorkspaceToolbar({
     </div>
   </div>
 
-  return <div className="tp-list-toolbar test-order-workspace-toolbar">
+  return <div className="tp-list-toolbar test-order-workspace-toolbar justify-start rounded-none border-0 border-b border-b-[var(--srf-card-border)]">
     <nav className="test-order-workspace-breadcrumb flex min-w-0 flex-[0_1_auto] items-center gap-[7px]" aria-label="面包屑">
       <button
         type="button"
@@ -129,7 +129,7 @@ export function TestOrderWorkspaceToolbar({
         (trigger.closest('.test-order-workspace-page') as HTMLElement | null) ?? document.body}
     >
       <Button
-        className={`test-order-workspace-filter-btn flex-none${activeFilterCount ? ' is-active' : ''}`}
+        className={`test-order-workspace-filter-btn flex-none${activeFilterCount ? ' is-active border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] text-[var(--srf-accent-strong)]' : ''}`}
         icon={<FilterOutlined aria-hidden="true" />}
         aria-label={activeFilterCount
           ? `筛选执行用例，已启用 ${activeFilterCount} 项`

@@ -85,11 +85,11 @@ export function AppShell() {
   return (
     <Layout className={shellClassName}>
       <Layout>
-        <Header className="app-header compact-header">
+        <Header className="app-header compact-header justify-end">
           <AppNavigationBrand bugOnly={bugOnly} />
-          <div className="app-header-main">
+          <div className="app-header-main min-w-0">
             {showWorkbenchHeader ? (
-              <div className="project-header-bar project-header-bar-select-only">
+              <div className="project-header-bar project-header-bar-select-only flex w-auto items-center justify-start gap-4 max-[900px]:flex-col max-[900px]:items-start">
                 <div className="project-selector-wrap">
                   <Select
                     className="project-select"
@@ -133,7 +133,7 @@ export function AppShell() {
                   />
                   {activeProjectId ? (
                     <>
-                      <span className="project-scope-separator" aria-hidden="true">/</span>
+                      <span className="project-scope-separator text-[var(--mac-glass-muted)]" aria-hidden="true">/</span>
                       <Select
                         className="project-select sprint-select"
                         popupMatchSelectWidth={false}
@@ -157,11 +157,11 @@ export function AppShell() {
             ) : null}
           </div>
           <AppSidebar bugOnly={bugOnly} />
-          <div className="app-header-actions">
+          <div className="app-header-actions flex shrink-0 items-center gap-1.5 max-[1200px]:ml-auto">
             <Popover trigger="click" placement="bottomRight" content={
-              <div className="app-feedback-content">需求、想法和问题，请联系 <a href="mailto:limingjiang.x@gmail.com">limingjiang.x@gmail.com</a></div>
+              <div className="app-feedback-content max-w-[280px] text-[var(--app-shell-text)]">需求、想法和问题，请联系 <a href="mailto:limingjiang.x@gmail.com">limingjiang.x@gmail.com</a></div>
             }>
-              <Button type="text" className="app-feedback-trigger" aria-label="测试阶段反馈联系方式">测试阶段</Button>
+              <Button type="text" className="app-feedback-trigger text-xs whitespace-nowrap text-[var(--app-accent)]" aria-label="测试阶段反馈联系方式">测试阶段</Button>
             </Popover>
             {showWorkbenchHeader && !bugOnly ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { if (!canNavigateAway()) return; useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
             <ThemeSelect />

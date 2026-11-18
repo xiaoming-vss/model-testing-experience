@@ -1,27 +1,5 @@
 /* 应用外壳的共享色板与顶栏细化；基础结构在 shell.css，按主题导入顺序叠加。 */
 
-/* Shared scoped shell palette; both shells use the same color roles. */
-.app-shell.app-shell-base-services,
-.app-shell-macos {
-  --mac-glass-page: var(--legacy-mac-glass-page);
-  --mac-glass-sidebar: var(--legacy-mac-glass-sidebar);
-  --mac-glass-header: var(--legacy-mac-glass-header);
-  --mac-glass-panel: var(--legacy-mac-glass-panel);
-  --mac-glass-panel-strong: var(--legacy-mac-glass-panel-strong);
-  --mac-glass-border: var(--legacy-mac-glass-border);
-  --mac-glass-border-soft: var(--legacy-mac-glass-border-soft);
-  --mac-glass-text: var(--legacy-mac-glass-text);
-  --mac-glass-muted: var(--legacy-mac-glass-muted);
-  --mac-glass-blue: var(--legacy-mac-glass-blue);
-}
-
-/* Additional roles used by the global shell. */
-.app-shell-macos {
-  --mac-glass-card: var(--legacy-mac-glass-card);
-  --mac-glass-subtle: var(--legacy-mac-glass-subtle);
-  --mac-glass-green: var(--legacy-mac-glass-green);
-}
-
 .app-shell-macos,
 .app-shell-macos .app-content {
   background:
@@ -72,6 +50,17 @@
     inset 0 1px 0 var(--app-glass-highlight-84),
     0 10px 24px var(--app-glass-shadow-card);
 }
+
+/* 详情页把板面还原为裸画布：页面显式追加该标记类，权重高于上面的玻璃板面，
+   因此不再需要在页面 Module 里写高权重覆盖。 */
+.app-shell-macos .workbench-panel.workbench-panel-flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
   background: var(--app-glass-surface-50);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -105,9 +94,6 @@
 .app-shell-macos .workbench-page {
   color: var(--mac-glass-text);
 }
-.app-shell-macos .workbench-tabs {
-  gap: 12px;
-}
 .app-shell-macos .workbench-board-panel {
   overflow: hidden;
   min-height: calc(100vh - 214px);
@@ -119,7 +105,6 @@
   backdrop-filter: saturate(180%) blur(22px);
 }
 /* Text actions must not inherit the fixed square sizing of header icons. */
-.app-shell .app-header-actions { flex-shrink: 0; }
 .app-shell .app-header-actions .app-header-create-project {
   width: auto;
   height: 32px;
@@ -164,12 +149,9 @@
   min-height: 56px;
 }
 .app-shell .app-header.compact-header .app-header-main { flex: 0 1 auto; }
-.app-feedback-trigger { color: var(--app-accent); font-size: 12px; white-space: nowrap; }
-.app-feedback-content { max-width: 280px; color: var(--app-shell-text); }
 .app-feedback-content a { color: var(--app-accent); overflow-wrap: anywhere; }
 @media (max-width: 1200px) {
   .app-shell-macos .app-header.compact-header { flex-wrap: wrap; padding-block: 8px; }
-  .app-top-navigation { flex-basis: 100%; }
 }
 @media (max-width: 900px) {
   .app-shell .app-header.compact-header .app-header-main { flex: 1 1 auto; width: auto; }
@@ -178,18 +160,15 @@
 
 /* Project and sprint form a compact path before global navigation. */
 .app-shell-macos .project-selector-wrap {
+  width: fit-content;
+  min-height: 34px;
   gap: 2px;
   padding: 0;
   border: 0;
   background: transparent;
+  color: var(--app-glass-text-secondary);
 }
-.project-scope-separator { color: var(--mac-glass-muted); }
 .app-shell .project-select .ant-select-selector { font-weight: 600; }
-.app-top-navigation { padding-left: 5px; }
-@media (max-width: 1200px) {
-  .app-top-navigation { order: 3; padding-left: 0; }
-  .app-header-actions { margin-left: auto; }
-}
 
 /* Size the scope controls to their labels instead of reserving fixed columns. */
 .app-shell-macos .project-selector-wrap .project-select {

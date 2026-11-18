@@ -25,12 +25,12 @@ describe('light workbench surfaces', () => {
   it('keeps legacy glass panels, populated rows and modern cards in the same muted palette', () => {
     const panel = resolve('--app-surface')
     for (const role of [
-      '--srf-card', '--srf-list-row-bg', '--legacy-mac-glass-panel', '--legacy-mac-glass-card',
+      '--srf-card', '--srf-list-row-bg', '--mac-glass-panel', '--mac-glass-card',
       '--app-glass-surface-50', '--app-glass-surface-54', '--app-glass-surface-62',
       '--app-glass-surface-66', '--app-glass-surface-68', '--app-glass-surface-70',
       '--app-glass-surface-72', '--app-glass-surface-78', '--app-glass-surface-82',
       '--app-glass-surface-86', '--app-glass-surface-96', '--app-glass-surface-98',
-      '--app-glass-table-bg', '--app-glass-toolbar', '--legacy-project-overview-panel',
+      '--app-glass-table-bg', '--app-glass-toolbar', '--project-overview-panel',
     ]) expect(resolve(role), role).toBe(panel)
     expect(resolve('--srf-hover')).toBe(resolve('--srf-list-header-bg'))
   })

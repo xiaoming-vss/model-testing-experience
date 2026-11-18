@@ -4,6 +4,7 @@ import type { UploadFile } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { ApiError } from '@/services/api'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
+import { MethodBadge } from '@/shared/components/MethodBadge'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
@@ -438,7 +439,7 @@ export function OpenApiImportModal({
                     disabled={!selectable}
                     onChange={event => toggleKey(item.key, event.target.checked)}
                   />
-                  <Tag className={`if-method if-method-${item.method.toLowerCase()}`}>{item.method}</Tag>
+                  <MethodBadge method={item.method} />
                   <span className="if-import-item-title flex min-w-0 flex-col gap-px">
                     <span className="if-import-item-name overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-semibold text-[var(--srf-text)]">{item.name}</span>
                     <span className="if-import-item-group overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--srf-text-muted)]">

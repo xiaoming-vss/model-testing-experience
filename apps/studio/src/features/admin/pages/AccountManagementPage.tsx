@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { listItems, listTotal } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
@@ -202,7 +203,7 @@ export function AccountManagementPage() {
                 locale={{ emptyText: <Empty description="暂无账号" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
               />
             </div>
-            <div className="table-footer">
+            <div className={`table-footer ${tableFooterClass}`}>
               <ListPagination
                 loading={usersQuery.isFetching || usersQuery.isError}
                 current={page}

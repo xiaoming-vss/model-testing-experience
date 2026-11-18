@@ -27,7 +27,7 @@ describe('登录页', () => {
     const title = screen.getByRole('heading', { name: '欢迎回来' })
 
     expect(shell).toBeInTheDocument()
-    expect(getComputedStyle(title).color).toBe('var(--app-auth-text)')
+    expect(title).toHaveClass('text-[var(--app-auth-text)]')
     expect(foundationTokens).toContain('--app-auth-text: #18202d;')
     expect(screen.getByText('© 2026 MTX. 版权所有')).toBeInTheDocument()
   })

@@ -93,7 +93,7 @@ export function RepositoryProfileReportView({
 
 function DescriptionsGrid({ repository }: { repository: RepositoryProfileRepository }) {
   return (
-    <dl className="repository-profile-detail-grid m-0 grid grid-cols-2 gap-x-6 gap-y-3 max-[900.01px]:grid-cols-1">
+    <dl className="repository-profile-detail-grid m-0 grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2 max-[900.01px]:grid-cols-1">
       <div>
         <dt className="text-[12px] leading-[22px] text-[var(--app-surface-text-muted)]">仓库 ID</dt>
         <dd className="m-0 min-w-0 leading-[22px] [overflow-wrap:anywhere]">

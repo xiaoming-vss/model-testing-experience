@@ -423,7 +423,7 @@ export function TestOrderWorkspacePage() {
                 {!detailNarrowNav ? <>
                   <Tooltip title="上一条（↑）" placement="right">
                     <Button
-                      className="test-order-detail-side-nav is-prev"
+                      className="test-order-detail-side-nav is-prev absolute left-5 top-1/2 z-[4] h-11 w-11 -translate-y-1/2 rounded-full border border-[var(--srf-card-border)] bg-[var(--srf-card)] text-[var(--srf-text-secondary)] shadow-[0_2px_8px_var(--srf-shadow-color)] hover:border-[var(--srf-accent)] hover:text-[var(--srf-accent)] disabled:opacity-35"
                       shape="circle"
                       aria-label="上一条"
                       icon={<LeftOutlined />}
@@ -433,7 +433,7 @@ export function TestOrderWorkspacePage() {
                   </Tooltip>
                   <Tooltip title="下一条（↓）" placement="left">
                     <Button
-                      className="test-order-detail-side-nav is-next"
+                      className="test-order-detail-side-nav is-next absolute right-5 top-1/2 z-[4] h-11 w-11 -translate-y-1/2 rounded-full border border-[var(--srf-card-border)] bg-[var(--srf-card)] text-[var(--srf-text-secondary)] shadow-[0_2px_8px_var(--srf-shadow-color)] hover:border-[var(--srf-accent)] hover:text-[var(--srf-accent)] disabled:opacity-35"
                       shape="circle"
                       aria-label="下一条"
                       icon={<RightOutlined />}
@@ -461,18 +461,19 @@ export function TestOrderWorkspacePage() {
                 </div>
               </div>
 
-              <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
-                <div className="test-order-execution-actions flex flex-wrap items-center justify-end gap-3">
+              <section className="test-order-execution-bar grid flex-none grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-5 gap-y-3 border-t border-[var(--srf-card-border)] bg-[var(--srf-card)] px-5 py-3.5 [grid-template-areas:'footer_actions_position'] max-[1600px]:grid-cols-[minmax(0,1fr)_auto] max-[1600px]:gap-x-4 max-[1600px]:gap-y-2.5 max-[1600px]:px-4 max-[1600px]:py-3 max-[1600px]:[grid-template-areas:'actions_actions'_'footer_position'] max-[1100px]:grid-cols-1 max-[1100px]:[grid-template-areas:'actions'_'position'_'footer']" aria-label="执行判定与缺陷关联">
+                <div className="test-order-execution-actions flex flex-wrap items-center justify-end gap-3 [grid-area:actions] max-[1100px]:gap-2">
                   <span className="test-order-verdict-title flex items-baseline justify-between gap-2 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">执行判定结果</span>
                   <TestOrderVerdictButtons
                     status={entryView?.status}
                     disabled={!canJudge || saveMutation.isPending}
                     showShortcuts
                     reverseOrder
+                    layout="flex"
                     onJudge={(status) => save({ status })}
                   />
                   {detailReady && selected?.status === 'failed' ? (
-                    <div className="test-order-defect-controls flex min-w-0 flex-none items-center">
+                    <div className="test-order-defect-controls flex min-w-0 flex-none items-center [&_.ant-btn]:flex-none">
                       <ProjectActionButton
                         action="write"
                         size="small"
@@ -500,7 +501,7 @@ export function TestOrderWorkspacePage() {
                   ) : null}
                 </div>
                 {detailReady && selected && (selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0) ? (
-                  <div className="test-order-defect-section flex flex-col gap-2">
+                  <div className="test-order-defect-section col-span-full flex flex-col gap-2 max-h-[min(20vh,180px)] overflow-auto">
                     {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
                       <div className="test-order-linked-bugs flex flex-wrap gap-2">
                         {listItems(linkedBugsQuery.data).map((bug) => (
@@ -536,7 +537,7 @@ export function TestOrderWorkspacePage() {
                     ) : null}
                   </div>
                 ) : null}
-                <footer className="test-order-execution-footer mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--srf-divider)] pt-2.5" aria-label="用例执行操作">
+                <footer className="test-order-execution-footer flex flex-wrap items-center gap-2 text-[11px] [grid-area:footer]" aria-label="用例执行操作">
                   <Tooltip
                     title={`快捷键：${TEST_ORDER_VERDICTS.map(({ key, label }) => `${key} ${label}`).join(' · ')}；↑ 上一条，↓ 下一条`}
                     trigger={['hover', 'focus']}
@@ -546,7 +547,7 @@ export function TestOrderWorkspacePage() {
                       icon={<QuestionCircleOutlined />} />
                   </Tooltip>
                   <Checkbox
-                    className="test-order-autoadvance w-full text-[11px] text-[var(--srf-text-secondary)]"
+                    className="test-order-autoadvance w-auto text-[11px] text-[var(--srf-text-secondary)]"
                     checked={autoAdvance}
                     onChange={(event) => setAutoAdvance(event.target.checked)}
                   >
@@ -561,7 +562,7 @@ export function TestOrderWorkspacePage() {
                     </Text>
                   ) : null}
                 </footer>
-                <Text className="test-order-entry-position tabular-nums text-[11px] text-[var(--srf-text-secondary)]" type="secondary">
+                <Text className="test-order-entry-position border-s border-[var(--srf-card-border)] ps-5 text-right tabular-nums text-[11px] text-[var(--srf-text-secondary)] [grid-area:position] max-[1100px]:border-0 max-[1100px]:ps-0" type="secondary">
                   {detailPosition}
                 </Text>
               </section>

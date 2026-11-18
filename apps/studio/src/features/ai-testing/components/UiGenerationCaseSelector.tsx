@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, listItems } from '@/services/api'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { tableFooterCompactClass } from '@/shared/utils/surfaceClasses'
 import { getErrorMessage } from '@/utils/format'
 
 type SourceCase = { caseId: string; title: string; suiteId: string; suiteName: string }
@@ -70,7 +71,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
         { title: '用例名称', dataIndex: 'title', ellipsis: true },
         { title: '用例集', dataIndex: 'suiteName', width: '28%', ellipsis: true },
       ]} />
-    <div className="table-footer ui-generation-case-pagination min-h-[42px] px-3 py-1.5"><ListPagination current={page} pageSize={pageSize} total={filtered.length} loading={query.isFetching}
+    <div className={`table-footer ui-generation-case-pagination ${tableFooterCompactClass}`}><ListPagination current={page} pageSize={pageSize} total={filtered.length} loading={query.isFetching}
       onChange={(next, size) => { setPage(next); setPageSize(size) }} /></div>
     {query.error ? <Alert showIcon type="error" title={getErrorMessage(query.error)} action={<Button size="small" onClick={() => { void query.refetch() }}>重新读取</Button>} /> : null}
     {query.isSuccess && value?.some(id => !query.data.some(item => item.caseId === id)) ? <Alert showIcon type="warning"

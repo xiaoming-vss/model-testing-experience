@@ -2,7 +2,6 @@
  * 页面骨架、卡片、导航、编辑器布局与可迁移皮肤已由 CaseLibraryPage /
  * FunctionCaseEditor / FunctionCaseContentEditor 的 Tailwind utility 负责。 */
 
-.root { --case-library-scope: 1; }
 
 .root :global(.case-library-tree-title) :global(.anticon) {
   color: var(--srf-text-secondary);

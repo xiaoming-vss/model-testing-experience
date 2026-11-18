@@ -16,7 +16,7 @@ import { buildUiSuiteRunPayload } from '../utils/runHelpers'
 import { api, ApiError, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
 import { formatTime, getErrorMessage, normalizeUiTestSuiteId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
-import { entityCardBadgesClass, entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass } from '@/shared/utils/surfaceClasses'
+import { entityCardBadgesClass, entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass, tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { buildUiTestSuiteUpdatePayload } from '@/utils/updatePayload'
 
 const { Text } = Typography
@@ -356,7 +356,7 @@ export const UiTestSuiteSection = forwardRef<
           )}
         </div>
 
-        <div className="table-footer ui-suite-list-footer">
+        <div className={`table-footer ui-suite-list-footer ${tableFooterClass}`}>
           <ListPagination loading={suitesQuery.isFetching || suitesQuery.isError}
             current={page}
             pageSize={pageSize}

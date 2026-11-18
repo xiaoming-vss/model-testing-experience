@@ -26,7 +26,7 @@
 | 标题操作栏 / 分页栏 | `#F8FAFD` | `--app-list-toolbar-bg` |
 | 表头 | `#F2F6FC` | `--srf-list-header-bg` |
 | 搜索与选择控件 | `#F5F8FC` | `--app-control-surface` |
-| 应用顶部栏 | `#F5F8FC` | `--legacy-mac-glass-header` |
+| 应用顶部栏 | `#F5F8FC` | `--mac-glass-header` |
 | 导航选中底色 | `#E8F1FF` | `--app-accent-surface` |
 | 主按钮 | `#E8F1FF` / 文字 `#24578F` | `--button-primary-bg` / `--button-primary-text` |
 | 列表名称链接 | `#4774CE` | `--app-list-name` |

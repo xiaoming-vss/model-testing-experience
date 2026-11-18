@@ -10,6 +10,7 @@ import {
 import type { TableProps } from 'antd'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { priorityTone } from '@/shared/utils/priorityTone'
 import { message } from '@/shared/utils/feedback'
@@ -202,7 +203,7 @@ export function TestOrderEntryList({
         const title = entry.caseTitle || '未命名用例'
         return (
           <div className="tp-list-name test-order-entry-name-cell flex min-w-0 items-center gap-2" title={title}>
-            <Text className="test-order-entry-name" ellipsis>{title}</Text>
+            <Text className="test-order-entry-name min-w-0 flex-1" ellipsis>{title}</Text>
           </div>
         )
       },
@@ -300,13 +301,13 @@ export function TestOrderEntryList({
     },
   ]
 
-  return <section ref={listRef} className="workbench-panel tp-board tp-list-panel test-order-entry-list-panel">
+  return <section ref={listRef} className="workbench-panel workbench-panel-flat tp-board tp-list-panel test-order-entry-list-panel">
     {toolbar}
 
     <div className="tp-list-body">
       <div className="tp-list-scroll test-order-entry-scroll">
         <Table<TestOrderEntrySummary>
-          className="functional-suite-list-table tp-list-table test-order-entry-table"
+          className="functional-suite-list-table tp-list-table test-order-entry-table [&_.ant-table-tbody>tr]:cursor-pointer"
           columns={narrow
             ? columns.filter((column) => !NARROW_COLUMN_KEYS.has(String(column.key)))
             : columns}
@@ -368,7 +369,7 @@ export function TestOrderEntryList({
         </div>
       </div> : null}
 
-      <div className="table-footer test-order-entry-footer">
+      <div className={`table-footer test-order-entry-footer ${tableFooterClass}`}>
         <ListPagination
           current={currentPage}
           pageSize={pageSize}

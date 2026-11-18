@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import { runResultRowClass, runResultRowTitleClass } from '@/shared/utils/surfaceClasses'
+import { runResultRowClass, runResultRowTitleClass, tableFooterClass } from '@/shared/utils/surfaceClasses'
 import workspaceStyles from '../styles/test-order-workspace.module.css'
 import { SearchOutlined } from '@ant-design/icons'
 import {
@@ -368,7 +368,7 @@ export function AddCasesFromLibraryModal({
           }}
           pagination={false}
         />
-        <div className="table-footer">
+        <div className={`table-footer ${tableFooterClass}`}>
           <ListPagination loading={casesQuery.isFetching || casesQuery.isError} current={page} pageSize={pageSize} total={total}
             onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }} />
         </div>

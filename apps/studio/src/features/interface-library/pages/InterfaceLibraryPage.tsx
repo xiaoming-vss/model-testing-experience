@@ -5,6 +5,7 @@ import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { listItems } from '@/services/api'
 import { usePaneActive } from '@/shared/ui/paneActivity'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
+import { interfacePageRootClass } from '../pageClasses'
 import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
@@ -46,7 +47,7 @@ export function InterfaceLibraryPage() {
 
   if (!projectId) {
     return (
-      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}`}>
+      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}`}>
         <Alert type="info" showIcon title="请先在顶部选择一个项目" />
       </div>
     )
@@ -58,7 +59,7 @@ export function InterfaceLibraryPage() {
     interfacesQuery.isFetching
   ) {
     return (
-      <div className={`workbench-page interface-library-page tp-surface if-detail-loading ${styles.pageRoot} ${interfaceScopes}`}>
+      <div className={`workbench-page interface-library-page tp-surface if-detail-loading ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}`}>
         <Spin />
       </div>
     )
@@ -66,7 +67,7 @@ export function InterfaceLibraryPage() {
 
   if (repositoriesQuery.isError || interfacesQuery.isError) {
     return (
-      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}`}>
+      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}`}>
         <Alert
           type="error"
           showIcon

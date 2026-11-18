@@ -81,8 +81,8 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/shell.css` / `shell-header.css` 仍引用需求、迭代、测试等 feature 内部类名（拆分前审计 87 个；阶段 13 又删除了 `.app-sider`、`.brand-row`、`.project-actions` 等零引用外壳块）、`layout.css` 仍有存量引用；阶段 7 已删除 `features/api-automation/styles/detail.css`（其中 30 处 `.ui-*` 随旧样式清理），全局层剩余引用仍按存量豁免 | 扫描脚本前缀统计（**存量豁免**） |
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | 阶段 7 后 `--tp-text` / `--tp-border` / `--tp-border-soft` 只由 `app/styles/shell.css` 定义；阶段 36 已删除 `shared/styles/legacy-surface.css`，其余消费方改由 utility 表达 | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
-| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`app/styles/shell.css` 仍用 `!important` 给 `.workbench-panel` 铺玻璃表面，列表页靠 `surface-tokens.css` 中带 `.app-shell-macos .testing-page` 前缀的板面覆盖压住，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`shell.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
-| S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 23 后长前缀已归零、`!important` 95 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
+| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；详情页板面必须显式追加 `workbench-panel-flat`，`shell-header.css` 用 `.app-shell-macos .workbench-panel.workbench-panel-flat` 统一压平玻璃底、内高光、阴影与 backdrop，页面不再各写高权重覆盖 | 评审 + 扫描脚本（**待强制**） |
+| S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 45 后长前缀为 0、`!important` 49 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
 | S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
 
 数据表行分隔由 `app/styles/theme.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查数据行覆盖及变量归属。
@@ -93,7 +93,6 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | --- | --- | --- |
 | `src/index.css` 的 `:root` 块 | `--app-*`、`--description-*` | 全局基础（背景、正文、链接、描述字体白名单） |
 | `src/shared/styles/foundation-tokens.css` | `--app-*`（与 `index.css` 不重名） | 外壳、公共页面框架、旧工作台及 AI/API 工作流语义配色，由 `index.css` 在启动时引入 |
-| `src/shared/styles/foundation-tokens.css` | `--legacy-*` | 旧工作台作用域 token 的浅色来源，局部变量保持原作用域 |
 | `src/shared/styles/github-dark-tokens.css`、`github-dark-foundation.css` | `--gh-*` 及上述语义 token | GitHub Dark 色盘与暗色赋值，只定义变量，不覆盖业务组件规则 |
 | `src/shared/styles/indigo-amber-light-tokens.css` | 上述语义 token 及侧栏局部别名 | 浅色交互强调使用清爽蓝（`#2563c9`），链接悬停加深为 `#1d4fa5`；主按钮使用浅蓝底（`#e8f1ff`）、蓝字（`#24578f`）和浅蓝描边，琥珀只保留状态语义（警告/待处理、P1、update 图标）；浅蓝灰导航与页面背景、白色内容面；所有赋值以 `:root:not([data-theme='dark'])` 限定，只覆盖既有颜色角色 |
 | `src/shared/styles/chart-tokens.css` | `--editor-*` | CodeMirror 的表面、选区、光标及 JSON/YAML 语法高亮，由 `index.css` 引入 |
@@ -146,10 +145,10 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 **「多出来的容器」都出在同一处：覆盖了外壳玻璃面，但权重没压过它。** 三处踩过的坑，改这一层时逐条对：
 
-- 板面 `.tp-board`：`shell-header.css` 的 macOS 玻璃规则写成
-  `.app-shell-macos .workbench-panel` 并带 `!important`，与 `shared/styles/surface-tokens.css` 里那条 `.tp-board` 覆盖同权重，
-  只靠 import 顺序决胜——顺序一变板面就会重新拿到玻璃底 + 内高光 + 28px 阴影，表现为内容区凭空多出一层容器。
-  修法是多带 `.app-shell-macos .testing-page` 前缀并保留板面覆盖的 `!important`，不再依赖 import 顺序。
+- 板面 `.tp-board`：`shell-header.css` 的 macOS 玻璃规则作用于 `.app-shell-macos .workbench-panel`；列表页的 `.tp-board.tp-list-panel`
+  在 `shared/styles/surface-tokens.css` 里给出卡片表面。详情页若不进列表表面层，应显式追加 `workbench-panel-flat`，
+  由 `.app-shell-macos .workbench-panel.workbench-panel-flat` 一次性压平玻璃底、内高光、阴影与 backdrop；
+  该选择器权重高于两侧板面规则，不再依赖 import 顺序，也不需要页面级 `!important`。
 - 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；旧 `.panel-header` / `.api-panel-header` 的容器规则通过 `:not(:where(.tp-list-toolbar))` 排除它。页面只补排布，不再复制尺寸与表面，公共工具栏规则不再需要 `!important`。阶段 20 起这些规则位于 `@layer components`；仅去掉 `!important` 而不分层仍会压过 utility。
 - 筛选标签 `.api-filter-field-label`：旧外壳给它铺了蓝底小胶囊，设计稿里是裸的弱化文字。
   在 `surface-tokens.css` 里按 `.tp-surface` 收掉，不动那条旧规则——它同时作用于测试单的「加入用例」弹窗，
@@ -161,7 +160,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 ### 列表规则保留等权重前缀
 
-原先的 `:root:not([data-theme='dark'])` 已改为 `:root:root`，使列表名称、表头和行样式同时适用于两种主题。两个写法的选择器权重相同；不能直接删掉前缀，否则会被其它 `!important` 规则反超。相关浅色行为由 `listSurfaceConsistency.test.ts` / `listNameConsistency.test.ts` 保护。
+原先的 `:root:not([data-theme='dark'])` 已改为 `:root:root`，使列表名称、表头和行样式同时适用于两种主题。两个写法的选择器权重相同；保留前缀是为了压过 AntD 与旧页面的同权重选择器，当前不再依赖 `!important`。相关浅色行为由 `listSurfaceConsistency.test.ts` / `listNameConsistency.test.ts` 保护。
 
 顺带记两处**浅色下早已存在**的名称样式分歧，此前被深色规则（统一写了 `line-height: 22px`）掩盖，
 深色退役后由 `listNameConsistency.test.ts` 的注释记录、未纳入断言：AI 任务列表名称行高 22px，其余三页 20px
@@ -285,9 +284,9 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
 
 - **板面必须显式压平**：这条路由不在 `.testing-page` 里（实测 `document.querySelector('.testing-page')` 为 null），
-  所以 `shell-header.css` 的 `.app-shell-macos .workbench-panel`（(0,2,0) + `!important`，玻璃底 + 内高光 +
-  10px/24px 投影）不会被 `surface-tokens.css` 里 `.tp-board` 那条 (0,2,0) 覆盖拦住，`shared` 那条带 `.testing-page` 的
-  (0,6,0) 规则也匹配不到。详情页因此自己写了一条带页面 Module `.scope` 的 (0,5,0) + `!important` 覆盖。
+  因此板面显式追加 `workbench-panel-flat`，由 `shell-header.css` 的
+  `.app-shell-macos .workbench-panel.workbench-panel-flat` 统一清零边框、圆角、背景、阴影与 backdrop，
+  不再需要页面 Module 自己写 `.scope` + `!important` 覆盖。
   判据：板面应是 `background: rgba(0,0,0,0)`、`box-shadow: none`、`border-width: 0`
   （它本来是半透明白 + 投影，肉眼不容易发现）。
 - **用例管理收进流程画布**：不再有「用例管理」下拉/顺序弹层。测试集流程画布始终显示用例卡片，点击卡片进入步骤画布，

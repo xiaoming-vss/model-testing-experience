@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–38 已完成预算收口；阶段 39–44 结构性整改已立项。本文件是整改台账与后续维护基线。它覆盖 `apps/studio/src/**/*.css` 当前全部 **44 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
+> 2026-11-18。阶段 0–45 已执行完成。本文件是整改台账与后续维护基线。它覆盖 `apps/studio/src/**/*.css` 当前全部 **40 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,35 +8,35 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 42 | ≤ 45 | 已达标（余 3 个） |
-| CSS 行数 | 7,756 | ≤ 9,000 | 已达标（余 1,244 行） |
-| `!important` | 93 | ≤ 100 | 已达标（数值） |
+| CSS 文件 | 40 | ≤ 45 | 已达标（余 5 个） |
+| CSS 行数 | 6,738 | ≤ 9,000 | 已达标（余 2,256 行） |
+| `!important` | 49 | ≤ 100 | 已达标（余 51 处） |
 | 长前缀 | 0 | 0 | 已达标 |
-| 重复规则体 | 10 | ≤ 60 | 已达标 |
+| 重复规则体 | 5 | ≤ 60 | 已达标 |
 | 单文件 > 600 行 | 0 | 0 | 已达标 |
+| 布局声明 | 1,162 | 只降不升 | 已 ratchet |
 
 **先看结论，避免继续“一个模块一个模块”地漏：**
 
-1. **文件数、行数、`!important`、长前缀与重复体均已达标。** 93 处 `!important` 中 83 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。阶段 38 未为了数字机械删规则。
-2. **阶段 37 完成了全局契约收缩。** 把 `list-name` 并入 `list-table`、`table-row-dividers` 并入 `theme.css`，删除已无消费方的 `api-collection-*` / `sprint-card-*` 规则，并把页面工具栏、快速过滤条、API/性能工具栏与 Shell 重复块迁入 utility 或合并；16 个文件 2,469 → 14 个 2,022 行。
-3. **当前底座占 21 个文件 / 3,869 行：**
-   - 7 个 token 文件：1,847 行；
-   - 9 个外壳/全局基础文件：1,296 行；
-   - 5 个共享全局契约：726 行。
-4. 其余 **21 个页面/共享组件文件（3,887 行）** 已低于阶段 37 前的文件与行数上限；阶段 39 删除右栏卡片与测试单可视化两个 Module，并收缩 API 规则与 AI 阶段可视化样式。
-5. 10 组重复规则体已在目标内，且多为跨页面同构皮肤；阶段 38 只做了复测与基线 ratchet，没有为了清零合并语义不同的选择器。完整列表见附录 B。
-6. **阶段 38 收口已完成。** 全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；两个基线 ratchet 后保持 44 文件 / 93 处 `!important` / 10 组重复体。D 类 token 审计确认 28 个 `--legacy-*` 别名仍各有消费者，删除组件未遗留同名 token；调色板 token 属于保留契约，未批量删除。
+1. **文件数、行数、`!important`、长前缀与重复体均已达标。** 49 处 `!important` 中 31 处在按钮调色板，5 处在主题覆盖，6 处在页签动效，其余 7 处分布在外壳、输入与分页契约；页面 Module 已无 `!important`。
+2. **阶段 37 完成了第一轮全局契约收缩。** 把 `list-name` 并入 `list-table`、`table-row-dividers` 并入 `theme.css`，删除已无消费方的 `api-collection-*` / `sprint-card-*` 规则，并把页面工具栏、快速过滤条、API/性能工具栏与 Shell 重复块迁入 utility 或合并；16 个文件 2,469 → 14 个 2,022 行。阶段 43 又移除了 `list-table` 的 23 处与页面板面的 10 处 `!important`。
+3. **当前底座占 21 个文件 / 3,587 行：**
+   - 7 个 token 文件：1,828 行；
+   - 14 个全局契约：1,759 行。
+4. 其余 **19 个页面/共享组件 Module（3,157 行）** 已低于阶段 37 前的文件与行数上限；阶段 39 删除右栏卡片与测试单可视化，阶段 40 迁移测试单工作台、Bug、接口库、Sprint 概览与账户样式，阶段 41 删除禅道绑定与侧栏导航两个 CSS 文件，阶段 45 把页脚、页签、滚动承载层、表尾、Logo 与外壳头部残留布局迁入 utility。
+5. 5 组重复规则体已在目标内，且多为跨页面同构皮肤；阶段 43 未为了清零合并语义不同的选择器。完整列表见附录 B。
+6. **阶段 45 收口复核。** 全量 189 个测试文件 / 947 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；两个基线 ratchet 后为 40 文件 / 6,738 行 / 49 处 `!important` / 5 组重复体 / 1,162 条布局声明。普通页脚、工作台页签、滚动承载层与 SVG Logo 不再由 CSS 布局规则承担。
 
 ## 二、动作分类
 
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
 | **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 0 | 0 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 21 | 3,887 |
-| **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 14 | 2,022 |
-| **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 19 | 3,157 |
+| **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 14 | 1,759 |
+| **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,828 |
 
-> A 类已清零。B 类剩余文件均已只保留深层皮肤或跨页面共享结构；阶段 39 删除 `ui-detail-inspector` 与 `test-order-visualization` 两个 Module。
+> A 类已清零。B 类剩余文件只保留 AntD / React Flow / CodeMirror / DOCX 深层结构、状态、动效与页面高度链；阶段 41 已将侧栏导航迁入 utility 并删除 `sidebar.css`。
 
 ### A 类：已完成（0 个文件）
 
@@ -50,153 +50,66 @@
 
 `chart-tokens`、`foundation-tokens`、`github-dark-foundation`、`github-dark-tokens`、`indigo-amber-light-tokens`、`ui-stage-visual-tokens`、`tailwind`。它们不产生页面布局，不参与文件数削减；只做“无消费者 token”清理。文件数目标必须从 A/B 里出，不能靠删 token 凑数。
 
-## 三、完整文件清单（按页面族）
+## 三、完整文件清单
 
-> 每一行对应一个存量文件；“动作”列保留 A/B/C/D 归类。当前 42 个文件均已列入，没有省略项；阶段 29–39 删除或并入的 24 个文件不再保留条目。
+> 当前 **40 个文件**全部列入；权威行数与布局声明由 `apps/studio/scripts/css-structure-budget.json` 维护，本表随阶段收口更新。A 类已清零，B/C/D 分类见下。
 
+### B 类：页面/共享组件 Module（19 个 / 3,120 行）
 
-### 一、外壳与全局基础
+| 文件 | 行 | `!important` |
+| --- | ---: | ---: |
+| `features/ai-testing/styles/generation-chain.module.css` | 337 | 0 |
+| `features/ui-automation/styles/ui-detail-shell.module.css` | 302 | 0 |
+| `features/ai-testing/styles/ai-task-detail.module.css` | 282 | 0 |
+| `features/ai-testing/styles/artifact-cases.module.css` | 247 | 0 |
+| `features/api-automation/styles/api-detail-shell.module.css` | 230 | 0 |
+| `features/ai-testing/styles/generation-canvas.module.css` | 220 | 0 |
+| `features/requirements/styles/requirement-detail.module.css` | 160 | 0 |
+| `features/ui-automation/styles/ui-suite.module.css` | 157 | 0 |
+| `shared/styles/account.module.css` | 148 | 0 |
+| `features/ai-testing/styles/ui-stage-visual.module.css` | 143 | 0 |
+| `features/projects/styles/sprint-overview.module.css` | 138 | 0 |
+| `features/test-cases/styles/case-library.module.css` | 134 | 0 |
+| `features/bugs/styles/bugs.module.css` | 132 | 0 |
+| `shared/styles/run-view.module.css` | 119 | 0 |
+| `features/interface-library/styles/interface-detail.module.css` | 99 | 0 |
+| `features/interface-library/styles/interface-library.module.css` | 80 | 0 |
+| `features/projects/styles/environment-drawer.module.css` | 76 | 0 |
+| `features/api-automation/styles/api-detail-rules.module.css` | 59 | 0 |
+| `features/test-orders/styles/test-order-workspace.module.css` | 57 | 0 |
 
-外壳、布局、侧栏、主题与全局 reset；全部 C 类，不随页面迁移。
+### C 类：全局契约（14 个 / 2,048 行）
 
-**9 个文件 / 1,296 行**（阶段 37 后；布局/皮肤声明数随死规则删除下降）
+| 文件 | 行 | `!important` |
+| --- | ---: | ---: |
+| `shared/styles/surface-tokens.css` | 391 | 0 |
+| `app/styles/shell.css` | 379 | 3 |
+| `app/styles/buttons.css` | 203 | 31 |
+| `app/styles/shell-header.css` | 190 | 0 |
+| `shared/components/RichTextEditor/rich-text-editor.css` | 184 | 0 |
+| `shared/styles/list-table.css` | 172 | 0 |
+| `app/styles/layout.css` | 143 | 1 |
+| `index.css` | 95 | 2 |
+| `shared/styles/pagination.css` | 87 | 1 |
+| `app/styles/antd-overrides.css` | 60 | 0 |
+| `app/styles/action-buttons.css` | 50 | 0 |
+| `shared/styles/tab-motion.css` | 33 | 6 |
+| `app/styles/theme.css` | 32 | 5 |
+| `shared/styles/scrollbars.css` | 29 | 0 |
 
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `app/styles/action-buttons.css` | 53 | — | — | — | 0 | 0 | **C** | 全局按钮/动作图标皮肤；只做死规则与层叠收缩 |
-| `app/styles/antd-overrides.css` | 60 | 0 / 0 | 28 | 1 | 0 | 0 | **C** | 全局 AntD 覆盖；只做死规则与层叠收缩 |
-| `app/styles/buttons.css` | 218 | — | — | — | 31 | 0 | **C** | 全局按钮契约，31 处 `!important`，最高风险 |
-| `app/styles/layout.css` | 143 | — | — | — | 1 | 2 | **C** | 外壳布局契约；不随页面迁移 |
-| `app/styles/shell-header.css` | 201 | — | — | — | 0 | 0 | **C** | 外壳头部契约；只收缩 |
-| `app/styles/shell.css` | 384 | — | — | — | 3 | 0 | **C** | 外壳布局契约；只收缩 |
-| `app/styles/sidebar.css` | 110 | 18 / 32 | 39 | 2 | 0 | 1 | **C** | 全局侧栏；只收缩 |
-| `app/styles/theme.css` | 32 | — | — | — | 5 | 0 | **C** | 主题变量与玻璃层；只收缩 |
-| `index.css` | 95 | — | — | — | 2 | 0 | **C** | 全局 reset/基础层；只收缩 |
+### D 类：Token / 主题 / Tailwind 层（7 个 / 1,828 行）
 
-### 二、UI 自动化（阶段 29 已完成）
+| 文件 | 行 | `!important` |
+| --- | ---: | ---: |
+| `shared/styles/foundation-tokens.css` | 569 | 0 |
+| `shared/styles/github-dark-foundation.css` | 522 | 0 |
+| `shared/styles/indigo-amber-light-tokens.css` | 323 | 0 |
+| `shared/styles/github-dark-tokens.css` | 227 | 0 |
+| `shared/styles/ui-stage-visual-tokens.css` | 89 | 0 |
+| `shared/styles/chart-tokens.css` | 50 | 0 |
+| `shared/styles/tailwind.css` | 48 | 0 |
 
-测试集列表、详情壳、检查器、执行流水线与测试集抽屉。
-
-**2 个文件 / 475 行（阶段 29 前：5 个 / 1,959 行）**。页面布局与可迁移皮肤已全部迁入组件 utility；右栏卡片原语已抽为 `shared/components/RunCard.tsx`，以下只保留 AntD / React Flow 深层规则。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/ui-automation/styles/ui-detail-shell.module.css` | 317 | — | — | 多 | 6 | 0 | **B** | 板面、顶栏输入、未保存态、React Flow 深层规则 |
-| `features/ui-automation/styles/ui-suite.module.css` | 158 | — | — | 多 | 0 | 0 | **B** | 测试集抽屉与步骤编辑器的 AntD 表单深层规则 |
-
-### 三、API 自动化（阶段 30 已完成）
-
-测试集列表、详情壳、请求编辑器、请求头/请求体、规则/后置操作与环境选择。
-
-**2 个文件 / 296 行（阶段 30 前：4 个 / 1,466 行）**。列表、顶栏、用例行、请求面板、环境弹层与后置操作已迁入组件 utility；以下只保留 AntD / CodeMirror 深层规则和页面级玻璃变量。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/api-automation/styles/api-detail-shell.module.css` | 231 | — | — | 多 | 0 | 0 | **B** | 用例名称行、方法 Select、路径输入、Tabs、键值输入、请求头表与请求体 CodeMirror |
-| `features/api-automation/styles/api-detail-rules.module.css` | 65 | — | — | 多 | 0 | 0 | **B** | 环境弹层、后置操作 hover 与 JSON 编辑器玻璃外壳；表单/卡片/按钮尺寸已内联 |
-
-### 四、测试单（阶段 31 已完成）
-
-列表、工作台、图谱与可视化。
-
-**1 个文件 / 210 行（阶段 31 前：5 个 / 1,154 行）**。列表、工作台骨架、图谱页壳/查看器、执行面板与判定区已迁入组件 utility；可视化面板已整体迁入 `visualizationClasses.ts` 并删除 Module，以下只保留页面高度链与 AntD 表格/弹层深层规则。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/test-orders/styles/test-order-workspace.module.css` | 210 | — | — | 多 | 0 | 6 | **B** | 页面高度链、工具栏/条目表格、详情翻页、加入用例弹窗、执行条与判定控件 |
-
-### 五、接口库（阶段 32 已完成）
-
-接口列表/树、详情与编辑器。
-
-**2 个文件 / 238 行（阶段 32 前：3 个 / 1,550 行）**。列表、软件仓库树、抽屉表单、详情两栏、请求地址条、标签页、面板、键值表与 OpenAPI 导入流程已迁入组件 utility；以下只保留页面壳、AntD 深层规则和方法签。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/interface-library/styles/interface-detail.module.css` | 100 | — | — | 多 | 0 | 0 | **B** | 名称/路径输入、方法 Select、键值表输入、面板工具按钮与导入 Tag 间距 |
-| `features/interface-library/styles/interface-library.module.css` | 138 | — | — | 多 | 0 | 0 | **B** | 页面壳与移动端内距、加载态、软件仓库树搜索/标签/空态、仓库表格深层规则与方法签 |
-
-### 六、AI 测试 / 生成链（阶段 33 已完成）
-
-需求生成、生成链、画布、产物、关系图谱、UI 生成与阶段可视化。
-
-**5 个文件 / 1,388 行（阶段 33 前：10 个 / 3,759 行）**。页面骨架、字段排版、关系图与 UI 生成弹窗已全部迁入组件 utility；阶段可视化的浅色规则已迁入 `uiStageVisualClasses.ts`，以下只保留 AntD / CodeMirror / React Flow 深层规则、深色覆盖和页面级玻璃变量。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/ai-testing/styles/ai-task-detail.module.css` | 295 | — | — | 多 | 0 | 0 | **B** | AI 页面 token、CodeMirror 折叠、任务卡/运行表、需求生成工作区、UI 生成弹窗与模型连接弹窗 |
-| `features/ai-testing/styles/artifact-cases.module.css` | 255 | — | — | 多 | 0 | 0 | **B** | 用例名称树/React Flow 节点、选中动效、生成用例审核字段、仓库画像与产物宿主适配 |
-| `features/ai-testing/styles/generation-chain.module.css` | 426 | — | — | 多 | 0 | 3 | **B** | 生成链弹窗、节点/文档/泳道、状态胶囊、产物滚动、导入、修订侧栏与关系图谱 |
-| `features/ai-testing/styles/generation-canvas.module.css` | 256 | — | — | 多 | 0 | 4 | **B** | React Flow 边/光束/分组动效、检查器深层规则、产物阅读布局、API 选择器与源码仓库 |
-| `features/ai-testing/styles/ui-stage-visual.module.css` | 156 | — | — | 多 | 0 | 1 | **B** | 阶段可视化深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局在 `uiStageVisualClasses.ts` |
-
-### 七、用例 / Bug / 需求（阶段 34 已完成）
-
-三个高频详情/列表模块；深层 AntD 规则最多，单独核对。
-
-**3 个文件 / 527 行（阶段 34 前：3 个 / 1,465 行）**。列表、详情、表单骨架、活动流与文档预览布局已迁入组件 utility；以下只保留 AntD/DOCX 深层结构、伪元素与高度链。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/test-cases/styles/case-library.module.css` | 135 | — | — | 多 | 0 | 0 | **B** | 用例库 AntD 输入/选择器/文本域、用例编辑弹窗色调头带与推送核对区 |
-| `features/bugs/styles/bugs.module.css` | 213 | — | — | 多 | 0 | 0 | **B** | Bug 详情高度链、元信息/上下文/动态伪元素、模态框与附件上传/导入深层规则 |
-| `features/requirements/styles/requirement-detail.module.css` | 179 | — | — | 多 | 0 | 0 | **B** | 需求详情侧栏动画/画布宿主、文档工具栏响应式内距与 DOCX 渲染排版 |
-
-### 八、基础服务 / Auth / 个人设置 / Projects（阶段 35 已完成）
-
-禅道绑定、登录、个人设置、环境抽屉、项目概览与 Sprint 看板。
-
-**4 个文件 / 449 行（阶段 35 前：6 个 / 1,142 行）**。登录/个人设置合并为共享 `account` Module，删除 `profile-settings`；项目概览并入 Sprint 看板，删除 `projects-overview`；环境抽屉与动态值选择弹窗只留 AntD 深层规则。
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/styles/account.module.css` | 150 | — | — | 多 | 0 | 0 | **B** | Auth 页渐变/纹理/玻璃壳、表单深层规则，以及个人设置页背景/头像/字段 |
-| `features/base-services/styles/zentao-binding.module.css` | 59 | — | — | 多 | 0 | 0 | **B** | 禅道绑定 Modal 深层结构与 Tag 省略 |
-| `features/projects/styles/environment-drawer.module.css` | 76 | — | — | 多 | 0 | 0 | **B** | 环境 Drawer、变量 Card/Table 与动态值选择 Modal 深层结构 |
-| `features/projects/styles/sprint-overview.module.css` | 164 | — | — | 多 | 4 | 0 | **B** | Sprint/Projects 看板表面、图表色块、Markdown 报告、macOS 表面与 4 处 `!important` |
-
-### 九、共享组件
-
-富文本 / JSON 编辑器的深层排版与运行报告弹窗的 AntD 结构。连接表单、导入弹窗、实体卡片与遗留表面已在阶段 36 删除。
-
-**2 个文件 / 304 行 / 深层与共享结构**
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/components/RichTextEditor/rich-text-editor.css` | 184 | — | — | 多 | 0 | 1 | **B** | 富文本 TipTap 正文与 CodeMirror 内部结构的共用深层样式 |
-| `shared/styles/run-view.module.css` | 120 | — | — | 多 | 0 | 0 | **B** | 运行报告 Segmented/Modal 结构、报告变量与产物视图伪元素 |
-
-### 十、共享全局契约
-
-列表名称（已并入表格契约）、表格、分页、表面、Tab 动效与滚动条；只收缩，不整体 utility 化。
-
-**5 个文件 / 726 行 / 全局契约与共享行为**
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/styles/list-table.css` | 172 | — | — | 多 | 22 | 0 | **C** | 表格几何、名称排版与兼容钩子；合并原 `list-name` |
-| `shared/styles/pagination.css` | 87 | 4 / 25 | 19 | 1 | 1 | 0 | **C** | 全局分页契约；已收缩 |
-| `shared/styles/surface-tokens.css` | 405 | — | — | 多 | 12 | 7 | **C** | 表面 token、板面与列表面板契约；已删除无消费方规则 |
-| `shared/styles/tab-motion.css` | 33 | 4 / 4 | 16 | 4 | 6 | 0 | **C** | 全局 Tab 动效；行为契约 |
-| `shared/styles/scrollbars.css` | 29 | 2 / 0 | 8 | 0 | 0 | 0 | **C** | 全局滚动条行为；保留 |
-
-### 十一、Token / 主题 / Tailwind 基础
-
-主题 token 与 Tailwind 层声明；保留，不参与页面迁移。
-
-**7 个文件 / 1,847 行 / 0 条布局声明 / 1,647 条皮肤声明**
-
-| 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `shared/styles/chart-tokens.css` | 50 | 0 / 0 | 40 | 0 | 0 | 0 | **D** | 图表 token；保留 |
-| `shared/styles/foundation-tokens.css` | 575 | 0 / 0 | 534 | 0 | 0 | 0 | **D** | 基础 token；保留 |
-| `shared/styles/github-dark-foundation.css` | 522 | 0 / 0 | 498 | 0 | 0 | 0 | **D** | 深色主题 token；保留 |
-| `shared/styles/github-dark-tokens.css` | 233 | 0 / 0 | 200 | 0 | 0 | 0 | **D** | 深色主题 token；保留 |
-| `shared/styles/indigo-amber-light-tokens.css` | 329 | 0 / 0 | 288 | 6 | 0 | 0 | **D** | 浅色主题 token；保留 |
-| `shared/styles/tailwind.css` | 48 | 0 / 0 | 0 | 0 | 0 | 0 | **D** | Tailwind 层声明；保留 |
-| `shared/styles/ui-stage-visual-tokens.css` | 90 | 0 / 0 | 87 | 0 | 0 | 0 | **D** | 阶段可视化 token；保留 |
-
-
+> 剩余文件的规则均为 AntD / React Flow / CodeMirror / DOCX 深层结构、状态、动效或页面高度链；普通页面布局不再回流。
 ## 四、阶段排期（29–38）
 
 > 每个阶段覆盖一个完整页面族，不再“今天只做一个模块”。阶段内的子批只用于控制验证范围，不改变该阶段必须覆盖的文件全集。
@@ -214,7 +127,7 @@
 | 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | **已完成（2,022 行）**：`list-name` 并入 `list-table`、`table-row-dividers` 并入 `theme.css`；删除无消费方 API/卡片规则，合并 Shell 重复块，页面工具栏/快速过滤/API 工具栏迁 utility；`!important` 95 → 93 | 高 |
 | 38 | 收口 | — | ≤ 9,000 / ≤ 45 | 44 | **已完成**：全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；两个基线 ratchet 未回退；D 类 token 审计未发现需删除的孤儿族，保留调色板契约 | 低 |
 
-**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 304（阶段 36 实际）+ 2,022（阶段 37 实际）+ 1,847（token）= **8,047 行**；文件 **44 个**，均低于 ≤9,000 / ≤45 目标。阶段 38 的复测与基线 ratchet 已完成，指标未回退。
+**目标校验**：阶段 29–37 的 8,047 行 / 44 文件是预算收口口径；阶段 39–45 再删除 4 个文件并收缩深层规则，最终为 **40 个文件 / 6,738 行 / 49 处 `!important` / 5 组重复体 / 1,162 条布局声明**，全部低于 ≤7,000 / ≤41 / ≤50 目标。阶段 38、阶段 44 与阶段 45 的复测和基线 ratchet 均已完成，指标未回退。
 
 ### 各阶段完成口径
 
@@ -228,147 +141,55 @@
 
 ## 五、`!important` 全量清单
 
-当前 93 处，分布在 11 个文件。**83 处在全局契约，10 处在页面 Module**；后者只有 `sprint-overview`（4）和 `ui-detail-shell`（6）。因此它不是当前主矛盾，但下列文件仍是高风险区：
+当前 49 处，分布在 7 个文件；页面 Module 已无 `!important`。风险集中在按钮调色板与主题/动效覆盖：
 
 | 文件 | 数量 | 风险点 |
 | --- | ---: | --- |
-| `app/styles/buttons.css` | 31 | AntD 按钮所有状态；反向压制基础按钮层，牵一发动全身 |
-| `shared/styles/list-table.css` | 23 | 表格表头/行/圆角/分隔线与列表名称；列表一致性测试依赖 |
-| `shared/styles/surface-tokens.css` | 12 | 列表板面、macOS 玻璃面、过滤组 |
-| `features/ui-automation/styles/ui-detail-shell.module.css` | 6 | macOS 详情板面透明化 |
+| `app/styles/buttons.css` | 31 | AntD 按钮所有状态；反向压制基础按钮层与 portal 覆盖 |
 | `shared/styles/tab-motion.css` | 6 | Tab 指示器透明与动效关闭 |
 | `app/styles/theme.css` | 5 | 浅色主题控件表面与全局行分隔线 |
-| `features/projects/styles/sprint-overview.module.css` | 4 | macOS Sprint 看板板面 |
-| `app/styles/shell.css` | 3 | 紧凑头部、表格单元格伪元素、项目选择 |
-| `src/index.css` | 1 | 描述文字颜色 |
+| `app/styles/shell.css` | 3 | 紧凑头部、表格单元格伪元素与 mac 玻璃文字 |
+| `index.css` | 2 | 描述文字颜色 |
 | `shared/styles/pagination.css` | 1 | 表格页脚背景 |
-| `app/styles/layout.css` | 1 | Tab 激活色 |
+| `app/styles/layout.css` | 1 | 布局链接强调色 |
 
-完整规则与声明见附录 A。处理原则：
+完整分类与保留理由见附录 A。处理原则：
 
 - 先确认是否有同权重替代规则或 `@layer` 可覆盖；只有确认无替代才保留 `!important`。
-- 全局按钮/表格/表面契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
-- 页面 Module 剩余 10 处保留；全局 83 处已在阶段 37 完成死规则合并与收缩（总数 95 → 93），阶段 38 不再硬去 `!important`。
+- 全局按钮/主题契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
+- 阶段 43 已把表格、页面板面与滚动区内距的 39 处移除；剩余 49 处均通过列表/板面契约测试与浏览器计算样式复核。
 
-## 六、重复规则体（10 组）
+## 六、重复规则体（5 组）
 
-结构门禁口径 10 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
+结构门禁当前 5 组，已在 ≤60 目标内。它们是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则：
 
-- 不单独立项，不为了把 42 降到 0 而合并语义不同的选择器。
-- 页面批次里如果同一规则体落在同一宿主/同一 utility 能表达，就合并；否则保留。
-- 附录 B 列出全部 10 组的成员选择器，供批次内查重，不要求逐组清零。
+- 权威列表由 `apps/studio/scripts/css-structure-budget.json` 的 `duplicateBodies` 维护，门禁按哈希与计数 ratchet。
+- 不为了把 5 降到 0 合并语义不同的选择器；页面批次中只有同一宿主/同一 utility 能表达时才合并。
+- 阶段 43 后剩余组均为跨 feature 的状态/表面单属性，保留。
 
 ## 七、附录
 
-### 附录 A：全部 `!important` 规则
+### 附录 A：`!important` 保留清单（49 处）
 
-#### `app/styles/buttons.css`
-- `.ant-btn`
-  - `color: var(--button-current-text) !important`; `background: var(--button-current-bg) !important`; `border-color: var(--button-current-border) !important`; `-webkit-backdrop-filter: none !important`; `backdrop-filter: none !important`; `box-shadow: none !important`; `text-shadow: none !important`; `transform: none !important`; `font-weight: 500 !important`
-- `.ant-btn:not(.ant-btn-circle):not(.ant-btn-round)`
-  - `border-radius: 8px !important`
-- `.ant-btn:not(:disabled):not(.ant-btn-disabled):not(.ant-btn-loading):hover`
-  - `background: var(--button-current-hover) !important`; `border-color: var(--button-current-hover-border) !important`
-- `.ant-btn:not(:disabled):not(.ant-btn-disabled):not(.ant-btn-loading):active`
-  - `background: var(--button-current-active) !important`
-- `.ant-btn:focus-visible`
-  - `outline: 2px solid var(--button-focus) !important`; `outline-offset: 2px !important`
-- `.ant-btn:disabled, .ant-btn.ant-btn-disabled`
-  - `color: var(--button-disabled-text) !important`; `background: var(--button-disabled-bg) !important`; `border-color: var(--button-disabled-border) !important`; `cursor: not-allowed !important`
-- `:is(.ant-btn-text, .ant-btn-link):is(:disabled, .ant-btn-disabled)`
-  - `background: transparent !important`; `border-color: transparent !important`
-- `.ant-btn.app-action-icon, .ant-table .ant-btn.ant-btn-icon-only:is(.ant-btn-text, .ant-btn-link)`
-  - `width: 28px !important`; `min-width: 28px !important`; `height: 28px !important`; `padding: 0 !important`; `border-radius: 6px !important`; `font-size: 14px !important`
-- `.ant-btn.app-action-icon > .ant-btn-icon, .ant-table .ant-btn.ant-btn-icon-only > .ant-btn-icon`
-  - `font-size: 14px !important`
-- `.ant-table .ant-btn.app-action-run`
-  - `height: 28px !important`; `font-size: 12px !important`; `gap: 4px !important`
-#### `app/styles/layout.css`
-- `.workbench-tabs .ant-tabs-tab-active .ant-tabs-tab-btn`
-  - `color: var(--app-accent-hover) !important`
-#### `app/styles/shell.css`
-- `.compact-header .project-select .ant-select-selector`
-  - `padding-inline: 0 !important`
-- `.workbench-panel .ant-table-cell::before`
-  - `background-color: var(--tp-border-soft) !important`
-- `.app-shell .project-select .ant-select-selector`
-  - `color: var(--app-glass-text) !important`
-#### `app/styles/theme.css`
-- `.app-shell-macos > .ant-layout`
-  - `background: var(--mac-glass-header) !important`
-- `:root:root:not([data-theme='dark']) .app-shell :is(.ant-input-affix-wrapper, .ant-select-selector, .ant-select:not(.ant-select-borderless):not(.ant-select-disabled) .ant-select-content)`
-  - `background: var(--app-control-surface) !important`; `border-color: var(--button-border) !important`
-- `:root:root:not([data-theme='dark']) .app-shell .ant-input-affix-wrapper input`
-  - `background: transparent !important`
-- `:root:root .ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td.ant-table-cell`
-  - `border-bottom: 1px solid var(--app-list-row-border) !important`
-#### `features/projects/styles/sprint-overview.module.css`
-- `:root:root :global(.app-shell-macos) .root :global(.sprint-overview-panel-unified)`
-  - `border: 0 !important`; `border-radius: 0 !important`; `background: transparent !important`; `box-shadow: none !important`
-#### `features/ui-automation/styles/ui-detail-shell.module.css`
-- `:global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`
-  - `border: 0 !important`; `border-radius: 0 !important`; `background: transparent !important`; `box-shadow: none !important`; `-webkit-backdrop-filter: none !important`; `backdrop-filter: none !important`
-#### `index.css`
-- `.ant-empty-description, .ant-form-item-extra, .project-description-text, .api-env-var-picker-item-desc`
-  - `color: var(--description-text) !important`
-- `.ant-empty-description, .ant-form-item-extra`
-  - `color: var(--description-text-muted) !important`
-#### `shared/styles/list-table.css`
-- `:root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name .ant-typography`
-  - `color: var(--app-list-name) !important`; `font-family: Arial, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important`; `font-size: 13px !important`; `font-weight: 400 !important`; `line-height: 24px !important`
-- `:root:root .app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(.ant-typography:hover, .ant-typography:focus-visible, a:focus-visible .ant-typography)`
-  - `color: var(--app-list-name-hover) !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell, :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell`
-  - `padding: 0 16px !important`; `border: 0 !important`; `border-bottom: 1px solid var(--app-list-header-border) !important`; `border-radius: 0 !important`; `color: var(--srf-list-header-text) !important`; `background: var(--srf-list-header-bg) !important`; `box-shadow: none !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td, :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td`
-  - `padding: 8px 16px !important`; `border-bottom: 1px solid var(--app-list-row-border) !important`; `background: var(--srf-list-row-bg) !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td, :root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td`
-  - `background: var(--srf-list-row-hover) !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:first-child`
-  - `border-top-left-radius: 8px !important`; `border-bottom-left-radius: 8px !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:last-child`
-  - `border-top-right-radius: 8px !important`; `border-bottom-right-radius: 8px !important`
-- `:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell::before`
-  - `display: none !important`
-#### `shared/styles/pagination.css`
-- `:root:root:not([data-theme='dark']) .app-shell .table-footer`
-  - `background: var(--app-list-toolbar-bg) !important`
-#### `shared/styles/surface-tokens.css`
-- `.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
-  - `border: 0 !important`; `border-radius: 0 !important`; `background: transparent !important`; `box-shadow: none !important`; `-webkit-backdrop-filter: none !important`; `backdrop-filter: none !important`
-- `:root:root .app-shell-macos .tp-surface .tp-board.tp-list-panel, .tp-surface .tp-board.tp-list-panel`
-  - `border: 1px solid var(--srf-card-border) !important`; `border-radius: var(--srf-radius-card) !important`; `background: var(--srf-card) !important`; `box-shadow: none !important`; `backdrop-filter: none !important`
-- `.tp-surface .tp-list-panel .tp-list-scroll`
-  - `padding: 16px !important`
-#### `shared/styles/tab-motion.css`
-- `:root [role='tablist'].has-shared-tab-motion [role='tab'][aria-selected='true']`
-  - `background: transparent !important`; `box-shadow: none !important`; `border-color: transparent !important`
-- `:root [role='tablist'].has-shared-tab-motion .ant-tabs-tab-active`
-  - `background: transparent !important`; `box-shadow: none !important`
-- `.shared-tab-motion-indicator, .ant-segmented-thumb`
-  - `transition: none !important`
+| 文件 | 数量 | 保留理由 |
+| --- | ---: | --- |
+| `app/styles/buttons.css` | 31 | 按钮调色板在 `@layer app-buttons` 内，需要压过未分层页面/portal 覆盖；含调色、悬停/禁用、图标动作尺寸与焦点环 |
+| `app/styles/theme.css` | 5 | 浅色/深色主题对顶栏、输入与列表分隔线的最终覆盖 |
+| `shared/styles/tab-motion.css` | 6 | 共享页签指示器与 Segmented 的透明背景/禁用过渡 |
+| `app/styles/shell.css` | 3 | 紧凑头部内距、表格分隔伪元素与 mac 玻璃文字 |
+| `index.css` | 2 | 描述正文的只读排版颜色 |
+| `shared/styles/pagination.css` | 1 | 浅色页脚背景覆盖 |
+| `app/styles/layout.css` | 1 | 布局链接的强调色 |
 
+### 附录 B：重复规则体
 
-### 附录 B：全部 10 组重复规则体
-
-> 每组列出所有成员（文件 → 选择器）。只用于查重，不表示必须合并。
-
-1. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css → :global(.app-shell):has(.root)`
-2. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/sprint-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
-3. `src/app/styles/shell.css → .workbench-page`；`src/app/styles/shell.css → .workbench-panel`
-4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`
-5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
-6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
-7. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`
-8. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
-9. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
-10. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
+阶段 43 后 5 组重复体全部是跨 feature 的同构单属性。成员选择器与哈希由 `css-structure-budget.json` 的 `duplicateBodies` 维护；本文不再复制易失效的选择器清单。修改样式后运行 `node scripts/check-css-structure.mjs`，计数上升会在门禁中失败。
 
 ## 八、执行顺序建议
 
-1. **阶段 29–38（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件、全局契约、收口）已完成**，当前 44 文件 / 8,047 行。
-2. **38（收口）已完成**：全量复测、ratchet 两个基线、审计 D 类 token 并更新本文与迁移计划；未再整体迁移全局契约，也未批量删除调色板 token。
-3. **阶段 38 预算目标已达成**：44 ≤ 45 文件、8,047 ≤ 9,000 行、93 ≤ 100 处 `!important`、0 长前缀、10 ≤ 60 组重复体；阶段 39 继续把文件/行数压到 42 / 7,756。
+1. **阶段 29–45（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects、共享组件、全局契约、结构整改与收口）已完成**，当前 40 文件 / 6,738 行。
+2. **阶段 38 收口、阶段 44 最终收口与阶段 45 残留布局清理均已完成**：全量复测、基线 ratchet、D 类 token 审计与 `--legacy-*` 清理；未批量删除调色板 token。
+3. **最终目标已达成**：40 ≤ 41 文件、6,738 ≤ 7,000 行、49 ≤ 50 处 `!important`、0 长前缀、5 ≤ 60 组重复体、1,162 条布局声明；后续只允许向下 ratchet。
 
 ## 九、完成与未完成记录
 
@@ -376,36 +197,82 @@
 
 ### 已完成
 
-- **阶段 0–38 全部执行完成**：包括页面族整族迁移、全局契约收缩、共享组件迁移、收口复测与基线 ratchet。
-- **页面级 Tailwind 化**：UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/个人设置/Projects、共享组件的布局、间距、排版与响应式排布已迁入 utility。
-- **结构收缩**：阶段 29–37 删除或并入 22 个 CSS 文件；`list-name` 并入 `list-table`，`table-row-dividers` 并入 `theme.css`，Shell/工具栏/按钮重复块已合并或 utility 化。
-- **最终指标**：44 个文件 / 8,047 行 / 93 处 `!important` / 0 长前缀 / 10 组重复规则体 / 0 个超过 600 行的文件。
-- **验证**：全量 187 个测试文件 / 942 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；阶段 29–37 已按各阶段记录完成对应页面与断点的浏览器核对，阶段 37 覆盖 Shell、工具栏、快速过滤条与按钮；两个基线已 ratchet 且无回退。
-- **Token 审计**：28 个 `--legacy-*` 别名仍有消费者，未发现删除组件遗留的同名 token；未批量删除调色板 token。
+- **阶段 0–45 全部执行完成**：包括页面族整族迁移、全局契约收缩、共享组件迁移、结构性整改、残留布局清理、收口复测与基线 ratchet。
+- **页面级 Tailwind 化**：UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/个人设置/Projects、共享组件与顶部导航的布局、间距、排版与响应式排布已迁入 utility。
+- **结构收缩**：从阶段 29 前的 66 个文件压到 40 个；阶段 39–41 删除 `ui-detail-inspector`、`test-order-visualization`、`zentao-binding`、`sidebar` 四个文件，`list-name` 并入 `list-table`，`table-row-dividers` 并入 `theme.css`，Shell/工具栏/按钮重复块已合并或 utility 化。
+- **最终指标**：40 个文件 / 6,738 行 / 49 处 `!important` / 0 长前缀 / 5 组重复规则体 / 1,162 条布局声明 / 0 个超过 600 行的文件。
+- **验证**：全量 189 个测试文件 / 947 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；阶段 29–45 已按各阶段记录完成对应页面与断点的浏览器核对；两个基线已 ratchet 且无回退。
+- **Token 审计**：28 个 `--legacy-*` 别名已内联删除；无消费者的动作、详情玻璃、AI 折叠、项目概览与 scope 标记 token 已清理；剩余调色板 token 作为设计系统资产保留。
 
 ### 阶段 39 已完成（2026-11-18）
 
 - **度量**：结构门禁新增 `layoutDeclarations`；全量布局声明 1,893 → 1,530（−363）。
 - **迁移**：删除 `ui-detail-inspector.module.css`（71 行，右栏卡片抽为 `shared/components/RunCard.tsx`）与 `test-order-visualization.module.css`（119 行，面板/步骤/关系图迁 utility，容器查询改用 Tailwind 变体）；`api-detail-rules` 105 → 65；`ui-stage-visual` 217 → 156，浅色规则迁 `uiStageVisualClasses.ts`。
 - **指标**：44 → 42 文件，8,047 → 7,756 行；`!important` 93、长前缀 0、10 组重复体、0 个超过 600 行的文件。
-- **验证**：`npm run verify`、CSS 三件套、`git diff --check` 通过；全量 188 个测试文件 / 946 个用例通过（当前工作树含性能测试新增；阶段 38 基线为 187/942）；UI 自动化、测试单可视化、API 自动化、AI 阶段可视化与运行报告定向测试通过。
+- **验证**：`npm run verify`、CSS 三件套、`git diff --check` 通过；当时全量 188 个测试文件 / 946 个用例通过（阶段 38 基线为 187/942）；UI 自动化、测试单可视化、API 自动化、AI 阶段可视化与运行报告定向测试通过。
 - **浏览器核对**：当前 `perf-e2e-1794842106` 项目无 UI/API 测试数据，`Zata-Platform` 无项目权限；列表与空态可打开，详情/回放/图谱需真实数据，留阶段 42 补齐，未伪造验收。
 
-### 未完成 / 明确保留
+### 阶段 40 已完成（2026-11-18）
 
-- **C 类全局契约（14 个文件 / 2,022 行）**：只做死规则、层叠和重复体收缩，未整体 utility 化；其中 83 处 `!important` 属于外壳/表格/按钮/表面契约，保留。
-- **B 类页面/共享 Module（21 个文件 / 3,887 行）**：保留 AntD / React Flow / DOCX 深层选择器、玻璃皮肤、页面高度链与容器查询，不再继续迁移。
-- **D 类 Token（7 个文件 / 1,847 行）**：主题、调色板与 Tailwind 层声明保留；当前无直接消费者的调色板 token 未删除，需设计系统确认后再处理。
-- **视觉验收缺口**：运行报告、导入预览、图谱执行面板等依赖后端数据的界面未做真实数据浏览器核对，当前由组件测试、类型检查与构建覆盖。
-- **交付状态**：`origin/dev` 停在阶段 20（`5c31a6e`），阶段 21–38 共 20 笔提交仅在本地 `dev`，尚未推送；其中收口提交为 `cb6ef53`、`7bb5faa`、`55bb860`。工作树另有性能测试步骤编辑器与运行环境选择改动，不属于本计划。
+- **页面布局迁移**：`test-order-workspace.module.css` 210 → 57（工具栏、条目表、侧翻页、底部判定条迁 utility，保留高度链与 AntD 深层规则）；`bugs.module.css` 213 → 133（详情栏、证据预览、描述模板迁 utility，保留 Modal/上传/导入与伪元素）；`interface-library.module.css` 138 → 84（页面内距与 HTTP 方法签迁 utility，抽共享 `shared/components/MethodBadge.tsx`，保留 Tree/Table 深层规则）；`sprint-overview.module.css` 164 → 154（进度/严重度子项迁 utility）；`account.module.css` 151 → 149（标题色迁 utility）。
+- **指标**：42 文件，7,756 → 7,457 行（−299）；布局声明 1,530 → 1,464；重复规则体 10 → 9；`!important` 93、长前缀 0、0 个超过 600 行的文件。
+- **验证**：`npm run verify`、当时全量 188 个测试文件 / 946 个用例、CSS 三件套与 `git diff --check` 通过；接口库 45 项、项目/认证 54 项定向测试通过。
+- **测试调整**：登录页标题由 CSS Module 改为 utility 后，jsdom 无法计算 Tailwind 类，断言从 computed style 改为类名契约；`--app-auth-text` token 仍由 foundation token 测试保护。
 
-### 阶段 39–44：结构性整改（已立项）
+### 阶段 41 已完成（2026-11-18）
 
-阶段 38 只完成预算收口；以下阶段继续处理结构性缺口，目标 **40–41 个文件 / ≤7,000 行 / `!important` ≤50**：
+- **共享板面契约**：`shell-header.css` 新增 `.workbench-panel-flat`，在 macOS 外壳内以更高优先级压平玻璃底；UI 测试集、性能、Bug、API、UI、用例库、测试单条目与 Sprint 详情统一追加该标记类，删除两份页面级 `!important` 复位块（10 处）与 `surface-tokens` 的 5 处 `tp-list-panel` `!important`。
+- **文件合并/删除**：禅道绑定弹窗改用 AntD `styles` 语义槽与 utility，删除 `zentao-binding.module.css`（59 行）；顶部导航整体迁入 `AppSidebar` / `TopNavTabMenu` / `SidebarIcon` 的 utility，删除 `sidebar.css`（110 行）。`RunCard` 与 `MethodBadge` 成为共享原语。
+- **深层规则收缩**：生成链状态胶囊与节点几何抽为 `generationClasses.ts` / 画布 utility；继续优化侧栏、产物视图切换、API 接口选择器、仓库画像网格与需求文档工具栏迁 utility；`generation-chain` 426 → 337、`generation-canvas` 256 → 220、`artifact-cases` 255 → 247、`requirement-detail` 179 → 160、`ui-stage-visual` 156 → 143。
+- **指标**：42 → 40 文件，7,457 → 6,996 行；`!important` 93 → 49；重复规则体 9 → 5；布局声明 1,464 → 1,248。
+- **验证**：AI 测试/需求 51 个测试文件 / 279 个用例通过；全量测试最终 189 文件 / 947 用例；`npm run verify`、CSS 三件套与 `git diff --check` 通过。
 
-1. **39 重新定界 + 安全 B 类第一批**：布局声明审计入基线；迁移 `ui-detail-inspector`、`test-order-visualization`，收缩 `api-detail-rules`、`ui-stage-visual`。
-2. **40 B 类页面布局第二批**：迁移 `test-order-workspace`、`bugs`、`interface-library`、`sprint-overview` 的剩余普通布局。
-3. **41 共享原语与合并**：抽 `RunCard` / `MethodBadge` / `EditorSurface`，合并重复 Modal 与 macOS 复位契约，移除页面级 `!important`。
-4. **42 数据依赖界面视觉验收**：运行报告、图谱执行、AI 生成链、DOCX 预览等；未通过不进入 C 类。
-5. **43 C 类全局契约收缩**：逐契约去 `!important`（93 → ≤50，争取 ≤30），每处移除配 computed-style 测试。
-6. **44 D 类 token 清理与最终收口**：清理 `--legacy-*` 与未定义 fallback token，更新最终指标与不可迁移 CSS 清单。
+### 阶段 42 已完成可执行范围（2026-11-18）
+
+- **真实数据核对**：在 `perf-e2e-1794842106` 本地项目创建迭代「CSS 视觉核对」，核对 Sprint 详情页（1280 深色）：健康摘要、执行进度、测试执行概览正常，`.sprint-overview-panel-unified` 计算样式为 `border 0 / radius 0 / transparent / no shadow / no backdrop`，页面无横向溢出。
+- **列表与外壳**：1280 / 760 深色与 1280 浅色核对顶部导航、资产库用例列表、测试单空态；导航指示器、活动项、窄屏间距与 `workbench-panel-flat` 均符合预期，`scrollWidth === clientWidth`。
+- **计算样式基线**：列表表格注入探针在移除 23 处 `!important` 前后，表头/单元格的 height、padding、border、radius、color、background 完全一致；新增 `shellSurfaceConsistency.test.ts` 锁定 flat 板面契约。
+- **未覆盖范围**：运行报告、测试单图谱执行、AI 生成链真实产物、需求 DOCX 预览仍缺真实运行记录/AI 服务/文档样本，未做浏览器验收；对应组件测试、类型检查与构建通过。该缺口保留，不用单元测试冒充视觉验收。
+
+### 阶段 43 已完成（2026-11-18）
+
+- **`!important` 收缩**：`list-table.css` 23 → 0（表头/行/悬停/圆角/伪元素），页面板面复位 10 → 0，`tp-list-panel` 5 → 0，`tp-list-scroll` 1 → 0；总数 93 → 49。
+- **保留理由**：31 处按钮调色板仍在 `@layer app-buttons` 内，需要压过未分层页面/portal 覆盖；主题 5、页签动效 6、外壳 3、输入 2、分页 1、布局 1 均依赖级联顺序或 AntD 内部状态，逐条核对后保留。
+- **测试**：`listSurfaceConsistency.test.ts`、`listPanelConsistency.test.ts` 在无 `!important` 下通过；新增 `shellSurfaceConsistency.test.ts`；浏览器计算样式复测一致。
+- **未追数字**：未继续强删按钮 `!important` 以冲击 ≤30；剩余项需要跨全部 portal 的视觉基线，保留比机械删除更安全。
+
+### 阶段 44 已完成（2026-11-18）
+
+- **`--legacy-*` 清零**：28 个别名全部内联到消费者 token（`--tp-*`、`--mac-glass-*`、`--project-overview-*`、`--mac-action-blue-border`），删除 `shell.css`、`shell-header.css`、`sprint-overview.module.css`、`action-buttons.css` 中的别名层；主题文件中同名 token 直接定义。
+- **无消费者 token**：删除 `--tp-action-*`（15）、未使用的 `--detail-glass-*`（5）、`--ai-fold-*` / `--ai-card-*` / `--ai-popover-arrow`（11）、项目概览未消费 token（18）、`--uisv-6b7f9e`、运行报告未消费变量；页面 scope 标记变量（14）一并清理。
+- **阶段 44 指标**：40 个文件 / 6,996 行 / 49 处 `!important` / 0 长前缀 / 5 组重复规则体 / 1,248 条布局声明 / 0 个超过 600 行的文件。
+- **交付状态**：`origin/dev` 已推进到 `13a29dd`（阶段 39 与性能改动已推送）；阶段 40–45 改动（含本文档）仍在工作树，尚未提交。
+
+### 阶段 45 已完成（2026-11-18）
+
+- **页脚与列表残留**：`pagination.css` 的 `.table-footer` 布局迁入 `shared/utils/surfaceClasses.ts` 的 `tableFooterClass` / `tableFooterCompactClass`，19 处列表/抽屉/弹窗/选择器页脚统一追加；`list-table.css` 的操作列标题、名称列宽度与动作列对齐迁到列 render 的 utility；`test-order-workspace`、`bugs`、`ui-suite`、`performance`、`account` 等页脚保持 58px / 12×16 内距。
+- **页签与滚动承载**：`shell.css` 的 `.workbench-tabs` 与 `.table-body-scroll` 布局迁入 `workbenchTabsClass` / `workbenchTabsCompactClass` / `workbenchTabsAiClass` 与 `tableScrollClass`，Projects、Sprint、AI Skill 库、用例库、Bug、性能、基础服务、环境抽屉与 UI 测试集分别按原内距接管；Sprint 与 AI Skill 库的页面级 padding 覆盖规则删除。
+- **外壳头部去重**：项目选择器、顶栏导航、反馈入口、头部动作区与 `app-header-main` 的布局迁到 `AppShell` / `AppSidebar` utility；`shell.css` 与 `shell-header.css` 删除重复块，`shell-header.css` 只保留 macOS 玻璃皮肤、项目选择器尺寸与 900px 以下高度回退。
+- **页面根与 Logo**：接口库三页的页面间距迁到 `interfacePageRootClass`，仅保留 760px 高度链；API 详情删除与 `surface-tokens` 重复的 `.api-automation-content` 高度/内距覆盖，`--detail-glass-border` 移到 `.scope`；`MtxLogo` 的描边与投影改为 SVG 属性 + utility，`layout.css` 删除 5 条 Logo 规则与未使用的 `.brand`。
+- **指标**：6,996 → 6,738 行（−258）；布局声明 1,248 → 1,162（−86）；文件数 40、`!important` 49、长前缀 0、重复体 5 不变；结构基线已 ratchet 到 4,529 条声明 / 1,162 条布局声明。
+- **验证**：全量 189 个测试文件 / 947 个用例、`npm run verify`、CSS 三件套与 `git diff --check` 通过；浏览器核对 1280 深/浅色、900、760 下的顶部导航、Sprint 详情、Bug 列表、用例库、UI 测试列表、性能运行记录、账号管理与接口库空态，页脚与头部计算样式一致，无横向溢出；API 详情、运行报告、图谱执行、AI 生成链与 DOCX 预览仍受真实数据缺口限制。
+- **测试调整**：`paginationConsistency` 与 `listPanelConsistency` 从“读取 CSS 计算值”改为“断言共享 utility 类契约 + 分页圆角仍由公共样式维护”，与阶段 43 的 computed-style 测试形成互补。
+
+### 剩余不可迁移 / 明确保留
+
+- **B 类页面/共享 Module（19 个文件 / 3,157 行）**：AntD / React Flow / CodeMirror / DOCX 深层选择器、状态色、动效、页面高度链与容器查询。生成链/画布的节点状态与动画是产品视觉的一部分，不再 utility 化。
+- **C 类全局契约（14 个文件 / 1,759 行）**：按钮层、列表表格、表面 token、外壳、滚动条、分页、页签动效；保留 49 处 `!important` 的级联理由已逐文件登记。
+- **D 类 Token（7 个文件 / 1,828 行）**：主题、调色板与 Tailwind 层声明保留；剩余无直接消费者的调色板 token 属设计系统资产，未在缺少设计确认时批量删除。
+- **视觉验收缺口**：运行报告、图谱执行、AI 生成链、DOCX 预览未取得真实数据；后续补数据时按阶段 42 记录的路由、断点与主题复测。
+
+### 阶段 39–45：执行结果
+
+阶段 38 只完成预算收口；阶段 39–45 完成结构性整改，最终达到 **40 个文件 / 6,738 行 / 49 处 `!important` / 1,162 条布局声明**：
+
+1. **39 重新定界 + 安全 B 类第一批（已完成）**：布局声明审计入基线；删除 `ui-detail-inspector`、`test-order-visualization`，收缩 `api-detail-rules`、`ui-stage-visual`。
+2. **40 B 类页面布局第二批（已完成）**：测试单工作台、Bug、接口库、Sprint 概览、账户样式迁 utility。
+3. **41 共享原语与合并（已完成）**：`RunCard` / `MethodBadge` / `workbench-panel-flat`；删除禅道绑定与侧栏导航 CSS；收缩生成链/画布/需求文档。
+4. **42 数据依赖界面视觉验收（已完成可执行范围）**：Sprint 详情与列表/外壳已核对；运行报告、图谱、AI 生成链、DOCX 预览缺口保留记录。
+5. **43 C 类全局契约收缩（已完成）**：`!important` 93 → 49，移除项配 computed-style 测试，保留项逐条登记。
+6. **44 D 类 token 清理与最终收口（已完成）**：`--legacy-*` 清零，未定义 fallback 消除，最终指标与不可迁移清单更新。
+7. **45 残留布局清理（已完成）**：页脚、工作台页签、滚动承载层、表尾、Logo 与外壳头部去重；6,996 → 6,738 行，布局声明 1,248 → 1,162。

@@ -1,5 +1,6 @@
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { Alert, Button, Empty, Modal, Spin } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -49,7 +50,7 @@ export function RequirementCodeRiskPanel({ workspace, canWrite }: {
           {canWrite ? <ActionButton operation="delete" iconOnly size="small" aria-label="删除运行记录" disabled={!isRunDeletable(row.status) || workspace.remove.isPending}
             onClick={event => { event.stopPropagation(); confirmDeleteRun(() => workspace.remove.mutate(row.runId!)) }} /> : null}
         </>} />} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前类型暂无运行记录" />}
-      {workspace.runsLoading ? null : !workspace.pagedRows.length ? <div className="table-footer"><ListPagination {...pagination} /></div> : null}
+      {workspace.runsLoading ? null : !workspace.pagedRows.length ? <div className={`table-footer ${tableFooterClass}`}><ListPagination {...pagination} /></div> : null}
     </section>
     <Modal title="分析报告" open={reportRunId !== undefined} onCancel={() => setReportRunId(undefined)} footer={<Button onClick={() => setReportRunId(undefined)}>关闭</Button>} width={960}>
       {reportQuery.isPending ? <Spin /> : report ? (

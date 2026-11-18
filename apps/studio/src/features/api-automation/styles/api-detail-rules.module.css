@@ -2,7 +2,6 @@
  * 表单/卡片/按钮的尺寸与底色已迁到组件 inline style；
  * 这里只保留 AntD 弹层、CodeMirror 与页面级 CSS 变量的必要规则。 */
 
-.scope { --api-rules-scope: 1; }
 
 .scope:global(.api-case-environment-popover-overlay) :global(.ant-popover-inner) {
   padding: 0;
@@ -11,26 +10,8 @@
 }
 
 /* macOS 详情工作区的玻璃变量；json-editor 深层规则仍从这里取色。 */
-.pageRoot {
-  --detail-glass-panel: var(--app-glass-surface-68);
-  --detail-glass-card: var(--app-glass-surface-74);
-  --detail-glass-soft: var(--app-glass-surface-50);
+.scope {
   --detail-glass-border: var(--app-glass-divider);
-  --detail-glass-border-strong: var(--app-glass-detail-border-strong);
-  --detail-glass-shadow: 0 12px 30px var(--app-glass-detail-shadow);
-  background: transparent;
-}
-
-.pageRoot :global(.api-automation-content) {
-  height: 100%;
-  min-height: 0;
-  padding: 12px var(--app-page-gutter) 20px;
-}
-
-@media (max-width: 1180px) {
-  .pageRoot :global(.api-automation-content) {
-    padding: 12px var(--app-page-gutter) 18px;
-  }
 }
 
 /* 后置操作入口的 hover 仍由未分层规则负责，避免被 AntD 按钮状态覆盖。 */

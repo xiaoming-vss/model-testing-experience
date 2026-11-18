@@ -10,6 +10,7 @@ import { ProjectAccessScope } from '@/features/projects/components/ProjectAccess
 import { api, listItems, listTotal } from '@/services/api'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import type { PerfRunStatus, PerfSuiteRunSummary } from '../types'
 import {
   PERF_OUTCOME_LABELS,
@@ -120,7 +121,7 @@ export function PerformanceRunsPage() {
   return <ProjectAccessScope projectId={activeProjectId ?? ''}>
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
           <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2.5">
               <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" onClick={() => navigate('/testing?tab=perf')} />
@@ -164,7 +165,7 @@ export function PerformanceRunsPage() {
               pagination={false}
               locale={{ emptyText: <div className="py-12 text-center text-xs text-app-surface-text-muted">没有符合条件的运行记录。调整筛选条件或先运行一个测试集。</div> }}
             />
-            <div className="table-footer">
+            <div className={`table-footer ${tableFooterClass}`}>
               <ListPagination
                 loading={runsQuery.isFetching}
                 current={page}

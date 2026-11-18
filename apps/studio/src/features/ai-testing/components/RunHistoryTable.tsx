@@ -3,6 +3,7 @@ import { MoreOutlined } from '@ant-design/icons'
 import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { formatTime } from '@/utils/format'
 
 export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
@@ -120,7 +121,7 @@ export function RunHistoryTable<T>({
       : []),
     ...(renderActions
       ? [{
-          title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
+          title: <span className="tp-actions-col-title inline-block text-center" style={{ width: 92 }}>操作</span>,
           key: 'actions',
           minWidth: columnMinWidths.actions,
           align: 'right' as const,
@@ -150,7 +151,7 @@ export function RunHistoryTable<T>({
       onRow={(row) => ({ onClick: () => onSelect(getRunId(row)) })}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无运行记录" /> }}
     />
-    {pagination ? <div className="table-footer"><ListPagination {...pagination} /></div> : null}
+    {pagination ? <div className={`table-footer ${tableFooterClass}`}><ListPagination {...pagination} /></div> : null}
     </>
   )
 }

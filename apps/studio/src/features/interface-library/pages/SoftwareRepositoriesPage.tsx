@@ -15,6 +15,7 @@ import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { formatTime } from '@/utils/format'
 import { SoftwareRepositoryEditorDrawer } from '../components/SoftwareRepositoryEditorDrawer'
 import { useSoftwareRepositoryManager } from '../hooks/useSoftwareRepositoryManager'
+import { interfacePageRootClass } from '../pageClasses'
 import type { SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
@@ -149,7 +150,7 @@ export function SoftwareRepositoriesPage() {
   ]
 
   return (
-    <div className={`workbench-page interface-library-page tp-surface tp-list-surface ${styles.pageRoot} ${interfaceScopes}`}>
+    <div className={`workbench-page interface-library-page tp-surface tp-list-surface ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}`}>
       <section className="tp-board tp-list-panel if-library-board">
         <div className="if-library-toolbar tp-list-toolbar gap-y-2">
           <div className="if-toolbar-filters flex min-w-0 flex-wrap items-center gap-2">

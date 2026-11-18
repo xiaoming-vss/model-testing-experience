@@ -89,7 +89,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     }
   }
 
-  return <aside className="revision-side-panel" aria-label="继续优化" onPaste={event => {
+  return <aside className="revision-side-panel flex min-h-0 min-w-[240px] flex-1 flex-col gap-3 overflow-auto rounded-xl border border-[var(--ai-border,var(--app-revision-border))] bg-[var(--ai-panel-soft,var(--app-revision-bg))] p-4" aria-label="继续优化" onPaste={event => {
     if (!attachmentsEnabled) return
     const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
     if (!files.length || loading || !projectId || imageAttachments.length + uploading >= MAX_ATTACHMENTS) return
@@ -97,17 +97,17 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     void uploadImages(files)
   }}>
     <header className="flex flex-col gap-1.5"><strong className="text-[17px]">继续优化</strong><span className="text-[12px] text-[var(--ai-text-secondary,var(--app-list-label))]">对照左侧当前内容，补充修改要求</span></header>
-    {draft && draft.questions.length > 0 ? <div className="revision-questions">
-      <div className="revision-question-progress"><span>已填写 {answered} / {draft.questions.length}</span><span>未填写 {draft.questions.length - answered}</span></div>
-      <div className="revision-question-track" aria-hidden="true"><span style={{ width: `${answered / draft.questions.length * 100}%` }} /></div>
-      <div className="revision-question-nav" aria-label="问题列表">{draft.questions.map((question, index) => <button type="button" key={`${question.id}-${index}`} className={`${index === currentIndex ? 'is-current' : ''} ${draft.answers[index]?.trim() ? 'is-answered' : ''}`} aria-label={`问题 ${question.id}${draft.answers[index]?.trim() ? '，已填写' : ''}`} aria-current={index === currentIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</div>
-      <div className="revision-question-content"><span className="revision-question-id">{draft.questions[currentIndex].id} · {draft.answers[currentIndex]?.trim() ? '已填写' : '待填写'}</span><p>{draft.questions[currentIndex].question}</p>
+    {draft && draft.questions.length > 0 ? <div className="revision-questions flex min-w-0 flex-col gap-3">
+      <div className="revision-question-progress flex justify-between gap-2 text-xs text-[var(--ai-text-secondary,var(--app-list-label))]"><span>已填写 {answered} / {draft.questions.length}</span><span>未填写 {draft.questions.length - answered}</span></div>
+      <div className="revision-question-track h-1 overflow-hidden rounded bg-[var(--ai-border,var(--app-revision-border))]" aria-hidden="true"><span style={{ width: `${answered / draft.questions.length * 100}%` }} className="block h-full bg-[var(--ant-color-primary)]" /></div>
+      <div className="revision-question-nav flex flex-wrap gap-1.5 [&>button]:h-[30px] [&>button]:min-w-8 [&>button]:cursor-pointer [&>button]:rounded-md [&>button]:border [&>button]:border-[var(--ai-border,var(--app-revision-border))] [&>button]:bg-transparent [&>button]:text-inherit" aria-label="问题列表">{draft.questions.map((question, index) => <button type="button" key={`${question.id}-${index}`} className={`${index === currentIndex ? 'is-current' : ''} ${draft.answers[index]?.trim() ? 'is-answered' : ''}`} aria-label={`问题 ${question.id}${draft.answers[index]?.trim() ? '，已填写' : ''}`} aria-current={index === currentIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</div>
+      <div className="revision-question-content border-t border-[var(--ai-border,var(--app-revision-border))] pt-3.5 [&>label]:mb-1.5 [&>label]:block [&>p]:my-2 [&>p]:mb-3.5 [&>p]:leading-[1.7] [&>p]:[overflow-wrap:anywhere]"><span className="revision-question-id text-xs text-[var(--ant-color-primary)]">{draft.questions[currentIndex].id} · {draft.answers[currentIndex]?.trim() ? '已填写' : '待填写'}</span><p>{draft.questions[currentIndex].question}</p>
         <label htmlFor="revision-question-answer">补充答复</label><Input.TextArea id="revision-question-answer" aria-label="补充答复" rows={4} disabled={loading} value={draft.answers[currentIndex] ?? ''} placeholder="填写已确认的信息；暂时不清楚可留空" onChange={event => { const answers = [...draft.answers]; answers[currentIndex] = event.target.value; onChange(updateQuestionRevisionDraft({ ...draft, answers })) }} />
-        <div className="revision-question-pagination"><Button disabled={currentIndex === 0} onClick={() => setQuestionIndex(currentIndex - 1)}>上一题</Button><Button disabled={currentIndex === draft.questions.length - 1} onClick={() => setQuestionIndex(currentIndex + 1)}>下一题</Button><span>{currentIndex + 1} / {draft.questions.length}</span></div></div>
-      <details className="revision-question-extra"><summary>补充其他优化要求（可选）</summary><Input.TextArea aria-label="优化指令" rows={3} disabled={loading} value={draft.instruction} placeholder="填写其他优化要求" onChange={event => onChange(updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }))} /></details>
+        <div className="revision-question-pagination mt-2.5 flex items-center gap-2 [&>span]:ml-auto [&>span]:text-xs [&>span]:text-[var(--ai-text-secondary,var(--app-list-label))]"><Button disabled={currentIndex === 0} onClick={() => setQuestionIndex(currentIndex - 1)}>上一题</Button><Button disabled={currentIndex === draft.questions.length - 1} onClick={() => setQuestionIndex(currentIndex + 1)}>下一题</Button><span>{currentIndex + 1} / {draft.questions.length}</span></div></div>
+      <details className="revision-question-extra border-t border-[var(--ai-border,var(--app-revision-border))] pt-3 [&>summary]:cursor-pointer [&>textarea]:mt-2.5"><summary>补充其他优化要求（可选）</summary><Input.TextArea aria-label="优化指令" rows={3} disabled={loading} value={draft.instruction} placeholder="填写其他优化要求" onChange={event => onChange(updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }))} /></details>
     </div> : <>
     <label htmlFor="revision-side-instruction">优化指令</label>
-    <Input.TextArea id="revision-side-instruction" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
+    <Input.TextArea id="revision-side-instruction" className="min-h-40 flex-1 resize-none leading-[1.8]" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
     </>}
     {attachmentsEnabled ? <>
       <div className="revision-attachments flex flex-wrap items-center gap-2" role="group" aria-label="优化图片">
@@ -139,7 +139,7 @@ export function RevisionDivider() {
     if (!workspace || !source) return
     source.style.setProperty('--revision-source-width', `${Math.max(35, Math.min(75, width / workspace.clientWidth * 100))}%`)
   }
-  return <div className="revision-divider" role="separator" aria-label="调整原内容与优化面板宽度" aria-orientation="vertical" tabIndex={0}
+  return <div className="revision-divider relative flex-[0_0_20px] cursor-col-resize touch-none" role="separator" aria-label="调整原内容与优化面板宽度" aria-orientation="vertical" tabIndex={0}
     onPointerDown={event => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId) }}
     onPointerMove={event => {
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) return

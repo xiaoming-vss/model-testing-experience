@@ -39,7 +39,7 @@ export function bugColumns({ memberNameMap, membersLoaded = true, sprintNameMap,
   }
   const columns: NonNullable<TableProps<Bug>['columns']> = [
     { title: 'Bug 标题', key: 'title',
-      render: (_, bug) => <Space size={8} className="tp-list-name functional-suite-list-name bug-title-cell min-w-0">
+      render: (_, bug) => <Space size={8} className="tp-list-name functional-suite-list-name bug-title-cell min-w-0 w-full">
         <span className="bug-name-icon inline-flex h-[22px] w-[22px] flex-none items-center justify-center"><AppIcon name="navBug" size={16} /></span>
         <span className="bug-list-number flex-none whitespace-nowrap font-sans text-xs leading-[20px] text-[var(--srf-text-muted)]">#{bug.id}</span>
         {/* Link 自己完成跳转并阻止冒泡，否则行 onRow 会再推一次相同路由，返回时要多点一次。 */}
@@ -76,7 +76,7 @@ export function bugColumns({ memberNameMap, membersLoaded = true, sprintNameMap,
       render: (_, bug) => bug.sourceCaseTitle || '未关联用例' },
   ]
   columns.push(...optional.filter((column) => optionalColumns.includes(String(column.key))))
-  columns.push({ title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>, key: 'actions', width: 128, align: 'right', fixed: 'right',
+  columns.push({ title: <span className="tp-actions-col-title inline-block text-center" style={{ width: 92 }}>操作</span>, key: 'actions', width: 128, align: 'right', fixed: 'right',
     render: (_, bug) => <Space size={4} className="bug-row-actions whitespace-nowrap" onClick={(event) => event.stopPropagation()}>
       {(getBugActions(bug)).map((action) => {
         const ActionIcon = BUG_ACTION_ICONS[action]

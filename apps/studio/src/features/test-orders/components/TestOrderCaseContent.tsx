@@ -38,7 +38,7 @@ export function TestOrderCaseContent({ snapshot }: Props) {
           <h2 className="m-0 inline-flex items-center gap-2.5 text-[15px] font-semibold leading-6 text-[var(--srf-text)]"><span className="test-order-content-steps-icon inline-flex h-7 w-7 items-center justify-center rounded-[var(--srf-radius-control)] bg-[var(--srf-accent-soft)] text-[var(--srf-accent)]"><OrderedListOutlined aria-hidden="true" /></span>测试执行步骤</h2>
           <span className="text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">{steps.length} 个步骤 · 操作与预期一一对应</span>
         </div>
-        <table className="test-order-content-table w-full table-fixed overflow-hidden rounded-[10px] border border-separate border-spacing-0 border-[var(--srf-card-border)]">
+        <table className="test-order-content-table w-full table-fixed overflow-hidden rounded-[10px] border border-separate border-spacing-0 border-[var(--srf-card-border)] [&_tr:last-child_td]:border-b-0">
           <caption className="absolute h-px w-px overflow-hidden whitespace-nowrap [clip-path:inset(50%)]">测试执行步骤与预期结果</caption>
           <thead>
             <tr>

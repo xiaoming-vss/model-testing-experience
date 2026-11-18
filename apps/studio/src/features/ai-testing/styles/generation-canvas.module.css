@@ -1,6 +1,5 @@
 /* 需求生成画布：React Flow 布局、阶段卡片、阅读态与阶段检查器。 */
 
-.scope { --ai-generation-canvas-scope: 1; }
 
 /* 需求生成画布：布局独立，配色沿用平台语义 token。 */
 .scope :global(.gc-canvas-panorama) { background: transparent; background-image: none; }
@@ -29,14 +28,6 @@
   .scope :global(.gc-flow-edge-output) { display: none; }
   .scope :global(.gc-flow-edge-output .gc-flow-beam) { animation: none; }
 }
-.scope :global(.gc-flow-group),
-.scope :global(.gc-flow-special) { box-sizing: border-box; width: 100%; height: 100%; padding: 14px; border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface); }
-.scope :global(.gc-flow-group) {
-  position: relative; border-color: transparent; background: var(--app-surface);
-}
-.scope :global(.gc-flow-special) { border-color: transparent; background: transparent; }
-.scope :global(.gc-flow-special.is-document) { position: relative; padding: 0; border: 0; }
-.scope :global(.gc-flow-special.is-document .gc-document-node) { margin-top: 0; }
 /* 对齐容器 border-box，描边居中跨在外沿，避免背景在虚线外露出一圈。 */
 .scope :global(.gc-flow-group-outline) { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); overflow: visible; pointer-events: none; }
 .scope :global(.gc-flow-group-outline rect) {
@@ -52,16 +43,6 @@
 .scope :global(.gc-flow-group.is-dim),
 .scope :global(.gc-flow-stage.is-dim) { opacity: 0.4; }
 .scope :global(.gc-flow-group.is-selected .gc-flow-group-outline rect) { stroke: var(--app-accent); }
-.scope :global(.gc-flow-group-header) { display: flex; align-items: center; gap: 8px; }
-.scope :global(.gc-flow-group-header strong) { font-size: 13px; }
-.scope :global(.gc-flow-group-select) { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.scope :global(.gc-flow-group-header small) { margin-left: auto; color: var(--app-surface-text-muted); font-size: 11px; }
-.scope :global(.gc-flow-group .gc-lane-empty) { width: 100%; margin-top: 10px; min-height: 84px; }
-.scope :global(.gc-flow-empty-card) { position: relative; margin-top: 10px; }
-.scope :global(.gc-flow-empty-card .gc-lane-empty) { margin-top: 0; }
-.scope :global(.gc-flow-special .gc-document-node),
-.scope :global(.gc-flow-special .gc-lane-empty) { width: 100%; margin-top: 10px; min-height: 72px; }
-.scope :global(.gc-flow-stage) { position: relative; width: 100%; }
 .scope :global(.gc-flow-stage .gc-node) {
   width: 100%; min-width: 0; min-height: 84px; padding: 8px 9px; border-width: 2px; overflow: hidden;
   background: linear-gradient(160deg, color-mix(in srgb, var(--gc-surface) 80%, var(--app-accent-soft)), var(--gc-surface) 55%);
@@ -70,8 +51,6 @@
 .scope :global(.gc-flow-stage .gc-node:is(.is-approved, .is-imported)) { background: linear-gradient(160deg, var(--app-testing-success-tag-bg), var(--gc-surface) 75%); }
 .scope :global(.gc-flow-stage .gc-node.is-draft) { background: linear-gradient(160deg, var(--app-status-warning-bg), var(--gc-surface) 75%); }
 .scope :global(.gc-flow-stage .gc-node.is-rejected) { background: linear-gradient(160deg, var(--app-danger-surface-soft), var(--gc-surface) 75%); }
-.scope :global(.gc-flow-stage .gc-node-main) { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.scope :global(.gc-flow-stage .gc-node-main .anticon) { flex: none; color: var(--app-accent); font-size: 15px; }
 .scope :global(.gc-flow-stage .gc-node.is-running) {
   border-color: color-mix(in srgb, var(--app-generation-running-accent) 45%, var(--gc-line));
   background: linear-gradient(160deg, color-mix(in srgb, var(--app-generation-running-accent) 8%, var(--gc-surface)), var(--gc-surface) 55%);
@@ -103,7 +82,6 @@
 @media (prefers-reduced-motion: reduce) {
   .scope :global(.gc-flow-stage .gc-node:is(.is-running, .is-draft)::before) { animation: none; opacity: 0.25; }
 }
-.scope :global(.gc-flow-stage .gc-node-main strong) { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .scope :global(.gc-flow-stage .gc-node.is-selected),
 .scope :global(.gc-flow-special .gc-document-node.is-selected),
 .scope :global(.gc-flow-special .gc-lane-empty.is-selected) { border-color: var(--app-accent); outline: 2px solid var(--app-accent-soft); outline-offset: 1px; }
@@ -235,20 +213,6 @@
 .scope :global(.gc-inspector-source p) { margin: 0; overflow-wrap: anywhere; }
 .scope :global(.gc-inspector-source .ant-upload-wrapper) { min-width: 0; }
 .scope :global(.gc-inspector-source .ant-upload-select) { max-width: 100%; }
-.scope :global(.api-interface-selector) { display: grid; gap: 8px; min-width: 0; }
-.scope :global(.api-interface-selector-scope) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.scope :global(.api-interface-selector-scope-toggle) { padding: 0; border: 0; color: var(--app-accent); background: none; font: inherit; font-size: 12px; cursor: pointer; }
-.scope :global(.api-interface-selector-scope-toggle:disabled) { color: var(--app-surface-text-muted); cursor: not-allowed; }
-.scope :global(.api-interface-selector-toolbar) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.scope :global(.api-interface-selector-toolbar .ant-select) { flex: 1 1 220px; min-width: 180px; }
-.scope :global(.api-interface-selector-empty) { color: var(--app-surface-text-muted); font-size: 12px; }
-.scope :global(.api-interface-selector-hint) { color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.5; }
-.scope :global(.api-source-repo-list) { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
-.scope :global(.api-source-repo) { display: grid; gap: 3px; min-width: 0; padding: 8px 10px; border: 1px solid var(--app-surface-border); border-radius: 8px; background: var(--app-surface); }
-.scope :global(.api-source-repo-title) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.scope :global(.api-source-repo-title strong) { overflow-wrap: anywhere; }
-.scope :global(.api-source-repo-meta),
-.scope :global(.api-source-repo-paths) { color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .scope :global(.gc-inspector-reading-tools .gc-title-tools > .ant-btn) { min-width: 0; min-height: 32px; font-size: 12px; }
 @media (max-width: 900px) {
   .scope :global(.gc-inspector-content) { flex: 0 0 auto; overflow: visible; }

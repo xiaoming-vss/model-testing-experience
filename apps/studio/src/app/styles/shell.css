@@ -7,87 +7,6 @@
   font-size: 18px;
 }
 
-.project-selector-wrap {
-  gap: 10px;
-  font-size: 15px;
-}
-
-.project-select {
-  min-width: 260px;
-}
-
-.project-select .ant-select-selection-item,
-.project-select .ant-select-selection-placeholder {
-  color: var(--app-shell-text);
-  font-size: 20px;
-  font-weight: 700;
-}
-
-@media (max-width: 900px) {
-
-  .project-select {
-    min-width: 200px;
-  }
-
-  .project-select .ant-select-selection-item,
-  .project-select .ant-select-selection-placeholder {
-    font-size: 18px;
-  }
-}
-
-.compact-header {
-  justify-content: flex-end;
-  height: 56px;
-  padding: 0 24px;
-  gap: 16px;
-  background: var(--app-surface);
-}
-
-.app-header-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.project-header-bar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.project-header-bar .project-selector-wrap {
-  min-width: 0;
-}
-
-@media (max-width: 900px) {
-  .compact-header {
-    height: auto;
-    min-height: 56px;
-    align-items: flex-start;
-    flex-direction: column-reverse;
-    padding: 10px 16px;
-  }
-
-  .app-header-main,
-  .project-header-bar {
-    width: 100%;
-  }
-
-  .project-header-bar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
-.project-header-bar-select-only {
-  justify-content: flex-start;
-}
-
-.compact-header .project-header-bar-select-only {
-  width: auto;
-}
-
 .compact-header .project-selector-wrap {
   display: inline-flex;
   align-items: center;
@@ -127,17 +46,6 @@
   font-size: 11px;
 }
 
-.workbench-empty {
-  border-radius: 6px;
-}
-
-@media (max-width: 900px) {
-
-  .workbench-tabs {
-    padding: 12px var(--app-page-gutter) 16px;
-  }
-}
-
 html,
 body,
 #root {
@@ -162,15 +70,6 @@ body,
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.workbench-tabs {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  gap: 12px;
 }
 
 .workbench-panel {
@@ -206,23 +105,10 @@ body,
 }
 
 :root {
-  --tp-border: var(--legacy-tp-border);
-  --tp-border-soft: var(--legacy-tp-border-soft);
-  --tp-text: var(--legacy-tp-text);
-  --tp-text-secondary: var(--legacy-tp-text-secondary);
-  --tp-text-muted: var(--legacy-tp-text-muted);
   --tp-card-radius: 8px;
 }
 
-/* 侧边栏宽度由 sidebar.css 管理:176px 展开 / 76px 折叠。 */
-
-.compact-header {
-  border-bottom-color: var(--tp-border-soft);
-}
-
-.workbench-tabs {
-  padding: 14px var(--app-page-gutter) 20px;
-}
+/* 侧边栏宽度由外壳布局管理：176px 展开 / 76px 折叠。 */
 
 .workbench-tabs > .ant-tabs-nav {
   margin-bottom: 12px;
@@ -263,13 +149,6 @@ body,
 
 .workbench-panel .ant-table-cell::before {
   background-color: var(--tp-border-soft) !important;
-}
-
-.table-body-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  background: var(--app-surface);
 }
 
 .table-body-scroll .ant-table-wrapper,
@@ -338,23 +217,6 @@ body,
   padding: 0;
   border: 0;
   background: transparent;
-}
-
-.app-shell .project-selector-wrap {
-  width: fit-content;
-  min-height: 34px;
-  padding: 0 10px 0 12px;
-  gap: 8px;
-  border: 1px solid var(--app-glass-border);
-  border-radius: 10px;
-  background: var(--app-glass-surface-58);
-  color: var(--app-glass-text-secondary);
-  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76);
-}
-
-.app-shell .project-select {
-  min-width: 140px;
-  width: 140px;
 }
 
 .app-shell .sprint-select {

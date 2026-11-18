@@ -6,6 +6,7 @@ import { AppstoreOutlined, SearchOutlined, SettingOutlined } from '@ant-design/i
 import { Alert, Button, Empty, Input, Popconfirm, Select, Space, Tag, Tooltip, Typography } from 'antd'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
@@ -198,7 +199,7 @@ export function PerformancePage() {
   return <ProjectAccessScope projectId={activeProjectId ?? ''}>
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
             <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
               <div className="api-panel-head-main flex min-w-0 flex-wrap items-center gap-2 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5">
@@ -277,7 +278,7 @@ export function PerformancePage() {
                 <div className={`entity-card-grid ${entityCardGridClass}`}>{pagedSuites.map(renderSuiteCard)}</div>
               )}
             </div>
-            <div className="table-footer api-test-footer">
+            <div className={`table-footer api-test-footer ${tableFooterClass}`}>
               <ListPagination
                 loading={suitesQuery.isFetching || suitesQuery.isError}
                 current={page}

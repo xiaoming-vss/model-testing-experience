@@ -18,22 +18,12 @@
   background: var(--legend-color);
 }
 
-.root :global(.sprint-dashboard-progress-meta) strong {
-  color: var(--app-text-strong);
-}
-
 .root :global(.sprint-dashboard-progress-fill) {
   background: var(--progress-color, var(--app-accent));
 }
 
 .root :global(.sprint-dashboard-severity-fill) {
   background: var(--severity-color, var(--app-accent));
-}
-
-.root :global(.sprint-dashboard-severity-row) strong {
-  color: var(--app-text-strong);
-  font-weight: 600;
-  text-align: right;
 }
 
 .root :global(.sprint-overview-chart-metrics) span::before {
@@ -66,13 +56,6 @@
 .root :global(.sprint-report-markdown-modal) :global(.ant-modal-body) {
   max-height: min(72vh, 760px);
   overflow: auto;
-}
-
-:root:root :global(.app-shell-macos) .root :global(.sprint-overview-panel-unified) {
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
 }
 
 .root :global(.sprint-dashboard-range-picker):global(.ant-picker) {
@@ -127,21 +110,7 @@
 }
 
 :global(.app-shell-macos) .root {
-  --project-overview-border: var(--legacy-project-overview-border);
-  --project-overview-panel: var(--legacy-project-overview-panel);
-  --project-overview-panel-soft: var(--legacy-project-overview-panel-soft);
-  --project-overview-card: var(--legacy-project-overview-card);
-  --project-overview-card-hover: var(--legacy-project-overview-card-hover);
-  --project-overview-text: var(--legacy-project-overview-text);
-  --project-overview-secondary: var(--legacy-project-overview-secondary);
-  --project-overview-muted: var(--legacy-project-overview-muted);
-  --project-overview-blue: var(--legacy-project-overview-blue);
   background: transparent;
-}
-
-:global(.app-shell-macos) .root :global(.workbench-tabs) {
-  padding: var(--app-page-gutter);
-  gap: 12px;
 }
 
 :global(.app-shell-macos) .root :global(.workbench-empty) {

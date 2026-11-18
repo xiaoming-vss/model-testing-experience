@@ -2,7 +2,6 @@
  * 页面骨架、阅读区与字段排版已迁到组件 utility；这里保留 React Flow 节点、
  * 选中动效、悬停关联入口以及产物 API 视图的 AntD 深层规则。 */
 
-.scope { --ai-artifact-cases-scope: 1; }
 
 /* 测试点树：节点、连线和编辑状态。 */
 .scope :global(.ai-case-name-tree-stats .ant-tag) {
@@ -212,13 +211,6 @@
 
 .scope :global(.repository-profile-table .ant-table-expanded-row > td) {
   background: var(--app-surface-hover);
-}
-
-.scope :global(.repository-profile-detail-grid > div) {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { cx } from '@/shared/utils/cx'
+import { tableFooterClass, tableScrollClass } from '@/shared/utils/surfaceClasses'
 import '@/shared/styles/list-table.css'
 import {
   AppstoreOutlined,
@@ -627,14 +628,14 @@ export function CaseLibraryPage() {
         ),
       },
       {
-        title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>,
+        title: <span className="tp-actions-col-title inline-block text-center" style={{ width: 64 }}>操作</span>,
         key: 'actions',
         width: 110,
         align: 'right',
         render: (_, item) => (
           <Space
             size={8}
-            className="functional-suite-list-actions case-library-row-actions"
+            className="functional-suite-list-actions case-library-row-actions justify-end"
             onClick={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
           >
@@ -721,7 +722,7 @@ export function CaseLibraryPage() {
   return (
     <div className={`workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface h-full ${caseLibraryStyles.root}`}>
       <div className="api-automation-content h-full">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board">
           <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">
             <div className="api-filter-group case-library-filters flex flex-wrap items-center gap-2">
               <h1 className="tp-list-title">用例库</h1>
@@ -1053,7 +1054,7 @@ export function CaseLibraryPage() {
                     {hasCaseFilters ? <ProjectActionButton action="read" size="small" type="link" onClick={clearCaseFilters}>清除用例筛选</ProjectActionButton> : null}
                   </div>
                 </div>
-                <div className="table-body-scroll flex min-h-0 flex-col p-4 case-library-table-scroll">
+                <div className={`table-body-scroll flex flex-auto min-h-0 flex-col p-4 case-library-table-scroll ${tableScrollClass}`}>
                   {casesQuery.error ? (
                     <Alert showIcon type="error" title="用例加载失败"
                       description={getErrorMessage(casesQuery.error)}
@@ -1129,7 +1130,7 @@ export function CaseLibraryPage() {
                   )}
                 </div>
 
-                <div className="table-footer case-library-footer">
+                <div className={`table-footer case-library-footer ${tableFooterClass}`}>
                   {!hasCaseData ? <Text type="secondary">{casesQuery.isError ? '用例数量暂不可用' : '正在加载用例…'}</Text> : (
                     <ListPagination loading={casesQuery.isFetching || casesQuery.isError}
                       current={page}

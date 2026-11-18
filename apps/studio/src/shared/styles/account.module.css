@@ -17,8 +17,6 @@
     );
 }
 
-.title { color: var(--app-auth-text); }
-
 .shell {
   border: 1px solid var(--app-auth-panel-border);
   border-radius: 22px;

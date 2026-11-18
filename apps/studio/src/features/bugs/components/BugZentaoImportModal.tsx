@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
 import { randomId } from '@/shared/utils/crypto'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { BugImportConfiguration, type ImportChoice } from './BugImportConfiguration'
 import bugStyles from '../styles/bugs.module.css'
 import { bugsApi } from '../api/bugs.api'
@@ -300,7 +301,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
             }}
           />
           </div>
-          <div className="table-footer">
+          <div className={`table-footer ${tableFooterClass}`}>
             <ListPagination current={page} pageSize={pageSize} total={candidates.data?.total ?? 0}
               loading={candidates.isFetching || candidates.isError}
               onChange={(nextPage, nextSize) => { setPage(nextSize === pageSize ? nextPage : 1); setPageSize(nextSize) }} />

@@ -26,6 +26,9 @@ import {
   serviceCardTitleClass,
   serviceCardTitleWrapClass,
   serviceCardValueClass,
+  tableFooterClass,
+  tableScrollClass,
+  workbenchTabsAiClass,
 } from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage } from '@/utils/format'
 
@@ -115,7 +118,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
 
   const content = (
     <>
-      <div className="workbench-tabs ai-skill-library-tabs [&_.ai-skill-library-panel.workbench-panel]:m-0">
+      <div className={`workbench-tabs ai-skill-library-tabs ${workbenchTabsAiClass} [&_.ai-skill-library-panel.workbench-panel]:m-0`}>
         <section className="workbench-panel workbench-board-panel ai-skill-library-panel tp-board tp-list-panel m-[12px_var(--app-page-gutter)_16px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-[var(--ai-border)] bg-[var(--ai-surface)]">
           <div className="tp-list-toolbar">
             <h1 className="tp-list-title">Skill库</h1>
@@ -135,7 +138,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
           {deleteSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(deleteSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {downloadSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass)}>
+          <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass, tableScrollClass)}>
             {!activeProjectId ? (
               <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
                 <Empty description="请先选择项目，再进入 Skill库" />
@@ -219,7 +222,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
             )}
           </div>
 
-          <div className="table-footer">
+          <div className={`table-footer ${tableFooterClass}`}>
             <Text type="secondary">{footerRange(skills.length)}</Text>
 
           </div>

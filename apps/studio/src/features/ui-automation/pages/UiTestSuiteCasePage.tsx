@@ -1186,7 +1186,7 @@ export function UiTestSuiteCasePage() {
   return (<ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>{(
     <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${shellStyles.scope}`}>
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board ui-suite-detail-board">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board ui-suite-detail-board">
           {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}
           {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
           {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}

@@ -103,7 +103,7 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   return (
     <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface ${suiteStyles.scope}`}>
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
+        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
 
           <UiSuiteListToolbar
             showScopeFilters={!isRequirementLocked}

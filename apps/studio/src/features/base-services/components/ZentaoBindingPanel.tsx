@@ -7,7 +7,6 @@ import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Checkbox, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import styles from '../styles/zentao-binding.module.css'
 import { api, listItems, type ZentaoBinding, type ZentaoBindingTargetType, type ZentaoRemoteOption } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
@@ -168,7 +167,7 @@ export function ZentaoBindingBadge({ targetType, binding: currentBinding, varian
   return (
     <div className="summary flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-xs leading-[18px] text-[var(--tp-text-muted)]" title={summaryTitle}>
       <div className="summaryMain flex min-w-0 items-center gap-1.5 overflow-hidden">
-        <Tag color="blue">禅道</Tag>
+        <Tag color="blue" className="me-0 shrink-0 rounded-full px-1.5 text-[11px] leading-[18px]">禅道</Tag>
         <span className="summaryKey flex-none text-[var(--app-service-text-label)]">{entityLabel}</span>
         <span className="summaryName min-w-0 flex-none overflow-hidden text-ellipsis font-semibold text-[var(--tp-text)]">{remoteName}</span>
         <span className="summarySeparator flex-none text-[var(--app-service-text-placeholder)]">/</span>
@@ -424,7 +423,18 @@ export function ZentaoBindingModal({
       width={760}
       mask={{ closable: false }}
       centered
-      className={styles.modal}
+      styles={{
+        container: {
+          maxWidth: 'calc(100vw - 24px)',
+          border: '1px solid var(--tp-border-soft)',
+          borderRadius: 16,
+          background: 'linear-gradient(180deg, var(--app-glass-surface-98), var(--app-testing-card-gradient-end)), var(--app-surface)',
+          boxShadow: 'inset 0 1px 0 var(--app-glass-highlight-72), 0 20px 48px var(--app-service-card-shadow)',
+        },
+        header: { padding: '18px 20px 0', background: 'transparent' },
+        title: { color: 'var(--tp-text)', fontSize: 15, lineHeight: '22px', fontWeight: 600 },
+        body: { padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 },
+      }}
       title={
         <Space size={8}>
           <LinkOutlined />
@@ -439,7 +449,7 @@ export function ZentaoBindingModal({
       <div className="head flex flex-wrap items-center justify-between gap-4">
         <Title level={5} className="mb-0 text-[15px] leading-[22px]">当前绑定</Title>
         {currentBinding ? (
-          <Space size={8} wrap className="current min-w-0 justify-start">
+          <Space size={8} wrap className="current min-w-0 justify-start [&_.ant-typography]:text-[13px] [&_.ant-typography]:leading-5">
             <Tag color="blue">{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding) || '-'}</Tag>
             <Text type="secondary">ID：{getBindingRemoteResourceId(currentBinding) || '-'}</Text>
             <Text type="secondary">状态：{getBindingStatusText(currentBinding.status)}</Text>
@@ -465,7 +475,7 @@ export function ZentaoBindingModal({
       {storiesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(storiesQuery.error)} /> : null}
       {((targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding) ||
       (targetType === 'requirement' && inheritedSprintBinding) ? (
-        <div className="inheritNote flex flex-wrap items-center gap-2 px-0.5 text-xs leading-[22px] text-[var(--tp-text-secondary,var(--app-control-text))]">
+        <div className="inheritNote flex flex-wrap items-center gap-2 px-0.5 text-xs leading-[22px] text-[var(--tp-text-secondary,var(--app-control-text))] [&_.ant-tag]:me-0 [&_.ant-tag]:max-w-[220px] [&_.ant-tag]:overflow-hidden [&_.ant-tag]:text-ellipsis [&_.ant-tag]:whitespace-nowrap">
           <Text type="secondary">已使用上级绑定；修改上级目标请到对应项目或迭代的绑定配置</Text>
           {(targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding ? (
             <Tag color="blue">

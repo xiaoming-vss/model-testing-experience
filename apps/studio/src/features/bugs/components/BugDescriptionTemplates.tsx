@@ -16,7 +16,7 @@ export function BugDescriptionTemplates({ value, onChange }: { value: string; on
       return <Popconfirm key={template.name} title="替换当前描述？"
         description="当前文字和内嵌截图将被模板替换，附件不受影响。"
         okText="替换" cancelText="保留原内容" disabled={!hasContent} onConfirm={apply}>
-        <button type="button" onClick={() => { if (!hasContent) apply() }}>{template.name}</button>
+        <button type="button" className="cursor-pointer rounded-[4px] border-0 bg-[var(--srf-accent-soft)] px-2 py-[3px] font-[inherit] text-[var(--srf-accent)] hover:bg-[var(--srf-count-badge)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)]" onClick={() => { if (!hasContent) apply() }}>{template.name}</button>
       </Popconfirm>
     })}
   </div>

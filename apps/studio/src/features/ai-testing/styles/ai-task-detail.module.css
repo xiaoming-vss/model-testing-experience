@@ -2,7 +2,6 @@
  * 页面布局、版本列表、运行表格单元与状态流水线已迁到组件 utility；
  * 这里保留 AI 页面 token、AntD 卡片/表格深层规则、CodeMirror 适配与弹窗尺寸。 */
 
-.scope { --ai-task-detail-scope: 1; }
 
 /* ===== AI 测试页 token 与外壳 ===== */
 
@@ -11,14 +10,9 @@
     linear-gradient(180deg, var(--app-card-gradient-start), var(--app-task-code-gradient-end)),
     var(--app-card-gradient-start);
   --ai-code-text: var(--app-task-code-text);
-  --ai-fold-card: var(--app-glass-surface-62);
-  --ai-fold-card-expanded: var(--app-task-fold-expanded);
-  --ai-fold-head: var(--app-glass-surface-78);
-  --ai-fold-body: var(--app-task-fold-body);
   --ai-popover-surface:
     linear-gradient(180deg, var(--app-glass-surface-98), var(--app-task-card-gradient-end)),
     var(--app-glass-surface-98);
-  --ai-popover-arrow: var(--app-glass-surface-98);
 }
 
 .scope:global(.ai-testing-page) {
@@ -37,11 +31,6 @@
   --ai-active-text: var(--app-glass-text);
   --ai-surface: var(--app-glass-surface-70);
   --ai-card: var(--app-glass-surface-66);
-  --ai-card-border: var(--app-glass-border-strong);
-  --ai-card-hover-border: var(--app-glass-card-border-hover);
-  --ai-card-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 12px 28px var(--app-glass-shadow-workspace);
   background:
     radial-gradient(circle at 18% 4%, var(--app-task-page-glow-primary), transparent 26%),
     radial-gradient(circle at 78% 0%, var(--app-task-page-glow-secondary), transparent 24%),
@@ -64,8 +53,6 @@
   --ai-active-text: var(--app-glass-text);
   --ai-surface: var(--app-glass-surface-68);
   --ai-card: var(--app-glass-surface-72);
-  --ai-card-border: var(--app-glass-divider);
-  --ai-card-hover-border: var(--app-glass-action-border);
 }
 
 /* ===== CodeMirror 折叠与行号 ===== */
@@ -130,11 +117,6 @@
 /* workbench-panel 未分层，utility 的 margin/radius 会被压过，保留宿主规则。 */
 .scope :global(.ai-skill-library-panel) { margin: 12px var(--app-page-gutter) 16px; border-radius: 18px; }
 .scope :global(.ai-skill-library-tabs .ai-skill-library-panel.workbench-panel) { margin: 0; }
-
-:global(.app-shell-macos) .scope:global(.ai-testing-page) :global(.workbench-tabs) {
-  padding: 12px var(--app-page-gutter) 16px;
-  gap: 12px;
-}
 
 :global(.app-shell-macos) .scope:global(.ai-testing-page.ai-skill-library-page) :global(.ai-skill-library-panel) {
   border: 1px solid var(--app-glass-divider);

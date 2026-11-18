@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cx } from '@/shared/utils/cx'
+import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 
 export type ListSurfaceProps = {
   children: ReactNode
@@ -36,7 +37,7 @@ export function ListSurface({
         <div className={cx('tp-list-scroll', scrollClassName)} aria-busy={scrollAriaBusy}>
           {children}
         </div>
-        {footer ? <div className="table-footer">{footer}</div> : null}
+        {footer ? <div className={cx('table-footer', tableFooterClass)}>{footer}</div> : null}
       </div>
     </section>
   )
