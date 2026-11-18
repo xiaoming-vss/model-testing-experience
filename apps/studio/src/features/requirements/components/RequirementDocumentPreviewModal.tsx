@@ -25,7 +25,7 @@ import {
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import styles from '../styles/document-preview.module.css'
+import detailStyles from '../styles/requirement-detail.module.css'
 
 function isWordDocument(documentType?: Requirement['documentType']) {
   return documentType === 'word' || documentType === 'docx'
@@ -334,7 +334,7 @@ export function RequirementDocumentPreviewContent({
   )
 
   return (
-    <div className={`requirement-document-modal${embedded ? ' requirement-document-inline' : ''} ${styles.root}`}>
+    <div className={`requirement-document-modal${embedded ? ' requirement-document-inline' : ''} ${detailStyles.root}`}>
       {!embedded ? <header className="requirement-document-modal-toolbar">
         <div className="requirement-document-modal-toolbar-main">
           {!embedded ? <div className="requirement-document-modal-title-row">

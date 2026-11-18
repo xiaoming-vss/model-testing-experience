@@ -41,8 +41,7 @@ import { getErrorMessage } from '@/utils/format'
 import type { TestOrderStatusFilter } from '../utils/testOrderStatus'
 import '@/shared/styles/surface-tokens.css'
 import workspaceStyles from '../styles/test-order-workspace.module.css'
-import workspaceListStyles from '../styles/test-order-workspace-list.module.css'
-import verdictStyles from '../styles/test-order-verdict.module.css'
+import executionStyles from '../styles/test-order-graph-execution.module.css'
 
 const { Text } = Typography
 
@@ -362,7 +361,7 @@ export function TestOrderWorkspacePage() {
   />
 
   return (
-    <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root} ${workspaceListStyles.root} ${verdictStyles.root}`}>
+    <div className={`workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface ${workspaceStyles.root} ${executionStyles.root}`}>
       <div className="api-automation-content gap-3">
         <div className="page-frame test-order-workspace tp-board">
           {orderQuery.error ? (

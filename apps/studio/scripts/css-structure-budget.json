@@ -3,12 +3,8 @@
   "allowedGlobalCss": [
     "src/app/styles/action-buttons.css",
     "src/app/styles/antd-overrides.css",
-    "src/app/styles/asset-library.css",
     "src/app/styles/buttons.css",
-    "src/app/styles/error-boundary.css",
-    "src/app/styles/index.css",
     "src/app/styles/layout.css",
-    "src/app/styles/shell-boundary.css",
     "src/app/styles/shell-header.css",
     "src/app/styles/shell.css",
     "src/app/styles/sidebar.css",
@@ -16,14 +12,12 @@
     "src/index.css",
     "src/shared/components/RichTextEditor/rich-text-editor.css",
     "src/shared/styles/chart-tokens.css",
-    "src/shared/styles/editor-tokens.css",
     "src/shared/styles/entity-card.css",
     "src/shared/styles/foundation-tokens.css",
     "src/shared/styles/github-dark-foundation.css",
     "src/shared/styles/github-dark-tokens.css",
     "src/shared/styles/indigo-amber-light-tokens.css",
     "src/shared/styles/legacy-surface.css",
-    "src/shared/styles/legacy-tokens.css",
     "src/shared/styles/list-name.css",
     "src/shared/styles/list-table.css",
     "src/shared/styles/pagination.css",
@@ -51,35 +45,15 @@
       "declarations": 28,
       "selectors": 11
     },
-    "src/app/styles/asset-library.css": {
-      "rules": 5,
-      "declarations": 20,
-      "selectors": 5
-    },
     "src/app/styles/buttons.css": {
       "rules": 27,
       "declarations": 113,
       "selectors": 38
     },
-    "src/app/styles/error-boundary.css": {
-      "rules": 1,
-      "declarations": 5,
-      "selectors": 1
-    },
-    "src/app/styles/index.css": {
-      "rules": 0,
-      "declarations": 0,
-      "selectors": 0
-    },
     "src/app/styles/layout.css": {
       "rules": 31,
       "declarations": 106,
       "selectors": 31
-    },
-    "src/app/styles/shell-boundary.css": {
-      "rules": 4,
-      "declarations": 9,
-      "selectors": 4
     },
     "src/app/styles/shell-header.css": {
       "rules": 46,
@@ -97,14 +71,9 @@
       "selectors": 22
     },
     "src/app/styles/theme.css": {
-      "rules": 1,
-      "declarations": 1,
-      "selectors": 1
-    },
-    "src/features/admin/styles/ldap-settings.module.css": {
-      "rules": 1,
-      "declarations": 1,
-      "selectors": 1
+      "rules": 5,
+      "declarations": 11,
+      "selectors": 5
     },
     "src/features/ai-testing/styles/ai-page.module.css": {
       "rules": 22,
@@ -112,9 +81,9 @@
       "selectors": 22
     },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
-      "rules": 65,
-      "declarations": 212,
-      "selectors": 71
+      "rules": 77,
+      "declarations": 252,
+      "selectors": 83
     },
     "src/features/ai-testing/styles/artifact-api.module.css": {
       "rules": 69,
@@ -127,19 +96,9 @@
       "selectors": 89
     },
     "src/features/ai-testing/styles/artifact-misc.module.css": {
-      "rules": 38,
-      "declarations": 92,
-      "selectors": 41
-    },
-    "src/features/ai-testing/styles/artifact-view-host.module.css": {
-      "rules": 3,
-      "declarations": 9,
-      "selectors": 3
-    },
-    "src/features/ai-testing/styles/artifact-view-switch.module.css": {
-      "rules": 7,
-      "declarations": 20,
-      "selectors": 7
+      "rules": 41,
+      "declarations": 101,
+      "selectors": 44
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
       "rules": 207,
@@ -156,25 +115,15 @@
       "declarations": 330,
       "selectors": 82
     },
-    "src/features/ai-testing/styles/requirement-design.module.css": {
-      "rules": 12,
-      "declarations": 40,
-      "selectors": 12
-    },
     "src/features/ai-testing/styles/ui-generation.module.css": {
       "rules": 76,
       "declarations": 244,
       "selectors": 79
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
-      "rules": 435,
-      "declarations": 1060,
-      "selectors": 539
-    },
-    "src/features/api-automation/styles/api-detail-editor.module.css": {
-      "rules": 57,
-      "declarations": 197,
-      "selectors": 61
+      "rules": 442,
+      "declarations": 1080,
+      "selectors": 546
     },
     "src/features/api-automation/styles/api-detail-request.module.css": {
       "rules": 62,
@@ -187,9 +136,9 @@
       "selectors": 63
     },
     "src/features/api-automation/styles/api-detail-shell.module.css": {
-      "rules": 25,
-      "declarations": 89,
-      "selectors": 28
+      "rules": 82,
+      "declarations": 286,
+      "selectors": 89
     },
     "src/features/api-automation/styles/api-list.module.css": {
       "rules": 9,
@@ -211,25 +160,15 @@
       "declarations": 104,
       "selectors": 36
     },
-    "src/features/bugs/styles/bug-form.module.css": {
-      "rules": 56,
-      "declarations": 150,
-      "selectors": 63
-    },
-    "src/features/bugs/styles/bug-import.module.css": {
-      "rules": 10,
-      "declarations": 28,
-      "selectors": 10
-    },
     "src/features/bugs/styles/bugs.module.css": {
-      "rules": 134,
-      "declarations": 423,
-      "selectors": 144
+      "rules": 200,
+      "declarations": 601,
+      "selectors": 217
     },
     "src/features/interface-library/styles/interface-detail.module.css": {
-      "rules": 32,
-      "declarations": 148,
-      "selectors": 34
+      "rules": 86,
+      "declarations": 328,
+      "selectors": 90
     },
     "src/features/interface-library/styles/interface-editor.module.css": {
       "rules": 74,
@@ -241,105 +180,55 @@
       "declarations": 305,
       "selectors": 77
     },
-    "src/features/interface-library/styles/interface-method.module.css": {
-      "rules": 21,
-      "declarations": 64,
-      "selectors": 23
-    },
-    "src/features/interface-library/styles/interface-openapi.module.css": {
-      "rules": 33,
-      "declarations": 116,
-      "selectors": 33
-    },
     "src/features/profile/styles/profile-settings.module.css": {
       "rules": 12,
       "declarations": 26,
       "selectors": 13
     },
-    "src/features/projects/styles/dynamic-value-picker.module.css": {
-      "rules": 48,
-      "declarations": 208,
-      "selectors": 52
-    },
     "src/features/projects/styles/environment-drawer.module.css": {
-      "rules": 34,
-      "declarations": 118,
-      "selectors": 34
+      "rules": 82,
+      "declarations": 326,
+      "selectors": 86
     },
     "src/features/projects/styles/projects-overview.module.css": {
       "rules": 34,
       "declarations": 83,
       "selectors": 35
     },
-    "src/features/projects/styles/sprint-dashboard.module.css": {
-      "rules": 31,
-      "declarations": 80,
-      "selectors": 37
-    },
     "src/features/projects/styles/sprint-overview.module.css": {
-      "rules": 16,
-      "declarations": 39,
-      "selectors": 17
-    },
-    "src/features/requirements/styles/document-preview.module.css": {
-      "rules": 43,
-      "declarations": 220,
+      "rules": 47,
+      "declarations": 119,
       "selectors": 54
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
-      "rules": 17,
-      "declarations": 58,
-      "selectors": 18
-    },
-    "src/features/test-cases/styles/case-editor.module.css": {
-      "rules": 44,
-      "declarations": 155,
-      "selectors": 48
+      "rules": 60,
+      "declarations": 278,
+      "selectors": 72
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 24,
-      "declarations": 69,
-      "selectors": 26
-    },
-    "src/features/test-cases/styles/case-push.module.css": {
-      "rules": 5,
-      "declarations": 6,
-      "selectors": 5
-    },
-    "src/features/test-orders/styles/add-cases-modal.module.css": {
-      "rules": 4,
-      "declarations": 5,
-      "selectors": 4
+      "rules": 73,
+      "declarations": 230,
+      "selectors": 79
     },
     "src/features/test-orders/styles/test-order-graph-execution.module.css": {
-      "rules": 9,
-      "declarations": 26,
-      "selectors": 12
+      "rules": 30,
+      "declarations": 102,
+      "selectors": 33
     },
     "src/features/test-orders/styles/test-order-graph.module.css": {
       "rules": 21,
       "declarations": 79,
       "selectors": 22
     },
-    "src/features/test-orders/styles/test-order-verdict.module.css": {
-      "rules": 21,
-      "declarations": 76,
-      "selectors": 21
-    },
     "src/features/test-orders/styles/test-order-visualization.module.css": {
       "rules": 116,
       "declarations": 375,
       "selectors": 127
     },
-    "src/features/test-orders/styles/test-order-workspace-list.module.css": {
-      "rules": 50,
-      "declarations": 183,
-      "selectors": 55
-    },
     "src/features/test-orders/styles/test-order-workspace.module.css": {
-      "rules": 27,
-      "declarations": 81,
-      "selectors": 29
+      "rules": 81,
+      "declarations": 269,
+      "selectors": 88
     },
     "src/features/test-orders/styles/test-orders-list.module.css": {
       "rules": 19,
@@ -351,15 +240,10 @@
       "declarations": 307,
       "selectors": 76
     },
-    "src/features/ui-automation/styles/ui-detail-pipeline.module.css": {
-      "rules": 51,
-      "declarations": 183,
-      "selectors": 53
-    },
     "src/features/ui-automation/styles/ui-detail-shell.module.css": {
-      "rules": 39,
-      "declarations": 82,
-      "selectors": 42
+      "rules": 90,
+      "declarations": 265,
+      "selectors": 95
     },
     "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
       "rules": 52,
@@ -391,11 +275,6 @@
       "declarations": 117,
       "selectors": 47
     },
-    "src/shared/styles/artifact-view.module.css": {
-      "rules": 5,
-      "declarations": 18,
-      "selectors": 6
-    },
     "src/shared/styles/base-services-connection.module.css": {
       "rules": 27,
       "declarations": 96,
@@ -407,14 +286,9 @@
       "selectors": 13
     },
     "src/shared/styles/chart-tokens.css": {
-      "rules": 1,
-      "declarations": 25,
-      "selectors": 1
-    },
-    "src/shared/styles/editor-tokens.css": {
-      "rules": 1,
-      "declarations": 15,
-      "selectors": 1
+      "rules": 2,
+      "declarations": 40,
+      "selectors": 2
     },
     "src/shared/styles/entity-card.css": {
       "rules": 19,
@@ -422,9 +296,9 @@
       "selectors": 19
     },
     "src/shared/styles/foundation-tokens.css": {
-      "rules": 1,
-      "declarations": 506,
-      "selectors": 1
+      "rules": 2,
+      "declarations": 534,
+      "selectors": 2
     },
     "src/shared/styles/github-dark-foundation.css": {
       "rules": 1,
@@ -451,11 +325,6 @@
       "declarations": 49,
       "selectors": 14
     },
-    "src/shared/styles/legacy-tokens.css": {
-      "rules": 1,
-      "declarations": 28,
-      "selectors": 1
-    },
     "src/shared/styles/list-name.css": {
       "rules": 3,
       "declarations": 12,
@@ -472,9 +341,9 @@
       "selectors": 20
     },
     "src/shared/styles/run-view.module.css": {
-      "rules": 75,
-      "declarations": 289,
-      "selectors": 87
+      "rules": 80,
+      "declarations": 307,
+      "selectors": 93
     },
     "src/shared/styles/scrollbars.css": {
       "rules": 5,

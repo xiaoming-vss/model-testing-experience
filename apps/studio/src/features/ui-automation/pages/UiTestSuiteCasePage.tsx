@@ -72,7 +72,6 @@ import '@/shared/styles/surface-tokens.css'
 import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
 import topbarStyles from '@/features/ui-automation/styles/ui-detail-topbar.module.css'
 import shellStyles from '@/features/ui-automation/styles/ui-detail-shell.module.css'
-import pipelineStyles from '@/features/ui-automation/styles/ui-detail-pipeline.module.css'
 import inspectorStyles from '@/features/ui-automation/styles/ui-detail-inspector.module.css'
 import flowStyles from '@/features/ui-automation/styles/ui-execution-flow.module.css'
 
@@ -1188,7 +1187,7 @@ export function UiTestSuiteCasePage() {
   )
 
   return (<ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>{(
-    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${topbarStyles.scope} ${shellStyles.scope} ${pipelineStyles.scope} ${inspectorStyles.scope} ${flowStyles.scope}`}>
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${topbarStyles.scope} ${shellStyles.scope} ${inspectorStyles.scope} ${flowStyles.scope}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board ui-suite-detail-board">
           {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}

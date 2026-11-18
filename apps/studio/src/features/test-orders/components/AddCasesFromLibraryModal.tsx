@@ -3,7 +3,7 @@ import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
 import styles from '@/shared/styles/run-view.module.css'
-import addCasesStyles from '../styles/add-cases-modal.module.css'
+import workspaceStyles from '../styles/test-order-workspace.module.css'
 import { SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -275,7 +275,7 @@ export function AddCasesFromLibraryModal({
       open={open}
       width={1100}
       centered
-      rootClassName={addCasesStyles.root}
+      rootClassName={workspaceStyles.root}
       styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' } }}
       cancelText="取消"
       okText="加入"
@@ -379,7 +379,7 @@ export function AddCasesFromLibraryModal({
         title="用例详情"
         width={720}
         centered
-        rootClassName={`${styles.root} ${addCasesStyles.root}`}
+        rootClassName={`${styles.root} ${workspaceStyles.root}`}
         footer={<Button onClick={() => setDetailItem(null)}>关闭</Button>}
         onCancel={() => setDetailItem(null)}
         destroyOnHidden

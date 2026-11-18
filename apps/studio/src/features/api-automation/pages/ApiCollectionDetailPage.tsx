@@ -38,7 +38,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
 import shellStyles from '../styles/api-detail-shell.module.css'
-import editorStyles from '../styles/api-detail-editor.module.css'
 import requestStyles from '../styles/api-detail-request.module.css'
 import rulesStyles from '../styles/api-detail-rules.module.css'
 import {
@@ -935,7 +934,7 @@ export function ApiCollectionDetailPage() {
   const handleCaseDragEnd = useCallback(() => setDraggingCaseId(null), [])
 
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
-    <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface ${shellStyles.scope} ${editorStyles.scope} ${requestStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
+    <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface ${shellStyles.scope} ${requestStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
       <div className="api-automation-content">
         <div className="page-frame api-collection-workbench tp-board min-h-0 flex-auto">
           {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}

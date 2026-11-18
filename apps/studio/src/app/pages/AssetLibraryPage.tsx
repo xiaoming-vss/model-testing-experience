@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import '@/app/styles/asset-library.css'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
 import { SoftwareRepositoriesPage } from '@/features/interface-library/pages/SoftwareRepositoriesPage'
@@ -37,12 +36,12 @@ export function AssetLibraryPage() {
   }
 
   return (
-    <div className="workbench-page asset-library-page">
-      <div className="asset-library-tab-panel">
+    <div className="workbench-page asset-library-page flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="asset-library-tab-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {ASSET_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (
-            <div key={key} className="asset-library-tab-pane" id={`asset-panel-${key}`} hidden={activeTab !== key}>
+            <div key={key} className="asset-library-tab-pane flex min-h-0 min-w-0 flex-1 flex-col [&[hidden]]:hidden [&>.workbench-page]:min-h-0 [&>.workbench-page]:flex-auto [&>.workbench-page]:p-0" id={`asset-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
                 <Page />
               </PaneActivityProvider>

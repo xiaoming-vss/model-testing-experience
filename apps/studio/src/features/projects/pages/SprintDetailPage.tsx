@@ -1,5 +1,4 @@
 import sprintOverviewStyles from '../styles/sprint-overview.module.css'
-import sprintDashboardStyles from '../styles/sprint-dashboard.module.css'
 import { useLocalDate } from '../hooks/useLocalDate'
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
@@ -717,7 +716,7 @@ function TestReportMarkdownModal({
         </Space>
       }
       destroyOnHidden={false}
-      className={`sprint-report-markdown-modal ${sprintDashboardStyles.root}`}
+      className={`sprint-report-markdown-modal ${sprintOverviewStyles.root}`}
     >
       {error ? <Alert showIcon type="error" title={getErrorMessage(error)} style={{ marginBottom: 16 }} /> : null}
       {loading ? (
@@ -775,7 +774,7 @@ function TestReportGenerateDrawer({
       onClose={onClose}
       width={520}
       destroyOnHidden
-      rootClassName={sprintDashboardStyles.root}
+      rootClassName={sprintOverviewStyles.root}
       extra={
         <Space>
           <Button onClick={onClose}>取消</Button>
@@ -991,7 +990,7 @@ export function SprintDetailPage() {
   }
 
   return (<ProjectAccessScope projectId={projectId} resourceError={projectScopeError}>{(
-    <div className={`workbench-page sprint-overview-page tp-surface overflow-hidden p-[var(--app-page-gutter)] ${sprintOverviewStyles.root} ${sprintDashboardStyles.root}`}>
+    <div className={`workbench-page sprint-overview-page tp-surface overflow-hidden p-[var(--app-page-gutter)] ${sprintOverviewStyles.root} ${sprintOverviewStyles.root}`}>
       {sprintQuery.isLoading ? (
         <div className="workbench-tabs">
           <section className="workbench-panel sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel overflow-hidden">

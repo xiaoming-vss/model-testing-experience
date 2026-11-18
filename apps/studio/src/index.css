@@ -3,10 +3,8 @@
 @import './shared/styles/table-row-dividers.css';
 @import './shared/styles/pagination.css';
 @import './shared/styles/foundation-tokens.css';
-@import './shared/styles/editor-tokens.css';
 @import './shared/styles/chart-tokens.css';
 @import './shared/styles/ui-stage-visual-tokens.css';
-@import './shared/styles/legacy-tokens.css';
 @import './shared/styles/github-dark-tokens.css';
 @import './shared/styles/github-dark-foundation.css';
 @import './shared/styles/indigo-amber-light-tokens.css';

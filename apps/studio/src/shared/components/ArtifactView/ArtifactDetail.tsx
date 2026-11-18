@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/artifact-view.module.css'
+import styles from '@/shared/styles/run-view.module.css'
 
 export function ArtifactCountBadge({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cx('inline-grid h-[17px] min-w-[17px] place-items-center rounded-full bg-app-surface-hover px-[5px] text-[9.5px] font-medium text-app-surface-text-muted', className)}>{children}</span>

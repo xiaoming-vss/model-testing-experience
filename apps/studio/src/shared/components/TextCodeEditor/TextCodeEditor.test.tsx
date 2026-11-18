@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { TextCodeEditor } from './TextCodeEditor'
-import editorTokens from '@/shared/styles/editor-tokens.css?raw'
+import editorTokens from '@/shared/styles/chart-tokens.css?raw'
 
 let paletteStyle: HTMLStyleElement
 beforeEach(() => {

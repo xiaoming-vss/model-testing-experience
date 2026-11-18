@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import inspectorCss from './api-detail-editor.module.css?raw'
+import inspectorCss from './api-detail-shell.module.css?raw'
 
 /** 取出 `selector { ... }` 的声明块；选择器里的 `.` `:` 只是字面量，不参与正则。 */
 function declarationsOf(css: string, selector: string) {

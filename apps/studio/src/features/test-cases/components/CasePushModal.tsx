@@ -10,7 +10,7 @@ import { getErrorMessage } from '@/utils/format'
 import { functionTestingApi } from '../api/functionTesting.api'
 import type { CasePushPreviewItem, CasePushReconcilePayload, FunctionTestCaseZentaoImportItem, ImportFunctionTestCasesToZentaoPayload } from '../types'
 import { CasePushReview } from './CasePushReview'
-import casePushStyles from '../styles/case-push.module.css'
+import caseLibraryStyles from '../styles/case-library.module.css'
 
 type TargetValues = { productId: number; moduleId: number }
 const unresolved = (operation?: FunctionTestCaseZentaoImportItem | null) => operation?.status === 'uncertain' || operation?.status === 'pending'
@@ -100,7 +100,7 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
   }
   return <ProjectActionModal
     open action="execute" projectId={projectId} title="导入到禅道" width={960}
-    rootClassName={casePushStyles.root}
+    rootClassName={caseLibraryStyles.root}
     cancelText="关闭" onCancel={() => { if (!busy) onClose() }}
     okText={actionLabel}
     confirmLoading={busy} okButtonProps={{ 'aria-label': actionLabel, disabled: items ? !canPush || Boolean(feedback) : busy }}

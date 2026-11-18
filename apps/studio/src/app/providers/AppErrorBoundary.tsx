@@ -1,6 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button, Result } from 'antd'
-import '../styles/error-boundary.css'
 
 type AppErrorBoundaryState = {
   error: Error | null
@@ -20,7 +19,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, AppErro
   render() {
     if (!this.state.error) return this.props.children
 
-    return <main className="app-error-boundary" role="alert">
+    return <main className="grid min-h-screen place-items-center bg-[var(--app-bg)] p-6" role="alert">
       <Result
         status="error"
         title="页面加载失败"

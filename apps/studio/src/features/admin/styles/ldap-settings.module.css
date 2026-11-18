@@ -1,4 +1,0 @@
-/* LDAP 设置页：只保留 Ant Design Form.Item 的间距；布局与排版由 Tailwind utility 负责。 */
-.form :global(.ant-form-item) {
-  margin-bottom: 16px;
-}

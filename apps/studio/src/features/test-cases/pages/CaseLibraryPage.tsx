@@ -71,7 +71,6 @@ import {
 } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import caseLibraryStyles from '@/features/test-cases/styles/case-library.module.css'
-import caseEditorStyles from '@/features/test-cases/styles/case-editor.module.css'
 
 const { Text } = Typography
 
@@ -1158,7 +1157,7 @@ export function CaseLibraryPage() {
           centered
           width={1040}
           maskClosable={false}
-          className={`case-library-case-modal tp-surface ${caseEditorStyles.root}`}
+          className={`case-library-case-modal tp-surface ${caseLibraryStyles.root}`}
           title={caseEditorHeader}
           onCancel={closeCaseEditor}
           footer={

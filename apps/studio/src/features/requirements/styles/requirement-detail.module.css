@@ -120,3 +120,376 @@
   min-height: 0;
   height: 100%;
 }
+
+/* ===== 原 document-preview.module.css ===== */
+
+/*
+ * 需求文档预览（弹窗内嵌与需求详情内嵌共用）。
+ * 旧类名保留为测试与兼容钩子，所有规则由根类 .root 限定作用域。
+ */
+.root {
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-testing-text-muted);
+}
+
+:global(.app-shell-macos) .root {
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-glass-text-hint);
+}
+
+.root :global(.requirement-document-modal-toolbar) {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 72px;
+  align-items: center;
+  padding: 12px 64px 12px 16px;
+  border-bottom: 1px solid var(--app-list-row-border);
+  background: var(--app-surface);
+  backdrop-filter: none;
+}
+
+.root :global(.requirement-document-modal-toolbar-main) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.root :global(.requirement-document-modal-title-row) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.root :global(.requirement-document-modal-title-icon) {
+  display: inline-flex;
+  color: var(--app-testing-control-accent);
+  font-size: 21px;
+}
+
+.root :global(.requirement-document-modal-title) {
+  color: var(--testing-text);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  letter-spacing: 0;
+}
+
+.root :global(.requirement-document-modal-meta) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--testing-text-muted);
+  font-size: 13px;
+}
+
+.root :global(.requirement-document-type-chip) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--app-testing-control-hover-border);
+  border-radius: 6px;
+  background: var(--app-testing-control-hover-bg);
+  color: var(--app-testing-control-accent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+}
+
+.root :global(.requirement-document-file-name) {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(52vw, 760px);
+  overflow: hidden;
+  color: var(--app-list-header-text);
+  font-size: 13px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.root :global(.requirement-document-download-link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  align-self: center;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--app-testing-control-selected-border);
+  border-radius: 7px;
+  background: var(--app-surface);
+  color: var(--app-testing-control-accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: none;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.root :global(.requirement-document-download-link:hover) {
+  border-color: var(--app-testing-control-focus-border);
+  background: var(--app-testing-control-selected-bg);
+  transform: none;
+}
+
+.root :global(.requirement-document-modal) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.root :global(.requirement-document-workspace) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 520px;
+  height: calc(100vh - 176px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--app-testing-control-disabled-bg);
+}
+
+.root :global(.requirement-document-pane) {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--app-testing-control-disabled-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.root :global(.requirement-document-pane:fullscreen) {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+}
+
+.root :global(.requirement-document-pane-body) {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--app-surface);
+}
+
+.root :global(.requirement-document-modal-stage) {
+  display: flex;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.root :global(.requirement-document-modal-stage.docx-mode),
+.root :global(.requirement-document-modal-stage.text-mode) {
+  padding: 0;
+  background: transparent;
+}
+
+.root :global(.requirement-document-preview-shell) {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.root :global(.requirement-document-preview-state) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  color: var(--testing-text-muted);
+  font-size: 13px;
+}
+
+.root :global(.requirement-document-preview-state.error) {
+  gap: 8px;
+}
+
+.root :global(.requirement-document-text-host) {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.root :global(.requirement-document-text-article) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-height: 100%;
+  max-width: 100%;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 24px;
+  border: 0;
+  background: var(--app-surface);
+  box-shadow: none;
+  color: var(--description-text);
+  font-family: var(--description-font);
+  font-size: 15px;
+  line-height: 1.84;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.root :global(.requirement-document-text-host) :global(.rich-text-viewer) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+}
+
+.root :global(.requirement-document-docx-host) {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--app-surface);
+  box-shadow: none;
+}
+
+.root :global(.requirement-document-modal-stage.docx-mode) :global(.requirement-document-docx-host),
+.root :global(.requirement-document-modal-stage.text-mode) :global(.requirement-document-text-host) {
+  background: var(--app-surface);
+}
+
+.root :global(.requirement-document-docx-host.loading) {
+  opacity: 0.3;
+}
+
+.root :global(.requirement-document-docx-host.hidden) {
+  display: none;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx),
+.root :global(.requirement-document-docx-host) :global(.requirement-docx > article),
+.root :global(.requirement-document-docx-host) :global(.requirement-docx > header),
+.root :global(.requirement-document-docx-host) :global(.requirement-docx > footer) {
+  box-sizing: border-box;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx) {
+  width: 100%;
+  min-height: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 24px;
+  border: 0;
+  background: var(--app-surface) !important;
+  box-shadow: none;
+  color: var(--description-text);
+  font-family: var(--description-font);
+  font-size: 15px;
+  line-height: 1.84;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx > article) {
+  max-width: 100%;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx p),
+.root :global(.requirement-document-docx-host) :global(.requirement-docx li) {
+  line-height: 1.84;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx table) {
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.root :global(.requirement-document-docx-host) :global(.requirement-docx td),
+.root :global(.requirement-document-docx-host) :global(.requirement-docx th) {
+  word-break: break-word;
+}
+
+@media (max-width: 680px) {
+  .root :global(.requirement-document-modal-toolbar) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 18px 16px;
+  }
+
+  .root :global(.requirement-document-modal-stage) {
+    height: min(62vh, 620px);
+    min-height: 460px;
+    padding: 16px 18px 18px;
+  }
+
+  .root :global(.requirement-document-modal-stage.docx-mode),
+  .root :global(.requirement-document-modal-stage.text-mode) {
+    padding: 0;
+  }
+
+  .root :global(.requirement-document-docx-host),
+  .root :global(.requirement-document-text-host) {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .root :global(.requirement-document-modal-toolbar) {
+    min-height: 88px;
+    align-items: flex-start;
+    padding: 12px 52px 10px 12px;
+  }
+
+  .root :global(.requirement-document-download-link) {
+    align-self: flex-end;
+  }
+
+  .root :global(.requirement-document-docx-host) :global(.requirement-docx),
+  .root :global(.requirement-document-text-article),
+  .root :global(.requirement-document-text-host) :global(.rich-text-viewer) {
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+  }
+}

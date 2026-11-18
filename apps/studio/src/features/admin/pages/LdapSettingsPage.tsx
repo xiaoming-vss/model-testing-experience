@@ -6,7 +6,6 @@ import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
 import { ldapApi, type LdapConfig, type LdapTest } from '../api/ldap.api'
 import '@/shared/styles/surface-tokens.css'
-import styles from '../styles/ldap-settings.module.css'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -62,7 +61,7 @@ export function LdapSettingsPage() {
       <Text type="secondary">管理目录连接、访问范围和登录方式</Text>
     </header>
     <div className="tp-list-body"><div className="tp-list-scroll">
-    <Form id="ldap-settings-form" form={form} layout="vertical" className={styles.form} onFinish={submit} disabled={busy} onValuesChange={() => { setDirty(true); setTestResult(null); test.reset(); save.reset() }}>
+    <Form id="ldap-settings-form" form={form} layout="vertical" className="[&_.ant-form-item]:mb-4" onFinish={submit} disabled={busy} onValuesChange={() => { setDirty(true); setTestResult(null); test.reset(); save.reset() }}>
       <section className="py-5">
         <Title level={5}>连接与访问范围</Title>
         <Form.Item name="enabled" label="启用 LDAP" valuePropName="checked"><Switch /></Form.Item>

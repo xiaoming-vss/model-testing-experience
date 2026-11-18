@@ -17,7 +17,7 @@ import {
   ArtifactStat,
   ArtifactTabs,
 } from '@/shared/components/ArtifactView'
-import hostStyles from '../styles/artifact-view-host.module.css'
+import miscArtifactStyles from '../styles/artifact-misc.module.css'
 import { cx } from '@/shared/utils/cx'
 import { toRecord, toRecordArray } from '@/shared/utils/value'
 import { toDisplayText } from '../utils/functionalOutput'
@@ -103,7 +103,7 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
   const select = (index: number) => setSelected(currentValue => ({ ...currentValue, [active]: index }))
   const sourceBlockIds = activeEntry ? refIds(activeEntry, 'sourceBlockIds') : []
 
-  return <div className={cx('flex h-full min-h-0 flex-col bg-app-surface', hostStyles.testScopeRoot)}>
+  return <div className={cx('flex h-full min-h-0 flex-col bg-app-surface', miscArtifactStyles.testScopeRoot)}>
     <ArtifactTabs
       ariaLabel="测试范围风险分析"
       active={active}

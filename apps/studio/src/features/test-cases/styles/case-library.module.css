@@ -151,3 +151,358 @@
   font-weight: 700;
   line-height: 16px;
 }
+
+/* ===== 原 case-editor.module.css ===== */
+
+/* 用例编辑弹窗：头部、表单骨架、区块卡片与 AntD 输入/选择控件皮肤（阶段 11 迁移）。
+ * Modal 的 className 同时带 `.case-library-case-modal tp-surface` 与本 Module 的 `.root`。 */
+/*
+ * 编辑用例弹窗（用例库点开用例的那套表单）。
+ *
+ * 只作用于 `.case-library-case-modal`：弹窗被 antd 传到 body 下，不在 `.app-shell` 里，
+ * 所以 `shell.css` / `shell-header.css` 那些带 `.app-shell` 前缀的规则碰不到它。
+ *
+ * token 与九色盘来自 shared/styles/surface-tokens.css；弹窗根节点带 `tp-surface` 才能取到（见 CaseLibraryPage）。
+ * 颜色一律走 token：这个文件是新增的，不在 STRUCTURE.md S8 的存量豁免里。
+ */
+
+/* ===== 弹窗头部 ===== */
+
+.root :global(.case-editor-head-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 8px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 14px;
+}
+
+.root :global(.case-editor-head-copy) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.root :global(.case-editor-head-title) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.root :global(.case-editor-head-name) {
+  color: var(--srf-text);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+/* TC-xxxx 是「该测试集内的用例序号」，完整来源见页面里的 orderNo。 */
+.root :global(.case-editor-head-badge) {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.root :global(.case-editor-head-uid) {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.root :global(.case-editor-head-subtitle) {
+  margin: 0;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* ===== 表单骨架 ===== */
+
+.root :global(.case-editor-form) {
+  padding: 0;
+  background: transparent;
+}
+
+.root :global(.case-editor-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.root :global(.case-editor-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* ===== 区块卡片 ===== */
+
+.root :global(.case-editor-section) {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.root :global(.case-editor-section-body) {
+  padding: 14px 16px 16px;
+}
+
+/* 区块头：左侧图标 + 标题（带一条色调竖条），右侧提示文案或计数徽标。 */
+.root :global(.case-editor-section-head) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.root :global(.case-editor-section-title) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.root :global(.case-editor-section-title)::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--srf-tone-text, var(--srf-accent));
+}
+
+.root :global(.case-editor-section-title) :global(.anticon) {
+  color: var(--srf-tone-text, var(--srf-accent));
+  font-size: 14px;
+}
+
+.root :global(.case-editor-section-hint) {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 操作步骤 / 预期结果用的是整条着色头带，不是白色头。 */
+.root :global(.case-editor-section-tinted) > :global(.case-editor-section-head) {
+  border-bottom: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  background: var(--srf-tone-bg, var(--srf-chip));
+}
+
+.root :global(.case-editor-count-badge) {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-tone-text, var(--srf-text-secondary));
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+/* ===== 用例名称 ===== */
+
+.root :global(.case-editor-name-label) {
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.root :global(.case-editor-name-meta-sep) {
+  margin: 0 6px;
+  color: var(--srf-card-border);
+}
+
+.root :global(.case-editor-name-head) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.root :global(.case-editor-required) {
+  color: var(--srf-danger);
+  font-style: normal;
+}
+
+.root :global(.case-editor-name-meta) {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.root :global(.case-editor-title-input):global(.ant-input) {
+  min-height: 40px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.root :global(.case-editor-title-input):global(.ant-input):focus,
+.root :global(.case-editor-title-input):global(.ant-input-focused) {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+/* 用例名称区块里的表单项自己控制间距，不要再叠一层 margin。 */
+.root :global(.case-editor-name-section) :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+/* ===== 优先级 / 用例类型 ===== */
+
+.root :global(.case-editor-section) :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.root :global(.case-editor-section) :global(.ant-select),
+.root :global(.case-editor-section) :global(.ant-select-selector) {
+  width: 100%;
+}
+
+.root :global(.case-editor-section) :global(.ant-select-selector) {
+  min-height: 36px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  box-shadow: none !important;
+}
+
+.root :global(.case-editor-section) :global(.ant-select-focused) :global(.ant-select-selector) {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+.root :global(.case-editor-section) :global(.ant-select-selection-item),
+.root :global(.case-editor-section) :global(.ant-select-selection-placeholder) {
+  color: var(--srf-text) !important;
+  font-size: 12px;
+  line-height: 34px;
+}
+
+.root :global(.case-editor-section) :global(.ant-select-selection-placeholder) {
+  color: var(--srf-text-muted) !important;
+}
+
+/* ===== 前置条件 / 步骤 / 预期结果的文本域 ===== */
+
+.root :global(.case-editor-section) textarea:global(.ant-input) {
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  font-size: 13px;
+  line-height: 22px;
+  padding: 10px 12px;
+  box-shadow: none !important;
+  resize: none;
+}
+
+/* 操作步骤 / 预期结果的文本域在着色头带下面，不再单独描边。 */
+.root :global(.case-editor-section-tinted) textarea:global(.ant-input) {
+  border: 0 !important;
+}
+
+.root :global(.case-editor-section) textarea:global(.ant-input):focus {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+.root :global(.case-editor-section) textarea:global(.ant-input)::placeholder {
+  color: var(--srf-text-muted) !important;
+}
+
+/* 两列步骤输入框等高。 */
+.root :global(.case-editor-steps-grid) {
+  align-items: stretch;
+}
+
+.root :global(.case-editor-steps-grid) > :global(.case-editor-section) {
+  min-width: 0;
+}
+
+/* 两列文本域随较高的那一列一起长高。 */
+.root :global(.case-editor-steps-grid) :global(.case-editor-section-body) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.root :global(.case-editor-steps-grid) textarea:global(.ant-input) {
+  flex: 1 1 auto;
+}
+
+/* ===== 底部动作 ===== */
+
+.root :global(.case-editor-footer) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.root :global(.case-editor-footer-main) {
+  align-items: center;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 900px) {
+  .root :global(.case-editor-grid),
+  .root :global(.case-editor-steps-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===== 原 case-push.module.css ===== */
+
+/* 导入到禅道弹窗：只保留 Ant Design 深层结构与未决核对区分隔线；
+   布局、间距与宽度由 CasePushModal / CasePushReview 的 Tailwind utility 负责。 */
+.root :global(.case-push-review) {
+  border-block-start: 1px solid var(--app-list-row-border);
+}
+
+.root :global(.case-push-review) :global(.ant-form) {
+  margin-block-start: 16px;
+}
+
+.root :global(.case-push-review) :global(.ant-checkbox-wrapper) {
+  margin-block: 12px;
+}
+
+.root :global(.case-push-review) :global(.ant-space) {
+  margin-block-end: 16px;
+}
+
+.root :global(.case-push-review) :global(.ant-btn-dangerous) {
+  display: block;
+  margin-block-start: 8px;
+}

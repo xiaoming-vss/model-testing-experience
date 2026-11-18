@@ -10,7 +10,6 @@ import { getTestOrderEntryStatusMeta } from '../utils/testOrderStatus'
 import { TestOrderVerdictButtons } from './TestOrderVerdictButtons'
 import '@/shared/styles/surface-tokens.css'
 import graphStyles from '../styles/test-order-graph-execution.module.css'
-import verdictStyles from '../styles/test-order-verdict.module.css'
 
 type Props = {
   orderId: string
@@ -49,7 +48,7 @@ function TestOrderGraphExecutionContent({ orderId, entry, canExecute, currentUse
     })
   }
 
-  return <section className={`test-order-graph-execution tp-surface ${graphStyles.execution} ${verdictStyles.root}`} aria-label="图谱用例执行">
+  return <section className={`test-order-graph-execution tp-surface ${graphStyles.execution} ${graphStyles.root}`} aria-label="图谱用例执行">
     <div className="test-order-graph-execution-meta">
       <Tag color={status.color}>{status.label}</Tag>
       {entry.casePriority ? <Tag>{entry.casePriority}</Tag> : null}

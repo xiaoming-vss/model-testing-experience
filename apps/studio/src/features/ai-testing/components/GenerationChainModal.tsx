@@ -46,7 +46,6 @@ import caseArtifactStyles from '../styles/artifact-cases.module.css'
 import apiArtifactStyles from '../styles/artifact-api.module.css'
 import miscArtifactStyles from '../styles/artifact-misc.module.css'
 import uiStageStyles from '../styles/ui-stage-visual.module.css'
-import viewSwitchStyles from '../styles/artifact-view-switch.module.css'
 
 const artifactScopes = [
   chainStyles.scope,
@@ -55,7 +54,6 @@ const artifactScopes = [
   apiArtifactStyles.scope,
   miscArtifactStyles.scope,
   uiStageStyles.scope,
-  viewSwitchStyles.scope,
 ].join(' ')
 
 function formatTime(value?: string | null) {

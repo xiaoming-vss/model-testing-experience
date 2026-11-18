@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AppErrorBoundary } from './providers/AppErrorBoundary'
 import { QueryProvider } from './providers/QueryProvider'
-import '@/app/styles/index.css'
+import '@/index.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(

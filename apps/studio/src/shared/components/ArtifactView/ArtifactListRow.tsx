@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cx } from '@/shared/utils/cx'
-import styles from '@/shared/styles/artifact-view.module.css'
+import styles from '@/shared/styles/run-view.module.css'
 
 const activeToneClass = {
   accent: 'bg-app-accent-selection',

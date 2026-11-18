@@ -531,3 +531,41 @@
       grid-template-columns: 1fr 1fr;
     }
 }
+
+/* ===== 原 artifact-view.module.css ===== */
+
+/* Artifact view 的复杂皮肤：伪元素与 Ant Design 深层结构。 */
+
+.tabActive::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--app-accent);
+}
+
+.row :global(.ant-tag),
+.compactTags :global(.ant-tag) {
+  margin-inline-end: 0;
+  padding-inline: 5px;
+  font-size: 9px;
+  line-height: 16px;
+}
+
+.row :global(.ant-tag) {
+  flex: 0 0 auto;
+}
+
+.kicker :global(.ant-tag) {
+  margin-inline-end: 0;
+  font-size: 9.5px;
+  line-height: 16px;
+}
+
+.relationsPopover :global(.ant-popover-container) {
+  padding: 0;
+  overflow: hidden;
+}

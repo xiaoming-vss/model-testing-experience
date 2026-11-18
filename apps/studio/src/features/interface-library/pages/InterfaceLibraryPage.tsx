@@ -8,12 +8,10 @@ import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/interface-library.module.css'
-import methodStyles from '../styles/interface-method.module.css'
-import openapiStyles from '../styles/interface-openapi.module.css'
 import detailStyles from '../styles/interface-detail.module.css'
 import editorStyles from '../styles/interface-editor.module.css'
 
-const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
+const interfaceScopes = `${styles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 /**
  * 接口库入口：不渲染外层接口表格，直接进入“软件仓库树 + 接口编辑器”工作区。

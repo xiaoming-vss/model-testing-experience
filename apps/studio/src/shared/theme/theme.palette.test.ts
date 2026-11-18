@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import foundation from '../styles/foundation-tokens.css?raw'
-import editor from '../styles/editor-tokens.css?raw'
 import charts from '../styles/chart-tokens.css?raw'
-import legacy from '../styles/legacy-tokens.css?raw'
 import darkFoundation from '../styles/github-dark-foundation.css?raw'
 import dark from '../styles/github-dark-tokens.css?raw'
 import buttons from '../../app/styles/buttons.css?raw'
@@ -18,7 +16,7 @@ describe('light workbench surfaces', () => {
   // are a separate local scope and must not replace content roles in this map.
   const global = light.match(/:root:not\(\[data-theme='dark'\]\)\s*\{([^}]+)\}/)?.[1] ?? ''
   const content = light.match(/:root:not\(\[data-theme='dark'\]\) \.tp-surface\s*\{([^}]+)\}/)?.[1] ?? ''
-  const values = declarations(foundation + legacy + surfaces + buttons + editor + global + content)
+  const values = declarations(foundation + surfaces + buttons + charts + global + content)
   function resolve(name: string, seen: string[] = []): string {
     expect(seen, `cycle at ${name}`).not.toContain(name)
     expect(values.has(name), `missing ${name}`).toBe(true)
@@ -87,7 +85,7 @@ describe('dark palette contract', () => {
     const brand = new Set(['--app-logo-primary', '--app-logo-shadow', '--app-logo-border', '--app-logo-model-text', '--app-logo-secondary'])
     // Geometry is shared by both themes and does not need a dark color mapping.
     const geometry = new Set(['--app-scrollbar-size', '--app-scrollbar-radius', '--app-sidebar-width'])
-    for (const name of declarations(foundation + editor + charts + legacy).keys()) {
+    for (const name of declarations(foundation + charts).keys()) {
       if (!brand.has(name) && !geometry.has(name)) expect(colors.has(name), name).toBe(true)
     }
   })

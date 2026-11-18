@@ -3,7 +3,7 @@ import { CheckOutlined, CodeSandboxOutlined, FunctionOutlined, SearchOutlined } 
 import { Button, Input, Modal } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from '@/shared/utils/cx'
-import styles from '../styles/dynamic-value-picker.module.css'
+import environmentStyles from '../styles/environment-drawer.module.css'
 
 export type DynamicValueBuiltin = {
   token: string
@@ -136,7 +136,7 @@ export function DynamicValuePickerModal({
       centered
       width={880}
       destroyOnHidden={false}
-      className={cx('api-env-var-picker-modal', styles.root)}
+      className={cx('api-env-var-picker-modal', environmentStyles.root)}
       onCancel={onClose}
     >
       <div className="api-env-var-picker api-env-var-picker-modal-body">
