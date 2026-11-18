@@ -1,7 +1,7 @@
-/*
- * API / 性能环境抽屉的皮肤。根节点仍保留 api-environment-drawer 兼容类，
- * 规则通过 .root 作用域收敛到当前 Drawer。
- */
+/* 环境抽屉与动态值选择弹窗：只保留 AntD Drawer/Modal/Card/Table 深层结构
+ * 和弹窗底部按钮尺寸；列表卡片、环境条目、动态值浏览器与预览布局已迁入
+ * EnvironmentDrawer / DynamicValuePickerModal 的 utility。 */
+
 .root :global(.ant-drawer-body) {
   display: flex;
   flex-direction: column;
@@ -18,54 +18,6 @@
   border-bottom: 1px solid var(--tp-border-soft, var(--app-editor-header-border));
 }
 
-.root :global(.api-environment-subtitle.ant-typography) {
-  margin: 4px 0 0;
-}
-
-.root :global(.api-environment-current-pill) {
-  flex: 0 0 auto;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--app-environment-option-selected);
-  color: var(--app-request-summary-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.root :global(.api-environment-item) {
-  border: 1px solid var(--tp-border);
-  border-radius: 12px;
-  background: var(--app-surface);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
-}
-
-.root :global(.api-environment-item:hover) {
-  border-color: var(--app-request-summary-border-hover);
-  box-shadow: 0 8px 20px var(--app-editor-focus-ring);
-}
-
-.root :global(.api-environment-item.active) {
-  border-color: var(--app-request-summary-border-hover);
-  box-shadow: 0 8px 20px var(--app-accent-emphasis);
-  background: var(--app-request-summary-hover);
-}
-
-.root :global(.api-environment-item-url) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--app-shell-text);
-  font-size: 13px;
-  line-height: 20px;
-}
-
 .root :global(.api-environment-vars-card) :global(.ant-card-body) {
   padding: 0;
   height: 100%;
@@ -78,12 +30,8 @@
   overflow: auto;
 }
 
-/* ===== 原 dynamic-value-picker.module.css ===== */
+/* ===== 动态值选择弹窗 ===== */
 
-/*
- * 动态值选择弹窗的皮肤。根节点仍保留 api-env-var-picker-modal 兼容类，
- * 规则通过 .root 作用域收敛，避免继续污染全局。
- */
 .root :global(.ant-modal-container),
 .root :global(.ant-modal-content) {
   overflow: hidden;
@@ -113,196 +61,6 @@
 
 .root :global(.ant-modal-body) {
   padding: 0;
-}
-
-.root :global(.api-env-var-picker),
-.root :global(.api-env-var-picker-modal-body) {
-  width: 100%;
-  padding: 0;
-  background: transparent;
-}
-
-.root :global(.api-env-var-picker-heading-title) {
-  color: var(--tp-text);
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 700;
-}
-
-.root :global(.api-env-var-picker-heading-subtitle) {
-  margin-top: 3px;
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 400;
-}
-
-.root :global(.api-env-var-picker-sources) {
-  border-right: 1px solid var(--app-frame-card-border);
-  background: var(--app-picker-header-bg);
-}
-
-.root :global(.api-env-var-picker-source) {
-  border: 0;
-  border-radius: 8px;
-  color: var(--tp-text-secondary);
-  background: transparent;
-  font-size: 13px;
-  line-height: 20px;
-  text-align: left;
-  cursor: pointer;
-  transition: color 0.16s ease, background-color 0.16s ease;
-}
-
-.root :global(.api-env-var-picker-source:hover) {
-  color: var(--tp-text);
-  background: var(--app-picker-option-hover);
-}
-
-.root :global(.api-env-var-picker-source.active) {
-  color: var(--app-surface-accent);
-  background: var(--app-picker-option-selected);
-}
-
-.root :global(.api-env-var-picker-source-count) {
-  border-radius: 999px;
-  color: var(--tp-text-muted);
-  background: var(--app-picker-option-disabled);
-  font-size: 10px;
-  line-height: 20px;
-}
-
-.root :global(.api-env-var-picker-browser) {
-  border-right: 1px solid var(--app-frame-card-border);
-}
-
-@media (max-width: 900px) {
-  .root :global(.api-env-var-picker-browser) {
-    border-right: 0;
-  }
-}
-
-.root :global(.api-env-var-picker-search) {
-  border-radius: 8px;
-  background: transparent;
-}
-
-.root :global(.api-env-var-picker-list) {
-  border: 0;
-  background: transparent;
-}
-
-.root :global(.api-env-var-picker-item) {
-  border: 0;
-  border-bottom: 1px solid var(--app-picker-row-border);
-  border-radius: 0;
-  background: transparent;
-  color: var(--tp-text);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-.root :global(.api-env-var-picker-item:hover) {
-  background: var(--app-picker-row-hover);
-}
-
-.root :global(.api-env-var-picker-item.active) {
-  border-bottom-color: var(--app-picker-row-selected-border);
-  border-radius: 8px;
-  background: var(--app-picker-row-selected);
-  box-shadow: inset 0 0 0 1px var(--app-picker-row-selected-ring);
-}
-
-.root :global(.api-env-var-picker-item-status) {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--app-picker-status);
-  box-shadow: 0 0 0 3px var(--app-picker-status-ring);
-}
-
-.root :global(.api-env-var-picker-item-key) {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--tp-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 600;
-}
-
-.root :global(.api-env-var-picker-item-desc),
-.root :global(.api-env-var-picker-item-example) {
-  width: fit-content;
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--tp-text-secondary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  line-height: 16px;
-}
-
-.root :global(.api-env-var-picker-item-example) {
-  color: var(--app-accent, var(--app-picker-accent-fallback));
-}
-
-.root :global(.api-env-var-picker-item-type) {
-  color: var(--tp-text-secondary);
-  font-size: 11px;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.root :global(.api-env-var-picker-item-check) {
-  color: var(--app-picker-action);
-  font-size: 13px;
-}
-
-.root :global(.api-env-var-picker-empty) {
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.root :global(.api-env-var-picker-preview-title) {
-  color: var(--tp-text);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 700;
-}
-
-.root :global(.api-env-var-picker-preview-token) {
-  border: 1px solid var(--app-frame-card-border);
-  border-radius: 10px;
-  color: var(--app-surface-accent);
-  background: var(--app-picker-header-bg);
-  font-family: Consolas, 'SFMono-Regular', monospace;
-  font-size: 16px;
-  line-height: 24px;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.root :global(.api-env-var-picker-preview-meta) :global(dt) {
-  color: var(--tp-text-secondary);
-}
-
-.root :global(.api-env-var-picker-preview-meta) :global(dd) {
-  color: var(--tp-text);
-}
-
-.root :global(.api-env-var-picker-preview-description) {
-  color: var(--tp-text-secondary);
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.root :global(.api-env-var-picker-footer) {
-  border-top: 1px solid var(--app-frame-card-border);
 }
 
 .root :global(.api-env-var-picker-footer) :global(.ant-btn) {

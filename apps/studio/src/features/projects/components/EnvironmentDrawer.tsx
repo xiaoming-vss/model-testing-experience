@@ -341,7 +341,7 @@ export function EnvironmentDrawer({
               <div className="api-environment-section-head flex items-start justify-between gap-4 max-narrow:flex-col">
                 <div>
                   <Text strong>项目环境</Text>
-                  <Paragraph type="secondary" className="api-environment-subtitle">
+                  <Paragraph type="secondary" className="api-environment-subtitle mb-0 mt-1">
                     环境绑定当前项目，作为{isPerf ? '性能测试' : ` ${kindLabel} 测试`}时的基础地址和变量上下文。
                   </Paragraph>
                 </div>
@@ -364,7 +364,7 @@ export function EnvironmentDrawer({
                       return (
                         <div
                           key={environmentId}
-                          className={`api-environment-item flex items-center gap-3 px-3 py-2.5 ${active ? ' active' : ''}`}
+                          className={`api-environment-item flex cursor-pointer items-center gap-3 rounded-[12px] border bg-[var(--app-surface)] px-3 py-2.5 transition-[border-color,box-shadow,background] ${active ? 'border-[var(--app-request-summary-border-hover)] bg-[var(--app-request-summary-hover)] shadow-[0_8px_20px_var(--app-accent-emphasis)]' : 'border-[var(--tp-border)] hover:border-[var(--app-request-summary-border-hover)] hover:shadow-[0_8px_20px_var(--app-editor-focus-ring)]'}`}
                           onClick={() => onSelectEnvironment(environmentId)}
                         >
                           <div className="api-environment-item-main min-w-0 flex flex-auto flex-col gap-1">
@@ -409,7 +409,7 @@ export function EnvironmentDrawer({
                                 </Popconfirm>
                               </Space>
                             </div>
-                            <div className="api-environment-item-url">{environment.baseUrl}</div>
+                            <div className="api-environment-item-url min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] leading-[20px] text-[var(--app-shell-text)]">{environment.baseUrl}</div>
                           </div>
                         </div>
                       )
@@ -423,12 +423,12 @@ export function EnvironmentDrawer({
               <div className="api-environment-section-head flex items-start justify-between gap-4 max-narrow:flex-col">
                 <div className="api-environment-section-title-block min-w-0">
                   <Text strong>环境变量</Text>
-                  <Paragraph type="secondary" className="api-environment-subtitle">
+                  <Paragraph type="secondary" className="api-environment-subtitle mb-0 mt-1">
                     变量会作为{isPerf ? '性能测试' : ` ${kindLabel} 测试`}运行时的取值来源。
                   </Paragraph>
                 </div>
                 <div className="api-environment-toolbar min-w-0 flex flex-wrap items-center justify-end gap-[10px] max-narrow:w-full max-narrow:justify-start">
-                  <span className="api-environment-current-pill">
+                  <span className="api-environment-current-pill flex-none whitespace-nowrap rounded-full bg-[var(--app-environment-option-selected)] px-3 py-1.5 text-xs font-semibold leading-[18px] text-[var(--app-request-summary-text)]">
                     启用环境：{selectedEnvironment?.name ?? '未选择'}
                   </span>
                   <Input

@@ -150,8 +150,8 @@ function normalizeDailyMetrics(snapshot?: SprintDailyMetricsSnapshot) {
 
 function SummaryMetric({ label, value, icon }: { label: string; value: number | string; icon?: ReactNode }) {
   return (
-    <div className="sprint-overview-summary-metric flex min-h-8 min-w-0 items-center gap-2.5 px-2">
-      {icon ? <span className="sprint-overview-summary-icon inline-flex h-7 w-7 flex-none items-center justify-center rounded-[8px]">{icon}</span> : null}
+    <div className="sprint-overview-summary-metric flex min-h-8 min-w-0 items-center gap-2.5 rounded-[10px] border border-[var(--app-info-border)] bg-[var(--app-info-surface)] px-2">
+      {icon ? <span className="sprint-overview-summary-icon inline-flex h-7 w-7 flex-none items-center justify-center rounded-[8px] bg-[var(--app-accent-soft)] text-[var(--app-accent)]">{icon}</span> : null}
       <span className="sprint-overview-summary-copy flex min-w-0 items-baseline gap-2 whitespace-nowrap">
         <span className="sprint-overview-summary-label text-[12px] leading-[18px] text-[var(--app-text-caption)]">{label}</span>
         <strong className="sprint-overview-summary-value text-[14px] font-bold leading-[18px] text-[var(--app-shell-text)]">{value}</strong>
@@ -173,9 +173,9 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
   const executionPercent = percentValue(executed, metrics.totalCases)
 
   return (
-    <div className="sprint-dashboard-health-band grid grid-cols-[minmax(200px,0.7fr)_minmax(280px,1fr)_minmax(300px,1fr)] items-center gap-4 p-4 max-[1280.01px]:grid-cols-2 max-[768.01px]:grid-cols-1">
+    <div className="sprint-dashboard-health-band grid rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none grid-cols-[minmax(200px,0.7fr)_minmax(280px,1fr)_minmax(300px,1fr)] items-center gap-4 p-4 max-[1280.01px]:grid-cols-2 max-[768.01px]:grid-cols-1">
       <div className="sprint-dashboard-health-title flex min-h-14 min-w-0 items-center gap-3">
-        <span className="sprint-dashboard-health-icon inline-flex h-9 w-9 flex-none items-center justify-center rounded-[8px] text-xl">
+        <span className="sprint-dashboard-health-icon inline-flex h-9 w-9 flex-none items-center justify-center rounded-[8px] bg-[var(--app-accent-emphasis)] text-xl text-[var(--app-accent)]">
           <FileTextOutlined />
         </span>
         <div className="sprint-dashboard-health-copy flex min-w-0 flex-col gap-[7px]">
@@ -193,10 +193,10 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
           <strong className="text-[14px] leading-6 text-[var(--app-shell-text)]">{executionPercent}%</strong>
         </div>
         <div className="sprint-dashboard-health-track flex h-2 w-full overflow-hidden rounded-full bg-[var(--app-progress-track)]">
-          <span className="sprint-dashboard-health-fill sprint-dashboard-health-fill-executed h-full" style={{ width: `${executionPercent}%` }} />
-          <span className="sprint-dashboard-health-fill sprint-dashboard-health-fill-pending h-full" style={{ width: `${percentValue(unexecuted, metrics.totalCases)}%` }} />
+          <span className="sprint-dashboard-health-fill sprint-dashboard-health-fill-executed h-full bg-[var(--app-result-success)]" style={{ width: `${executionPercent}%` }} />
+          <span className="sprint-dashboard-health-fill sprint-dashboard-health-fill-pending h-full bg-[var(--app-result-pending)]" style={{ width: `${percentValue(unexecuted, metrics.totalCases)}%` }} />
         </div>
-        <div className="sprint-dashboard-health-legend flex flex-wrap items-center gap-[18px] text-[12px] leading-[18px] text-[var(--app-text-label)]">
+        <div className="sprint-dashboard-health-legend flex [&_span]:inline-flex [&_span]:items-center [&_span]:gap-[5px] [&_strong]:text-[var(--app-shell-text)] flex-wrap items-center gap-[18px] text-[12px] leading-[18px] text-[var(--app-text-label)]">
           <span style={{ '--legend-color': 'var(--chart-pending)' } as CSSProperties}>未执行 <strong>{unexecuted}</strong></span>
           <span style={{ '--legend-color': 'var(--chart-positive)' } as CSSProperties}>已执行 <strong>{executed}</strong></span>
           <span style={{ '--legend-color': 'var(--chart-total)' } as CSSProperties}>成功 <strong>{success}</strong></span>
@@ -210,19 +210,19 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
         </span>
         <span>
           已解决
-          <strong className="sprint-dashboard-health-green">{metrics.bug.collected ? metrics.bug.resolved : '—'}</strong>
+          <strong className="sprint-dashboard-health-green text-[var(--app-result-success)]">{metrics.bug.collected ? metrics.bug.resolved : '—'}</strong>
         </span>
         <span>
           已关闭
-          <strong className="sprint-dashboard-health-blue">{metrics.bug.collected ? metrics.bug.closed : '—'}</strong>
+          <strong className="sprint-dashboard-health-blue text-[var(--app-accent)]">{metrics.bug.collected ? metrics.bug.closed : '—'}</strong>
         </span>
         <span>
           未解决
-          <strong className="sprint-dashboard-health-red">{metrics.bug.collected ? metrics.bug.unresolved : '—'}</strong>
+          <strong className="sprint-dashboard-health-red text-[var(--app-result-failed)]">{metrics.bug.collected ? metrics.bug.unresolved : '—'}</strong>
         </span>
         <span>
           解决率
-          <strong className="sprint-dashboard-health-green">{metrics.bug.collected ? `${percentValue(metrics.bug.resolved, metrics.bug.total)}%` : '—'}</strong>
+          <strong className="sprint-dashboard-health-green text-[var(--app-result-success)]">{metrics.bug.collected ? `${percentValue(metrics.bug.resolved, metrics.bug.total)}%` : '—'}</strong>
         </span>
       </div>
     </div>
@@ -261,7 +261,7 @@ function TestTypeIcon({ type }: { type: 'functional' | 'api' | 'ui' }) {
     ui: <DesktopOutlined />,
   }[type]
 
-  return <span className="sprint-dashboard-test-icon inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] text-[18px]">{icon}</span>
+  return <span className="sprint-dashboard-test-icon inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] bg-[var(--app-accent-selection)] text-[18px] text-[var(--app-accent)]">{icon}</span>
 }
 
 function TestExecutionOverviewCard({ metrics }: { metrics: NormalizedDailyMetrics }) {
@@ -272,12 +272,12 @@ function TestExecutionOverviewCard({ metrics }: { metrics: NormalizedDailyMetric
   ]
 
   return (
-    <Card className="sprint-overview-card sprint-overview-card-rich sprint-dashboard-panel min-h-0 max-[768.01px]:overflow-x-auto">
+    <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none sprint-dashboard-panel min-h-0 max-[768.01px]:overflow-x-auto">
       <div className="sprint-dashboard-card-head mb-1.5 flex flex-wrap items-start justify-between gap-3">
         <Title level={4} className="m-0 text-[15px] font-semibold leading-6">测试执行概览</Title>
       </div>
       <div className="sprint-dashboard-test-table grid min-h-0 flex-auto grid-rows-[32px_repeat(3,56px)] content-stretch border-t border-[var(--app-frame-divider-soft)] max-[768.01px]:min-w-[640px] min-[1281px]:grid-rows-[32px_repeat(3,minmax(56px,1fr))]">
-        <div className="sprint-dashboard-test-row sprint-dashboard-test-row-head grid grid-cols-[minmax(120px,1.2fr)_72px_repeat(4,minmax(92px,1fr))] items-center gap-2.5 border-b border-[var(--app-list-row-border)] py-1.5 text-[12px] font-bold leading-[18px] text-[var(--app-text-label)] last:border-b-0">
+        <div className="sprint-dashboard-test-row sprint-dashboard-test-row-head grid grid-cols-[minmax(120px,1.2fr)_72px_repeat(4,minmax(92px,1fr))] items-center gap-2.5 border-b border-[var(--app-list-row-border)] bg-[var(--app-frame-row-hover)] py-1.5 text-[12px] font-bold leading-[18px] text-[var(--app-text-label)] last:border-b-0">
           <span>测试类型</span>
           <span>总数</span>
           <span>已执行</span>
@@ -340,7 +340,7 @@ function SeverityLine({
 
 function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
   if (!bug.collected) return (
-    <Card className="sprint-overview-card sprint-overview-card-rich sprint-dashboard-panel min-h-0">
+    <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none sprint-dashboard-panel min-h-0">
       <div className="sprint-dashboard-card-head mb-1.5 flex flex-wrap items-start justify-between gap-3"><Title level={4} className="m-0 text-[15px] font-semibold leading-6">缺陷风险画像</Title></div>
       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="缺陷数据未采集，暂不统计" />
     </Card>
@@ -364,7 +364,7 @@ function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
   ]
 
   return (
-    <Card className="sprint-overview-card sprint-overview-card-rich sprint-dashboard-panel min-h-0">
+    <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none sprint-dashboard-panel min-h-0">
       <div className="sprint-dashboard-card-head mb-1.5 flex flex-wrap items-start justify-between gap-3">
         <Title level={4} className="m-0 text-[15px] font-semibold leading-6">缺陷风险画像</Title>
       </div>
@@ -585,7 +585,7 @@ function renderMarkdownBlocks(markdown: string) {
       const table = parseMarkdownTable(tableLines)
       if (table) {
         blocks.push(
-          <div className="sprint-report-markdown-table-wrap" key={`table-${index}`}>
+          <div className="sprint-report-markdown-table-wrap my-3 overflow-auto rounded-[8px] border border-[var(--app-document-table-border)]" key={`table-${index}`}>
             <table>
               <thead>
                 <tr>
@@ -724,7 +724,7 @@ function TestReportMarkdownModal({
           <Spin />
         </div>
       ) : markdown ? (
-        <article className="sprint-report-markdown">{renderMarkdownBlocks(markdown)}</article>
+        <article className="sprint-report-markdown text-[14px] leading-[1.72] text-[var(--app-document-text)] [&_blockquote]:my-3 [&_blockquote]:border-l-[3px] [&_blockquote]:border-[var(--app-accent)] [&_blockquote]:bg-[var(--app-document-quote-bg)] [&_blockquote]:px-3.5 [&_blockquote]:py-2.5 [&_blockquote]:text-[var(--app-document-quote-text)] [&_code]:rounded-[5px] [&_code]:bg-[var(--app-document-code-bg)] [&_code]:px-[5px] [&_code]:py-0.5 [&_code]:text-[12px] [&_code]:text-[var(--app-document-code-text)] [&_h1]:mb-2.5 [&_h1]:mt-5 [&_h1]:text-[24px] [&_h1]:font-[750] [&_h1]:text-[var(--app-document-heading)] [&_h2]:mb-2.5 [&_h2]:mt-5 [&_h2]:text-[20px] [&_h2]:font-[750] [&_h2]:text-[var(--app-document-heading)] [&_h3]:mb-2.5 [&_h3]:mt-5 [&_h3]:text-[17px] [&_h3]:font-[750] [&_h3]:text-[var(--app-document-heading)] [&_h4]:mb-2.5 [&_h4]:mt-5 [&_h4]:text-[15px] [&_h4]:font-[750] [&_h4]:text-[var(--app-document-heading)] [&_li]:my-1 [&_ol]:my-2 [&_ol]:mb-3 [&_ol]:pl-6 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-auto [&_pre]:rounded-[8px] [&_pre]:bg-[var(--app-document-code-block-bg)] [&_pre]:p-3 [&_pre_code]:whitespace-pre [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[var(--app-document-code-block-text)] [&_table]:w-full [&_table]:min-w-[560px] [&_table]:border-collapse [&_td]:border-b [&_td]:border-[var(--app-frame-divider)] [&_td]:px-3 [&_td]:py-2.5 [&_td]:text-left [&_td]:align-top [&_th]:border-b [&_th]:border-[var(--app-frame-divider)] [&_th]:bg-[var(--app-document-table-heading-bg)] [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:align-top [&_th]:font-bold [&_th]:text-[var(--app-text-strong)] [&_ul]:my-2 [&_ul]:mb-3 [&_ul]:pl-6">{renderMarkdownBlocks(markdown)}</article>
       ) : (
         <Empty description="暂无可查看的报告内容" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}
@@ -998,7 +998,7 @@ export function SprintDetailPage() {
           </section>
         </div>
       ) : sprintQuery.data ? (
-        <section className="tp-board tp-list-panel sprint-overview-frame min-h-0">
+        <section className="tp-board tp-list-panel sprint-overview-frame min-h-0 [&>.workbench-tabs]:p-0">
           <section className="tp-list-toolbar">
             <div className="sprint-overview-toolbar-summary-row flex w-full flex-wrap items-center justify-between gap-3 max-[1200.01px]:items-start">
               <div className="sprint-overview-toolbar-main flex min-w-0 flex-none flex-col items-start gap-2">
@@ -1073,15 +1073,15 @@ export function SprintDetailPage() {
 
                   <div className="sprint-overview-section sprint-dashboard-trend-section flex flex-col gap-2 min-[1281px]:min-h-0">
                     {historyMetricsQuery.isLoading ? (
-                      <Card className="sprint-overview-card sprint-overview-card-rich sprint-overview-history-state grid min-h-[120px] place-items-center">
+                      <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none sprint-overview-history-state grid min-h-[120px] place-items-center">
                         <Spin />
                       </Card>
                     ) : historyMetrics.length === 0 ? (
-                      <Card className="sprint-overview-card sprint-overview-card-rich min-h-0">
+                      <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none min-h-0">
                         <Empty description="暂无历史快照" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       </Card>
                     ) : (
-                      <Card className="sprint-overview-card sprint-overview-card-rich sprint-dashboard-trend-card min-h-0">
+                      <Card className="sprint-overview-card sprint-overview-card-rich rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-none sprint-dashboard-trend-card min-h-0">
                         <div className="sprint-dashboard-card-head mb-1.5 flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <Title level={4} className="m-0 text-[15px] font-semibold leading-6">趋势历史</Title>
@@ -1107,7 +1107,7 @@ export function SprintDetailPage() {
                                 {historyMetrics[historyMetrics.length - 1]?.totalCases ?? 0}
                               </Title>
                             </div>
-                            <Tag className="sprint-overview-accent-tag">Cases</Tag>
+                            <Tag className="sprint-overview-accent-tag rounded-full border-0 bg-[var(--app-badge-bg)] px-2.5 text-[var(--app-badge-text)] [margin-inline-end:0]">Cases</Tag>
                           </div>
                           <TrendLineChart data={historyMetrics} />
                           </div>
@@ -1119,7 +1119,7 @@ export function SprintDetailPage() {
                                 {historyMetrics[historyMetrics.length - 1]?.bug.collected ? historyMetrics[historyMetrics.length - 1]?.bug.total : '—'}
                               </Title>
                             </div>
-                            <Tag className="sprint-overview-accent-tag">Bugs</Tag>
+                            <Tag className="sprint-overview-accent-tag rounded-full border-0 bg-[var(--app-badge-bg)] px-2.5 text-[var(--app-badge-text)] [margin-inline-end:0]">Bugs</Tag>
                           </div>
                           <TrendBarChart data={historyMetrics} />
                           </div>

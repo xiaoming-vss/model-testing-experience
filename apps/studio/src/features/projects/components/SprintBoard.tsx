@@ -44,7 +44,7 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
       return <EntityCard key={sprintId} className={`sprint-board-card sprint-board-card-${group.key} max-[680.01px]:[&_.entity-card-foot]:flex-wrap`}
         titleAs="h3" titleId={`sprint-title-${sprintId}`}
         title={<Link to={`/projects/${projectId}/sprints/${sprintId}`} title={sprint.name}>{sprint.name}</Link>}
-        status={<span className={`sprint-board-status sprint-board-status-${group.key} inline-flex flex-none items-center gap-[5px] whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]`}>
+        status={<span className={`sprint-board-status sprint-board-status-${group.key} inline-flex flex-none items-center gap-[5px] whitespace-nowrap text-[10.5px] font-medium leading-[18px] ${group.key === 'running' ? 'text-[var(--app-action-read)]' : group.key === 'completed' ? 'text-[var(--app-result-success-text)]' : 'text-[var(--srf-text-muted)]'}`}>
           {group.key === 'other' ? sprint.status || '未知状态' : group.label}
         </span>}
         meta={[

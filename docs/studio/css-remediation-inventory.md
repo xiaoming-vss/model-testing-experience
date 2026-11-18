@@ -1,6 +1,6 @@
 # Studio CSS 存量整改总清单
 
-> 2026-11-18。阶段 0–34 已完成；本文件是阶段 35 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **53 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
+> 2026-11-18。阶段 0–35 已完成；本文件是阶段 36 起的完整整改台账。它覆盖 `apps/studio/src/**/*.css` 当前全部 **51 个文件**，不是单模块建议。阶段 29 前的 66 文件基线仍保留在下方表格的“阶段 29 前”口径中。
 >
 > 数据口径：`scripts/check-css-budget.mjs`、`scripts/check-css-structure.mjs` 与逐文件静态分类脚本。“布局”指 `display/flex/grid/gap/padding/margin/size/overflow` 等结构声明；“皮肤”指颜色、字体、边框、圆角、阴影、动效等声明；“深层规则”指带后代选择器、`:global(...)` 或组件内部 DOM 的规则。数字用于排序，不替代浏览器验收。
 
@@ -8,40 +8,39 @@
 
 | 指标 | 当前 | 目标 | 缺口 |
 | --- | ---: | ---: | ---: |
-| CSS 文件 | 53 | ≤ 45 | **-8** |
-| CSS 行数 | 10,331 | ≤ 9,000 | **-1,331** |
+| CSS 文件 | 51 | ≤ 45 | **-6** |
+| CSS 行数 | 9,638 | ≤ 9,000 | **-638** |
 | `!important` | 95 | ≤ 100 | 已达标（数值） |
 | 长前缀 | 0 | 0 | 已达标 |
-| 重复规则体 | 15 | ≤ 60 | 已达标 |
+| 重复规则体 | 14 | ≤ 60 | 已达标 |
 | 单文件 > 600 行 | 0 | 0 | 已达标 |
 
 **先看结论，避免继续“一个模块一个模块”地漏：**
 
 1. **真正的缺口是文件数和行数，不是 `!important`。** 95 处 `!important` 中 85 处在全局外壳/表格/按钮/表面契约，只有 10 处在页面 Module（`sprint-overview` 4、`ui-detail-shell` 6）。后面不应为了数字机械去 `!important`。
-2. **只迁布局达不到行数目标。** 只迁布局仍覆盖不了 1,331 行的缺口；阶段 29–34 已实际验证，必须同时迁皮肤。要达标，颜色、字体、边框、圆角、阴影等皮肤声明也必须随 JSX utility 或共享 token 迁走，最终让大部分页面 Module 整体消失。
+2. **只迁布局达不到行数目标。** 只迁布局仍覆盖不了 638 行的缺口；阶段 29–35 已实际验证，必须同时迁皮肤。要达标，颜色、字体、边框、圆角、阴影等皮肤声明也必须随 JSX utility 或共享 token 迁走，最终让大部分页面 Module 整体消失。
 3. **按当前文件边界，保留底座已经占 23 个文件 / 4,316 行：**
    - 7 个 token 文件：1,847 行；
    - 9 个外壳/全局基础文件：1,565 行；
    - 7 个共享全局契约：904 行。
-4. 因此其余 **30 个页面/共享组件文件（6,015 行）必须压到 ≤22 个文件、≤4,684 行**：至少 **8 个文件要删除或并入宿主 Module**，约 **22.1% 的页面 CSS 行要消失**。这是阶段 35–38 的硬约束。
-5. 15 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随页面批次顺手合并。完整列表见附录 B。
+4. 因此其余 **28 个页面/共享组件文件（5,322 行）必须压到 ≤22 个文件、≤4,684 行**：至少 **6 个文件要删除或并入宿主 Module**，约 **12.0% 的页面 CSS 行要消失**。这是阶段 36–38 的硬约束。
+5. 14 组重复规则体已在目标内，且多为跨页面同构皮肤；不单独立项，随页面批次顺手合并。完整列表见附录 B。
 
 ## 二、动作分类
 
 | 动作 | 含义 | 文件数 | 行数 |
 | --- | --- | ---: | ---: |
-| **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 4 | 425 |
-| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 26 | 5,590 |
+| **A** | 删除或并入宿主 Module 的确定候选；先迁 utility，再删文件 | 3 | 360 |
+| **B** | 页面/共享组件 Module；按页面族迁移，能删则删，否则只留深层皮肤 | 25 | 4,962 |
 | **C** | 全局契约；只做死规则、层叠和重复体收缩，不整体 utility 化 | 16 | 2,469 |
 | **D** | Token / 主题 / Tailwind 层；保留，只清理无消费者 token | 7 | 1,847 |
 
 > A 类不是“删掉就完事”：必须先把对应 JSX 的布局与可迁移皮肤换成 utility，确认无消费方后再删文件。B 类中标注“删除候选”的文件，在皮肤迁完后同样要转 A；否则文件数目标无法达成。
 
-### A 类：4 个确定删除/并入候选（425 行）
+### A 类：3 个确定删除/并入候选（360 行）
 
 | 文件 | 行 | 删除前必须迁走的内容 |
 | --- | ---: | --- |
-| `features/profile/styles/profile-settings.module.css` | 65 | 7 条布局 + 19 条皮肤；4 条深层规则 |
 | `shared/styles/base-services-connection.module.css` | 195 | 61 条布局 + 35 条皮肤；0 条深层规则 |
 | `shared/styles/case-import.module.css` | 63 | 28 条纯布局 + 3 条皮肤；5 条深层规则 |
 | `shared/styles/legacy-surface.css` | 102 | 37 条布局 + 12 条皮肤；遗留全局类 |
@@ -56,7 +55,7 @@
 
 ## 三、完整文件清单（按页面族）
 
-> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 53 个文件均已列入，没有省略项；阶段 29–33 删除的 13 个文件不再保留条目。
+> 每一行都是一个待办项；“动作”列用 A/B/C/D 标记。当前 51 个文件均已列入，没有省略项；阶段 29–35 删除的 15 个文件不再保留条目。
 
 
 ### 一、外壳与全局基础
@@ -148,20 +147,18 @@
 | `features/bugs/styles/bugs.module.css` | 213 | — | — | 多 | 0 | 0 | **B** | Bug 详情高度链、元信息/上下文/动态伪元素、模态框与附件上传/导入深层规则 |
 | `features/requirements/styles/requirement-detail.module.css` | 179 | — | — | 多 | 0 | 0 | **B** | 需求详情侧栏动画/画布宿主、文档工具栏响应式内距与 DOCX 渲染排版 |
 
-### 八、基础服务 / Auth / 个人设置 / Projects
+### 八、基础服务 / Auth / 个人设置 / Projects（阶段 35 已完成）
 
 禅道绑定、登录、个人设置、环境抽屉、项目概览与 Sprint 看板。
 
-**6 个文件 / 1,142 行 / 193 条布局声明 / 364 条皮肤声明**
+**4 个文件 / 449 行（阶段 35 前：6 个 / 1,142 行）**。登录/个人设置合并为共享 `account` Module，删除 `profile-settings`；项目概览并入 Sprint 看板，删除 `projects-overview`；环境抽屉与动态值选择弹窗只留 AntD 深层规则。
 
 | 文件 | 行 | 布局（纯/混） | 皮肤 | 深层规则 | `!important` | 重复体 | 动作 | 整改说明 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| `features/base-services/styles/zentao-binding.module.css` | 209 | 42 / 22 | 40 | 9 | 0 | 2 | **B** | 禅道绑定页；9 条深层规则 |
-| `features/auth/styles/auth.module.css` | 175 | 3 / 10 | 53 | 14 | 0 | 0 | **B** | 页面专属但 14 条深层规则；低收益，最后处理 |
-| `features/profile/styles/profile-settings.module.css` | 65 | 2 / 5 | 19 | 4 | 0 | 0 | **A** | 65 行小 Module，整体迁 utility 后删除 |
-| `features/projects/styles/environment-drawer.module.css` | 318 | 9 / 36 | 121 | 10 | 0 | 0 | **B** | 阶段 24 已迁布局；剩余皮肤/AntD 深层，只清死规则 |
-| `features/projects/styles/projects-overview.module.css` | 99 | 18 / 7 | 55 | 13 | 0 | 3 | **B** | 99 行；13 条深层规则，皮肤为主，低收益 |
-| `features/projects/styles/sprint-overview.module.css` | 276 | 17 / 22 | 76 | 9 | 4 | 0 | **B** | Sprint 看板；保留 4 处 `!important`，最后动 |
+| `shared/styles/account.module.css` | 150 | — | — | 多 | 0 | 0 | **B** | Auth 页渐变/纹理/玻璃壳、表单深层规则，以及个人设置页背景/头像/字段 |
+| `features/base-services/styles/zentao-binding.module.css` | 59 | — | — | 多 | 0 | 0 | **B** | 禅道绑定 Modal 深层结构与 Tag 省略 |
+| `features/projects/styles/environment-drawer.module.css` | 76 | — | — | 多 | 0 | 0 | **B** | 环境 Drawer、变量 Card/Table 与动态值选择 Modal 深层结构 |
+| `features/projects/styles/sprint-overview.module.css` | 164 | — | — | 多 | 4 | 0 | **B** | Sprint/Projects 看板表面、图表色块、Markdown 报告、macOS 表面与 4 处 `!important` |
 
 ### 九、共享组件
 
@@ -224,12 +221,12 @@
 | 32 | 接口库全部 3 个 Module | 1,550 | ≤ 550 | 3 → 2 | **已完成（238 行）**：列表/树/抽屉、详情、编辑器面板、键值表与 OpenAPI 导入流程迁 utility；删除编辑器 Module，AntD 深层规则并入详情 | 低–中 |
 | 33 | AI 测试/生成链全部 10 个 Module | 3,759 | ≤ 1,450 | 10 → 5 | **已完成（1,449 行）**：三个产物 Module 与关系/UI 生成并入宿主；画布、生成链、阶段可视化、任务详情全量迁 utility；删除 `ai-page`、`artifact-api`、`artifact-misc`、`relations`、`ui-generation` | 高 |
 | 34 | 用例 / Bug / 需求 3 个 Module | 1,465 | ≤ 650 | 3 → 3 | **已完成（527 行）**：表格、筛选、详情、活动流、表单骨架、文档预览布局迁 utility；保留 AntD / DOCX 深层结构与高度链 | 高 |
-| 35 | 基础服务 / Auth / 个人设置 / Projects 6 个 Module | 1,142 | ≤ 450 | 6 → 4 | 删 `profile-settings`；项目概览并入 Sprint 看板；环境抽屉、Auth 以皮肤为主，低收益，最后处理 | 中 |
+| 35 | 基础服务 / Auth / 个人设置 / Projects 6 个 Module | 1,142 | ≤ 450 | 6 → 4 | **已完成（449 行）**：登录/个人设置合并为共享 `account` Module，删除 `profile-settings`；项目概览并入 Sprint 看板，删除 `projects-overview`；环境抽屉、动态值选择与禅道绑定只留 AntD 深层规则 | 中 |
 | 36 | 共享组件 7 个文件 | 1,448 | ≤ 450 | 7 → 2 | 删 `case-import`、`base-services-connection`、`legacy-surface`；实体卡片/JSON 编辑器并入共享原语；保留富文本与运行报告 | 高 |
 | 37 | 全局契约 16 个文件 | 2,469 | ≤ 2,100 | 16 → 14 | 只做死规则、重复体、可替代 `!important`；把 `table-row-dividers` 与 `list-name` 并入 `list-table` | 高 |
 | 38 | 收口 | — | ≤ 9,000 / ≤ 45 | 44 | 全量复测、ratchet 两个基线、清理无消费者 token、更新本文与迁移计划 | 低 |
 
-**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 450 + 450 + 2,100 + 1,847（token）= **8,272 行**；文件目标 **44**（≤45，留 1 个文件余量）。达标线是排期目标，最终以实际数字为准；如果某阶段只完成布局迁移，必须在阶段 38 前补做皮肤迁出，否则目标不成立。
+**目标校验**：546（阶段 29 实际）+ 336（阶段 30 实际）+ 329（阶段 31 实际）+ 238（阶段 32 实际）+ 1,449（阶段 33 实际）+ 527（阶段 34 实际）+ 449（阶段 35 实际）+ 450 + 2,100 + 1,847（token）= **8,271 行**；文件目标 **44**（≤45，留 1 个文件余量）。达标线是排期目标，最终以实际数字为准；如果某阶段只完成布局迁移，必须在阶段 38 前补做皮肤迁出，否则目标不成立。
 
 ### 各阶段完成口径
 
@@ -268,13 +265,13 @@
 - 全局按钮/表格/表面契约一次只动一个文件，并用 computed style 对比，不允许“批量去 `!important`”。
 - 页面 Module 剩余 10 处随阶段 35/38 处理；全局 85 处随阶段 37 处理，优先合并同体规则和删死规则，而不是硬去 `!important`。
 
-## 六、重复规则体（15 组）
+## 六、重复规则体（14 组）
 
-结构门禁口径 15 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
+结构门禁口径 14 组，已在 ≤60 目标内。它们主要是跨页面的 `display:none`、`font-size`、`width:100%`、`margin:0`、`flex:0 0 auto`、`min-width:0` 等单属性皮肤/布局规则。处理方式：
 
 - 不单独立项，不为了把 44 降到 0 而合并语义不同的选择器。
 - 页面批次里如果同一规则体落在同一宿主/同一 utility 能表达，就合并；否则保留。
-- 附录 B 列出全部 15 组的成员选择器，供批次内查重，不要求逐组清零。
+- 附录 B 列出全部 14 组的成员选择器，供批次内查重，不要求逐组清零。
 
 ## 七、附录
 
@@ -372,28 +369,26 @@
   - `border-bottom: 1px solid var(--app-list-row-border) !important`
 
 
-### 附录 B：全部 15 组重复规则体
+### 附录 B：全部 14 组重复规则体
 
 > 每组列出所有成员（文件 → 选择器）。只用于查重，不表示必须合并。
 
 1. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail`；`src/features/test-orders/styles/test-order-workspace.module.css → :global(.app-shell):has(.root)`
-2. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/projects-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
-3. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar), .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quick-filters`
-4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`；`src/shared/styles/json-editor.module.css → .toolbarActions`
-5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
-6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
+2. `src/app/styles/layout.css → .app-shell.app-shell-requirement-detail > .ant-layout`；`src/features/projects/styles/sprint-overview.module.css → :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page)`
+3. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-group-header)`；`src/features/ai-testing/styles/ui-stage-visual.module.css → .scope :global(.ai-artifact-mode-controls)`；`src/shared/styles/json-editor.module.css → .toolbarActions`
+4. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-flow-stage .gc-node-main strong)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-node > strong)`
+5. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.gc-inspector-header .gc-state.is-failed), .scope :global(.gc-inspector-header .gc-state.is-rejected)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-danger)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-danger)`
+6. `src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-scope)`；`src/features/ai-testing/styles/generation-canvas.module.css → .scope :global(.api-interface-selector-toolbar)`；`src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-toolbar), .panel :global(.test-order-viz-toolbar) > div`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quick-filters`
 7. `src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-state.is-ok)`；`src/features/ai-testing/styles/generation-chain.module.css → .scope :global(.gc-trace-chip.is-ok)`
-8. `src/features/projects/styles/projects-overview.module.css → .root :global(.requirements-binding-item) img`；`src/features/projects/styles/projects-overview.module.css → .root :global(.sprint-board-binding-status) img`
-9. `src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-state) > div`；`src/shared/styles/run-view.module.css → .root :global(.api-collection-run-history-layout), .root :global(.api-collection-run-history-list)`
+8. `src/features/test-orders/styles/test-order-visualization.module.css → .panel :global(.test-order-viz-state) > div`；`src/shared/styles/run-view.module.css → .root :global(.api-collection-run-history-layout), .root :global(.api-collection-run-history-list)`
+9. `src/features/test-orders/styles/test-order-workspace.module.css → .root:global(.tp-surface) :global(.test-order-workspace), .root :global(.api-automation-content)`；`src/shared/styles/case-import.module.css → .root :global(.ant-modal-body)`
 10. `src/features/test-orders/styles/test-order-workspace.module.css → .root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar), .root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-list-panel > .tp-list-toolbar`
-11. `src/features/test-orders/styles/test-order-workspace.module.css → .root:global(.tp-surface) :global(.test-order-workspace), .root :global(.api-automation-content)`；`src/shared/styles/case-import.module.css → .root :global(.ant-modal-body)`
-12. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
-13. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
-14. `src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-content .tiptap code`；`src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-viewer code`
-15. `src/shared/styles/legacy-surface.css → .requirement-panel-head`；`src/shared/styles/surface-tokens.css → .api-filter-group`
+11. `src/features/ui-automation/styles/ui-detail-inspector.module.css → .scope :global(.ui-wb-card-head)`；`src/shared/styles/surface-tokens.css → .tp-surface .tp-quickbar`
+12. `src/features/ui-automation/styles/ui-detail-shell.module.css → :global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board)`；`src/shared/styles/surface-tokens.css → .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board`
+13. `src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-content .tiptap code`；`src/shared/components/RichTextEditor/rich-text-editor.css → .rich-text-viewer code`
+14. `src/shared/styles/legacy-surface.css → .requirement-panel-head`；`src/shared/styles/surface-tokens.css → .api-filter-group`
 ## 八、执行顺序建议
 
-1. **阶段 29–34（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求）已完成**，当前 53 文件 / 10,331 行；继续 35（基础服务 / Auth / 个人设置 / Projects）。
-2. **35（基础服务/Auth/Projects）**：6 个 Module 1,142 → ≤450；删除 `profile-settings`，项目概览并入 Sprint 看板，环境抽屉与 Auth 以皮肤清理为主。
-3. **再 36（共享组件）**：7 个文件 1,448 → ≤450；删除 `case-import`、`base-services-connection`、`legacy-surface`，实体卡片/JSON 编辑器并入共享原语。
-4. **最后 37–38（全局契约与收口）**：只收缩，不整体迁移；所有 `!important` 变更都在这里做，避免和页面迁移混在一起难以回滚。
+1. **阶段 29–35（UI / API 自动化、测试单、接口库、AI 测试/生成链、用例/Bug/需求、基础服务/Auth/Projects）已完成**，当前 51 文件 / 9,638 行；继续 36（共享组件）。
+2. **36（共享组件）**：7 个文件 1,448 → ≤450；删除 `case-import`、`base-services-connection`、`legacy-surface`，实体卡片/JSON 编辑器并入共享原语。
+3. **最后 37–38（全局契约与收口）**：只收缩，不整体迁移；所有 `!important` 变更都在这里做，避免和页面迁移混在一起难以回滚。

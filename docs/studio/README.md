@@ -86,7 +86,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 ### 需求详情、个人设置与基础服务样式归属
 
 - 需求详情页的页面高度链、面包屑、主/侧栏骨架与窄屏堆叠由 `RequirementDetailPage` / `RequirementDetailHeader` 的 utility 负责；`requirements/styles/requirement-detail.module.css` 只保留链接表面、侧栏动画、画布与文档容器深层结构，根节点挂 `.root`。
-- 个人设置页与独立修改密码页共用 `profile/styles/profile-settings.module.css`，该 Module 只保留渐变、卡片表面与 AntD 深层结构；布局、间距和排版由两页的 Tailwind utility 负责，修改密码页不再有单独 Module。`ChangePasswordPage` 对 profile Module 的跨 feature 导入是结构门禁的显式豁免。
+- 登录页、个人设置页与独立修改密码页共用 `shared/styles/account.module.css`，该 Module 只保留登录页渐变/纹理/玻璃壳、个人设置根背景/头像与 AntD 深层结构；布局、间距和排版由三页的 Tailwind utility 负责。跨 feature 的共享已收敛到 `shared/`，不再需要 `ChangePasswordPage` 对 feature Module 的跨 feature 导入豁免。
 - 禅道 MCP 卡片不再有独立 Module；标题、状态、实例省略与间距均由 `ZentaoMcpServiceCard.tsx` 的 utility 表达。
 - `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。`src/index.css` 不再重复声明控件 `font-family`，避免未分层规则压过 `font-mono`。
 - 阶段 14 后 `src/features` 下不再有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
@@ -101,7 +101,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`theme.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表、软件仓库树与共用的方法签在 `interface-library.module.css`；详情、编辑器深层 AntD 规则与 OpenAPI 导入标签间距在 `interface-detail.module.css`。阶段 32 后页面根与 Modal/Drawer 根挂两个 `.scope`；布局、树节点、仓库表格、编辑器面板、导入步骤与结果都已迁入组件 utility。
 - UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `ui-detail-inspector.module.css`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根同时挂这三个 Module 的作用域。阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
-- Sprint 详情页只保留卡片/健康带表面、图表色块与报告 Markdown 在 `sprint-overview.module.css` / `sprint-overview.module.css`，两者按顺序导入；页面网格、工具栏、指标与断点由 `SprintDetailPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的 `projects-overview.module.css` 保留空态、状态色、焦点与 macOS 皮肤，需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
+- Sprint 详情页与 Projects 概览共用 `sprint-overview.module.css`，只保留卡片/健康带表面、图表色块、状态色映射与报告 Markdown 在 `sprint-overview.module.css`；页面网格、工具栏、指标与断点由 `SprintDetailPage` / `ProjectsPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
 

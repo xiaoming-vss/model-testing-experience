@@ -29,7 +29,6 @@
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
   "crossFeatureCssImports": [
-    "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/styles/profile-settings.module.css",
     "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/generation-chain.module.css"
   ],
   "orphanCss": [],
@@ -110,15 +109,10 @@
       "declarations": 91,
       "selectors": 43
     },
-    "src/features/auth/styles/auth.module.css": {
-      "rules": 28,
-      "declarations": 66,
-      "selectors": 35
-    },
     "src/features/base-services/styles/zentao-binding.module.css": {
-      "rules": 31,
-      "declarations": 104,
-      "selectors": 36
+      "rules": 8,
+      "declarations": 27,
+      "selectors": 8
     },
     "src/features/bugs/styles/bugs.module.css": {
       "rules": 63,
@@ -135,25 +129,15 @@
       "declarations": 64,
       "selectors": 22
     },
-    "src/features/profile/styles/profile-settings.module.css": {
-      "rules": 12,
-      "declarations": 26,
-      "selectors": 13
-    },
     "src/features/projects/styles/environment-drawer.module.css": {
-      "rules": 45,
-      "declarations": 166,
-      "selectors": 48
-    },
-    "src/features/projects/styles/projects-overview.module.css": {
-      "rules": 33,
-      "declarations": 80,
-      "selectors": 35
+      "rules": 11,
+      "declarations": 37,
+      "selectors": 12
     },
     "src/features/projects/styles/sprint-overview.module.css": {
-      "rules": 46,
-      "declarations": 115,
-      "selectors": 54
+      "rules": 33,
+      "declarations": 92,
+      "selectors": 36
     },
     "src/features/requirements/styles/requirement-detail.module.css": {
       "rules": 29,
@@ -199,6 +183,11 @@
       "rules": 37,
       "declarations": 104,
       "selectors": 47
+    },
+    "src/shared/styles/account.module.css": {
+      "rules": 23,
+      "declarations": 61,
+      "selectors": 29
     },
     "src/shared/styles/base-services-connection.module.css": {
       "rules": 27,
@@ -329,10 +318,6 @@
     "790b1e6d62087b78": {
       "count": 2,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
-    },
-    "8470710580857f2c": {
-      "count": 2,
-      "sample": "width: 13px;height: 13px;opacity: 0.4;filter: grayscale(1)"
     },
     "9222d9fe65fe3f15": {
       "count": 2,

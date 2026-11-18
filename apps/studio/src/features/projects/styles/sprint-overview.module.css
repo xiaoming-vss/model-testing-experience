@@ -1,6 +1,6 @@
-/* Sprint 详情页看板皮肤（阶段 12 迁移，阶段 17 收缩）。
- * 页面高度链、网格断点、指标卡片与工具栏排版已迁到 SprintDetailPage 的 Tailwind utility；
- * 这里只保留卡片/健康带的背景与描边、图表色块、状态色和 AntD 深层结构。 */
+/* Sprint 详情页 / Projects 概览共享表面。页面高度链、网格、指标卡片、工具栏、
+ * 健康摘要与报告 Markdown 排版由 SprintDetailPage / ProjectsPage utility 负责；
+ * 这里保留图表、Recharts/AntD 深层结构、伪元素、macOS 表面与状态色映射。 */
 
 .root :global(.sprint-overview-card-rich) :global(.ant-card-body) {
   padding: 16px;
@@ -10,53 +10,6 @@
   flex-direction: column;
 }
 
-.root :global(.sprint-overview-summary-metric) {
-  border-radius: 10px;
-  background: var(--app-info-surface);
-  border: 1px solid var(--app-info-border);
-}
-
-.root :global(.sprint-overview-summary-icon) {
-  color: var(--app-accent);
-  background: var(--app-accent-soft);
-}
-
-.root :global(.sprint-overview-accent-tag) {
-  margin-inline-end: 0;
-  border: none;
-  border-radius: 999px;
-  padding-inline: 10px;
-  color: var(--app-badge-text);
-  background: var(--app-badge-bg);
-}
-
-.root :global(.sprint-overview-card-rich),
-.root :global(.sprint-dashboard-health-band) {
-  border: 1px solid var(--srf-card-border);
-  border-radius: 12px;
-  background: var(--srf-card);
-  box-shadow: none;
-}
-
-.root :global(.sprint-dashboard-health-icon) {
-  color: var(--app-accent);
-  background: var(--app-accent-emphasis);
-}
-
-.root :global(.sprint-dashboard-health-fill-executed) {
-  background: var(--app-result-success);
-}
-
-.root :global(.sprint-dashboard-health-fill-pending) {
-  background: var(--app-result-pending);
-}
-
-.root :global(.sprint-dashboard-health-legend) span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
 .root :global(.sprint-dashboard-health-legend) span::before {
   content: '';
   width: 7px;
@@ -64,37 +17,6 @@
   border-radius: 999px;
   background: var(--legend-color);
 }
-
-.root :global(.sprint-dashboard-health-legend) strong {
-  color: var(--app-shell-text);
-}
-
-.root :global(.sprint-dashboard-health-green) {
-  color: var(--app-result-success);
-}
-
-.root :global(.sprint-dashboard-health-blue) {
-  color: var(--app-accent);
-}
-
-.root :global(.sprint-dashboard-health-red) {
-  color: var(--app-result-failed);
-}
-
-.root :global(.sprint-dashboard-test-row-head) {
-  background: var(--app-frame-row-hover);
-}
-
-.root :global(.sprint-dashboard-test-icon) {
-  color: var(--app-accent);
-  background: var(--app-accent-selection);
-}
-
-/* ===== 原 sprint-dashboard.module.css ===== */
-
-/* Sprint 详情页图表、指标与报告皮肤（阶段 12 迁移，阶段 17 收缩）。
- * 看板网格、工具栏、卡片排版与断点已迁到 SprintDetailPage 的 Tailwind utility；
- * 这里保留图表色块、Recharts/AntD 深层结构、报告 Markdown 排版与 macOS 表面。 */
 
 .root :global(.sprint-dashboard-progress-meta) strong {
   color: var(--app-text-strong);
@@ -141,120 +63,9 @@
   color: var(--app-text-label);
 }
 
-/* ===== 报告 Markdown ===== */
-
 .root :global(.sprint-report-markdown-modal) :global(.ant-modal-body) {
   max-height: min(72vh, 760px);
   overflow: auto;
-}
-
-.root :global(.sprint-report-markdown) {
-  color: var(--app-document-text);
-  font-size: 14px;
-  line-height: 1.72;
-}
-
-.root :global(.sprint-report-markdown) h1,
-.root :global(.sprint-report-markdown) h2,
-.root :global(.sprint-report-markdown) h3,
-.root :global(.sprint-report-markdown) h4 {
-  margin: 20px 0 10px;
-  color: var(--app-document-heading);
-  font-weight: 750;
-}
-
-.root :global(.sprint-report-markdown) h1 {
-  font-size: 24px;
-}
-
-.root :global(.sprint-report-markdown) h2 {
-  font-size: 20px;
-}
-
-.root :global(.sprint-report-markdown) h3 {
-  font-size: 17px;
-}
-
-.root :global(.sprint-report-markdown) h4 {
-  font-size: 15px;
-}
-
-.root :global(.sprint-report-markdown) p {
-  margin: 8px 0;
-}
-
-.root :global(.sprint-report-markdown) ul,
-.root :global(.sprint-report-markdown) ol {
-  margin: 8px 0 12px;
-  padding-left: 24px;
-}
-
-.root :global(.sprint-report-markdown) li {
-  margin: 4px 0;
-}
-
-.root :global(.sprint-report-markdown) blockquote {
-  margin: 12px 0;
-  padding: 10px 14px;
-  border-left: 3px solid var(--app-accent);
-  background: var(--app-document-quote-bg);
-  color: var(--app-document-quote-text);
-}
-
-.root :global(.sprint-report-markdown) code {
-  border-radius: 5px;
-  padding: 2px 5px;
-  background: var(--app-document-code-bg);
-  color: var(--app-document-code-text);
-  font-size: 12px;
-}
-
-.root :global(.sprint-report-markdown) pre {
-  margin: 12px 0;
-  overflow: auto;
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--app-document-code-block-bg);
-}
-
-.root :global(.sprint-report-markdown) pre code {
-  padding: 0;
-  background: transparent;
-  color: var(--app-document-code-block-text);
-  white-space: pre;
-}
-
-.root :global(.sprint-report-markdown-table-wrap) {
-  overflow: auto;
-  margin: 12px 0;
-  border: 1px solid var(--app-document-table-border);
-  border-radius: 8px;
-}
-
-.root :global(.sprint-report-markdown) table {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-}
-
-.root :global(.sprint-report-markdown) th,
-.root :global(.sprint-report-markdown) td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--app-frame-divider);
-  text-align: left;
-  vertical-align: top;
-}
-
-.root :global(.sprint-report-markdown) th {
-  background: var(--app-document-table-heading-bg);
-  color: var(--app-text-strong);
-  font-weight: 700;
-}
-
-/* ===== 看板表面 ===== */
-
-.root :global(.sprint-overview-frame) > :global(.workbench-tabs) {
-  padding: 0;
 }
 
 :root:root :global(.app-shell-macos) .root :global(.sprint-overview-panel-unified) {
@@ -273,4 +84,81 @@
     height: 100%;
     min-height: 0;
   }
+}
+
+/* ===== Projects 页：需求卡片、迭代看板与项目概览表面 ===== */
+.root :global(.requirements-list-scroll) > :global(.ant-empty) { margin: 32px 0; }
+.root :global(.requirements-list-scroll):has(> :global(.ant-empty)) { display: flex; align-items: center; justify-content: center; }
+.root :global(.requirements-list-panel) > :global(.ant-alert) { margin: 12px 16px; }
+
+.root :global(.requirements-card) :global(.entity-card-meta) dd :global(.ant-typography) { color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; }
+
+/* Icon ink comes from the shared action layer: edit amber, bind teal.
+   The overflow trigger stays neutral so it does not compete with the actions. */
+.root :global(.requirements-card-actions) :global(.project-requirement-more-action) {
+  --button-current-text: var(--srf-text-muted);
+  --button-current-hover: var(--button-quiet-hover-bg, var(--srf-hover));
+}
+
+/* 需求页在窄屏锁定工作台高度，滚动交给列表板面。 */
+@media (max-width: 900px) {
+  :global(.app-shell):has(:global(.requirements-page)) { height: 100vh; min-height: 0; }
+  :global(.app-shell):has(:global(.requirements-page)) > :global(.ant-layout),
+  :global(.app-shell):has(:global(.requirements-page)) :global(.app-content) { min-height: 0; overflow: hidden; }
+  :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-page):global(.requirements-page) { height: 100%; min-height: 0; overflow: hidden; }
+  :global(.app-shell):has(:global(.requirements-page)) :global(.workbench-tabs) { min-height: 0; overflow: hidden; }
+}
+
+/* ===== 迭代看板 ===== */
+.root :global(.sprint-board-scroll) > :global(.ant-alert) { margin-bottom: 16px; }
+.root :global(.sprint-board-scroll) > :global(.ant-empty) { margin: 48px 16px; }
+.root :global(.sprint-board-status)::before { content: ""; width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.root :global(.sprint-board-actions) :global(.ant-btn) {
+  --action-tone: var(--app-action-read);
+  --button-current-text: var(--app-action-read);
+  --button-current-hover: var(--app-action-read-soft);
+  --button-current-hover-border: transparent;
+  --button-current-active: var(--app-action-read-soft);
+}
+
+/* ===== 项目概览 ===== */
+:global(.app-shell-macos) :global(.project-description-text) {
+  color: var(--mac-glass-muted);
+}
+
+:global(.app-shell-macos) .root {
+  --project-overview-border: var(--legacy-project-overview-border);
+  --project-overview-panel: var(--legacy-project-overview-panel);
+  --project-overview-panel-soft: var(--legacy-project-overview-panel-soft);
+  --project-overview-card: var(--legacy-project-overview-card);
+  --project-overview-card-hover: var(--legacy-project-overview-card-hover);
+  --project-overview-text: var(--legacy-project-overview-text);
+  --project-overview-secondary: var(--legacy-project-overview-secondary);
+  --project-overview-muted: var(--legacy-project-overview-muted);
+  --project-overview-blue: var(--legacy-project-overview-blue);
+  background: transparent;
+}
+
+:global(.app-shell-macos) .root :global(.workbench-tabs) {
+  padding: var(--app-page-gutter);
+  gap: 12px;
+}
+
+:global(.app-shell-macos) .root :global(.workbench-empty) {
+  border: 1px solid var(--project-overview-border);
+  background: var(--project-overview-panel);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
+}
+
+:global(.app-shell-macos) .root :global(.project-description-text) {
+  color: var(--project-overview-muted);
+}
+
+:global(.app-shell-macos) .root :global(.action-btn-create):global(.ant-btn-primary) {
+  border: 1px solid var(--app-glass-action-border-hover);
+  border-radius: 10px;
 }

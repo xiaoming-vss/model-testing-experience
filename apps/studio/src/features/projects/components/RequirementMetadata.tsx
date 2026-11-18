@@ -14,7 +14,7 @@ export function RequirementCodeSummary({ requirement, variant = 'summary' }: { r
     const bound = count > 0
     const labels = (bindings ?? []).map(label)
     return <Tooltip title={bound ? <>{labels.map((item, index) => <div key={index}>{item}</div>)}</> : undefined}>
-      <span className={`requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]${bound ? ' is-bound' : ''}`} tabIndex={bound ? 0 : undefined}>
+      <span className={`requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] [&_img]:h-[13px] [&_img]:w-[13px] [&_img]:opacity-40 [&_img]:grayscale focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)] ${bound ? 'is-bound text-[var(--srf-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'text-[var(--srf-text-secondary)]'}`} tabIndex={bound ? 0 : undefined}>
         <AppIcon name="gitlab" size={14} />
         <span>软件仓库 {bound ? `已关联${count > 1 ? `（${count}）` : ''}` : '未关联'}</span>
       </span>

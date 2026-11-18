@@ -1,13 +1,6 @@
 /* Auth 页复杂皮肤：渐变、纹理、玻璃壳与 Ant Design 深层结构。
    布局、间距和排版由 AuthPage.tsx 的 Tailwind utility 负责。 */
 
-.page {
-  color: var(--app-auth-text);
-  background:
-    linear-gradient(180deg, var(--app-auth-gradient-start), var(--app-auth-gradient-end)),
-    var(--app-profile-surface);
-}
-
 .page::before {
   content: '';
   position: absolute;
@@ -24,6 +17,8 @@
     );
 }
 
+.title { color: var(--app-auth-text); }
+
 .shell {
   border: 1px solid var(--app-auth-panel-border);
   border-radius: 22px;
@@ -33,53 +28,6 @@
   -webkit-backdrop-filter: saturate(180%) blur(30px);
   backdrop-filter: saturate(180%) blur(30px);
   box-shadow: inset 0 1px 0 var(--app-glass-highlight-91);
-}
-
-.brandPanel {
-  border-right: 1px solid var(--app-auth-panel-divider);
-  background:
-    linear-gradient(90deg, var(--app-auth-aside-bg), var(--app-glass-surface-36)),
-    var(--app-glass-surface-24);
-}
-
-.brandName {
-  color: var(--app-auth-text);
-  font-family: var(--app-font-sans);
-}
-
-.brandSubtitle,
-.brandCopyText {
-  color: var(--app-auth-text-secondary);
-  font-family: var(--app-font-sans);
-}
-
-.capabilityItem {
-  border-bottom: 1px solid var(--app-glass-border-strong);
-  color: var(--app-auth-text-muted);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: var(--app-auth-dot-neutral);
-}
-
-.dotBlue {
-  background: var(--app-auth-dot-primary);
-}
-
-.dotTeal {
-  background: var(--app-auth-dot-secondary);
-}
-
-.title {
-  color: var(--app-auth-text);
-}
-
-.titleCopy {
-  color: var(--app-auth-text-secondary);
 }
 
 .form :global(.ant-form-item) {
@@ -159,17 +107,44 @@
   line-height: 20px;
 }
 
-.switchText {
-  color: var(--app-auth-text-muted);
-}
-
-.footer {
-  color: var(--app-auth-meta);
-}
-
 @media (max-width: 900px) {
   .brandPanel {
     border-right: 0;
     border-bottom: 1px solid var(--app-auth-footer-divider);
   }
+}
+
+/* 个人设置 / 修改密码：页面背景、头像渐变与 AntD 字段深层规则。
+ * 卡片表面、边框、标题分隔线与底栏已由 ProfilePage / ChangePasswordPage utility 负责。 */
+.profileRoot {
+  --profile-surface: var(--app-glass-surface-94);
+  --profile-border: var(--app-profile-border);
+  --profile-muted: var(--app-profile-text-muted);
+  --profile-tint: var(--app-profile-tint);
+  background: radial-gradient(ellipse at 20% 10%, var(--app-profile-accent-bg), transparent 55%), var(--app-profile-surface);
+}
+
+.profileAvatar {
+  background: linear-gradient(135deg, var(--app-profile-avatar-gradient-start), var(--app-profile-avatar-gradient-end));
+  color: var(--app-on-accent);
+}
+
+.profileFields :global(.ant-form-item) {
+  margin-bottom: 24px;
+}
+
+.profileFields :global(.ant-form-item-label) > :global(label) {
+  font-weight: 600;
+}
+
+.profileFields :global(.ant-input) {
+  min-height: 44px;
+  border-radius: 10px;
+  padding-inline: 14px;
+}
+
+.profileRoot :global(.ant-btn) {
+  height: 40px;
+  padding-inline: 22px;
+  border-radius: 10px;
 }

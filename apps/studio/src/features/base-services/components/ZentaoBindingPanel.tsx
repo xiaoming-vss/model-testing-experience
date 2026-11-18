@@ -105,12 +105,6 @@ function getBindingStatusText(status?: string) {
   return status
 }
 
-function getBindingStatusTone(status?: string) {
-  if (status === 'active') return 'active'
-  if (status === 'disabled') return 'disabled'
-  return 'neutral'
-}
-
 function getBindingEntityLabel(targetType: ZentaoBindingTargetType) {
   if (targetType === 'project') return '项目'
   if (targetType === 'sprint') return '执行'
@@ -149,10 +143,10 @@ export function ZentaoBindingBadge({ targetType, binding: currentBinding, varian
 }) {
   if (variant === 'settings') {
     if (!currentBinding) return <Text type="secondary">未绑定项目</Text>
-    return <div className={styles.settingsDetails}>
-      <div className={styles.settingsLine}>
-        <Text className={styles.settingsName}>{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding)}</Text>
-        <Tag color={currentBinding.status === 'active' ? 'success' : 'default'}>{getBindingStatusText(currentBinding.status)}</Tag>
+    return <div className="settingsDetails mt-3 flex flex-col gap-1.5">
+      <div className="settingsLine flex items-start justify-between gap-3">
+        <Text className="settingsName min-w-0 [overflow-wrap:anywhere]">{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding)}</Text>
+        <Tag className="shrink-0" color={currentBinding.status === 'active' ? 'success' : 'default'}>{getBindingStatusText(currentBinding.status)}</Tag>
       </div>
       <Text type="secondary">项目 ID：{getBindingRemoteResourceId(currentBinding) || '-'}</Text>
     </div>
@@ -165,17 +159,23 @@ export function ZentaoBindingBadge({ targetType, binding: currentBinding, varian
   const statusText = getBindingStatusText(currentBinding.status)
   const summaryTitle = `禅道已绑定 ${entityLabel} ${remoteName} | ID ${remoteId} | ${statusText}`
 
+  const statusClass = currentBinding.status === 'active'
+    ? 'text-[var(--app-accent)] border-[var(--app-testing-active-border)] bg-[var(--app-editor-focus-ring)]'
+    : currentBinding.status === 'disabled'
+      ? 'text-[var(--app-service-status-disabled-text)] border-[var(--app-service-status-disabled-border)] bg-[var(--app-service-status-disabled-bg)]'
+      : 'text-[var(--app-result-warning-text)] border-[var(--app-service-status-warning-border)] bg-[var(--app-service-status-warning-bg)]'
+
   return (
-    <div className={styles.summary} title={summaryTitle}>
-      <div className={styles.summaryMain}>
+    <div className="summary flex min-w-0 max-w-full items-center gap-2 whitespace-nowrap text-xs leading-[18px] text-[var(--tp-text-muted)]" title={summaryTitle}>
+      <div className="summaryMain flex min-w-0 items-center gap-1.5 overflow-hidden">
         <Tag color="blue">禅道</Tag>
-        <span className={styles.summaryKey}>{entityLabel}</span>
-        <span className={styles.summaryName}>{remoteName}</span>
-        <span className={styles.summarySeparator}>/</span>
-        <span className={styles.summaryKey}>ID</span>
-        <span className={styles.summaryMeta}>{remoteId}</span>
+        <span className="summaryKey flex-none text-[var(--app-service-text-label)]">{entityLabel}</span>
+        <span className="summaryName min-w-0 flex-none overflow-hidden text-ellipsis font-semibold text-[var(--tp-text)]">{remoteName}</span>
+        <span className="summarySeparator flex-none text-[var(--app-service-text-placeholder)]">/</span>
+        <span className="summaryKey flex-none text-[var(--app-service-text-label)]">ID</span>
+        <span className="summaryMeta flex-none overflow-hidden text-ellipsis">{remoteId}</span>
       </div>
-      <span className={`${styles.summaryStatus} ${styles[getBindingStatusTone(currentBinding.status)]}`}>{statusText}</span>
+      <span className={`flex-none rounded-full border px-2 text-[11px] leading-[18px] ${statusClass}`}>{statusText}</span>
     </div>
   )
 }
@@ -436,10 +436,10 @@ export function ZentaoBindingModal({
       footer={null}
       destroyOnHidden
     >
-      <div className={styles.head}>
-        <Title level={5}>当前绑定</Title>
+      <div className="head flex flex-wrap items-center justify-between gap-4">
+        <Title level={5} className="mb-0 text-[15px] leading-[22px]">当前绑定</Title>
         {currentBinding ? (
-          <Space size={8} wrap className={styles.current}>
+          <Space size={8} wrap className="current min-w-0 justify-start">
             <Tag color="blue">{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding) || '-'}</Tag>
             <Text type="secondary">ID：{getBindingRemoteResourceId(currentBinding) || '-'}</Text>
             <Text type="secondary">状态：{getBindingStatusText(currentBinding.status)}</Text>
@@ -465,7 +465,7 @@ export function ZentaoBindingModal({
       {storiesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(storiesQuery.error)} /> : null}
       {((targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding) ||
       (targetType === 'requirement' && inheritedSprintBinding) ? (
-        <div className={styles.inheritNote}>
+        <div className="inheritNote flex flex-wrap items-center gap-2 px-0.5 text-xs leading-[22px] text-[var(--tp-text-secondary,var(--app-control-text))]">
           <Text type="secondary">已使用上级绑定；修改上级目标请到对应项目或迭代的绑定配置</Text>
           {(targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding ? (
             <Tag color="blue">
@@ -481,9 +481,9 @@ export function ZentaoBindingModal({
       ) : null}
 
       {targetType === 'project' && (
-        <div className={styles.formRow}>
+        <div className="formRow flex flex-wrap items-center gap-2.5">
           <Text>项目 MCP 服务</Text>
-          <Select className={`${styles.select} ${styles.mcpSelect}`} aria-label="项目 MCP 服务" value={effectiveMcpId}
+          <Select className="w-[220px] min-w-0 flex-1 max-[680.01px]:w-full" aria-label="项目 MCP 服务" value={effectiveMcpId}
             loading={mcpQuery.isLoading} placeholder="选择项目使用的禅道 MCP"
             disabled={!can('manage')} showSearch optionFilterProp="label"
             options={mcps.map(service => ({ value: service.serviceId, label: `${service.name} · ${service.zentaoInstanceUrl || service.baseUrl}` }))}
@@ -506,9 +506,9 @@ export function ZentaoBindingModal({
       {!parentReady && <Alert showIcon type="info" title="请先完成上级项目和迭代的禅道绑定" />}
       {mcp && <Text type="secondary">当前服务：{mcp.name} · {mcp.zentaoInstanceUrl || '实例地址未确认'} · 使用本人授权</Text>}
       {mcpReady && parentReady && (
-        <div className={styles.formRow}>
+        <div className="formRow flex flex-wrap items-center gap-2.5">
           <Select
-            className={styles.select}
+            className="w-[220px] max-[680.01px]:w-full"
             aria-label="禅道项目"
             loading={projectsQuery.isLoading}
             value={remoteProjectId}
@@ -521,7 +521,7 @@ export function ZentaoBindingModal({
           />
           {depth !== 'project' ? (
             <Select
-              className={styles.select}
+              className="w-[220px] max-[680.01px]:w-full"
               aria-label="禅道执行"
               loading={executionsQuery.isLoading}
               value={remoteExecutionId}
@@ -535,7 +535,7 @@ export function ZentaoBindingModal({
           ) : null}
           {depth === 'story' ? (
             <Select
-              className={styles.select}
+              className="w-[220px] max-[680.01px]:w-full"
               aria-label="禅道需求"
               loading={storiesQuery.isLoading}
               value={remoteLeafResourceId}
@@ -549,7 +549,7 @@ export function ZentaoBindingModal({
           ) : null}
           <ProjectActionButton action="manage" projectId={projectId}
             type="primary"
-            className="action-btn-save"
+            className="action-btn-save max-[680.01px]:w-full"
             loading={saveBindingMutation.isPending}
             disabled={!can('manage') || !mcpReady || !parentReady || !selectedRemoteResourceId || (instanceSwitch && !confirmInstanceSwitch) || projectsQuery.isError || executionsQuery.isError || storiesQuery.isError}
             onClick={() => saveBindingMutation.mutate()}

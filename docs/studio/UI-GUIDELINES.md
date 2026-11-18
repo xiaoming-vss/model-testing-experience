@@ -369,7 +369,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 `features/projects/components/SprintBoard.tsx` 以连续卡片网格展示全部迭代，仍按进行中 → 未开始 → 已完成 → 其他状态稳定排序后统一分页，同状态保留接口顺序；不隐藏已完成记录，状态圆点标签继续显示在各卡片上。切换项目重置分页。
 
-项目信息栏独立成顶部卡片，使用共享表头底色 `--srf-list-header-bg`，包含项目名、角色、描述与刷新／新建；下方迭代卡片区与底部分页共用一个内容容器，使用主题背景、细描边和 12px 圆角。卡片区内边距 16px 并独立滚动，分页固定在板面底部。卡片沿用真实名称，不拆出虚构版本字段；开始和结束时间拆成两列并显示到分钟。名称为可聚焦的详情链接；编辑、禅道绑定、删除直接展示并保留原权限和删除确认。未绑定显示“禅道 未绑定”；已绑定底栏显示“禅道 已绑定 · 绑定名称”，名称过长省略，悬停显示完整名称、ID 和状态。标题统一使用 650 字重，状态由标题右侧圆点标签表达。页面复用公共分页；需求/迭代卡片排版由组件 utility 负责，`features/projects/styles/projects-overview.module.css` 只保留空态、状态色、焦点与 macOS 表面，不覆盖其他页面的旧卡片样式。
+项目信息栏独立成顶部卡片，使用共享表头底色 `--srf-list-header-bg`，包含项目名、角色、描述与刷新／新建；下方迭代卡片区与底部分页共用一个内容容器，使用主题背景、细描边和 12px 圆角。卡片区内边距 16px 并独立滚动，分页固定在板面底部。卡片沿用真实名称，不拆出虚构版本字段；开始和结束时间拆成两列并显示到分钟。名称为可聚焦的详情链接；编辑、禅道绑定、删除直接展示并保留原权限和删除确认。未绑定显示“禅道 未绑定”；已绑定底栏显示“禅道 已绑定 · 绑定名称”，名称过长省略，悬停显示完整名称、ID 和状态。标题统一使用 650 字重，状态由标题右侧圆点标签表达。页面复用公共分页；需求/迭代卡片排版由组件 utility 负责，`features/projects/styles/sprint-overview.module.css` 只保留状态色映射、图表与 AntD 深层结构，不覆盖其他页面的旧卡片样式。
 
 验证：`SprintBoard.test.tsx` 和 `ProjectsPage.test.tsx` 覆盖排序后分页、未知状态保留、删除确认、只读权限和原需求列表。正式页面在 1920、1680、1440、760、390 像素宽度及 1920 深色下检查无横向溢出，卡片保持 218px 最小高度，项目信息栏独立于卡片板面，刷新与新建位于项目信息栏右侧，新建可打开既有抽屉。截图 `.scratch/base-panels-preview/sprint-new-1920.png`、`sprint-new-1680.png`、`sprint-new-1440.png`、`sprint-new-760.png`、`sprint-new-390.png` 和 `sprint-new-dark-1920.png`；未提交真实业务写操作。
 
@@ -383,7 +383,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 - 创建时间默认显示到分钟，悬停展示完整时间。软件仓库关联摘要沿用列表接口的当前页批量数据，不逐卡请求。
 - 编辑、禅道绑定直接展示，关联软件仓库和删除保留“更多”菜单，删除继续二次确认。项目成员可关联软件仓库，软件仓库本身的维护仍仅限项目所有者；全局迭代范围和服务端分页不变。
 
-实现：`features/projects/components/RequirementCards.tsx`、`SprintBoard.tsx`、`ProjectsPage.tsx`、`projects-overview.module.css` 和 `RequirementRowActions.tsx`；卡片行/标题排版在组件 utility。检查：`ProjectsPage.test.tsx`、`RequirementRowActions.test.tsx`；卡片排列、长内容及窄屏溢出另以浏览器验证。
+实现：`features/projects/components/RequirementCards.tsx`、`SprintBoard.tsx`、`ProjectsPage.tsx`、`sprint-overview.module.css` 和 `RequirementRowActions.tsx`；卡片行/标题排版在组件 utility。检查：`ProjectsPage.test.tsx`、`RequirementRowActions.test.tsx`；卡片排列、长内容及窄屏溢出另以浏览器验证。
 
 2026-10-22 按用户确认的表格参考结构调整需求页：标题栏从卡片板面中拆出，成为独立顶部卡片；下方卡片板面单独成框，移除页面内的搜索／筛选；顶部卡片显示真实总数并保留刷新、新建。实际页面在 1680、1440、760、390 像素宽度及 1680 深色下检查无横向溢出，截图位于 `.scratch/base-panels-preview/requirements-header-*.png` 和 `requirements-header-dark-1680.png`。
 

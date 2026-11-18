@@ -3,7 +3,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { ListSurface } from '@/shared/components/ListSurface'
 import { PageToolbar } from '@/shared/components/PageToolbar'
-import projectsOverviewStyles from '../styles/projects-overview.module.css'
+import projectsOverviewStyles from '../styles/sprint-overview.module.css'
 import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
@@ -438,7 +438,7 @@ export function ProjectsPage() {
                     <div><span>ID </span>{remoteId || '-'}</div>
                     <div><span>状态 </span>{statusText}</div>
                   </div> : undefined}>
-                    <span className={`sprint-board-binding-status inline-flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]${binding ? pending ? ' is-pending' : ' is-bound' : ''}`} tabIndex={binding ? 0 : undefined}>
+                    <span className={`sprint-board-binding-status inline-flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] [&_img]:h-[13px] [&_img]:w-[13px] [&_img]:opacity-40 [&_img]:grayscale focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)] ${binding ? pending ? 'is-pending text-[var(--app-status-warning-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'is-bound text-[var(--srf-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'text-[var(--srf-text-secondary)]'}`} tabIndex={binding ? 0 : undefined}>
                       <AppIcon name="zentao" size={13} />
                       <span>禅道 {binding ? pending ? '待确认' : '已绑定' : '未绑定'}</span>
                       {binding && remoteName ? <><span className="sprint-board-binding-separator text-[var(--srf-text-muted)] opacity-[0.55]" aria-hidden="true">·</span><span className="sprint-board-binding-name max-w-[100px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-[var(--srf-text)]" title={remoteName}>{remoteName}</span></> : null}
@@ -484,7 +484,7 @@ export function ProjectsPage() {
                     renderBinding={requirement => {
                       const binding = requirement.zentaoBinding
                       const pending = Boolean(binding?.status && binding.status !== 'active')
-                      const className = `requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] text-[var(--srf-text-secondary)]${binding ? pending ? ' is-pending' : ' is-bound' : ''}`
+                      const className = `requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] [&_img]:h-[13px] [&_img]:w-[13px] [&_img]:opacity-40 [&_img]:grayscale focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)] ${binding ? pending ? 'is-pending text-[var(--app-status-warning-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'is-bound text-[var(--srf-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'text-[var(--srf-text-secondary)]'}`
                       const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
                       const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
                       const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'

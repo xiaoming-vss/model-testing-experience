@@ -77,7 +77,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S6 | CSS 位置唯一：`features/<f>/styles/`。**禁止**在 `components/`、`pages/` 下放 CSS；全局层只允许 `app/styles/`、`shared/styles/` | 审计时 25 个 CSS 散在 6 类位置：`src/` 根 2、`app/styles/` 6、`shared/styles/` 1、`features/*/styles/` 10、`features/*/components/` 3、`features/*/pages/` 3。阶段 8 已删除 `ai-testing/components/` 下 `RevisionSidePanel.css`、`FunctionalCaseRelationsViewer.css`、`FunctionalCaseRelationsGraph.css`，并把样式并入 `styles/` Module；`ai-testing/pages/RequirementAnalysisTaskDetailPage.css` 已于 2026-11-15 删除；阶段 14 把最后的 `profile/pages/ProfilePage.css` 迁到 `profile/styles/profile-settings.module.css`，`features/` 下已无非 Module CSS | 扫描脚本路径检查（**阶段 14 后无存量豁免**） |
+| S6 | CSS 位置唯一：`features/<f>/styles/`。**禁止**在 `components/`、`pages/` 下放 CSS；全局层只允许 `app/styles/`、`shared/styles/` | 审计时 25 个 CSS 散在 6 类位置：`src/` 根 2、`app/styles/` 6、`shared/styles/` 1、`features/*/styles/` 10、`features/*/components/` 3、`features/*/pages/` 3。阶段 8 已删除 `ai-testing/components/` 下 `RevisionSidePanel.css`、`FunctionalCaseRelationsViewer.css`、`FunctionalCaseRelationsGraph.css`，并把样式并入 `styles/` Module；`ai-testing/pages/RequirementAnalysisTaskDetailPage.css` 已于 2026-11-15 删除；阶段 14 把最后的 `profile/pages/ProfilePage.css` 迁到 `profile/styles/profile-settings.module.css`，阶段 35 该 Module 又并入共享 `shared/styles/account.module.css`，`features/` 下已无非 Module CSS | 扫描脚本路径检查（**阶段 14 后无存量豁免**） |
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/shell.css` / `shell-header.css` 仍引用需求、迭代、测试等 feature 内部类名（拆分前审计 87 个；阶段 13 又删除了 `.app-sider`、`.brand-row`、`.project-actions` 等零引用外壳块）、`layout.css` 仍有存量引用；阶段 7 已删除 `features/api-automation/styles/detail.css`（其中 30 处 `.ui-*` 随旧样式清理），全局层剩余引用仍按存量豁免 | 扫描脚本前缀统计（**存量豁免**） |
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | 阶段 7 后 `--tp-text` / `--tp-border` / `--tp-border-soft` 只由 `app/styles/shell.css` 定义，`shared/styles/legacy-surface.css` 与 `features/projects/styles/sprint-overview.module.css` 的消费方向已单向 | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
@@ -128,7 +128,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 页面 | 页面样式文件 |
 | --- | --- |
 | 用例库 | `features/test-cases/styles/case-library.module.css`（含用例编辑与导入禅道弹窗皮肤）；页面骨架与导航布局在 `CaseLibraryPage` utility |
-| 项目 / 迭代看板 | `features/projects/styles/projects-overview.module.css` + `sprint-overview.module.css`；页面网格与断点在 Projects/Sprint 页面 utility |
+| 项目 / 迭代看板 | `features/projects/styles/sprint-overview.module.css`（Projects 概览与 Sprint 详情共用）；页面网格与断点在 Projects/Sprint 页面 utility |
 | 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-detail.module.css`；列表/树、详情、编辑器与导入流程布局在组件 utility |
 | 测试单 | `features/test-orders/styles/test-order-workspace.module.css` + `test-order-visualization.module.css`；列表、工作台骨架、图谱页壳/查看器与判定区排版在页面/组件 utility |
 | API 测试 | `features/api-automation/styles/api-detail-shell.module.css` + `api-detail-rules.module.css`；列表、详情两栏、顶栏、用例行、请求面板与后置操作布局在页面与组件 utility |
