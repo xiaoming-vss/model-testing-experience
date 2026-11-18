@@ -167,7 +167,7 @@
 @keyframes gc-state-dot-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes gc-state-dot-glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); } 50% { box-shadow: 0 0 7px 1px color-mix(in srgb, currentColor 55%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .scope :global(.gc-inspector-header .gc-state::before),
- .scope :global(.gc-inspector-header .gc-state::after) { animation: none !important; } }
+ .scope :global(.gc-inspector-header .gc-state::after) { animation: none; } }
 .scope :global(.gc-inspector-content) { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 16px 16px; }
 .scope :global(.gc-inspector-summary) { margin-bottom: 14px; color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .scope :global(.gc-inspector-summary dl) { margin: 12px 0 0; border-top: 1px solid var(--app-surface-divider); }

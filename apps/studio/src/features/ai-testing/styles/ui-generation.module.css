@@ -417,5 +417,5 @@
 
 .scope:global(.llm-connection-select-modal) :global(.ant-modal-header),
 .scope:global(.llm-connection-select-modal) :global(.ant-modal-footer) {
-  background: transparent !important;
+  background: transparent;
 }

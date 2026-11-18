@@ -11,7 +11,7 @@
  * 由 `ApiCollectionDetailPage` 引入，选择器统一挂在页面根节点的 Module `.scope` 下，与上面两个文件不重叠。
  *
  * 颜色只取 `--srf-*` / `--srf-tone-*`：两个页签的所有取值都来自 `surface-tokens.css` 的色盘。
- * 覆盖全局按钮皮肤的规则在文件末尾——那一段必须带 `.app-shell.app-shell-macos`
+ * 覆盖全局按钮皮肤的规则在文件末尾——那一段必须带 `.app-shell-macos`
  * 前缀与 `!important`，理由见 `docs/studio/STRUCTURE.md` 的 S14。
  */
 

@@ -31,7 +31,7 @@
 }
 
 /* 沿用平台工作台外边距，详情与列表共用同一内容区。 */
-:global(.app-shell.app-shell-macos) .root :global(.api-automation-content) {
+:global(.app-shell-macos) .root :global(.api-automation-content) {
   padding: 12px var(--app-page-gutter) 16px;
 }
 

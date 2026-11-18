@@ -503,7 +503,7 @@
 :root[data-theme="dark"] .scope :global(.uisv-readiness-legend) { color: var(--uisv-d29922); }
 :root[data-theme="dark"] .scope :global(.uisv-readiness-legend .ready) { background: var(--uisv-3fb950); }
 :root[data-theme="dark"] .scope :global(.uisv-readiness-legend .gap) { background: var(--uisv-d29922); }
-:root[data-theme="dark"] .scope :global(.uisv-readiness-strip .ant-progress-rail) { background: var(--uisv-30363d) !important; }
+:root[data-theme="dark"] .scope :global(.uisv-readiness-strip .ant-progress-rail) { background: var(--uisv-30363d); }
 :root[data-theme="dark"] .scope :global(.uisv-keyword) { background: var(--uisv-21262d); color: var(--uisv-8b949e); }
 :root[data-theme="dark"] .scope :global(.uisv-kw-click) { background: var(--uisv-rgba-56-139-253-0-15); color: var(--uisv-58a6ff); }
 :root[data-theme="dark"] .scope :global(.uisv-kw-assert_visible),

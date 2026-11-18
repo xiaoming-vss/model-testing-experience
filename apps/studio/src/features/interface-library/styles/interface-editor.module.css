@@ -164,9 +164,9 @@
   padding: 3px 7px;
 }
 
-.scope :global(.if-col-enabled) { width: 48px; text-align: center !important; }
+.scope :global(.if-col-enabled) { width: 48px; text-align: center; }
 .scope :global(.if-col-type) { width: 106px; }
-.scope :global(.if-col-required) { width: 52px; text-align: center !important; }
+.scope :global(.if-col-required) { width: 52px; text-align: center; }
 .scope :global(.if-col-action) { width: 42px; }
 .scope :global(.if-kv-table th.if-col-enabled),
 .scope :global(.if-kv-table td:first-child) { text-align: center; }

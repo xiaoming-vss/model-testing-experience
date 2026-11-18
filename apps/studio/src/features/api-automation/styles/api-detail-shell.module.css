@@ -267,8 +267,8 @@
 }
 
 .scope :global(.api-wb-method .ant-select-selector) {
-  border-color: var(--srf-tone-border) !important;
-  background: var(--srf-tone-bg) !important;
+  border-color: var(--srf-tone-border);
+  background: var(--srf-tone-bg);
 }
 
 .scope :global(.api-wb-method .ant-select-selection-item) {

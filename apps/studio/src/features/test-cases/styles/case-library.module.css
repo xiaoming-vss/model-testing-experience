@@ -72,7 +72,7 @@
 }
 
 .root :global(.case-library-tree-search) :global(.ant-input-affix-wrapper) {
-  border-radius: 6px !important;
+  border-radius: 6px;
   background: var(--srf-hover);
   font-size: 11px;
 }
@@ -350,18 +350,18 @@
 
 .root :global(.case-editor-title-input):global(.ant-input) {
   min-height: 40px;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-control) !important;
-  background: var(--srf-card) !important;
-  color: var(--srf-text) !important;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+  color: var(--srf-text);
   font-size: 13px;
   box-shadow: none;
 }
 
 .root :global(.case-editor-title-input):global(.ant-input):focus,
 .root :global(.case-editor-title-input):global(.ant-input-focused) {
-  border-color: var(--srf-accent) !important;
-  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
 }
 
 /* 用例名称区块里的表单项自己控制间距，不要再叠一层 margin。 */
@@ -382,55 +382,55 @@
 
 .root :global(.case-editor-section) :global(.ant-select-selector) {
   min-height: 36px;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-control) !important;
-  background: var(--srf-card) !important;
-  color: var(--srf-text) !important;
-  box-shadow: none !important;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+  color: var(--srf-text);
+  box-shadow: none;
 }
 
 .root :global(.case-editor-section) :global(.ant-select-focused) :global(.ant-select-selector) {
-  border-color: var(--srf-accent) !important;
-  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
 }
 
 .root :global(.case-editor-section) :global(.ant-select-selection-item),
 .root :global(.case-editor-section) :global(.ant-select-selection-placeholder) {
-  color: var(--srf-text) !important;
+  color: var(--srf-text);
   font-size: 12px;
   line-height: 34px;
 }
 
 .root :global(.case-editor-section) :global(.ant-select-selection-placeholder) {
-  color: var(--srf-text-muted) !important;
+  color: var(--srf-text-muted);
 }
 
 /* ===== 前置条件 / 步骤 / 预期结果的文本域 ===== */
 
 .root :global(.case-editor-section) textarea:global(.ant-input) {
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-control) !important;
-  background: var(--srf-card) !important;
-  color: var(--srf-text) !important;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+  color: var(--srf-text);
   font-size: 13px;
   line-height: 22px;
   padding: 10px 12px;
-  box-shadow: none !important;
+  box-shadow: none;
   resize: none;
 }
 
 /* 操作步骤 / 预期结果的文本域在着色头带下面，不再单独描边。 */
 .root :global(.case-editor-section-tinted) textarea:global(.ant-input) {
-  border: 0 !important;
+  border: 0;
 }
 
 .root :global(.case-editor-section) textarea:global(.ant-input):focus {
-  border-color: var(--srf-accent) !important;
-  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
 }
 
 .root :global(.case-editor-section) textarea:global(.ant-input)::placeholder {
-  color: var(--srf-text-muted) !important;
+  color: var(--srf-text-muted);
 }
 
 /* 两列步骤输入框等高。 */

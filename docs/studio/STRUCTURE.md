@@ -82,8 +82,8 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | 阶段 7 后 `--tp-text` / `--tp-border` / `--tp-border-soft` 只由 `app/styles/shell.css` 定义，`shared/styles/legacy-surface.css` 与 `features/projects/styles/sprint-overview.module.css` 的消费方向已单向 | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
 | S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`app/styles/shell.css` 仍用 `!important` 给 `.workbench-panel` 铺玻璃表面，列表页靠 `surface-tokens.css` 中带 `.app-shell-macos .testing-page` 前缀的板面覆盖压住，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`shell.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
-| S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
-| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 长前缀；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 737 处 `!important`、194 处长前缀维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
+| S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 23 后长前缀已归零、`!important` 95 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
+| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
 
 数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 
@@ -148,11 +148,10 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 **「多出来的容器」都出在同一处：覆盖了外壳玻璃面，但权重没压过它。** 三处踩过的坑，改这一层时逐条对：
 
-- 板面 `.tp-board`：`shell.css` 的玻璃规则写成
-  `.app-shell.app-shell-macos :is(<页面类…>) :is(<面板类…>)`，两个 `:is()` 各 1 分，
-  合计 **(0,6,0)**——与 `shared/styles/surface-tokens.css` 里那条 `.tp-board` 覆盖（(0,2,0)）相比权重更高，
-  顺序一变板面就会重新拿到玻璃底 + 内高光 + 28px 阴影，表现为内容区凭空多出一层容器。
-  修法是多带 `.app-shell-macos .testing-page` 前缀抬到 (0,7,0)，不再依赖 import 顺序。
+- 板面 `.tp-board`：`shell-header.css` 的 macOS 玻璃规则写成
+  `.app-shell-macos .workbench-panel` 并带 `!important`，与 `shared/styles/surface-tokens.css` 里那条 `.tp-board` 覆盖同权重，
+  只靠 import 顺序决胜——顺序一变板面就会重新拿到玻璃底 + 内高光 + 28px 阴影，表现为内容区凭空多出一层容器。
+  修法是多带 `.app-shell-macos .testing-page` 前缀并保留板面覆盖的 `!important`，不再依赖 import 顺序。
 - 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；旧 `.panel-header` / `.api-panel-header` 的容器规则通过 `:not(:where(.tp-list-toolbar))` 排除它。页面只补排布，不再复制尺寸与表面，公共工具栏规则不再需要 `!important`。阶段 20 起这些规则位于 `@layer components`；仅去掉 `!important` 而不分层仍会压过 utility。
 - 筛选标签 `.api-filter-field-label`：旧外壳给它铺了蓝底小胶囊，设计稿里是裸的弱化文字。
   在 `surface-tokens.css` 里按 `.tp-surface` 收掉，不动那条旧规则——它同时作用于测试单的「加入用例」弹窗，
@@ -231,7 +230,7 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   `.api-case-nav-item`、`.api-case-editor-shell` 这一族类名同时被 UI 测试详情页与用例库使用，它们的规则
   （`test-cases/styles/index.css`、`ui-suite.module.css`、`shell.css` / `shell-header.css` 的兼容选择器）
   必须原地留着；API 详情页自己不再使用、且全仓库再无引用的旧规则已在阶段 7 随旧 CSS 删除。
-- 板面这一层要自己压平：`app/styles/shell-header.css` 给 `.app-shell.app-shell-macos .workbench-panel` 铺了玻璃底
+- 板面这一层要自己压平：`app/styles/shell-header.css` 给 `.app-shell-macos .workbench-panel` 铺了玻璃底
   + 内高光 + 投影，列表页靠 `.tp-board` 那条带 `.testing-page` 前缀的规则压住，详情页不在 `.testing-page` 里，
   所以要自己写一条带页面类的高权重覆盖。其余颜色全部走 `--srf-*` / `.tone-*`。
 - **`Form.useWatch` 对没挂载的 `Form.Item` 返回 `undefined`**：请求体与设置两个页签只有被打开时才挂载，
@@ -246,7 +245,7 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   `compressDocument()`；`toolbar={null}` 表示外壳不自带工具条，动作条由请求体面板画在编辑器之外。旧的
   `api-body-type-segmented` 与 `json-editor-toolbar-row/-side/-type/-link` 规则随旧实现从 API 详情样式
   删除（全仓库再无引用；阶段 7 后该层由 `api-detail-shell.module.css` 等 Module 持有）。
-- 覆盖全局按钮皮肤与输入框皮肤的规则必须按 S14 的写法带 `.app-shell.app-shell-macos` +
+- 覆盖全局按钮皮肤与输入框皮肤的规则必须按 S14 的写法带 `.app-shell-macos` +
   `.api-collection-workbench-page` 前缀与 `!important`，否则与全局皮肤同权重、只靠 import 顺序决胜。
   `styles/detailRequestPanels.test.ts` 锁住这条。
 - 状态条与徽标都是真实计算结果：合法性用与校验规则同一份判断，大小按 UTF-8 字节数，行 / 列来自编辑器光标；
@@ -290,9 +289,9 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
 
 - **板面必须显式压平**：这条路由不在 `.testing-page` 里（实测 `document.querySelector('.testing-page')` 为 null），
-  所以 `shell-header.css` 的 `.app-shell.app-shell-macos .workbench-panel`（(0,3,0) + `!important`，玻璃底 + 内高光 +
+  所以 `shell-header.css` 的 `.app-shell-macos .workbench-panel`（(0,2,0) + `!important`，玻璃底 + 内高光 +
   10px/24px 投影）不会被 `surface-tokens.css` 里 `.tp-board` 那条 (0,2,0) 覆盖拦住，`shared` 那条带 `.testing-page` 的
-  (0,6,0) 规则也匹配不到。详情页因此自己写了一条带页面 Module `.scope` 的 (0,6,0)。
+  (0,6,0) 规则也匹配不到。详情页因此自己写了一条带页面 Module `.scope` 的 (0,5,0) + `!important` 覆盖。
   判据：板面应是 `background: rgba(0,0,0,0)`、`box-shadow: none`、`border-width: 0`
   （它本来是半透明白 + 投影，肉眼不容易发现）。
 - **用例管理收进流程画布**：不再有「用例管理」下拉/顺序弹层。测试集流程画布始终显示用例卡片，点击卡片进入步骤画布，
@@ -402,7 +401,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 硬约束：
 
 - 不新增全局 CSS 文件：这里指非 `*.module.css`、选择器会进入全局作用域的样式文件；`app/styles/`、`shared/styles/` 只允许 token 文件和既有公共层收缩。`shared/styles/tailwind.css` 是唯一的 Tailwind 入口，只写 `@layer`、`@theme` token 映射和 `@import`，不写业务规则；公共产物视图的复杂皮肤集中在 `shared/styles/run-view.module.css`，与宿主滚动容器耦合的适配放在对应 feature 的 `styles/*.module.css`，不写进共享 module。
-- 不新增 `!important`、`.app-shell.app-shell-macos` 长前缀；需要覆盖时先迁走旧规则或调整 layer 顺序。
+- 不新增 `!important`、`.app-shell.app-shell-macos` 双类长前缀（macOS 外壳统一用单类 `.app-shell-macos`）；需要覆盖时先迁走旧规则或调整 layer 顺序。
 - 颜色只用已登记 token；Tailwind 通过 `@theme` 映射，禁用默认色盘，禁止 `bg-[#...]` 等任意色值。
 - 存量 CSS 冻结，只减不增；改到哪个页面就迁哪个页面，迁完删除原 CSS 文件，不做“先留着”的兼容层。
 - Tailwind 工具链接入前，新增样式只能写 CSS Modules；不得以等待接入为由继续新增页面级全局 CSS。
@@ -476,7 +475,7 @@ git grep -n -E "styles/(requirement-review|traceable-points|test-scope-analysis|
 10. 页面是否只做编排，渲染细节已下沉？单函数 ≤ 150 行（C2、C3）
 11. 要写的工具函数在 `shared/utils/` 里已经有了吗？（C5）
 12. 有没有第三处重复需要抽取？（C6）
-13. 新样式没有新增全局 CSS、`!important` 或 `.app-shell.app-shell-macos` 长前缀吗？布局用了 Tailwind utility、复杂皮肤用了 CSS Modules 吗？（S16）
+13. 新样式没有新增全局 CSS、`!important` 或 `.app-shell.app-shell-macos` 双类长前缀吗？布局用了 Tailwind utility、复杂皮肤用了 CSS Modules 吗？（S16）
 14. 共享 `*.module.css` 里没有 feature 私有选择器或 DOM 契约吗？宿主适配写在自己的 `features/<f>/styles/*.module.css` 吗？（S7、S16）
 15. 迁移完成的页面删掉了原 CSS 和 module 中 0 引用的类吗？页面有没有重新复制 Ant Design 深层规则或重复 utility 串？（S13、S16）
 16. 删除或改名样式文件时，`README.md`、`UI-GUIDELINES.md`、本文件的实现位置同步更新了吗？

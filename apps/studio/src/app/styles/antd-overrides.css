@@ -1,60 +1,60 @@
 /* AntD 组件级覆盖：标签状态色板。页面/外壳只消费，不重复定义。 */
 
-/* 接口方法签使用接口库自己的 --app-http-method-* 色板，不能继承 mac 玻璃标签的通用 !important 样式。 */
-.app-shell.app-shell-macos .ant-tag:not(.if-method) {
+/* 接口方法签使用接口库自己的 --app-http-method-* 色板，不能继承 mac 玻璃标签的通用 样式。 */
+.app-shell-macos .ant-tag:not(.if-method) {
   border-radius: 999px;
-  border-color: var(--app-glass-tag-border) !important;
-  background: var(--app-glass-selected) !important;
-  color: var(--app-glass-tag-text) !important;
+  border-color: var(--app-glass-tag-border);
+  background: var(--app-glass-selected);
+  color: var(--app-glass-tag-text);
 }
 
 /* Semantic task-status palette. These selectors intentionally override the generic tag treatment above. */
-.app-shell.app-shell-macos .ant-tag.ant-tag-default {
-  border-color: var(--app-status-neutral-border) !important;
-  background: var(--app-status-neutral-bg) !important;
-  color: var(--app-status-neutral-text) !important;
+.app-shell-macos .ant-tag.ant-tag-default {
+  border-color: var(--app-status-neutral-border);
+  background: var(--app-status-neutral-bg);
+  color: var(--app-status-neutral-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-gold,
-.app-shell.app-shell-macos .ant-tag.ant-tag-warning {
-  border-color: var(--app-status-warning-border) !important;
-  background: var(--app-status-warning-bg) !important;
-  color: var(--app-status-warning-text) !important;
+.app-shell-macos .ant-tag.ant-tag-gold,
+.app-shell-macos .ant-tag.ant-tag-warning {
+  border-color: var(--app-status-warning-border);
+  background: var(--app-status-warning-bg);
+  color: var(--app-status-warning-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-cyan {
-  border-color: var(--app-status-running-border) !important;
-  background: var(--app-status-running-bg) !important;
-  color: var(--app-status-running-text) !important;
+.app-shell-macos .ant-tag.ant-tag-cyan {
+  border-color: var(--app-status-running-border);
+  background: var(--app-status-running-bg);
+  color: var(--app-status-running-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-purple {
-  border-color: var(--app-status-review-border) !important;
-  background: var(--app-status-review-bg) !important;
-  color: var(--app-status-review-text) !important;
+.app-shell-macos .ant-tag.ant-tag-purple {
+  border-color: var(--app-status-review-border);
+  background: var(--app-status-review-bg);
+  color: var(--app-status-review-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-green,
-.app-shell.app-shell-macos .ant-tag.ant-tag-processing {
-  border-color: var(--app-status-approved-border) !important;
-  background: var(--app-status-approved-bg) !important;
-  color: var(--app-status-approved-text) !important;
+.app-shell-macos .ant-tag.ant-tag-green,
+.app-shell-macos .ant-tag.ant-tag-processing {
+  border-color: var(--app-status-approved-border);
+  background: var(--app-status-approved-bg);
+  color: var(--app-status-approved-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-success {
-  border-color: var(--app-status-completed-border) !important;
-  background: var(--app-status-completed-bg) !important;
-  color: var(--app-status-completed-text) !important;
+.app-shell-macos .ant-tag.ant-tag-success {
+  border-color: var(--app-status-completed-border);
+  background: var(--app-status-completed-bg);
+  color: var(--app-status-completed-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-error {
-  border-color: var(--app-status-failed-border) !important;
-  background: var(--app-status-failed-bg) !important;
-  color: var(--app-status-failed-text) !important;
+.app-shell-macos .ant-tag.ant-tag-error {
+  border-color: var(--app-status-failed-border);
+  background: var(--app-status-failed-bg);
+  color: var(--app-status-failed-text);
 }
 
-.app-shell.app-shell-macos .ant-tag.ant-tag-volcano {
-  border-color: var(--app-status-blocked-border) !important;
-  background: var(--app-status-blocked-bg) !important;
-  color: var(--app-status-blocked-text) !important;
+.app-shell-macos .ant-tag.ant-tag-volcano {
+  border-color: var(--app-status-blocked-border);
+  background: var(--app-status-blocked-bg);
+  color: var(--app-status-blocked-text);
 }

@@ -57,11 +57,11 @@
 /* ProjectsPage 专用表面：项目概览变量、页头摘要和空态。
    项目卡片与列表板面由 EntityCard / ListSurface 提供。 */
 
-:global(.app-shell.app-shell-macos) :global(.project-description-text) {
-  color: var(--mac-glass-muted) !important;
+:global(.app-shell-macos) :global(.project-description-text) {
+  color: var(--mac-glass-muted);
 }
 
-:global(.app-shell.app-shell-macos) .root {
+:global(.app-shell-macos) .root {
   --project-overview-border: var(--legacy-project-overview-border);
   --project-overview-panel: var(--legacy-project-overview-panel);
   --project-overview-panel-soft: var(--legacy-project-overview-panel-soft);
@@ -71,29 +71,29 @@
   --project-overview-secondary: var(--legacy-project-overview-secondary);
   --project-overview-muted: var(--legacy-project-overview-muted);
   --project-overview-blue: var(--legacy-project-overview-blue);
-  background: transparent !important;
+  background: transparent;
 }
 
-:global(.app-shell.app-shell-macos) .root :global(.workbench-tabs) {
+:global(.app-shell-macos) .root :global(.workbench-tabs) {
   padding: var(--app-page-gutter);
   gap: 12px;
 }
 
-:global(.app-shell.app-shell-macos) .root :global(.workbench-empty) {
-  border: 1px solid var(--project-overview-border) !important;
-  background: var(--project-overview-panel) !important;
+:global(.app-shell-macos) .root :global(.workbench-empty) {
+  border: 1px solid var(--project-overview-border);
+  background: var(--project-overview-panel);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
     inset 0 1px 0 var(--app-glass-highlight-86),
-    0 10px 24px var(--app-glass-shadow-card) !important;
+    0 10px 24px var(--app-glass-shadow-card);
 }
 
-:global(.app-shell.app-shell-macos) .root :global(.project-description-text) {
-  color: var(--project-overview-muted) !important;
+:global(.app-shell-macos) .root :global(.project-description-text) {
+  color: var(--project-overview-muted);
 }
 
-:global(.app-shell.app-shell-macos) .root :global(.action-btn-create):global(.ant-btn-primary) {
-  border: 1px solid var(--app-glass-action-border-hover) !important;
-  border-radius: 10px !important;
+:global(.app-shell-macos) .root :global(.action-btn-create):global(.ant-btn-primary) {
+  border: 1px solid var(--app-glass-action-border-hover);
+  border-radius: 10px;
 }

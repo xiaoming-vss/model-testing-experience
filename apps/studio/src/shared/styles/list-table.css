@@ -12,7 +12,7 @@
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell,
-:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell {
+:root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell {
   height: 42px;
   padding: 0 16px !important;
   border: 0 !important;
@@ -28,7 +28,7 @@
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
-:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
+:root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   height: 48px;
   padding: 8px 16px !important;
   border-bottom: 1px solid var(--app-list-row-border) !important;
@@ -38,7 +38,7 @@
 }
 
 :root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td,
-:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td {
+:root .app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td {
   background: var(--srf-list-row-hover) !important;
 }
 

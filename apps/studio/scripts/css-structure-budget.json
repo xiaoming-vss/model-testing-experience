@@ -197,7 +197,7 @@
     },
     "src/features/projects/styles/sprint-overview.module.css": {
       "rules": 46,
-      "declarations": 116,
+      "declarations": 115,
       "selectors": 54
     },
     "src/features/requirements/styles/requirement-detail.module.css": {

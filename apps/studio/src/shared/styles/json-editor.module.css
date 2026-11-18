@@ -86,8 +86,8 @@
 .codemirror :global(.cm-content *),
 .codemirror :global(.cm-line),
 .codemirror :global(.cm-line *) {
-  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace !important;
-  font-style: normal !important;
+  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;
+  font-style: normal;
   font-variant-ligatures: none;
   font-feature-settings: 'liga' 0, 'calt' 0;
 }
@@ -122,13 +122,13 @@
 }
 
 .codemirror :global(.cm-matchingBracket) {
-  color: var(--app-surface-text) !important;
+  color: var(--app-surface-text);
   background: var(--app-editor-selection);
   border-radius: 4px;
 }
 
 .codemirror :global(.cm-nonmatchingBracket) {
-  color: var(--app-editor-error-text) !important;
+  color: var(--app-editor-error-text);
 }
 
 .codemirror :global(.cm-tooltip) {

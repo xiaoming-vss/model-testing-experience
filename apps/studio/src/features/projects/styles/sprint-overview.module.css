@@ -70,15 +70,15 @@
 }
 
 .root :global(.sprint-dashboard-health-green) {
-  color: var(--app-result-success) !important;
+  color: var(--app-result-success);
 }
 
 .root :global(.sprint-dashboard-health-blue) {
-  color: var(--app-accent) !important;
+  color: var(--app-accent);
 }
 
 .root :global(.sprint-dashboard-health-red) {
-  color: var(--app-result-failed) !important;
+  color: var(--app-result-failed);
 }
 
 .root :global(.sprint-dashboard-test-row-head) {
@@ -125,7 +125,7 @@
 
 .root :global(.sprint-overview-donut-layout) :global(.recharts-default-tooltip),
 .root :global(.sprint-overview-chart-host) :global(.recharts-default-tooltip) {
-  border: 1px solid var(--tp-border-soft) !important;
+  border: 1px solid var(--tp-border-soft);
   border-radius: 10px;
   box-shadow: 0 10px 24px var(--app-card-shadow-floating);
 }
@@ -255,18 +255,17 @@
 
 .root :global(.sprint-overview-frame) > :global(.workbench-tabs) {
   padding: 0;
-  gap: 0;
 }
 
-:root:root :global(.app-shell.app-shell-macos) .root :global(.sprint-overview-panel-unified) {
+:root:root :global(.app-shell-macos) .root :global(.sprint-overview-panel-unified) {
   border: 0 !important;
-  border-radius: 0;
+  border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
 .root :global(.sprint-dashboard-range-picker):global(.ant-picker) {
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 @media (min-width: 1281px) {

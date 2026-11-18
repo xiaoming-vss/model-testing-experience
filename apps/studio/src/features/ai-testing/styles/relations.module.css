@@ -32,7 +32,7 @@
 .scope :global(.ai-hierarchy-footer) { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--ant-color-border-secondary); color: var(--ant-color-text-secondary); font-size: 12px; }
 @media (max-width: 768px) {
   .scope :global(.ai-hierarchy-body) { flex-direction: column; }
-  .scope :global(.ai-hierarchy-details.ai-relations-panel) { width: 100% !important; max-width: 100%; max-height: 55%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
+  .scope :global(.ai-hierarchy-details.ai-relations-panel) { width: 100%; max-width: 100%; max-height: 55%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
   .scope :global(.ai-hierarchy-canvas .react-flow__minimap) { display: none; }
 }
 

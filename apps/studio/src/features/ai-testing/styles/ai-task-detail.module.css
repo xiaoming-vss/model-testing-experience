@@ -155,8 +155,8 @@
 }
 
 .scope :global(.code-risk-report-gap-title) {
-  margin: 0 0 2px !important;
-  font-size: 14px !important;
+  margin: 0 0 2px;
+  font-size: 14px;
 }
 
 .scope :global(.code-risk-report-gap-suggestion) {

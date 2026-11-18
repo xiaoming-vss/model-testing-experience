@@ -217,14 +217,10 @@
   overflow: visible;
 }
 
-/* app/styles/shell-header.css 的玻璃板面规则写成
-   `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,
-6,
-0），与上面 `.tp-board` 那条同权重——
-   同权重就靠样式表顺序决胜，顺序一变玻璃底、内高光与 28px 阴影就会重新盖回来（表现为内容区多出一层容器）。
-   这里多带 `.app-shell-macos .testing-page` 前缀抬到 (0,
-7,
-0)，顺序依赖就没有了。 */
+/* app/styles/shell-header.css 的玻璃板面规则写成 `.app-shell-macos .workbench-panel`
+   （(0,2,0) + `!important`），与上面 `.tp-board` 那条同权重——同权重就靠样式表顺序决胜，
+   顺序一变玻璃底、内高光与 28px 阴影就会重新盖回来（表现为内容区多出一层容器）。
+   这里多带 `.app-shell-macos .testing-page` 前缀（(0,6,0)）并用 `!important` 压住玻璃层，顺序依赖就没有了。 */
 .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
   border: 0 !important;
   border-radius: 0 !important;
@@ -339,7 +335,7 @@
    Tab 在外框外，滚动区内收 16px，分页不参与滚动。
    显式接入以兼容未迁移页面；覆盖旧工作台玻璃板面的高权重规则。
    工具栏、内收列表、分页共用一个外框；其它 tp-board 保留原布局。 */
-:root:root .app-shell.app-shell-macos .tp-surface .tp-board.tp-list-panel,
+:root:root .app-shell-macos .tp-surface .tp-board.tp-list-panel,
 .tp-surface .tp-board.tp-list-panel {
   display: flex;
   flex: 1;

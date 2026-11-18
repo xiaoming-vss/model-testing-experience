@@ -5,12 +5,12 @@
 @import './antd-overrides.css';
 @import './action-buttons.css';
 
-.app-shell.app-shell-macos > .ant-layout {
+.app-shell-macos > .ant-layout {
   background: var(--mac-glass-header) !important;
 }
-.app-shell.app-shell-macos .app-header.compact-header { border-bottom: 0; }
-.app-shell.app-shell-macos .app-content { position: relative; }
-.app-shell.app-shell-macos .app-content::before {
+.app-shell-macos .app-header.compact-header { border-bottom: 0; }
+.app-shell-macos .app-content { position: relative; }
+.app-shell-macos .app-content::before {
   content: '';
   position: absolute;
   inset: 0;

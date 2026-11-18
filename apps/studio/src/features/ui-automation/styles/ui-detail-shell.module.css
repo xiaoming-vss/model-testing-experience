@@ -18,14 +18,14 @@
 /* ===== 板面与两栏 ===== */
 
 /*
- * 板面必须是裸画布：`app/styles/shell-header.css` 给 `.app-shell.app-shell-macos .workbench-panel`
- * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) + !important），shared/styles/surface-tokens.css 里
+ * 板面必须是裸画布：`app/styles/shell-header.css` 给 `.app-shell-macos .workbench-panel`
+ * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) +），shared/styles/surface-tokens.css 里
  * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
  * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：
  * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)。
  * 去掉这层的判据：板面应无底色 / 无投影（否则内容区会凭空多出一个容器）。
  */
-:global(.app-shell.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board) {
+:global(.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board) {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -35,10 +35,10 @@
 }
 
 /* 折叠状态由 `hidden` 属性表达（步骤卡片展开/收起就是这一条），而 `.ui-test-case-step-body` 在
-   ui-suite.module.css 里是 flex 容器——作者样式压得过 UA 的 `[hidden]`，这里补一条 !important 兜住。
+   ui-suite.module.css 里是 flex 容器——作者样式压得过 UA 的 `[hidden]`，这里补一条 兜住。
    antd 的 reset 也带同效规则，这条是让折叠不依赖三方 reset。 */
 .scope [hidden] {
-  display: none !important;
+  display: none;
 }
 
 /* 工作区高度：取板上剩余高度（板面本身是有高度的滚动容器），所以整页不再随内容变长。

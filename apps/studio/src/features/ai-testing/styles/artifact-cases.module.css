@@ -139,8 +139,8 @@
 .scope :global(.ai-case-name-tree) { display: flex; flex-direction: column; overflow: hidden; }
 .scope :global(.ai-case-name-tree-stats) { position: relative; flex: 0 0 auto; }
 .scope :global(.ai-case-flow-canvas) { position: relative; flex: 1 1 auto; min-width: 0; min-height: 220px; }
-.scope :global(.ai-case-flow-canvas > .react-flow) { position: absolute !important; inset: 0; background: transparent; }
-.scope :global(.ai-case-flow-canvas .react-flow__node) { width: max-content; max-width: 360px; font: inherit; pointer-events: all !important; }
+.scope :global(.ai-case-flow-canvas > .react-flow) { position: absolute; inset: 0; background: transparent; }
+.scope :global(.ai-case-flow-canvas .react-flow__node) { width: max-content; max-width: 360px; font: inherit; pointer-events: all; }
 .scope :global(.ai-case-flow-canvas .ai-case-name-tree-root),
 .scope :global(.ai-case-flow-canvas .ai-case-name-tree-node) { width: max-content; }
 .scope :global(.ai-case-flow-canvas .ai-case-flow-handle) { width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
