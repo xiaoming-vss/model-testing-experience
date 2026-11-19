@@ -132,7 +132,8 @@ npm run build         # tsc -b && vite build
 npm run check:theme   # 登记色源与任意色值检查
 npm run check:css     # !important / 长前缀 / 未定义变量预算
 npm run check:css:structure  # CSS 文件、导入、规则体与重复体结构门禁
-npm run verify        # type-check + lint + check:theme + check:css + check:css:structure + build
+npm run check:boundaries  # feature 跨模块 import 基线检查
+npm run verify        # type-check + lint + check:theme + check:css + check:css:structure + check:boundaries + build
 ```
 
 `npm run verify` 不包含 `npm test`；迁移和发布前仍需单独执行全量测试。

@@ -18,7 +18,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查，结构门禁可通过 `npm run check:css:structure` 单独检查；其它规则的自动化见各条「检查」列。
+> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查，结构门禁可通过 `npm run check:css:structure` 单独检查，feature 边界可通过 `npm run check:boundaries` 单独检查；其它规则的自动化见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -57,7 +57,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint（**待强制**）；按 feature 生成规则块，各自忽略自身目录 |
+| S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint + `npm run check:boundaries`（**已实现**，接入 `verify`）：按 feature 生成规则块，各自忽略自身目录；存量违规按文件记入 `scripts/feature-boundary-budget.json`，只减不增 |
 | S4 | **归属判定（一句话）：被 2 个以上 feature 使用的代码必须上提。** 无业务语义 → `shared/`；有业务语义 → 提到 `app/` 或独立领域模块 | 用例关系图谱 `ai-testing/utils/caseRelationsGraph.ts`（483 行）被 test-orders 引用却留在 ai-testing；`projects` 被 3 个 feature 依赖（api-automation 16 处、ui-automation 13 处、base-services 10 处），是事实上的平台层却从未上提 | 评审 + 定期依赖图核对（**待强制**） |
 | S5 | `shared/` 准入两条：**无业务语义** + **全站唯一实现**。「全站唯一实现」必须列成显式清单，新增条目需评审 | 文件下载已统一到 `shared/utils/download.ts` 的 `saveBlob`；对象解析已统一到 `shared/utils/value.ts` 的 `toRecord` / `toRecordArray` | 清单见本节末（**待强制**） |
 
