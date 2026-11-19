@@ -12,5 +12,5 @@
 ```sh
 uv sync --locked        # Python 依赖
 npm ci                  # 仅 Pi 后端需要固定版本 CLI
-uv run mtx-ai-worker    # 执行底座由 worker.toml 的 agent.backend 决定
+uv run --locked mtx-ai-worker    # 执行底座由 worker.toml 的 agent.backend 决定
 ```

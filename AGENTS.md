@@ -4,7 +4,7 @@ This monorepo contains six independently runnable projects under apps/: studio, 
 
 Deployment source of truth: config/platform.example.toml plus local ignored config/platform.toml. Generate runtime configuration through scripts/manage.py. Do not commit secrets, generated configuration, databases, worker runtime state or dependency directories.
 
-For orchestration changes run `python3 -m unittest discover -s tests -v` and `python3 scripts/manage.py compose config --quiet` after initializing local configuration. Run relevant child-project checks for changes within a project.
+For orchestration changes run the root and Compose checks in [docs/commands.md](docs/commands.md#根目录与部署编排) after initializing local configuration. Run the relevant child-project checks in [docs/commands.md](docs/commands.md) for changes within a project.
 
 Control-plane database policy: before the first public release, keep exactly one editable Alembic baseline (`apps/control-plane/alembic/versions/20261103_0001_v1_baseline.py`) and edit it directly for schema changes; do not add update migrations. Freeze the baseline at first release, then add new revisions. See [database schema](docs/control-plane/database-schema.md) and [ADR 0014](docs/control-plane/adr/0014-pre-release-single-baseline.md).
 

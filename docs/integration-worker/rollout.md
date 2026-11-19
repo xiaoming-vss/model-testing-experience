@@ -46,7 +46,7 @@ python3 scripts/manage.py compose up -d --no-deps integration-worker
 
 ```sh
 # apps/control-plane；使用该部署生成的配置
-uv run --extra dev python -m testing_agent.cli.integration_maintenance observe --config config/local.toml --project-id <项目ID> --window-hours 24 --limit 100
+uv run --locked --extra dev python -m testing_agent.cli.integration_maintenance observe --config config/local.toml --project-id <项目ID> --window-hours 24 --limit 100
 ```
 
 出现重复远端对象、文件错属、未知写入未核对、结果日志未确认，或普通接口延迟超出本批阈值时停止扩大范围。先关闭提交，必要时关闭领取，保留范围和账本；通过原关联的只读恢复入口核对，不重新提交相同远端写入。

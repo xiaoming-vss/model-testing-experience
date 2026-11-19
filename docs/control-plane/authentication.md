@@ -42,9 +42,9 @@ initial_password = "GENERATE"
 密码丢失时使用仅运维可用的 CLI：
 
 ```sh
-uv run python -m testing_agent.cli.super_admin reset-password --config config/local.toml
+uv run --locked python -m testing_agent.cli.super_admin reset-password --config config/local.toml
 # 或从标准输入读取，避免交互式终端
-uv run python -m testing_agent.cli.super_admin reset-password --config config/local.toml --password-stdin
+uv run --locked python -m testing_agent.cli.super_admin reset-password --config config/local.toml --password-stdin
 ```
 
 CLI 只按超级管理员标记定位账号，不创建第二个账号；不存在时提示先启动控制面完成初始化。重置后设置 `must_change_password=true`、递增令牌版本、清除失败计数和锁定状态，不通过公开 HTTP 接口提供。

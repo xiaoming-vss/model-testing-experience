@@ -79,7 +79,7 @@ Worker 使用原任务需求下载入口，通过原有任务执行者授权后�
 在控制面目录执行临时 S3 对象清理：
 
 ```bash
-uv run python -m testing_agent.cli.storage cleanup
+uv run --locked python -m testing_agent.cli.storage cleanup
 ```
 
 ## 验证与运维
@@ -95,8 +95,8 @@ uv run python -m testing_agent.cli.storage cleanup
 早期正式对象以 `content` 命名，在 RustFS 控制台下载时可能失去 `.docx` 扩展名。新上传文件已保留原始名称。旧文件可以在控制面目录执行：
 
 ```bash
-uv run python -m testing_agent.cli.storage repair-names
-uv run python -m testing_agent.cli.storage repair-names --apply
+uv run --locked python -m testing_agent.cli.storage repair-names
+uv run --locked python -m testing_agent.cli.storage repair-names --apply
 ```
 
 默认只列出候选；apply 复制已核验的旧对象到含原文件名的新 Key，核对原大小与 SHA-256 后更新文件记录，文件 ID 和业务关联保持不变。旧 `content` 对象保留，兼容已签发链接，命令可重复执行。控制台下载时选择带扩展名的新对象；旧对象不自动删除。

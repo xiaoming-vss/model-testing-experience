@@ -8,4 +8,4 @@
 
 每次写入先取得控制面已持久化的步骤许可。失租和 SIGTERM 停止新写入；在途请求按未知结果或受限证据处理。网络重试仅复用控制面请求/事件编号，MCP 写入执行一次。凭据与签名 URL 仅驻内存；本地恢复日志只能保存经过 schema 限制的原操作身份和安全结果。
 
-修改后运行 `uv run --extra dev python -m pytest`、`uv run --extra dev ruff check .`、`uv run --extra dev mypy`。跨进程 fixture 和失租恢复检查与单元测试并用；共享编排修改另执行根目录规定的检查。
+修改后按[验证命令矩阵](../../docs/commands.md#integration-worker)运行 pytest、Ruff 和 mypy。跨进程 fixture 和失租恢复检查与单元测试并用；共享编排修改另执行根目录规定的检查。

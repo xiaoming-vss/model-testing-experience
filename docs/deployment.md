@@ -57,7 +57,7 @@ v1 只支持空数据库初始化。控制面只有一个基线迁移 `20261103_
 本地开发库 `testing-agent-control-plane-b` 可以保留数据，但只允许做一次性 stamp，不执行 DDL。操作前先备份数据库，并在控制面目录确认：
 
 ```sh
-uv run python - <<'PY'
+uv run --locked python - <<'PY'
 import sqlalchemy as sa
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
@@ -80,7 +80,7 @@ PY
 
 ```sh
 cd apps/control-plane
-uv run alembic stamp --purge 20261103_0001
+uv run --locked alembic stamp --purge 20261103_0001
 ```
 
 `--purge` 用于移除旧 revision 行后写入预发布阶段的唯一 baseline；stamp 只更新 `alembic_version`，不修改业务表。随后重新核对行数并访问 `/v1/health` 完成启动 smoke。该操作不适用于生产或任何需要升级的数据库。
@@ -178,12 +178,7 @@ python3 scripts/manage.py compose run --rm migrate
 
 ## 检查
 
-```sh
-python3 -m unittest discover -s tests -v
-python3 scripts/manage.py compose config --quiet
-```
-
-各子项目的完整检查见各自 README。
+根编排和 Compose 检查的命令、前置条件见[验证命令矩阵](commands.md#根目录与部署编排)。各子项目的完整检查入口也从该矩阵进入。
 
 ## 禅道连接器退出（2026-10-03）
 

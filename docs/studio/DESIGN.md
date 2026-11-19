@@ -94,17 +94,9 @@ shared/    无业务语义的请求封装、通用组件、工具和主题能力
 
 ## 测试与验证
 
-修改前端代码后，在 `apps/studio/` 执行与改动匹配的检查：
+修改前端代码后，按[命令矩阵](../commands.md#studio)执行与改动匹配的检查，交付前至少运行 `npm run verify` 与 `npm test`。
 
-```sh
-npm run type-check
-npm run lint
-npm run test
-npm run check:theme
-npm run build
-```
-
-页面或样式变更还要在浏览器核对桌面和窄屏：有数据、首次空状态、筛选无结果、长名称、无权限操作、加载失败和分页越界。jsdom 能验证行为和部分样式断言，但不能替代真实布局检查。完整命令、代理、容器运行方式和已知限制见 [`docs/studio/README.md`](README.md)。
+页面或样式变更还要在浏览器核对桌面和窄屏：有数据、首次空状态、筛选无结果、长名称、无权限操作、加载失败和分页越界。jsdom 能验证行为和部分样式断言，但不能替代真实布局检查。代理、容器运行方式和已知限制见 [`docs/studio/README.md`](README.md)。
 
 ## 变更检查清单
 

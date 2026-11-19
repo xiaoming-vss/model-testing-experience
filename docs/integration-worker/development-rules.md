@@ -18,15 +18,7 @@
 
 ## 验证入口
 
-本项目已经在 `pyproject.toml` 固定 mypy 的 `src` 范围、函数体检查和无用忽略检查，继续使用项目配置。
-
-```sh
-uv sync --locked --extra dev
-uv run --locked --extra dev python -m pytest
-uv run --locked --extra dev ruff check .
-uv run --locked --extra dev ruff format --check <修改的源码及测试路径>
-uv run --locked --extra dev mypy
-```
+本项目已经在 `pyproject.toml` 固定 mypy 的 `src` 范围、函数体检查和无用忽略检查，继续使用项目配置。安装、全量测试、Ruff、格式、mypy 以及独立容器/长传输验收命令统一见[验证命令矩阵](../commands.md#integration-worker)。
 
 | 变更 | 必跑入口 |
 | --- | --- |

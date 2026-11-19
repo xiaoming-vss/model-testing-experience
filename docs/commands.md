@@ -1,0 +1,161 @@
+# 验证命令矩阵
+
+本文件是仓库检查、测试和构建命令的唯一事实来源。项目 README、开发规则和根 `AGENTS.md` 只说明何时执行哪些检查，不再复制完整命令列表。
+
+## 使用约定
+
+- 除非表格注明，命令均在仓库根目录执行；工作目录列写 `apps/<project>` 时，先进入该目录。
+- Python 项目使用 uv。`uv run` 一律带 `--locked`，确保运行环境与 `uv.lock` 一致；安装使用 `uv sync --locked`。确需在锁文件之外临时安装工具时，必须在本文件登记原因和替代命令。
+- 开发依赖按项目声明的依赖组安装：control-plane、api-ui-worker、integration-worker、perf-worker 使用 `--extra dev`，ai-worker 使用 `--group dev`。
+- 默认命令不依赖真实外部服务。需要真实 MySQL、S3、禅道/GitLab、浏览器、LLM、k6 或 Prometheus 的验收单列在“外部验收”一节，不能由模拟测试代替。
+- CI 由外部流水线负责；流水线应直接调用本文件的命令，不复制命令定义。
+- 交付说明必须记录实际执行的命令、结果、跳过项和未验证范围。
+
+## 根目录与部署编排
+
+工作目录为仓库根目录。`scripts/manage.py` 要求 Python 3.11+。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 初始化本地配置 | `python3 scripts/manage.py init` | 首次部署；生成被忽略的 `config/platform.toml`，不覆盖已有文件 |
+| 补齐已有配置 | `python3 scripts/manage.py upgrade-config` | 已有 `config/platform.toml`；只补缺项，不轮换密钥 |
+| 生成本地运行配置 | `python3 scripts/manage.py configure --mode local` | 已执行 `init`；写入各项目被忽略的运行配置和 studio `.env.local` |
+| 生成 Docker 配置 | `python3 scripts/manage.py configure --mode docker` | 已执行 `init`；写入 `.runtime/docker/` 和 `.runtime/compose.env` |
+| 根编排测试 | `python3 -m unittest discover -s tests -v` | Python 3.11+；需要容器的用例在缺少环境时显式跳过 |
+| Compose 配置校验 | `python3 scripts/manage.py compose config --quiet` | 已执行 `init`；Docker Engine 与 Compose v2+ |
+| 本地启动单个服务 | `python3 scripts/manage.py run <control-plane\|ai-worker\|api-ui-worker\|integration-worker\|perf-worker\|studio>` | 已安装对应项目依赖 |
+| 数据库迁移 | `python3 scripts/manage.py migrate` | 数据库可达；迁移基线只支持空库初始化 |
+| K8s chart 静态检查 | `for chart in deploy/helm/charts/*; do helm lint "$chart"; done` | 已安装 Helm；K8s 不是本地默认部署方式 |
+
+根编排变更至少执行“根编排测试”和“Compose 配置校验”。`init` 与 `configure` 的具体配置项见[统一配置、部署与本地开发](deployment.md)。
+
+## control-plane
+
+工作目录：`apps/control-plane`。Python 3.12；依赖组 `dev`。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装依赖 | `uv sync --locked --extra dev` | 锁文件未变更 |
+| 静态检查 + 全量测试 | `uv run --locked --extra dev python scripts/check.py` | 默认使用 SQLite；真实 MySQL/存储用例按环境变量启用后自动退回单进程 |
+| 仅静态检查 | `uv run --locked --extra dev python scripts/check.py --static-only` | — |
+| 全量测试（串行） | `uv run --locked --extra dev pytest -q` | 全量约 28 分钟；本仓库约定不与其它 pytest 并发执行 |
+| 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
+| Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
+| Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
+| mypy | `uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>` | — |
+| 数据库迁移 | `uv run --locked --extra dev alembic upgrade head` | 数据库可达；空库或只含可丢弃测试表 |
+
+真实 MySQL、对象存储和并发锁行为需要单独验收：
+
+- `CONTROL_PLANE_TEST_DATABASE_URL`：指向可丢弃的 MySQL 测试库后运行对应专项。
+- `CONTROL_PLANE_STORAGE_LIVE`：启用真实对象存储验收后运行对应专项。
+- 这两类用例共享一次性数据库或存储，`scripts/check.py` 会自动退回单进程。
+
+## ai-worker
+
+工作目录：`apps/ai-worker`。Python 3.13；依赖组 `dev`（仅 Ruff）；测试框架为 unittest。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装 Python 依赖 | `uv sync --locked --group dev` | 锁文件未变更 |
+| 安装 Pi 运行时 | `npm ci` | 使用 Pi 后端时需要固定版本 CLI |
+| 测试 | `uv run --locked --group dev python -m unittest discover -s tests -v` | 部分用例按环境跳过 |
+| Ruff 检查 | `uv run --locked --group dev ruff check .` | — |
+| Ruff 格式检查 | `uv run --locked --group dev ruff format --check <修改的源码及测试路径>` | — |
+
+本项目未配置 mypy；公共接口类型按[通用后端规则](agents/backend-development.md)通过审查和契约测试验证。模拟模型回归不代表真实 LLM、GitLab 或 S3 已完成验收。
+
+## api-ui-worker
+
+工作目录：`apps/api-ui-worker`。Python 3.12；依赖组 `dev`。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装依赖 | `uv sync --locked --extra dev` | 锁文件未变更 |
+| 安装浏览器 | `uv run --locked playwright install chromium` | Linux 首次安装可加 `--with-deps` |
+| 测试 | `uv run --locked --extra dev python -m pytest -q` | 默认使用模拟执行器 |
+| Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
+| Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
+| mypy | `uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>` | — |
+
+真实浏览器行为和实际 S3 上传需要在项目 Playwright 环境及真实存储上另行验收；模拟定位器或模拟上传不能作为完整端到端验收。
+
+## integration-worker
+
+工作目录：`apps/integration-worker`。Python 3.12；依赖组 `dev`。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装依赖 | `uv sync --locked --extra dev` | 锁文件未变更 |
+| 测试 | `uv run --locked --extra dev python -m pytest -q` | — |
+| Ruff 检查 | `uv run --locked --extra dev ruff check .` | — |
+| Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
+| mypy | `uv run --locked --extra dev mypy` | 使用项目 `pyproject.toml` 的 `src` 范围配置 |
+| 独立容器运行验收 | `docker build -t mtx/integration-worker:split-validation apps/integration-worker`，然后 `MTX_TEST_INTEGRATION_WORKER_RUNTIME=1 python3 -m unittest discover -s tests -p test_integration_worker_runtime.py -v` | 在仓库根目录执行；需要 Docker |
+| 180 秒传输边界验收 | `MTX_INTEGRATION_LONG_UPLOAD=1 uv run --locked --extra dev python -m pytest tests/integration/test_long_upload.py -q` | 在本项目目录执行；需要控制面开发依赖；默认跳过 |
+
+真实 MySQL 并发、真实禅道和真实 S3 验收另行执行，且不能把夹具通过当作真实写入或恢复证据。
+
+## perf-worker
+
+工作目录：`apps/perf-worker`。Python 3.12；依赖组 `dev`。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装依赖 | `uv sync --locked --extra dev` | 锁文件未变更 |
+| 测试 | `uv run --locked --extra dev python -m pytest -q` | 没有 `k6` 时真实模板链路用例跳过 |
+| Ruff 检查 | `uv run --locked --extra dev ruff check .` | — |
+| Ruff 格式检查 | `uv run --locked --extra dev ruff format --check .` | — |
+| mypy | `uv run --locked --extra dev mypy` | 使用项目 `pyproject.toml` 的 `src` 范围配置 |
+
+Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-remote-write-receiver`），并确认 `run_id` 指标可查。假 k6 测试不能作为真实压测验收。
+
+## studio
+
+工作目录：`apps/studio`。Node 22.23.1（`.nvmrc`），使用 npm 与 `package-lock.json`。
+
+| 用途 | 命令 | 前置条件 |
+| --- | --- | --- |
+| 安装依赖 | `npm ci` | Node 版本符合 `.nvmrc` |
+| 类型检查 | `npm run type-check` | — |
+| Lint | `npm run lint` | — |
+| 测试 | `npm test` | jsdom 环境；重型页面可加 `--maxWorkers=1` 复跑 |
+| 主题与色值检查 | `npm run check:theme` | — |
+| CSS 预算检查 | `npm run check:css` | — |
+| CSS 结构检查 | `npm run check:css:structure` | — |
+| CSS 全部检查 | `npm run check:css:all` | 等价于 `check:css` + `check:css:structure` |
+| feature 边界检查 | `npm run check:boundaries` | — |
+| 构建 | `npm run build` | — |
+| 完整静态验证 | `npm run verify` | 包含 type-check、lint、主题/CSS/边界检查和 build；**不包含** `npm test` |
+
+前端交付前至少执行 `npm run verify` 和 `npm test`。真实浏览器布局、窄屏、浅色/深色和列表表面观感仍需按[界面规范](studio/UI-GUIDELINES.md)人工核对；jsdom 不能替代真实布局验收。
+
+## 按变更选择入口
+
+| 变更范围 | 最小入口 |
+| --- | --- |
+| 根编排、Compose、部署脚本 | 根编排测试 + Compose 配置校验 |
+| control-plane | `scripts/check.py`，再按[控制面开发规则](control-plane/development-rules.md#验证与交付)追加专项 |
+| ai-worker | unittest 全量，再按[AI Worker 开发规则](ai-worker/development-rules.md#验证入口)追加专项 |
+| api-ui-worker | pytest 全量，再按[API/UI Worker 开发规则](api-ui-worker/development-rules.md#验证入口)追加专项 |
+| integration-worker | pytest 全量，再按[集成 Worker 开发规则](integration-worker/development-rules.md#验证入口)追加专项 |
+| perf-worker | pytest 全量，再按[性能 Worker 开发规则](perf-worker/development-rules.md#验证入口)追加专项 |
+| studio | `npm run verify` + `npm test`，再按改动范围执行对应页面/样式检查 |
+| 纯文档 | 核对内容、链接和路径；09 完成后可运行 `python3 scripts/check_docs.py` |
+
+共享基础层、跨项目协议或权限/领取/回传/停止语义变更时扩大回归范围。实际执行少于本表要求时，必须在交付说明中写明原因和未验证范围。
+
+## 外部验收
+
+以下验收不属于本地默认命令，发布前按对应文档在真实环境执行：
+
+| 外部系统 | 说明 |
+| --- | --- |
+| MySQL | 字符集、排序规则、注释、默认值和并发锁行为；control-plane 迁移与并发专项 |
+| S3 / 对象存储 | 文件上传、下载授权、签名 URL 和真实存储行为 |
+| 禅道 / GitLab | 真实 MCP 写入、一次执行、附件归属和恢复证据 |
+| Playwright 浏览器 | 真实页面定位、截图、Trace 和停止行为 |
+| LLM 服务 | 真实模型调用、超时、截断和执行底座行为 |
+| k6 / Prometheus | 真实压测、Remote Write 和 `run_id` 指标可查 |
+
+每项验收必须记录使用的环境、命令、结果和未覆盖范围；模拟测试、夹具和跳过项不能写成真实验收通过。

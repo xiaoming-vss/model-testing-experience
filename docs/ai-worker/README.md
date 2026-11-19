@@ -98,17 +98,15 @@ max_output_chars = 100000
 
 ## 命令
 
-在 `apps/ai-worker/` 下执行：
+在 `apps/ai-worker/` 下安装依赖并启动：
 
 ```sh
-uv sync --locked                                  # 安装 Python 依赖
+uv sync --locked --group dev
 npm ci                                            # Pi 后端需要固定版本 CLI
-uv run mtx-ai-worker                              # 启动（后端由配置决定）
-uv run python -m unittest discover -s tests       # 测试（434 项，3 项按环境跳过）
-uv run ruff check .                               # Lint
+uv run --locked mtx-ai-worker                     # 启动（后端由配置决定）
 ```
 
-测试使用 `unittest` 编写，因此运行方式不是 pytest；开发依赖组只声明了 ruff。
+测试、Ruff 和格式检查命令统一见[命令矩阵](../commands.md#ai-worker)；按变更类型选择的专项入口见[开发规则](development-rules.md#验证入口)。测试使用 `unittest` 编写，因此运行方式不是 pytest；开发依赖组只声明了 ruff。
 
 ## 与控制面的交互
 

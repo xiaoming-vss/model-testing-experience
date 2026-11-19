@@ -9,5 +9,5 @@
 安装依赖并生成配置后，在本目录独立启动：
 
 ```sh
-uv run mtx-api-ui-worker
+uv run --locked mtx-api-ui-worker
 ```

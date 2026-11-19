@@ -195,36 +195,15 @@ Worker 领取、心跳、执行结果和取消操作遵循各自状态机、领�
 
 源码和测试变更必须通过修改范围内的 Ruff 检查、格式检查、类型检查及上表回归。新增类型与修改过的公共函数必须检查参数、返回值和函数体；第三方缺少类型声明时局部说明，不能用全局忽略掩盖业务类型错误。
 
-在 `apps/control-plane/` 执行应用检查：
+安装、静态检查、全量测试和定向测试命令统一见[验证命令矩阵](../commands.md#control-plane)。Ruff 参数和规则以应用 `pyproject.toml` 为准；类型检查使用矩阵中的固定参数，并将涉及的业务模块路径明确记录在交付说明中。后续迁入工具配置文件时，必须保持这些检查范围，不依赖各开发者的本地默认设置。新模块错误必须修复；触及历史模块时区分本次新增问题与存量问题，不能将仍有错误的检查报告为通过。
 
-```sh
-uv sync --locked --extra dev
-uv run --locked --extra dev python scripts/check.py
-uv run --locked --extra dev python -m pytest tests/<相关测试文件>.py
-uv run --locked --extra dev ruff check <修改的源码及测试路径>
-uv run --locked --extra dev ruff format --check <修改的源码及测试路径>
-uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>
-```
-
-Ruff 参数和规则以应用 `pyproject.toml` 为准；类型检查使用上面的固定参数，并将涉及的业务模块路径明确记录在交付说明中。后续迁入工具配置文件时，必须保持这些检查范围，不依赖各开发者的本地默认设置。新模块错误必须修复；触及历史模块时区分本次新增问题与存量问题，不能将仍有错误的检查报告为通过。
-
-占位路径按本次修改替换。首次开发需要同步依赖，已有环境且依赖未变更时直接使用现有环境。下面是权限与数据库结构变更的固定测试入口示例：
-
-```sh
-uv run --locked --extra dev python -m pytest tests/test_auth_contract.py tests/test_project_membership_api.py tests/test_developer_access.py
-uv run --locked --extra dev python -m pytest tests/test_initial_schema_migration.py tests/test_schema_comments.py
-```
+占位路径按本次修改替换。首次开发需要同步依赖，已有环境且依赖未变更时直接使用现有环境。权限与数据库结构变更至少覆盖 `test_auth_contract.py`、`test_project_membership_api.py`、`test_developer_access.py`、`test_initial_schema_migration.py` 和 `test_schema_comments.py`，使用矩阵中的定向测试入口执行。
 
 涉及多个类别时组合必跑入口；共享基础层或跨模块改动扩大回归范围。纯文档修改核对内容、路径和链接即可。CI 后续应复用相同检查入口；本规范不将尚未配置的自动检查声明为已经生效。
 
 数据库或锁相关真实验收使用明确指定的空、可丢弃 MySQL 测试库，遵守测试夹具的库名和初始化限制。测试不得默认接入开发业务库或正式数据。
 
-修改仓库编排时，在仓库根目录初始化本地配置后执行：
-
-```sh
-python3 -m unittest discover -s tests -v
-python3 scripts/manage.py compose config --quiet
-```
+修改仓库编排时，按[验证命令矩阵](../commands.md#根目录与部署编排)在仓库根目录初始化本地配置后执行根编排测试和 Compose 配置校验。
 
 交付说明包含改动后的行为、迁移及配置要求、相关验证和实际限制。接口变更更新消费方及契约，数据库变更同时交付模型与迁移，领域语义变化同步文档；没有完成的验证不写成通过。
 

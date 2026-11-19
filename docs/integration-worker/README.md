@@ -54,7 +54,7 @@ Docker 健康检查读取进程与最近循环/心跳进展；空队列及控制
 在 `apps/control-plane` 使用生成配置执行只读观测命令；不需要停止服务：
 
 ```sh
-uv run --extra dev python -m testing_agent.cli.integration_maintenance observe --config config/local.toml --project-id <项目ID> --window-hours 24 --limit 100
+uv run --locked --extra dev python -m testing_agent.cli.integration_maintenance observe --config config/local.toml --project-id <项目ID> --window-hours 24 --limit 100
 ```
 
 省略 project-id 查看当前数据库整体；时间窗口为 1..720 小时，明细上限为 1..1000，截断会显式标记。输出包括活跃/排队/unknown/隔离任务、最久等待、首次领取等待样本、有效/过期租约、最近成功心跳、按服务和步骤聚合的耗时，以及失败、unknown、失租和授权撤销的操作计数。停止的 Worker 也可查看其最近联系与心跳，在线数按当前代次及期限计算。
@@ -96,18 +96,8 @@ docker cp <副本容器编号>:/app/runtime/evidence.json .runtime/integration-e
 
 ## 检查
 
-在应用目录运行 pytest、Ruff 和 mypy。完整 HTTP 工作流测试需要先安装控制面的开发依赖，它启动隔离控制面数据库及 HTTP 进程，不访问统一配置中的运行服务。真实 MySQL 并发验收与真实禅道/S3 验收另行进行。
+在应用目录运行 pytest、Ruff 和 mypy，完整命令见[命令矩阵](../commands.md#integration-worker)。完整 HTTP 工作流测试需要先安装控制面的开发依赖，它启动隔离控制面数据库及 HTTP 进程，不访问统一配置中的运行服务。真实 MySQL 并发验收与真实禅道/S3 验收另行进行。
 
-```sh
-# 仓库根目录，显式运行独立容器的空领取/健康/停止验收
-docker build -t mtx/integration-worker:split-validation apps/integration-worker
-MTX_TEST_INTEGRATION_WORKER_RUNTIME=1 python3 -m unittest discover -s tests -p test_integration_worker_runtime.py -v
-```
+独立容器的空领取/健康/停止验收（仓库根目录，需要 Docker）和 180 秒传输边界验收（本项目目录，默认跳过）的命令、环境变量和前置条件见[命令矩阵](../commands.md#integration-worker)。
 
-180 秒传输边界检查默认跳过；安装控制面开发依赖后，在本应用目录显式执行：
-
-```sh
-MTX_INTEGRATION_LONG_UPLOAD=1 uv run --extra dev python -m pytest tests/integration/test_long_upload.py -q
-```
-
-该检查启动独立控制面、Worker 和 HTTP MCP 夹具，上传超过实际 RPC 180 秒截止后要求 unknown、不重发及不执行正文；同时读取真实租约心跳并测量普通 Bug/项目接口的基线与上传期间延迟。输出 `long-upload-acceptance.json` 到本次 pytest 临时目录，包含延迟与心跳的聚合事实，不含凭据。它证明进程与传输边界，真实禅道/S3 长传输负载需要单独验证。
+180 秒检查启动独立控制面、Worker 和 HTTP MCP 夹具，上传超过实际 RPC 180 秒截止后要求 unknown、不重发及不执行正文；同时读取真实租约心跳并测量普通 Bug/项目接口的基线与上传期间延迟。输出 `long-upload-acceptance.json` 到本次 pytest 临时目录，包含延迟与心跳的聚合事实，不含凭据。它证明进程与传输边界，真实禅道/S3 长传输负载需要单独验证。

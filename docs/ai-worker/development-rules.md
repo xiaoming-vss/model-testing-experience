@@ -20,14 +20,7 @@
 
 ## 验证入口
 
-本项目使用 unittest 和 `dev` 依赖组，当前未配置 mypy；公共接口类型按通用规则通过审查和现有契约验证。
-
-```sh
-uv sync --locked --group dev
-uv run --locked --group dev python -m unittest discover -s tests -v
-uv run --locked --group dev ruff check .
-uv run --locked --group dev ruff format --check <修改的源码及测试路径>
-```
+本项目使用 unittest 和 `dev` 依赖组，当前未配置 mypy；公共接口类型按通用规则通过审查和现有契约验证。安装、全量测试、Ruff 和格式检查命令统一见[验证命令矩阵](../commands.md#ai-worker)。
 
 | 变更 | 必须检查的入口 |
 | --- | --- |

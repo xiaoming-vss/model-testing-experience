@@ -168,7 +168,7 @@ MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 MTX_TEST_ZENTAO_MCP_SOURCE_DEADLINE=1 \
 
 该检查使用真实发布二进制及隔离 HTTP 来源，验证 60 秒截止、明确失败与未执行 POST /files；真实 S3/禅道链路结果和 180 秒成功响应延迟场景已记入集成验收记录并归档。
 
-发布控制面代码时，在空库执行 `uv run alembic upgrade head`（唯一 baseline 已包含附件表结构），并部署 Studio 的本轮构建。MCP、控制面迁移和 Studio 三者应一起升级；升级后读取工具列表应出现 `upload_bug_attachment`、`get_bug_attachment`。具体执行入口沿用部署现有流程；独立控制面可在应用目录执行 `uv run alembic upgrade head`，平台容器模式沿用既有迁移服务。
+发布控制面代码时，在空库执行 `uv run --locked alembic upgrade head`（唯一 baseline 已包含附件表结构），并部署 Studio 的本轮构建。MCP、控制面迁移和 Studio 三者应一起升级；升级后读取工具列表应出现 `upload_bug_attachment`、`get_bug_attachment`。具体执行入口沿用部署现有流程；独立控制面可在应用目录执行 `uv run --locked alembic upgrade head`，平台容器模式沿用既有迁移服务。
 
 隔离协议验收可在仓库根目录运行：
 

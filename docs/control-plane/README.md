@@ -177,17 +177,15 @@ env = "local"                     # local 时开启 uvicorn reload
 
 ## 命令
 
-在 `apps/control-plane/` 下执行：
+在 `apps/control-plane/` 下安装依赖、启动和迁移：
 
 ```sh
-uv sync --locked --extra dev                      # 安装依赖（含开发依赖）
-uv run mtx-control-plane                          # 启动
-uv run --locked --extra dev python scripts/check.py  # 静态检查和完整测试
-uv run --locked --extra dev python scripts/check.py --static-only  # 仅静态检查
-uv run --extra dev alembic upgrade head           # 数据库迁移
+uv sync --locked --extra dev
+uv run --locked mtx-control-plane
+uv run --locked --extra dev alembic upgrade head
 ```
 
-也可在仓库根目录用 `python3 scripts/manage.py run control-plane` 和 `python3 scripts/manage.py migrate`，由统一配置生成 `config/local.toml`。
+检查与测试命令（`scripts/check.py`、pytest、Ruff、mypy）统一见[命令矩阵](../commands.md#control-plane)。也可在仓库根目录用 `python3 scripts/manage.py run control-plane` 和 `python3 scripts/manage.py migrate`，由统一配置生成 `config/local.toml`。
 
 `sql/` 存放一次性的数据订正脚本，需人工对着目标库执行，默认干跑、执行前自动备份受影响行。已有的脚本见下表。
 
@@ -227,8 +225,8 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 ## 测试
 
-在 `apps/control-plane/` 执行 `uv run --locked --extra dev python scripts/check.py`，
-依次检查 Ruff、格式、全源码类型和完整测试。可通过 `--tests tests/<file>.py`
+检查与测试入口统一见[命令矩阵](../commands.md#control-plane)。`scripts/check.py`
+依次检查 Ruff、格式、全源码类型和完整测试，可通过 `--tests tests/<file>.py`
 选择关联回归，或 `--static-only` 仅执行静态检查。共享测试准备代码集中到
 `tests/support/`，新增共享夹具不放在 `test_*.py` 中供其他模块导入。
 整改已于 2026-11-18 收口，方案与实施记录已归档删除；

@@ -10,5 +10,5 @@
 安装依赖并生成配置后，在本目录独立启动：
 
 ```sh
-uv run mtx-control-plane
+uv run --locked mtx-control-plane
 ```

@@ -9,13 +9,13 @@
 本地在控制面目录使用其既有配置（`config/local.toml` 或 `APP_CONF`）：
 
 ```sh
-uv run alembic upgrade head
-uv run python -m testing_agent.cli.skills default-skills
+uv run --locked alembic upgrade head
+uv run --locked python -m testing_agent.cli.skills default-skills
 ```
 
 Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-upgrade 自动执行同一命令；需要 `config.storage.s3.enabled=true`，设为 `false` 时跳过。同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。也可以在 Pod 内手工执行 `/app/default-skills` 重试。
 
-更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像并 `helm upgrade`。脚本不读取 Worker 私有目录。同名技能整体替换，不递增版本，不提供回滚；源目录中删除的文件再次同步后不再出现在清单中。删除整个源技能文件夹不会在普通同步时自动删除系统技能；需要显式追加 `--prune`，同步完成后删除源目录中已不存在的系统默认技能（项目自定义技能不受影响），命令为 `uv run python -m testing_agent.cli.skills /app/default-skills --prune`。
+更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像并 `helm upgrade`。脚本不读取 Worker 私有目录。同名技能整体替换，不递增版本，不提供回滚；源目录中删除的文件再次同步后不再出现在清单中。删除整个源技能文件夹不会在普通同步时自动删除系统技能；需要显式追加 `--prune`，同步完成后删除源目录中已不存在的系统默认技能（项目自定义技能不受影响），命令为 `uv run --locked python -m testing_agent.cli.skills /app/default-skills --prune`。
 
 历史迁移 `20260927_0021` 按已确认需求丢弃旧压缩包技能记录，将其关联文件交给 S3 清理流程，不做压缩包数据迁移；该调整已并入当前唯一 baseline，空库执行 `alembic upgrade head` 即可。默认技能是 `project_id=NULL`、`scope_key=system` 的资源，自定义技能使用项目 ID 作为 scope。唯一约束为 scope + 文件夹名。
 
@@ -42,7 +42,7 @@ Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-up
 不能把本地异常当成远端写入已经终止。
 
 旧固定路径及更早的 ID 路径继续可读；可以执行
-`uv run python -m testing_agent.cli.skills --migrate-paths` 转为独立批次目录。
+`uv run --locked python -m testing_agent.cli.skills --migrate-paths` 转为独立批次目录。
 迁移保留技能及文件 ID，已是批次路径时重复执行不复制；旧对象等待签名有效期后回收。
 系统默认技能同步、项目技能上传和路径迁移采用同一发布协议。旧路径只读兼容，新的发布
 与文件名修复均不会再向可能被旧清理任务持有的对象键写入。
@@ -153,7 +153,7 @@ Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-up
 
 功能链路的四个阶段统一使用 `mtx-organize-requirement-material`、`mtx-analyze-functional-requirements`、`mtx-generate-traceable-test-points`、`mtx-generate-solution-test-cases`。已删除四个对应的非 `mtx-` 默认技能源目录，并清理 Worker 中按旧名称选择阶段和输出约束的兼容分支；测试与文档同步改为新名称。`extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 等其他默认技能不在本次清理范围。
 
-后续（2026-11-13）：确认 `extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 已不在 Worker 选择路径上（材料阶段统一使用 `mtx-organize-requirement-material`），两个默认技能源目录已删除，测试与设计文档已改为新名称。部署后执行 `uv run python -m testing_agent.cli.skills /app/default-skills --prune` 从系统默认技能库移除历史记录；项目自定义技能不受影响。
+后续（2026-11-13）：确认 `extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 已不在 Worker 选择路径上（材料阶段统一使用 `mtx-organize-requirement-material`），两个默认技能源目录已删除，测试与设计文档已改为新名称。部署后执行 `uv run --locked python -m testing_agent.cli.skills /app/default-skills --prune` 从系统默认技能库移除历史记录；项目自定义技能不受影响。
 
 `testing_agent.cli.skills` 新增 `--prune`：普通同步只发布/更新源目录中的技能，`--prune` 在同步完成后删除源目录中已不存在的系统默认技能，项目自定义技能不受影响。本地已执行一次带 `--prune` 的同步，四个旧技能从默认库移除，文件按既有删除协议进入 S3 清理流程；四项 `mtx-` 技能的清单文件数与源目录一致。`tests/test_project_skill_space.py` 21 项、AI Worker 单元测试 468 项、`AiSkillLibraryPage.test.tsx` 2 项通过。未创建真实模型业务运行。
 
@@ -189,13 +189,13 @@ Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-up
 
 两个 API 默认技能源目录已按 mtx 技能结构整理并切换名称：`openapi-test-config-extractor` → `mtx-extract-interface-test-config`，`api-cases-yaml-generator` → `mtx-generate-api-test-case`。两个技能均改为中文 `SKILL.md`（输入／执行／输出与校验）并新增 `prompts/`（生成与输出前自查），规则和格式拆分到 `references/input-format.md`、`references/field-rules.md`、`references/output-format.md`；同时移除原 `SKILL.md` 中指向作者本机 Windows 目录的绝对路径引用。业务规则与平台校验边界保持不变；输出示例中的认证占位符统一为双花括号模板。
 
-AI Worker 的阶段选择、技能常量、提示词、CLI 默认值和单元测试已同步切换为新名称，不保留旧名兼容分支。部署时先同步新技能，再切换 Worker；本地或集群发布后执行 `uv run python -m testing_agent.cli.skills /app/default-skills --prune`，将旧名称从系统默认技能库移除（项目自定义技能不受影响）。本次仅完成仓库源与代码整理，未执行真实 S3／数据库发布、Worker 重启或模型生成验收。
+AI Worker 的阶段选择、技能常量、提示词、CLI 默认值和单元测试已同步切换为新名称，不保留旧名兼容分支。部署时先同步新技能，再切换 Worker；本地或集群发布后执行 `uv run --locked python -m testing_agent.cli.skills /app/default-skills --prune`，将旧名称从系统默认技能库移除（项目自定义技能不受影响）。本次仅完成仓库源与代码整理，未执行真实 S3／数据库发布、Worker 重启或模型生成验收。
 
 ## 2026-11-15 API 用例设计技能
 
 新增系统默认技能 `api-case-designer`，源目录为 `apps/control-plane/default-skills/api-case-designer/`，包含 `SKILL.md`、`agents/openai.yaml`、`prompts/design-cases.md`、`prompts/design-self-review.md` 以及输入、输出和覆盖规则参考。技能只消费已审核的接口配置提取子集和需求上下文，输出 `api_test_design/1.0` JSON；平台在 Worker 内完成完整设计契约校验和生成对齐校验。
 
-部署时沿用既有默认技能同步命令发布（本地 `uv run python -m testing_agent.cli.skills default-skills`，集群由 Helm `skillsSync` Job 执行）。本次仅提交仓库源，未执行真实 S3 发布、Worker 重启或模型生成验收。
+部署时沿用既有默认技能同步命令发布（本地 `uv run --locked python -m testing_agent.cli.skills default-skills`，集群由 Helm `skillsSync` Job 执行）。本次仅提交仓库源，未执行真实 S3 发布、Worker 重启或模型生成验收。
 
 同时更新 `mtx-generate-api-test-case`：输入包含 `apiDesign` 时进入设计驱动模式，严格按设计逐条生成 YAML、落实 `statusClass` 状态区间断言和 `patch` 效果，不增加设计之外的用例、断言或提取规则；输入只有提取配置时保留原正向用例生成行为。
 

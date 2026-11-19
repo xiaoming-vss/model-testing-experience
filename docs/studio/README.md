@@ -120,23 +120,14 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ## 命令
 
-在 `apps/studio/` 下执行：
+在 `apps/studio/` 下安装依赖并启动开发服务器：
 
 ```sh
-npm ci                # 安装依赖
-npm run dev           # 开发服务器，默认 127.0.0.1:5173
-npm run type-check    # tsc -b --pretty false
-npm run lint          # eslint .
-npm run test          # vitest run
-npm run build         # tsc -b && vite build
-npm run check:theme   # 登记色源与任意色值检查
-npm run check:css     # !important / 长前缀 / 未定义变量预算
-npm run check:css:structure  # CSS 文件、导入、规则体与重复体结构门禁
-npm run check:boundaries  # feature 跨模块 import 基线检查
-npm run verify        # type-check + lint + check:theme + check:css + check:css:structure + check:boundaries + build
+npm ci
+npm run dev           # 默认 127.0.0.1:5173
 ```
 
-`npm run verify` 不包含 `npm test`；迁移和发布前仍需单独执行全量测试。
+检查、测试、构建和 feature 边界验证命令统一见[命令矩阵](../commands.md#studio)。`npm run verify` 不包含 `npm test`；迁移和发布前两者都要执行。
 
 测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。测试数量以后续输出为准。
 

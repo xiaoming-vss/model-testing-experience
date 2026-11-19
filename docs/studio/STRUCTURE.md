@@ -18,7 +18,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查，结构门禁可通过 `npm run check:css:structure` 单独检查，feature 边界可通过 `npm run check:boundaries` 单独检查；其它规则的自动化见各条「检查」列。
+> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 

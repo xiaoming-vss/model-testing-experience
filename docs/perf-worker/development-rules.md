@@ -51,13 +51,7 @@
 
 ## 验证入口
 
-```sh
-uv sync --locked --extra dev
-uv run --locked --extra dev python -m pytest
-uv run --locked --extra dev ruff check .
-uv run --locked --extra dev ruff format --check .
-uv run --locked --extra dev mypy
-```
+安装、全量测试、Ruff、格式和 mypy 命令统一见[验证命令矩阵](../commands.md#perf-worker)。
 
 | 变更 | 必跑入口 |
 | --- | --- |

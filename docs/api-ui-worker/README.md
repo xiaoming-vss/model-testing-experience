@@ -46,15 +46,15 @@ mode = "poll"                 # poll 或 once
 
 ## 命令
 
-在 `apps/api-ui-worker/` 下执行：
+在 `apps/api-ui-worker/` 下安装依赖并启动：
 
 ```sh
-uv sync --locked --extra dev                      # 安装依赖
-uv run playwright install chromium                # 安装浏览器（Linux 首次可加 --with-deps）
-uv run mtx-api-ui-worker                          # 启动
-uv run --extra dev pytest                         # 测试
-uv run --extra dev ruff check .                   # Lint
+uv sync --locked --extra dev
+uv run --locked playwright install chromium       # Linux 首次可加 --with-deps
+uv run --locked mtx-api-ui-worker
 ```
+
+测试、Ruff 和 mypy 命令统一见[命令矩阵](../commands.md#api-ui-worker)；按变更类型选择的专项入口见[开发规则](development-rules.md#验证入口)。
 
 ## 对外接口
 

@@ -115,13 +115,7 @@ k6 退出码语义：`0` 执行完成，`99` 阈值不达标但执行完成，�
 
 ## 命令与验证
 
-```sh
-cd apps/perf-worker
-uv run --locked --extra dev pytest
-uv run --locked --extra dev ruff check .
-uv run --locked --extra dev ruff format --check .
-uv run --locked --extra dev mypy
-```
+测试、Ruff、格式和 mypy 命令统一见[命令矩阵](../commands.md#perf-worker)；按变更类型选择的专项入口见[开发规则](development-rules.md#验证入口)。
 
 有 `k6` 时测试会跑真实模板链路；没有 `k6` 时相关测试跳过。Remote Write 需要 Prometheus 开启接收能力（如 `--web.enable-remote-write-receiver`）。
 

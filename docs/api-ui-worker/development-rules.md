@@ -19,13 +19,7 @@
 
 ## 验证入口
 
-```sh
-uv sync --locked --extra dev
-uv run --locked --extra dev python -m pytest
-uv run --locked --extra dev ruff check <修改的源码及测试路径>
-uv run --locked --extra dev ruff format --check <修改的源码及测试路径>
-uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>
-```
+安装、全量测试、Ruff、格式和 mypy 命令统一见[验证命令矩阵](../commands.md#api-ui-worker)。
 
 | 变更 | 必跑入口 |
 | --- | --- |
