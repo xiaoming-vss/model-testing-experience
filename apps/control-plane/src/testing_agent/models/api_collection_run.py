@@ -53,7 +53,10 @@ class ApiCollectionRun(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "API 测试集运行状态：pending/queued/claimed/running/success/"
+            "failed/error/canceled/skipped"
+        ),
     )
     total_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="本次运行用例总数"
@@ -134,7 +137,10 @@ class ApiCollectionRunItem(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "API 测试集条目状态：pending/queued/claimed/running/success/"
+            "failed/error/canceled/skipped"
+        ),
     )
     continue_on_failure: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="失败后是否继续执行后续用例"

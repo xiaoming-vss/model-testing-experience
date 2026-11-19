@@ -25,7 +25,7 @@ class ApiCase(Base):
         nullable=False,
         comment="API 集合业务标识",
     )
-    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="API 测试用例名称")
     description: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="业务描述"
     )

@@ -52,7 +52,9 @@ class UiTestCaseRun(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "UI 用例运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped"
+        ),
     )
     trace_path: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="浏览器执行追踪文件路径"

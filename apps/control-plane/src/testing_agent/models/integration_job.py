@@ -142,7 +142,7 @@ class IntegrationJobStep(Base):
     status: Mapped[str] = mapped_column(
         String(20),
         default="pending",
-        comment="pending/write_intent/succeeded/noop/failed/blocked/unknown/canceled",
+        comment="集成步骤状态：pending/write_intent/succeeded/noop/failed/blocked/unknown/canceled",
     )
     operation_id: Mapped[str] = mapped_column(
         String(64), default="", comment="远端写入操作标识，用于结果核对与避免重复写入"

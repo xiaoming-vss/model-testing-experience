@@ -19,7 +19,7 @@ class Project(Base):
     user_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="当前项目所有者用户业务标识"
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="项目名称")
     description: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="业务描述"
     )

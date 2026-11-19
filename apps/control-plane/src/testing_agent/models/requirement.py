@@ -23,7 +23,7 @@ class Requirement(Base):
         nullable=False,
         comment="迭代业务标识",
     )
-    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="需求名称")
     document_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="richtext", comment="需求文档类型"
     )

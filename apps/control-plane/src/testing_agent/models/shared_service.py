@@ -18,7 +18,7 @@ class SharedService(Base):
         String(64), ForeignKey("projects.project_id"), index=True, comment="项目业务标识"
     )
     provider: Mapped[str] = mapped_column(String(30), comment="外部服务提供方类型")
-    name: Mapped[str] = mapped_column(String(120), comment="名称")
+    name: Mapped[str] = mapped_column(String(120), comment="共享服务名称")
     base_url: Mapped[str] = mapped_column(String(512), comment="服务或环境基础地址")
     allow_http: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="禅道/GitLab 服务地址是否允许明文 HTTP"

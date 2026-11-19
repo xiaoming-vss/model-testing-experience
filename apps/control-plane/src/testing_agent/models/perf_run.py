@@ -73,12 +73,12 @@ class PerfRun(Base):
         index=True,
         nullable=False,
         default="queued",
-        comment="queued/running/stopping/completed/failed/stopped/canceled",
+        comment="性能运行状态：queued/running/stopping/completed/failed/stopped/canceled",
     )
     outcome: Mapped[str | None] = mapped_column(
         String(32),
         nullable=True,
-        comment="passed/threshold_failed/inconclusive/execution_error/stopped",
+        comment="性能运行结果分类：passed/threshold_failed/inconclusive/execution_error/stopped",
     )
     case_yaml: Mapped[str] = mapped_column(
         Text().with_variant(LONGTEXT(), "mysql"),

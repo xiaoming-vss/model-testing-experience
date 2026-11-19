@@ -35,7 +35,7 @@ class Bug(Base):
         nullable=False,
         comment="项目业务标识",
     )
-    title: Mapped[str] = mapped_column(String(200), nullable=False, comment="标题")
+    title: Mapped[str] = mapped_column(String(200), nullable=False, comment="Bug 标题")
     description_html: Mapped[str] = mapped_column(
         LONGTEXT, nullable=False, default="", comment="Bug 富文本正文 HTML"
     )

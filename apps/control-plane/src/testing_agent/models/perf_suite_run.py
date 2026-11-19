@@ -60,10 +60,12 @@ class PerfSuiteRun(Base):
         index=True,
         nullable=False,
         default="queued",
-        comment="queued/running/stopping/completed/failed/stopped/canceled",
+        comment="性能测试集运行状态：queued/running/stopping/completed/failed/stopped/canceled",
     )
     outcome: Mapped[str | None] = mapped_column(
-        String(32), nullable=True, comment="inconclusive/stopped/execution_error"
+        String(32),
+        nullable=True,
+        comment=("性能测试集运行结果分类：inconclusive/stopped/execution_error"),
     )
     total_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="本次运行计划执行的用例数"
@@ -129,7 +131,7 @@ class PerfSuiteRunItem(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/running/completed/failed/stopped/canceled/skipped",
+        comment="性能测试集条目状态：pending/queued/running/completed/failed/stopped/canceled/skipped",
     )
     outcome: Mapped[str | None] = mapped_column(String(32), nullable=True, comment="子运行结果")
     child_run_id: Mapped[str] = mapped_column(

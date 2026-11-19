@@ -34,7 +34,7 @@ class TestOrder(Base):
         nullable=False,
         comment="迭代业务标识",
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="测试单名称")
     tested_version: Mapped[str] = mapped_column(
         String(100), nullable=False, default="", comment="本次手工测试的被测版本"
     )

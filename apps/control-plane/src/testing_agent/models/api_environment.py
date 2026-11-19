@@ -27,7 +27,7 @@ class ApiEnvironment(Base):
     kind: Mapped[str] = mapped_column(
         String(16), nullable=False, default="api", comment="环境用途：api / ui / perf"
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="API 环境名称")
     base_url: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="服务或环境基础地址"
     )

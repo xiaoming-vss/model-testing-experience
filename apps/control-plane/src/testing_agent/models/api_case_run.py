@@ -55,7 +55,9 @@ class ApiCaseRun(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "API 用例运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped"
+        ),
     )
     request_snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True, comment="实际请求的脱敏快照 JSON"

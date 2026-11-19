@@ -36,7 +36,7 @@ class FunctionTestCase(Base):
     module: Mapped[str] = mapped_column(
         String(120), nullable=False, default="", comment="功能用例所属业务模块"
     )
-    title: Mapped[str] = mapped_column(String(255), nullable=False, comment="标题")
+    title: Mapped[str] = mapped_column(String(255), nullable=False, comment="功能测试用例标题")
     priority: Mapped[str] = mapped_column(String(30), nullable=False, default="", comment="优先级")
     case_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="", comment="用例类型"

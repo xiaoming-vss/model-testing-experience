@@ -23,7 +23,7 @@ class ApiAssertRule(Base):
         nullable=False,
         comment="测试用例业务标识",
     )
-    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="API 断言规则名称")
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否启用")
     order_no: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="执行或展示顺序"

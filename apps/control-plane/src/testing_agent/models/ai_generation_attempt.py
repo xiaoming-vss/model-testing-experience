@@ -54,7 +54,11 @@ class AiGenerationAttempt(Base):
         JSON(none_as_null=True), comment="本次生成或编辑的冻结输入快照"
     )
     revision_instruction: Mapped[str | None] = mapped_column(Text, comment="本次修订指令")
-    status: Mapped[str] = mapped_column(String(20), nullable=False, comment="本次尝试的执行状态")
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment=("AI 执行尝试状态：pending/claimed/running/success/failed/error/canceled"),
+    )
     output_content: Mapped[str | None] = mapped_column(
         CONTENT, comment="本次尝试输出的阶段候选正文"
     )

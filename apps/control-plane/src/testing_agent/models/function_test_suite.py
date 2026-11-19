@@ -23,7 +23,7 @@ class FunctionTestSuite(Base):
         nullable=False,
         comment="需求业务标识",
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="功能测试集名称")
     description: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="业务描述"
     )

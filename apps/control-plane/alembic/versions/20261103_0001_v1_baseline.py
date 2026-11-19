@@ -246,7 +246,7 @@ def upgrade() -> None:
             comment="个人连接及凭据所有者用户业务标识",
         ),
         sa.Column("provider", sa.String(length=30), nullable=False, comment="外部服务提供方类型"),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="集成连接名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
         sa.Column("auth_type", sa.String(length=50), nullable=False, comment="外部服务认证方式"),
         sa.Column("account", sa.String(length=120), nullable=False, comment="外部服务登录账号"),
@@ -656,7 +656,7 @@ def upgrade() -> None:
         sa.Column(
             "user_id", sa.String(length=64), nullable=False, comment="当前项目所有者用户业务标识"
         ),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="项目名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
@@ -1128,7 +1128,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="AI Worker 任务状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column(
             "worker_id",
@@ -1285,7 +1285,7 @@ def upgrade() -> None:
         sa.Column(
             "kind", sa.String(length=16), nullable=False, comment="环境用途：api / ui / perf"
         ),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="API 环境名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column("is_default", sa.Boolean(), nullable=False, comment="是否为所在作用域的默认项"),
@@ -1319,7 +1319,7 @@ def upgrade() -> None:
             "bug_no", sa.Integer(), nullable=False, comment="项目内唯一 Bug 序号，展示为 BUG-序号"
         ),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
-        sa.Column("title", sa.String(length=200), nullable=False, comment="标题"),
+        sa.Column("title", sa.String(length=200), nullable=False, comment="Bug 标题"),
         sa.Column(
             "description_html", mysql.LONGTEXT(), nullable=False, comment="Bug 富文本正文 HTML"
         ),
@@ -1501,7 +1501,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="prepared/succeeded/failed/unknown；prepared 已获一次写许可，重试不再授予",
+            comment="功能用例推送操作状态：prepared/succeeded/failed/unknown；prepared 已获一次写许可，重试不再授予",
         ),
         sa.Column(
             "action",
@@ -1628,7 +1628,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/write_intent/succeeded/noop/failed/blocked/unknown/canceled",
+            comment="集成步骤状态：pending/write_intent/succeeded/noop/failed/blocked/unknown/canceled",
         ),
         sa.Column(
             "operation_id",
@@ -1875,7 +1875,7 @@ def upgrade() -> None:
         ),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
         sa.Column("provider", sa.String(length=30), nullable=False, comment="外部服务提供方类型"),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="共享服务名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
         sa.Column(
             "allow_http",
@@ -2023,7 +2023,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="迭代名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
             "start_time",
@@ -2734,7 +2734,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
         sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="需求名称"),
         sa.Column("document_type", sa.String(length=20), nullable=False, comment="需求文档类型"),
         sa.Column(
             "document_content", mysql.LONGTEXT(), nullable=False, comment="需求文档正文或提取内容"
@@ -2814,7 +2814,7 @@ def upgrade() -> None:
         sa.Column("order_id", sa.String(length=64), nullable=False, comment="测试单业务标识"),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
         sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="测试单名称"),
         sa.Column(
             "tested_version",
             sa.String(length=100),
@@ -2891,7 +2891,7 @@ def upgrade() -> None:
             comment="本次生成或编辑的冻结输入快照",
         ),
         sa.Column("revision_instruction", sa.Text(), nullable=True, comment="本次修订指令"),
-        sa.Column("status", sa.String(length=20), nullable=False, comment="本次尝试的执行状态"),
+        sa.Column("status", sa.String(length=20), nullable=False, comment="AI 执行尝试状态：pending/claimed/running/success/failed/error/canceled"),
         sa.Column(
             "output_content",
             sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
@@ -2993,7 +2993,7 @@ def upgrade() -> None:
             "collection_id", sa.String(length=64), nullable=False, comment="API 集合业务标识"
         ),
         sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="API 测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
             "effective_import_id",
@@ -3061,7 +3061,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("suite_id", sa.String(length=64), nullable=False, comment="功能测试集业务标识"),
         sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="功能测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
             "effective_import_id",
@@ -3318,7 +3318,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("suite_id", sa.String(length=64), nullable=False, comment="UI 测试套件业务标识"),
         sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
-        sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="UI 测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
             "effective_import_id",
@@ -3520,7 +3520,7 @@ def upgrade() -> None:
         sa.Column(
             "collection_id", sa.String(length=64), nullable=False, comment="API 集合业务标识"
         ),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="API 测试用例名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
@@ -3594,7 +3594,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="API 测试集运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column("total_count", sa.Integer(), nullable=False, comment="本次运行用例总数"),
         sa.Column("success_count", sa.Integer(), nullable=False, comment="本次运行用例成功数"),
@@ -3673,7 +3673,7 @@ def upgrade() -> None:
             "suite_id", sa.String(length=64), nullable=False, comment="所属功能测试集业务标识"
         ),
         sa.Column("module", sa.String(length=120), nullable=False, comment="功能用例所属业务模块"),
-        sa.Column("title", sa.String(length=255), nullable=False, comment="标题"),
+        sa.Column("title", sa.String(length=255), nullable=False, comment="功能测试用例标题"),
         sa.Column("priority", sa.String(length=30), nullable=False, comment="优先级"),
         sa.Column("case_type", sa.String(length=30), nullable=False, comment="用例类型"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
@@ -3771,7 +3771,7 @@ def upgrade() -> None:
         sa.Column(
             "suite_id", sa.String(length=64), nullable=False, comment="所属 UI 测试套件业务标识"
         ),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="UI 测试用例名称"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
         sa.Column("steps_json", mysql.JSON(), nullable=False, comment="可执行 UI 步骤列表 JSON"),
@@ -3828,7 +3828,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="UI 测试集运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column("total_count", sa.Integer(), nullable=False, comment="本次运行用例总数"),
         sa.Column("success_count", sa.Integer(), nullable=False, comment="本次运行用例成功数"),
@@ -3917,7 +3917,7 @@ def upgrade() -> None:
             "assert_rule_id", sa.String(length=64), nullable=False, comment="断言规则业务标识"
         ),
         sa.Column("case_id", sa.String(length=64), nullable=False, comment="测试用例业务标识"),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="API 断言规则名称"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
         sa.Column("assert_source", sa.String(length=30), nullable=False, comment="断言数据来源"),
@@ -3980,7 +3980,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="API 用例运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column(
             "request_snapshot_json", mysql.JSON(), nullable=True, comment="实际请求的脱敏快照 JSON"
@@ -4182,13 +4182,13 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="queued/running/stopping/completed/failed/stopped/canceled",
+            comment="性能测试集运行状态：queued/running/stopping/completed/failed/stopped/canceled",
         ),
         sa.Column(
             "outcome",
             sa.String(length=32),
             nullable=True,
-            comment="inconclusive/stopped/execution_error",
+            comment="性能测试集运行结果分类：inconclusive/stopped/execution_error",
         ),
         sa.Column("total_count", sa.Integer(), nullable=False, comment="本次运行计划执行的用例数"),
         sa.Column("completed_count", sa.Integer(), nullable=False, comment="已完成用例数"),
@@ -4276,7 +4276,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/running/completed/failed/stopped/canceled/skipped",
+            comment="性能测试集条目状态：pending/queued/running/completed/failed/stopped/canceled/skipped",
         ),
         sa.Column("outcome", sa.String(length=32), nullable=True, comment="子运行结果"),
         sa.Column(
@@ -4452,13 +4452,13 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="queued/running/stopping/completed/failed/stopped/canceled",
+            comment="性能运行状态：queued/running/stopping/completed/failed/stopped/canceled",
         ),
         sa.Column(
             "outcome",
             sa.String(length=32),
             nullable=True,
-            comment="passed/threshold_failed/inconclusive/execution_error/stopped",
+            comment="性能运行结果分类：passed/threshold_failed/inconclusive/execution_error/stopped",
         ),
         sa.Column(
             "case_yaml",
@@ -4549,7 +4549,7 @@ def upgrade() -> None:
             "extract_rule_id", sa.String(length=64), nullable=False, comment="提取规则业务标识"
         ),
         sa.Column("case_id", sa.String(length=64), nullable=False, comment="测试用例业务标识"),
-        sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="API 提取规则名称"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
         sa.Column("source", sa.String(length=30), nullable=False, comment="变量提取的数据来源"),
@@ -4610,7 +4610,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="UI 用例运行状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column(
             "trace_path", sa.String(length=512), nullable=False, comment="浏览器执行追踪文件路径"
@@ -4707,7 +4707,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="UI 测试集条目状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column(
             "snapshot_json", mysql.JSON(), nullable=True, comment="执行输入或业务内容快照 JSON"
@@ -4789,7 +4789,7 @@ def upgrade() -> None:
             "status",
             sa.String(length=20),
             nullable=False,
-            comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+            comment="API 测试集条目状态：pending/queued/claimed/running/success/failed/error/canceled/skipped",
         ),
         sa.Column(
             "continue_on_failure",

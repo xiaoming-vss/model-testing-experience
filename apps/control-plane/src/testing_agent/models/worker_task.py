@@ -34,7 +34,10 @@ class WorkerTask(Base):
         String(20),
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "AI Worker 任务状态：pending/queued/claimed/running/success/"
+            "failed/error/canceled/skipped"
+        ),
     )
     worker_id: Mapped[str] = mapped_column(
         String(120), nullable=False, default="", comment="领取或执行任务的 Worker 标识"

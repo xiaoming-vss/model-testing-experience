@@ -49,7 +49,10 @@ class UiTestSuiteRun(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "UI 测试集运行状态：pending/queued/claimed/running/success/"
+            "failed/error/canceled/skipped"
+        ),
     )
     total_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="本次运行用例总数"
@@ -140,7 +143,10 @@ class UiTestSuiteRunItem(Base):
         index=True,
         nullable=False,
         default="pending",
-        comment="pending/queued/claimed/running/success/failed/error/canceled/skipped",
+        comment=(
+            "UI 测试集条目状态：pending/queued/claimed/running/success/"
+            "failed/error/canceled/skipped"
+        ),
     )
     snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True, comment="执行输入或业务内容快照 JSON"

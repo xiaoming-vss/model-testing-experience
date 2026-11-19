@@ -30,7 +30,7 @@ class IntegrationConnection(Base):
     provider: Mapped[str] = mapped_column(
         String(30), index=True, nullable=False, comment="外部服务提供方类型"
     )
-    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="名称")
+    name: Mapped[str] = mapped_column(String(120), nullable=False, comment="集成连接名称")
     base_url: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="服务或环境基础地址"
     )
