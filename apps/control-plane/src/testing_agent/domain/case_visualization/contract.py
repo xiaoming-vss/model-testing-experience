@@ -10,6 +10,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 TASK_TYPE = "test_order_case_visualization"
+SKILL_NAME = "mtx-analyze-case-visualization"
 STATE_IDENTITY_MESSAGE = "状态保持必须引用同一已知状态"
 MAX_INPUT_BYTES = 256 * 1024
 MAX_OUTPUT_BYTES = 512 * 1024
