@@ -30,6 +30,7 @@
 | 生成 Docker 配置 | `python3 scripts/manage.py configure --mode docker` | 已执行 `init`；写入 `.runtime/docker/` 和 `.runtime/compose.env` |
 | 根编排测试 | `python3 -m unittest discover -s tests -v` | Python 3.11+；需要容器的用例在缺少环境时显式跳过 |
 | Compose 配置校验 | `python3 scripts/manage.py compose config --quiet` | 已执行 `init`；Docker Engine 与 Compose v2+ |
+| 六镜像构建验证 | `scripts/build_images.sh [app ...]` | Docker BuildKit、uv、npm 和可访问的镜像仓库；先校验锁文件再构建 |
 | 本地启动单个服务 | `python3 scripts/manage.py run <control-plane\|ai-worker\|api-ui-worker\|integration-worker\|perf-worker\|studio>` | 已安装对应项目依赖 |
 | 数据库迁移 | `python3 scripts/manage.py migrate` | 数据库可达；迁移基线只支持空库初始化 |
 | K8s chart 静态检查 | `for chart in deploy/helm/charts/*; do helm lint "$chart"; done` | 已安装 Helm；K8s 不是本地默认部署方式 |
@@ -46,15 +47,14 @@
 
 ### 六镜像构建验证
 
-外部 CI 在仓库根目录逐个构建六个应用镜像；基础镜像已固定 digest，构建上下文为各自应用目录：
+外部 CI 调用 `scripts/build_images.sh`。不带参数时先校验五个 Python 项目的 `uv.lock` 和两个 `package-lock.json`，再按各应用目录构建六个镜像；也可以只传应用名：
 
 ```bash
-for app in control-plane ai-worker api-ui-worker integration-worker perf-worker studio; do
-  docker build -f "apps/$app/Dockerfile" -t "mtx/$app:ci" "apps/$app" || exit 1
-done
+scripts/build_images.sh
+scripts/build_images.sh control-plane studio
 ```
 
-前置条件为 Docker Engine、BuildKit 和可访问镜像仓库。`studio` 默认不设置 `VITE_API_BASE_URL`，由 Nginx 同源代理；需要绝对 API 地址时通过 `--build-arg` 传入。
+脚本只封装锁文件检查和构建命令，不推送镜像，也不替代外部 CI。前置条件为 Docker Engine、BuildKit、`uv`、`npm` 和可访问镜像仓库。`studio` 默认不设置 `VITE_API_BASE_URL`，由 Nginx 同源代理；需要绝对 API 地址时设置同名环境变量，脚本会转成 `--build-arg`。
 
 ## control-plane
 
