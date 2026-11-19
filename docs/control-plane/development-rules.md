@@ -41,7 +41,7 @@
 | `schemas/` | 请求、响应与 Worker 协议模型 |
 | `domain/` | 领域值对象、状态规则及适合独立验证的计算逻辑 |
 | `core/`、`db/` | 配置、错误、身份工具、数据库会话及基础设施 |
-| `api/deps.py` | 鉴权依赖和服务装配；业务路由仍放在 `routers/` |
+| `api/deps.py`、`api/deps_*.py` | 鉴权依赖和服务装配；`deps.py` 只作兼容门面，按 auth/common/projects/testing/integration/perf/generation 分域实现；业务路由仍放在 `routers/` |
 
 Router 和 handler 必须保持轻量，业务判断集中在 service 或 domain，两层不得直接访问 ORM 模型或数据库 session。通用查询、筛选、分页、聚合与持久化默认放在 repository，service 负责业务规则及事务协调。
 

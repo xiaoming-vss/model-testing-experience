@@ -46,11 +46,11 @@
 | `core/` | `config.py`、`security.py`、`enums.py`、`errors.py`、`sid.py` |
 | `db/`、`domain/` | 会话与基础层、领域值对象 |
 
-调用层次为 router → handler → service → repository → model。注意 `api/` 目录下只有依赖注入与鉴权校验（`deps.py`），业务路由不在此处。
+调用层次为 router → handler → service → repository → model。注意 `api/` 目录下只有依赖注入与鉴权校验（`deps.py` 门面及按域拆分的 `deps_*.py`），业务路由不在此处。
 
 AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管理或工作流对象。
 旧的 `services/ai_generate_task.py` 与 `get_ai_generate_task_service` 已移除，不再维护总入口的
-转发方法或常量/序列化函数重导出。下表中的模块默认位于 `services/`，装配入口位于 `api/deps.py`。
+转发方法或常量/序列化函数重导出。下表中的模块默认位于 `services/`，装配入口位于 `api/deps.py`（兼容门面）和 `api/deps_*.py`（按域实现）。
 
 | 模块与公共能力 | 职责 |
 | --- | --- |

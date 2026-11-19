@@ -1,824 +1,174 @@
-from __future__ import annotations
+"""FastAPI dependency facade grouped by business domain.
 
-import logging
-from secrets import compare_digest
-from typing import Annotated
+Implementations live in ``deps_<domain>``; this module preserves the
+existing ``testing_agent.api.deps`` import path.
+"""
 
-from fastapi import Depends, Header, Request
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from testing_agent.api.deps_auth import (
+    get_access_token,
+    get_auth_service,
+    get_current_user_id,
+    get_effective_settings,
+    get_ldap_settings_service,
+    get_user_admin_service,
+    require_super_admin,
+    verify_integration_worker_token,
+    verify_perf_worker_token,
+    verify_worker_token,
+)
+from testing_agent.api.deps_common import (
+    get_file_service,
+)
+from testing_agent.api.deps_generation import (
+    get_generation_access,
+    get_generation_api_importer,
+    get_generation_chain,
+    get_generation_import_context,
+    get_generation_launcher,
+    get_generation_metrics,
+    get_generation_queries,
+    get_generation_reports,
+    get_generation_review,
+    get_generation_stages,
+    get_generation_task_commands,
+    get_requirement_design_service,
+    get_ui_generation_sources,
+    get_ui_generation_stages,
+    get_ui_worker_artifact_service,
+    get_worker_task_service,
+)
+from testing_agent.api.deps_integration import (
+    build_bug_service,
+    build_integration_bug_service,
+    get_bug_service,
+    get_integration_bug_service,
+    get_integration_connection_service,
+    get_shared_service,
+)
+from testing_agent.api.deps_perf import (
+    get_perf_case_service,
+    get_perf_run_service,
+    get_perf_suite_run_service,
+    get_perf_suite_service,
+    get_perf_worker_service,
+)
+from testing_agent.api.deps_projects import (
+    build_project_service,
+    build_sprint_service,
+    get_project_service,
+    get_project_skill_space_service,
+    get_requirement_service,
+    get_requirement_software_repository_service,
+    get_resource_binding_service,
+    get_software_repository_service,
+    get_sprint_code_overview_service,
+    get_sprint_daily_metrics_service,
+    get_sprint_service,
+)
+from testing_agent.api.deps_testing import (
+    build_api_case_service,
+    build_test_order_service,
+    get_api_assert_rule_service,
+    get_api_case_service,
+    get_api_collection_run_service,
+    get_api_collection_service,
+    get_api_environment_service,
+    get_api_environment_var_service,
+    get_api_extract_rule_service,
+    get_api_interface_import_service,
+    get_api_interface_service,
+    get_case_visualization_service,
+    get_function_case_exporter,
+    get_function_case_importer,
+    get_function_test_case_service,
+    get_function_test_suite_service,
+    get_monitoring_connection_service,
+    get_test_order_entry_service,
+    get_test_order_graph_service,
+    get_test_order_service,
+    get_ui_run_variables_service,
+    get_ui_test_case_run_service,
+    get_ui_test_case_service,
+    get_ui_test_suite_service,
+)
 from testing_agent.core.config import Settings, get_settings
-from testing_agent.core.errors import (
-    AppError,
-    ErrForbidden,
-    ErrUnauthorized,
-)
-from testing_agent.core.ldap_directory import LdapDirectory
 from testing_agent.db.session import get_session
-from testing_agent.models.user import User
-from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
-from testing_agent.repositories.api_case import ApiCaseRepository
-from testing_agent.repositories.api_collection import ApiCollectionRepository
-from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
-from testing_agent.repositories.api_environment import ApiEnvironmentRepository
-from testing_agent.repositories.api_environment_var import ApiEnvironmentVarRepository
-from testing_agent.repositories.api_extract_rule import ApiExtractRuleRepository
-from testing_agent.repositories.api_interface import ApiInterfaceRepository
-from testing_agent.repositories.auth_runtime import AuthRuntimeRepository
-from testing_agent.repositories.auth_session import AuthSessionRepository
-from testing_agent.repositories.bug import BugRepository
-from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
-from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
-from testing_agent.repositories.generation_chain import GenerationChainRepository
-from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
-from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
-from testing_agent.repositories.monitoring_connection import MonitoringConnectionRepository
-from testing_agent.repositories.perf_case import PerfCaseRepository
-from testing_agent.repositories.perf_run import PerfRunRepository
-from testing_agent.repositories.perf_suite import PerfSuiteRepository
-from testing_agent.repositories.perf_suite_run import PerfSuiteRunRepository
-from testing_agent.repositories.project import ProjectRepository
-from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
-from testing_agent.repositories.requirement import RequirementRepository
-from testing_agent.repositories.requirement_design import RequirementDesignRepository
-from testing_agent.repositories.requirement_software_repository import (
-    RequirementSoftwareRepositoryRepository,
-)
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
-from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
-from testing_agent.repositories.sprint import SprintRepository
-from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
-from testing_agent.repositories.test_order import TestOrderRepository
-from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
-from testing_agent.repositories.ui_test_case import UiTestCaseRepository
-from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
-from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
-from testing_agent.repositories.user import UserRepository
-from testing_agent.repositories.worker_task import WorkerTaskRepository
-from testing_agent.services.ai_candidate_review import GenerationCandidateReview
-from testing_agent.services.ai_report import TestReportWorkflow
-from testing_agent.services.ai_run_launcher import GenerationRunLauncher
-from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
-from testing_agent.services.ai_task_access import GenerationImportContext
-from testing_agent.services.ai_task_commands import GenerationTaskCommands
-from testing_agent.services.ai_task_queries import GenerationQueries
-from testing_agent.services.ai_task_scope import GenerationAccess
-from testing_agent.services.api_assert_rule import ApiAssertRuleService
-from testing_agent.services.api_case import ApiCaseService
-from testing_agent.services.api_collection import ApiCollectionService
-from testing_agent.services.api_collection_run import ApiCollectionRunService
-from testing_agent.services.api_environment import ApiEnvironmentService
-from testing_agent.services.api_environment_var import ApiEnvironmentVarService
-from testing_agent.services.api_extract_rule import ApiExtractRuleService
-from testing_agent.services.api_generate_import import ApiCandidateImporter
-from testing_agent.services.api_interface import ApiInterfaceService
-from testing_agent.services.api_interface_import import ApiInterfaceImportService
-from testing_agent.services.auth import AuthService
-from testing_agent.services.auth_mode import AuthModeService
-from testing_agent.services.auth_session import SessionService
-from testing_agent.services.baseline_resolution import BaselineResolutionService
-from testing_agent.services.bug import BugService
-from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
-from testing_agent.services.function_case_export import FunctionCaseExporter
-from testing_agent.services.function_case_import import FunctionCaseImporter
-from testing_agent.services.function_test_case import FunctionTestCaseService
-from testing_agent.services.function_test_suite import FunctionTestSuiteService
-from testing_agent.services.generation_chain import GenerationChainService
-from testing_agent.services.integration_connection import IntegrationConnectionService
-from testing_agent.services.integration_credentials import IntegrationCredentialCipher
-from testing_agent.services.ldap_login import LdapLoginService
-from testing_agent.services.ldap_settings import LdapSettingsService, effective_settings
-from testing_agent.services.monitoring_connection import MonitoringConnectionService
-from testing_agent.services.perf_case import PerfCaseService
-from testing_agent.services.perf_run import PerfRunService
-from testing_agent.services.perf_suite import PerfSuiteService
-from testing_agent.services.perf_suite_run import PerfSuiteRunService
-from testing_agent.services.perf_worker import PerfWorkerService
-from testing_agent.services.project import ProjectService
-from testing_agent.services.project_skill_space import ProjectSkillSpaceService
-from testing_agent.services.repository_profile import RepositoryProfileService
-from testing_agent.services.requirement import RequirementService
-from testing_agent.services.requirement_design import RequirementDesignService
-from testing_agent.services.requirement_software_repository import (
-    RequirementSoftwareRepositoryService,
-)
-from testing_agent.services.resource_binding import ResourceBindingService
-from testing_agent.services.software_repository import SoftwareRepositoryService
-from testing_agent.services.sprint import SprintService
-from testing_agent.services.sprint_code_overview import (
-    SprintCodeOverviewService,
-)
-from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
-from testing_agent.services.test_order import TestOrderService
-from testing_agent.services.test_order_case_visualization import TestOrderCaseVisualizationService
-from testing_agent.services.test_order_entry import TestOrderEntryService
-from testing_agent.services.test_order_graph import TestOrderGraphService
-from testing_agent.services.ui_generation_source import UiGenerationSourceService
-from testing_agent.services.ui_generation_workflow import UiGenerationWorkflow
-from testing_agent.services.ui_run_variables import UiRunVariablesService
-from testing_agent.services.ui_test_case import UiTestCaseService
-from testing_agent.services.ui_test_case_run import UiTestCaseRunService
-from testing_agent.services.ui_test_suite import UiTestSuiteService
-from testing_agent.services.user_admin import UserAdminService
-from testing_agent.services.worker_task import WorkerTaskService
-from testing_agent.services.zentao_mcp import ZentaoMcpResources
-from testing_agent.services.zentao_mcp_cases import ZentaoMcpCases
 
-
-async def get_access_token(
-    authorization: Annotated[str | None, Header()] = None,
-) -> str:
-    if not authorization:
-        raise ErrUnauthorized()
-    return authorization.removeprefix("Bearer ").strip()
-
-
-async def get_current_user_id(
-    request: Request,
-    token: str = Depends(get_access_token),
-    session: AsyncSession = Depends(get_session),
-) -> str:
-    return await SessionService(AuthSessionRepository(session), get_settings()).authenticate(
-        token, method=request.method, path=request.url.path
-    )
-
-
-async def require_super_admin(
-    user_id: str = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_session),
-) -> str:
-    is_super_admin = await session.scalar(
-        select(User.is_super_admin).where(User.user_id == user_id)
-    )
-    if not is_super_admin:
-        raise ErrForbidden()
-    return user_id
-
-
-def verify_worker_token(
-    x_worker_token: Annotated[str | None, Header(alias="X-Worker-Token")] = None,
-    settings: Settings = Depends(get_settings),
-) -> None:
-    if not settings.worker_key or not x_worker_token or x_worker_token != settings.worker_key:
-        raise ErrUnauthorized()
-
-
-def verify_integration_worker_token(
-    x_worker_token: Annotated[str | None, Header()] = None,
-    settings: Settings = Depends(get_settings),
-) -> None:
-    expected = settings.integration_worker_key
-    if (
-        not expected
-        or not x_worker_token
-        or not compare_digest(x_worker_token.encode(), expected.encode())
-    ):
-        logging.getLogger(__name__).warning("Integration worker authentication rejected status=401")
-        raise ErrUnauthorized()
-
-
-def verify_perf_worker_token(
-    x_worker_token: Annotated[str | None, Header()] = None,
-    settings: Settings = Depends(get_settings),
-) -> None:
-    expected = settings.perf_worker_key
-    if (
-        not expected
-        or not x_worker_token
-        or not compare_digest(x_worker_token.encode(), expected.encode())
-    ):
-        raise ErrUnauthorized()
-
-
-def get_perf_worker_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> PerfWorkerService:
-    from testing_agent.services.stored_file import StoredFileService
-
-    return PerfWorkerService(
-        session,
-        files=StoredFileService(session, settings.s3),
-        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-    )
-
-
-async def get_effective_settings(session: AsyncSession = Depends(get_session)) -> Settings:
-    return await effective_settings(AuthRuntimeRepository(session), get_settings())
-
-
-def get_ldap_settings_service(session: AsyncSession = Depends(get_session)) -> LdapSettingsService:
-    return LdapSettingsService(AuthRuntimeRepository(session), get_settings())
-
-
-async def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
-    users = UserRepository(session)
-    try:
-        settings = await effective_settings(AuthRuntimeRepository(session), get_settings())
-    except AppError:
-        # Keep local super-admin recovery available if stored LDAP credentials cannot decrypt.
-        settings = get_settings()
-        return AuthService(
-            users,
-            LoginRateLimitRepository(session),
-            settings,
-            mode=AuthModeService(AuthRuntimeRepository(session), settings),
-        )
-    users = UserRepository(session)
-    limits = LoginRateLimitRepository(session)
-    ldap_login = LdapLoginService(
-        users,
-        limits,
-        AuthModeService(AuthRuntimeRepository(session), settings),
-        settings,
-        LdapDirectory(settings.ldap),
-    )
-    return AuthService(users, limits, settings, ldap_login=ldap_login, mode=ldap_login.mode)
-
-
-async def get_user_admin_service(session: AsyncSession = Depends(get_session)) -> UserAdminService:
-    settings = await effective_settings(AuthRuntimeRepository(session), get_settings())
-    return UserAdminService(
-        UserRepository(session),
-        ProjectRepository(session),
-        settings,
-        mode=AuthModeService(AuthRuntimeRepository(session), settings),
-    )
-
-
-def get_project_service(session: AsyncSession = Depends(get_session)) -> ProjectService:
-    return ProjectService(ProjectRepository(session))
-
-
-def build_project_service(session: AsyncSession) -> ProjectService:
-    return ProjectService(ProjectRepository(session))
-
-
-def get_sprint_service(session: AsyncSession = Depends(get_session)) -> SprintService:
-    return SprintService(SprintRepository(session), build_project_service(session))
-
-
-def build_sprint_service(session: AsyncSession) -> SprintService:
-    return SprintService(SprintRepository(session), build_project_service(session))
-
-
-def get_requirement_service(
-    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
-) -> RequirementService:
-    from testing_agent.services.requirement_generation_defaults import add_default_generation_tasks
-    from testing_agent.services.stored_file import StoredFileService
-
-    return RequirementService(
-        RequirementRepository(session),
-        build_sprint_service(session),
-        StoredFileService(session, settings.s3),
-        initialize_generation=lambda requirement, project_id, user_id: add_default_generation_tasks(
-            session, requirement, project_id, user_id
-        ),
-    )
-
-
-def get_api_case_service(session: AsyncSession = Depends(get_session)) -> ApiCaseService:
-    return ApiCaseService(ApiCaseRepository(session))
-
-
-def build_api_case_service(session: AsyncSession) -> ApiCaseService:
-    return ApiCaseService(ApiCaseRepository(session))
-
-
-def get_api_collection_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiCollectionService:
-    return ApiCollectionService(ApiCollectionRepository(session))
-
-
-def get_api_collection_run_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiCollectionRunService:
-    return ApiCollectionRunService(ApiCollectionRunRepository(session))
-
-
-def get_api_environment_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiEnvironmentService:
-    return ApiEnvironmentService(ApiEnvironmentRepository(session))
-
-
-def get_api_environment_var_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiEnvironmentVarService:
-    return ApiEnvironmentVarService(ApiEnvironmentVarRepository(session))
-
-
-def get_api_assert_rule_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiAssertRuleService:
-    return ApiAssertRuleService(
-        ApiAssertRuleRepository(session),
-        build_api_case_service(session),
-    )
-
-
-def get_api_extract_rule_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiExtractRuleService:
-    return ApiExtractRuleService(
-        ApiExtractRuleRepository(session),
-        build_api_case_service(session),
-    )
-
-
-def get_function_test_suite_service(
-    session: AsyncSession = Depends(get_session),
-) -> FunctionTestSuiteService:
-    return FunctionTestSuiteService(FunctionTestSuiteRepository(session))
-
-
-def get_function_test_case_service(
-    session: AsyncSession = Depends(get_session),
-) -> FunctionTestCaseService:
-    return FunctionTestCaseService(FunctionTestCaseRepository(session))
-
-
-def get_function_case_importer(
-    session: AsyncSession = Depends(get_session),
-) -> FunctionCaseImporter:
-    return FunctionCaseImporter(FunctionTestCaseRepository(session))
-
-
-def get_function_case_exporter(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> FunctionCaseExporter:
-    return FunctionCaseExporter(
-        FunctionTestCaseRepository(session),
-        IntegrationConnectionService(
-            IntegrationConnectionRepository(session),
-            credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-        ),
-        ZentaoMcpCases(),
-        settings=settings,
-    )
-
-
-def get_ui_test_suite_service(
-    session: AsyncSession = Depends(get_session),
-) -> UiTestSuiteService:
-    return UiTestSuiteService(UiTestSuiteRepository(session))
-
-
-def get_ui_test_case_service(
-    session: AsyncSession = Depends(get_session),
-) -> UiTestCaseService:
-    return UiTestCaseService(UiTestCaseRepository(session))
-
-
-def get_ui_test_case_run_service(
-    session: AsyncSession = Depends(get_session),
-) -> UiTestCaseRunService:
-    return UiTestCaseRunService(UiTestCaseRunRepository(session))
-
-
-def get_ui_run_variables_service(
-    session: AsyncSession = Depends(get_session),
-) -> UiRunVariablesService:
-    return UiRunVariablesService(session)
-
-
-def get_integration_connection_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> IntegrationConnectionService:
-    return IntegrationConnectionService(
-        IntegrationConnectionRepository(session),
-        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-    )
-
-
-def get_monitoring_connection_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> MonitoringConnectionService:
-    return MonitoringConnectionService(
-        MonitoringConnectionRepository(session),
-        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-    )
-
-
-def get_perf_case_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> PerfCaseService:
-    from testing_agent.services.stored_file import StoredFileService
-
-    return PerfCaseService(
-        PerfCaseRepository(session),
-        files=StoredFileService(session, settings.s3),
-    )
-
-
-def get_perf_run_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> PerfRunService:
-    from testing_agent.services.stored_file import StoredFileService
-
-    cipher = IntegrationCredentialCipher(settings.integration_key)
-    monitoring_service = MonitoringConnectionService(
-        MonitoringConnectionRepository(session),
-        credential_cipher=cipher,
-    )
-    return PerfRunService(
-        PerfRunRepository(session),
-        cases=PerfCaseRepository(session),
-        environments=ApiEnvironmentRepository(session),
-        monitoring=MonitoringConnectionRepository(session),
-        monitoring_service=monitoring_service,
-        files=StoredFileService(session, settings.s3),
-        credential_cipher=cipher,
-    )
-
-
-def get_perf_suite_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> PerfSuiteService:
-    from testing_agent.services.stored_file import StoredFileService
-
-    return PerfSuiteService(
-        PerfSuiteRepository(session),
-        cases=PerfCaseRepository(session),
-        runs=PerfSuiteRunRepository(session),
-        files=StoredFileService(session, settings.s3),
-    )
-
-
-def get_perf_suite_run_service(
-    session: AsyncSession = Depends(get_session),
-    perf_runs: PerfRunService = Depends(get_perf_run_service),
-) -> PerfSuiteRunService:
-    return PerfSuiteRunService(
-        PerfSuiteRunRepository(session),
-        suites=PerfSuiteRepository(session),
-        cases=PerfCaseRepository(session),
-        runs=PerfRunRepository(session),
-        perf_runs=perf_runs,
-    )
-
-
-def get_software_repository_service(
-    session: AsyncSession = Depends(get_session),
-    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
-) -> SoftwareRepositoryService:
-    return SoftwareRepositoryService(
-        SoftwareRepositoryRepository(session),
-        connections,
-    )
-
-
-def get_requirement_software_repository_service(
-    session: AsyncSession = Depends(get_session),
-    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
-) -> RequirementSoftwareRepositoryService:
-    return RequirementSoftwareRepositoryService(
-        RequirementSoftwareRepositoryRepository(session),
-        SoftwareRepositoryRepository(session),
-        connections,
-    )
-
-
-def get_api_interface_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiInterfaceService:
-    return ApiInterfaceService(
-        ApiInterfaceRepository(session),
-        SoftwareRepositoryRepository(session),
-    )
-
-
-def get_api_interface_import_service(
-    session: AsyncSession = Depends(get_session),
-) -> ApiInterfaceImportService:
-    return ApiInterfaceImportService(
-        ApiInterfaceRepository(session),
-        SoftwareRepositoryRepository(session),
-    )
-
-
-def get_resource_binding_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> ResourceBindingService:
-    return ResourceBindingService(
-        ResourceBindingRepository(session),
-        IntegrationConnectionService(
-            IntegrationConnectionRepository(session),
-            ZentaoMcpResources(),
-            credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-        ),
-        ZentaoMcpResources(),
-    )
-
-
-def get_sprint_code_overview_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> SprintCodeOverviewService:
-    credential_cipher = IntegrationCredentialCipher(settings.integration_key)
-    integration_connection_service = IntegrationConnectionService(
-        IntegrationConnectionRepository(session),
-        credential_cipher=credential_cipher,
-    )
-    return SprintCodeOverviewService(
-        build_sprint_service(session),
-        BaselineResolutionService(RequirementSoftwareRepositoryRepository(session)),
-        integration_connection_service,
-        credential_cipher,
-    )
-
-
-def get_project_skill_space_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> ProjectSkillSpaceService:
-    return ProjectSkillSpaceService(
-        ProjectSkillSpaceRepository(session), get_file_service(session, settings)
-    )
-
-
-def get_sprint_daily_metrics_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> SprintDailyMetricsService:
-    return SprintDailyMetricsService(SprintDailyMetricsRepository(session))
-
-
-def get_generation_access(
-    session: AsyncSession = Depends(get_session),
-) -> GenerationAccess:
-    return GenerationAccess(AiGenerateTaskRepository(session))
-
-
-def get_generation_queries(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationQueries:
-    return GenerationQueries(access.repository, access)
-
-
-def get_generation_task_commands(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationTaskCommands:
-    return GenerationTaskCommands(access.repository, access)
-
-
-def get_generation_metrics(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> SprintDailyMetricsService:
-    return SprintDailyMetricsService(SprintDailyMetricsRepository(access.repository.session))
-
-
-def get_generation_launcher(
-    access: GenerationAccess = Depends(get_generation_access),
-    metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
-    settings: Settings = Depends(get_settings),
-) -> GenerationRunLauncher:
-    session = access.repository.session
-    cipher = IntegrationCredentialCipher(settings.integration_key)
-    connections = IntegrationConnectionService(
-        IntegrationConnectionRepository(session), credential_cipher=cipher
-    )
-    requirements = RequirementSoftwareRepositoryRepository(session)
-    return GenerationRunLauncher(
-        repository=access.repository,
-        access=access,
-        sprint_daily_metrics_service=metrics,
-        code_risk_analysis_service=CodeRiskAnalysisService(
-            access.repository,
-            requirements,
-            connections,
-            cipher,
-        ),
-        repository_profile_service=RepositoryProfileService(
-            access.repository,
-            requirements,
-            connections,
-            cipher,
-        ),
-    )
-
-
-def get_generation_reports(
-    access: GenerationAccess = Depends(get_generation_access),
-    metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
-) -> TestReportWorkflow:
-    return TestReportWorkflow(
-        repository=access.repository,
-        sprint_daily_metrics_service=metrics,
-        ensure_project_access=access.ensure_project_access,
-        owned_run=access.owned_run,
-    )
-
-
-def get_generation_review(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationCandidateReview:
-    return GenerationCandidateReview(access.repository, access.owned_run)
-
-
-def get_generation_api_importer(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> ApiCandidateImporter:
-    return ApiCandidateImporter(
-        repository=access.repository,
-        owned_run=access.owned_run,
-        ensure_collection_access=access.ensure_collection_access,
-    )
-
-
-def get_generation_import_context(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationImportContext:
-    return GenerationImportContext(access.repository, access)
-
-
-def get_requirement_design_service(
-    access: GenerationAccess = Depends(get_generation_access),
-    commands: GenerationTaskCommands = Depends(get_generation_task_commands),
-) -> RequirementDesignService:
-    return RequirementDesignService(
-        RequirementDesignRepository(access.repository.session),
-        access.repository,
-        access,
-        commands,
-    )
-
-
-def get_worker_task_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> WorkerTaskService:
-    return WorkerTaskService(
-        WorkerTaskRepository(session),
-        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
-    )
-
-
-def build_test_order_service(session: AsyncSession) -> TestOrderService:
-    return TestOrderService(TestOrderRepository(session), TestOrderEntryRepository(session))
-
-
-def build_bug_service(session: AsyncSession, settings) -> BugService:
-    from testing_agent.services.stored_file import StoredFileService
-
-    return BugService(BugRepository(session), files=StoredFileService(session, settings.s3))
-
-
-def get_bug_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> BugService:
-    return build_bug_service(session, settings)
-
-
-def build_integration_bug_service(session: AsyncSession, settings: Settings):
-    from testing_agent.repositories.integration_job import IntegrationJobRepository
-    from testing_agent.services.bug_zentao_push import BugZentaoPushService
-    from testing_agent.services.integration_authorization import IntegrationAuthorization
-    from testing_agent.services.integration_bug import IntegrationBugService
-
-    pushes = BugZentaoPushService(
-        build_bug_service(session, settings), get_integration_connection_service(session, settings)
-    )
-    return IntegrationBugService(
-        IntegrationJobRepository(session),
-        pushes,
-        IntegrationAuthorization(session, IntegrationCredentialCipher(settings.integration_key)),
-        settings,
-    )
-
-
-def get_integration_bug_service(
-    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
-):
-    return build_integration_bug_service(session, settings)
-
-
-def get_test_order_service(
-    session: AsyncSession = Depends(get_session),
-) -> TestOrderService:
-    return build_test_order_service(session)
-
-
-def get_test_order_entry_service(
-    session: AsyncSession = Depends(get_session),
-) -> TestOrderEntryService:
-    return TestOrderEntryService(
-        TestOrderEntryRepository(session),
-        build_test_order_service(session),
-    )
-
-
-def get_test_order_graph_service(
-    session: AsyncSession = Depends(get_session),
-) -> TestOrderGraphService:
-    return TestOrderGraphService(
-        AiGenerateTaskRepository(session),
-        build_test_order_service(session),
-        TestOrderEntryRepository(session),
-    )
-
-
-def get_file_service(
-    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
-):
-    from testing_agent.services.stored_file import StoredFileService
-
-    return StoredFileService(session, settings.s3)
-
-
-def get_shared_service(
-    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
-):
-    from testing_agent.services.shared_service import SharedServiceService
-
-    return SharedServiceService(connections)
-
-
-def get_ui_worker_artifact_service(
-    tasks: WorkerTaskService = Depends(get_worker_task_service),
-    files=Depends(get_file_service),
-):
-    from testing_agent.services.ui_worker_artifacts import UiWorkerArtifactService
-
-    return UiWorkerArtifactService(tasks, files)
-
-
-def get_generation_stages(
-    access: GenerationAccess = Depends(get_generation_access),
-    files=Depends(get_file_service),
-) -> GenerationStageWorkflow:
-    return GenerationStageWorkflow(
-        repository=access.repository,
-        owned_run=access.owned_run,
-        files=files,
-        access=access,
-    )
-
-
-def get_ui_generation_stages(
-    access: GenerationAccess = Depends(get_generation_access),
-    files=Depends(get_file_service),
-) -> UiGenerationWorkflow:
-    return UiGenerationWorkflow(
-        repository=access.repository,
-        owned_run=access.owned_run,
-        files=files,
-    )
-
-
-def get_ui_generation_sources(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> UiGenerationSourceService:
-    cipher = IntegrationCredentialCipher(settings.integration_key)
-    return UiGenerationSourceService(
-        session,
-        integration_connection_service=IntegrationConnectionService(
-            IntegrationConnectionRepository(session), credential_cipher=cipher
-        ),
-        credential_cipher=cipher,
-    )
-
-
-def get_generation_chain(
-    access: GenerationAccess = Depends(get_generation_access),
-    files=Depends(get_file_service),
-    imports: GenerationImportContext = Depends(get_generation_import_context),
-    api_importer: ApiCandidateImporter = Depends(get_generation_api_importer),
-    ui_sources: UiGenerationSourceService = Depends(get_ui_generation_sources),
-) -> GenerationChainService:
-    return GenerationChainService(
-        repository=GenerationChainRepository(access.repository.session),
-        tasks=access.repository,
-        access=access,
-        files=files,
-        imports=imports,
-        api_importer=api_importer,
-        ui_sources=ui_sources,
-    )
-
-
-def get_case_visualization_service(
-    session: AsyncSession = Depends(get_session),
-) -> TestOrderCaseVisualizationService:
-    from testing_agent.repositories.case_visualization import CaseVisualizationRepository
-    from testing_agent.services.test_order_case_visualization import (
-        TestOrderCaseVisualizationService,
-    )
-
-    return TestOrderCaseVisualizationService(
-        CaseVisualizationRepository(session),
-        build_test_order_service(session),
-    )
+__all__ = [
+    "Settings",
+    "get_settings",
+    "get_session",
+    "get_access_token",
+    "get_current_user_id",
+    "require_super_admin",
+    "verify_worker_token",
+    "verify_integration_worker_token",
+    "verify_perf_worker_token",
+    "get_effective_settings",
+    "get_ldap_settings_service",
+    "get_auth_service",
+    "get_user_admin_service",
+    "get_file_service",
+    "get_project_service",
+    "build_project_service",
+    "get_sprint_service",
+    "build_sprint_service",
+    "get_requirement_service",
+    "get_software_repository_service",
+    "get_requirement_software_repository_service",
+    "get_resource_binding_service",
+    "get_sprint_code_overview_service",
+    "get_project_skill_space_service",
+    "get_sprint_daily_metrics_service",
+    "get_integration_connection_service",
+    "build_bug_service",
+    "get_bug_service",
+    "build_integration_bug_service",
+    "get_integration_bug_service",
+    "get_shared_service",
+    "get_api_case_service",
+    "build_api_case_service",
+    "get_api_collection_service",
+    "get_api_collection_run_service",
+    "get_api_environment_service",
+    "get_api_environment_var_service",
+    "get_api_assert_rule_service",
+    "get_api_extract_rule_service",
+    "get_function_test_suite_service",
+    "get_function_test_case_service",
+    "get_function_case_importer",
+    "get_function_case_exporter",
+    "get_ui_test_suite_service",
+    "get_ui_test_case_service",
+    "get_ui_test_case_run_service",
+    "get_ui_run_variables_service",
+    "get_monitoring_connection_service",
+    "get_api_interface_service",
+    "get_api_interface_import_service",
+    "build_test_order_service",
+    "get_test_order_service",
+    "get_test_order_entry_service",
+    "get_test_order_graph_service",
+    "get_case_visualization_service",
+    "get_perf_worker_service",
+    "get_perf_case_service",
+    "get_perf_run_service",
+    "get_perf_suite_service",
+    "get_perf_suite_run_service",
+    "get_generation_access",
+    "get_generation_queries",
+    "get_generation_task_commands",
+    "get_generation_metrics",
+    "get_generation_launcher",
+    "get_generation_reports",
+    "get_generation_review",
+    "get_generation_api_importer",
+    "get_generation_import_context",
+    "get_requirement_design_service",
+    "get_worker_task_service",
+    "get_ui_worker_artifact_service",
+    "get_generation_stages",
+    "get_ui_generation_stages",
+    "get_ui_generation_sources",
+    "get_generation_chain",
+]

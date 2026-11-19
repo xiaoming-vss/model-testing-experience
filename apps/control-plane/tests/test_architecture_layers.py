@@ -14,6 +14,49 @@ SERVICE_SQL_CLASSIFICATIONS = {
 }
 
 
+def test_fastapi_dependencies_are_split_by_domain():
+    api_root = PROJECT_ROOT / "src/testing_agent/api"
+    facade = api_root / "deps.py"
+    assert len(facade.read_text(encoding="utf-8").splitlines()) < 400
+    expected = {
+        "deps_auth.py",
+        "deps_common.py",
+        "deps_generation.py",
+        "deps_integration.py",
+        "deps_perf.py",
+        "deps_projects.py",
+        "deps_testing.py",
+    }
+    modules = {path.name: path for path in api_root.glob("deps_*.py")}
+    assert expected <= set(modules)
+
+    graph: dict[str, set[str]] = {}
+    for name, path in modules.items():
+        graph[name.removesuffix(".py")] = {
+            node.module.rsplit(".", 1)[-1]
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+            if isinstance(node, ast.ImportFrom)
+            and node.module
+            and node.module.startswith("testing_agent.api.deps_")
+        }
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(node: str) -> None:
+        assert node not in visiting, f"dependency cycle includes {node}"
+        if node in visited:
+            return
+        visiting.add(node)
+        for child in graph.get(node, set()):
+            visit(child)
+        visiting.remove(node)
+        visited.add(node)
+
+    for module in graph:
+        visit(module)
+
+
 def test_generation_callers_cannot_reintroduce_the_aggregate_facade():
     root = PROJECT_ROOT / "src/testing_agent"
     assert not (root / "services/ai_generate_task.py").exists()

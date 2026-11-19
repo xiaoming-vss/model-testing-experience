@@ -64,7 +64,7 @@ def test_local_case_creation_does_not_construct_remote_export_client(api, monkey
     def forbidden_client():
         raise AssertionError("Local assets must not construct a remote export client")
 
-    monkeypatch.setattr("testing_agent.api.deps.ZentaoMcpCases", forbidden_client)
+    monkeypatch.setattr("testing_agent.api.deps_testing.ZentaoMcpCases", forbidden_client)
     response = api.post(
         f"/v1/function-test-suites/{suite}/cases", headers=owner, json={"title": "本地用例"}
     )
