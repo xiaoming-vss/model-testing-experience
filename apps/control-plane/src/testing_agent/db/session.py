@@ -7,10 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from testing_agent.core.config import get_settings
 
 _settings = get_settings()
-_database_url = (
-    _settings.database_url
-    or "mysql+asyncmy://root:123456@127.0.0.1:3306/testing-agent-python?charset=utf8mb4"
-)
+if not _settings.database_url.strip():
+    raise RuntimeError(
+        "data.db.user.dsn is required; run `python3 scripts/manage.py configure --mode local` "
+        "or set the DSN in config/platform.toml"
+    )
+_database_url = _settings.database_url
 _pool_options = (
     {}
     if _database_url.startswith("sqlite")
