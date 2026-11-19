@@ -37,6 +37,10 @@
 | K8s values 部署一致性检查 | `python3 scripts/check_k8s_config.py --platform-config config/platform.toml --values-dir .runtime/k8s` | 已执行 `init` 并填写实际 values；strict，关键字段缺失或漂移时非零 |
 | 文档一致性检查 | `python3 scripts/check_docs.py` | 默认不访问外部网络；`--check-urls` 可选检查外部链接 |
 | 文档检查脚本测试 | `python3 -m unittest tests.test_documents -v` | — |
+| 集成 Worker 容器隔离验收（opt-in） | `MTX_TEST_INTEGRATION_WORKER_RUNTIME=1 python3 -m unittest tests.test_integration_worker_runtime -v` | Docker Engine；先构建 `mtx/integration-worker:split-validation` 或用 `MTX_TEST_INTEGRATION_WORKER_IMAGE` 指定镜像；默认跳过 |
+| 禅道 MCP 容器验收（opt-in） | `MTX_TEST_ZENTAO_MCP_RUNTIME=1 python3 -m unittest tests.test_zentao_mcp_runtime -v` | Docker Engine；创建一次性 MCP 容器，默认跳过 |
+| 禅道 MCP 附件验收（opt-in） | `MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 python3 -m unittest tests.test_zentao_mcp_attachment_runtime -v` | Docker Engine 与附件容器依赖；默认跳过 |
+| 禅道 MCP 选项验收（opt-in） | `MTX_TEST_ZENTAO_MCP_BUG_OPTIONS=1 python3 -m unittest tests.test_zentao_mcp_bug_options_runtime -v` | Docker Engine；创建一次性 MCP 容器，默认跳过 |
 
 根编排变更至少执行“根编排测试”和“Compose 配置校验”。`init` 与 `configure` 的具体配置项见[统一配置、部署与本地开发](deployment.md)。
 

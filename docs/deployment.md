@@ -30,7 +30,7 @@ python3 scripts/manage.py upgrade-config
 
 ## Kubernetes
 
-平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker 和性能 Worker；MySQL、Redis、S3 使用外部地址。
+平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含性能 Worker；MySQL、Redis、S3 使用外部地址。
 
 ## Docker 整体启动
 

@@ -151,7 +151,7 @@ API 提取校验非空接口映射、snake_case 名称、path/method 与已定�
 
 修正期间复用 `outputValidation` 摘要上报 `repairAttempt/maxRepairs/status`。API 生成阶段进度保留已验证的提取 JSON；UI 进度保留源码位置，修正失败不发布非法用例。每轮输出和校验错误保存在任务 workspace 的 `diagnostics/api-design`、`diagnostics/api-cases` 或 `diagnostics/ui-output`（旧两阶段链路为 `diagnostics/api-output`），文件权限 0600，不保存模型连接设置或完整提示词。
 
-验证：Worker 全量 232 项测试、控制面 API/UI 导入与 Worker 契约 40 项回归通过；API 标准技能样例（含提取和断言规则）、UI 全部支持关键字样例同时通过 Worker 验证器与控制面导入验证。Worker Ruff 与修改范围格式检查通过。未调用真实模型生成或执行 API/UI 用例。
+验证：当时 Worker 全量测试、控制面 API/UI 导入与 Worker 契约 40 项回归通过；API 标准技能样例（含提取和断言规则）、UI 全部支持关键字样例同时通过 Worker 验证器与控制面导入验证。Worker Ruff 与修改范围格式检查通过。未调用真实模型生成或执行 API/UI 用例。
 
 ## UI YAML 人工补全
 

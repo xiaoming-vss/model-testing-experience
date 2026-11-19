@@ -4,7 +4,7 @@
 
 - `deploy/helm/charts/<service>/`：每个服务的完整 chart，包含工作负载、Service、ConfigMap、PVC 等资源，以及该 chart 自己的 `values.yaml`。
 - 每个 chart 都可以单独 `helm install`，不依赖其他 chart 的发布。
-- 当前只覆盖平台本身，不包含 CI Worker 和性能 Worker；性能 Worker 已支持 Compose `poll` 模式，Helm 待后续补充。
+- 当前只覆盖平台本身，不包含性能 Worker；性能 Worker 已支持 Compose `poll` 模式，Helm 待后续补充。
 
 ## 前置条件
 
@@ -132,7 +132,7 @@ deploy/helm/charts/
 | `skillsSync.activeDeadlineSeconds` | 技能同步 Job 超时 |
 | `skillsSync.resources` | 技能同步 Job 的 resources |
 
-默认技能随控制面镜像内置在 `/app/default-skills`（16 个系统技能）。`skillsSync` Job 在迁移完成后把它们发布到 S3 和数据库；同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像后 `helm upgrade`。
+默认技能随控制面镜像内置在 `/app/default-skills`（数量以 `apps/control-plane/default-skills/` 目录为准）。`skillsSync` Job 在迁移完成后把它们发布到 S3 和数据库；同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像后 `helm upgrade`。
 
 ### studio
 

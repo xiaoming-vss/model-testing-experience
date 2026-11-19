@@ -11,6 +11,7 @@ Model Testing Experience（简称 MTX）是面向测试协作的平台，包含�
 | integration-worker | `apps/integration-worker` | 禅道 Bug、附件、正文图片和字段同步执行 |
 | perf-worker | `apps/perf-worker` | 性能测试执行（k6；控制面 poll 模式，Compose 可部署） |
 | mysql | — | MySQL 8.4 |
+| redis | — | Redis 7，实时通知；配置外部 `redis.url` 时不启动 |
 | migrate | `apps/control-plane` | 一次性数据库迁移 |
 
 ## 目录结构
