@@ -30,6 +30,7 @@ def connection_row(project_id="project-1", user_id="user-1", connection_id="conn
         user_id=user_id,
         base_url="https://gitlab.example.com",
         access_token="enc:glpat-secret-token",
+        extra_json=None,
         status="active",
     )
 
@@ -70,33 +71,80 @@ class FakeGitLabResourceClient:
         self.calls = []
         self.results = {}
 
-    async def list_groups(self, base_url, access_token, *, search="", page=1, page_size=100):
+    async def list_groups(
+        self,
+        base_url,
+        access_token,
+        *,
+        search="",
+        page=1,
+        page_size=100,
+        allow_http=False,
+        insecure_skip_verify=False,
+    ):
         self.calls.append(("groups", base_url, access_token, search, page, page_size))
         return self._resolve("groups")
 
     async def list_group_repositories(
-        self, base_url, access_token, group_id, *, page=1, page_size=100
+        self,
+        base_url,
+        access_token,
+        group_id,
+        *,
+        page=1,
+        page_size=100,
+        allow_http=False,
+        insecure_skip_verify=False,
     ):
         self.calls.append(("repositories", base_url, access_token, group_id, page, page_size))
         return self._resolve("repositories")
 
     async def list_repository_branches(
-        self, base_url, access_token, repository_id, *, search="", page=1, page_size=100
+        self,
+        base_url,
+        access_token,
+        repository_id,
+        *,
+        search="",
+        page=1,
+        page_size=100,
+        allow_http=False,
+        insecure_skip_verify=False,
     ):
         self.calls.append(
             ("branches", base_url, access_token, repository_id, search, page, page_size)
         )
         return self._resolve("branches")
 
-    async def get_project(self, base_url, access_token, repository_id):
+    async def get_project(
+        self, base_url, access_token, repository_id, *, allow_http=False, insecure_skip_verify=False
+    ):
         self.calls.append(("project", base_url, access_token, repository_id))
         return self._resolve("project")
 
-    async def get_branch(self, base_url, access_token, repository_id, branch):
+    async def get_branch(
+        self,
+        base_url,
+        access_token,
+        repository_id,
+        branch,
+        *,
+        allow_http=False,
+        insecure_skip_verify=False,
+    ):
         self.calls.append(("branch", base_url, access_token, repository_id, branch))
         return self._resolve("branch")
 
-    async def resolve_commit(self, base_url, access_token, repository_id, ref):
+    async def resolve_commit(
+        self,
+        base_url,
+        access_token,
+        repository_id,
+        ref,
+        *,
+        allow_http=False,
+        insecure_skip_verify=False,
+    ):
         self.calls.append(("commit", base_url, access_token, repository_id, ref))
         value = self.results.get("commit")
         if isinstance(value, Exception):

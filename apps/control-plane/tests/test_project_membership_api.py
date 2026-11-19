@@ -432,7 +432,7 @@ def test_gitlab_overview_does_not_reuse_another_members_authorization(
 ):
     from testing_agent.services.gitlab_resource import GitLabResourceClient
 
-    async def branch(self, base_url, token, repository_id, branch_name):
+    async def branch(self, base_url, token, repository_id, branch_name, **kwargs):
         return {"name": branch_name, "commitId": "sha"}
 
     async def compare(self, base_url, token, repository_id, **kwargs):
@@ -624,10 +624,10 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
 
     api.app.dependency_overrides[verify_worker_token] = lambda: None
 
-    async def branch(self, base_url, token, repository_id, branch_name):
+    async def branch(self, base_url, token, repository_id, branch_name, **kwargs):
         return {"name": branch_name, "commitId": "sha"}
 
-    async def gitlab_project(self, base_url, token, repository_id):
+    async def gitlab_project(self, base_url, token, repository_id, **kwargs):
         return {
             "id": "9",
             "pathWithNamespace": "team/repo",
@@ -635,7 +635,7 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
             "defaultBranch": "main",
         }
 
-    async def commit(self, base_url, token, repository_id, ref):
+    async def commit(self, base_url, token, repository_id, ref, **kwargs):
         return "base-sha" if ref == "base" else "head-sha"
 
     monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)

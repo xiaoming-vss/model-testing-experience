@@ -182,6 +182,7 @@ def make_connection(connection_id: str, base_url: str, encrypted_token: str) -> 
         project_id="project-1",
         base_url=base_url,
         access_token=encrypted_token,
+        extra_json=None,
     )
 
 
@@ -307,7 +308,16 @@ class FakeIntegrationConnectionService:
         return self.commits.get(ref, f"sha-{ref}")
 
     async def _list_repository_branches(
-        self, base_url, access_token, repository_id, *, search="", page=1, page_size=100
+        self,
+        base_url,
+        access_token,
+        repository_id,
+        *,
+        search="",
+        page=1,
+        page_size=100,
+        allow_http=False,
+        insecure_skip_verify=False,
     ):
         self.calls.append(
             {

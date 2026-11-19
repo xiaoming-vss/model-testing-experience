@@ -77,6 +77,7 @@ def make_connection(connection_id: str) -> SimpleNamespace:
         project_id="project-1",
         base_url="https://gitlab.example.com",
         access_token=f"enc:{connection_id}",
+        extra_json=None,
     )
 
 

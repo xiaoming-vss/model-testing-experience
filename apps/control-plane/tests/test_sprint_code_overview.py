@@ -103,6 +103,7 @@ def _connection(connection_id: str = "conn-1", base_url: str = "https://gitlab.e
         connection_id=connection_id,
         base_url=base_url,
         access_token="enc:token-1",
+        extra_json=None,
     )
 
 
@@ -150,7 +151,15 @@ class FakeGitlabClient:
         self.calls: list[dict] = []
 
     async def compare_repository_branches(
-        self, base_url, access_token, repository_id, *, from_ref=None, to_ref=None
+        self,
+        base_url,
+        access_token,
+        repository_id,
+        *,
+        from_ref=None,
+        to_ref=None,
+        allow_http=False,
+        insecure_skip_verify=False,
     ):
         self.calls.append(
             {
