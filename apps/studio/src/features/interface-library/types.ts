@@ -1,3 +1,5 @@
+import type { InterfaceGroup } from './utils/interfaceGroups'
+
 export type SoftwareRepositoryGitRepository = {
   projectId: string
   path: string
@@ -220,4 +222,15 @@ export type ImportCommitResult = {
   libraryOnly: number
   softwareRepositoryBasePath: string
   interfaces: { key: string; interfaceId: string; changeType: string }[]
+}
+
+export type InterfaceGroupTarget = {
+  repository: SoftwareRepository
+  group: InterfaceGroup
+}
+
+export type InterfaceMoveTarget = {
+  repository: SoftwareRepository
+  item: ApiInterfaceListItem
+  groups: string[]
 }
