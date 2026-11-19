@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from testing_agent_ai_worker.agent.pi import _CHILDREN, Pi, check_runtime
 from testing_agent_ai_worker.config.models import PiConfig
@@ -35,7 +36,7 @@ history.append(m);session.write_text(json.dumps(history))
 if m=='recover':
  emit({'type':'message_end','message':{'role':'assistant','stopReason':'error','errorMessage':'SECRET'}})
  emit({'type':'agent_end'})
-content=json.dumps({'history':history,'images':r.get('images',[]),'agentDir':os.environ['PI_CODING_AGENT_DIR'],'hasKey':bool(os.environ.get('MTX_PI_API_KEY')),'argv':sys.argv})
+content=json.dumps({'history':history,'images':r.get('images',[]),'agentDir':os.environ['PI_CODING_AGENT_DIR'],'hasKey':bool(os.environ.get('MTX_PI_API_KEY')),'argv':sys.argv,'env':dict(os.environ)})
 emit({'type':'message_end','message':{'role':'assistant','stopReason':m if m in ('length','error','aborted') else 'stop','content':[{'type':'text','text':content}],'usage':{'input':3,'output':2}}})
 emit({'type':'agent_end'})
 emit({'type':'agent_settled'})
@@ -113,6 +114,24 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         argv = json.loads(result.content)["argv"]
         self.assertIn("--no-tools", argv)
         self.assertNotIn("--tools", argv)
+
+    async def test_pi_subprocess_does_not_inherit_parent_secrets(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "TESTING_AGENT_WORKER_TOKEN": "SECRET-MARKER",
+                "AWS_SECRET_ACCESS_KEY": "SECRET-MARKER",
+                "PI_ALLOWED_SETTING": "visible",
+            },
+        ):
+            result = await self.client().run("env", session_key="env")
+
+        child_env = json.loads(result.content)["env"]
+        self.assertNotIn("TESTING_AGENT_WORKER_TOKEN", child_env)
+        self.assertNotIn("AWS_SECRET_ACCESS_KEY", child_env)
+        self.assertEqual("visible", child_env.get("PI_ALLOWED_SETTING"))
+        self.assertEqual("secret", child_env["MTX_PI_API_KEY"])
+        self.assertIn("PATH", child_env)
 
     async def test_truncation_cannot_be_published_as_a_complete_artifact(self):
         with self.assertRaisesRegex(RuntimeError, "length"):

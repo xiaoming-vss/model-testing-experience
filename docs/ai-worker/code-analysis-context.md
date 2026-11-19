@@ -22,7 +22,7 @@
 ```
 
 - clone 使用 `--filter=blob:none --no-checkout --no-recurse-submodules`，再按工作/基线分支 fetch，失败时回退按 commit SHA fetch；随后 `checkout --detach <headCommit>` 并核对 `HEAD`。
-- 每个仓库使用独立的临时 `GIT_ASKPASS`、空 `HOME` 和空全局 gitconfig；token 只出现在子进程环境变量中，不写入 remote URL、`.git/config`、日志或提示词。认证临时目录在准备结束后删除。
+- 每个仓库使用独立的临时 `GIT_ASKPASS`、空 `HOME` 和空全局 gitconfig；token 只出现在子进程环境变量中，不写入 remote URL、`.git/config`、日志或提示词。git 子进程只继承 PATH、临时目录、locale 和 Windows 启动变量，不继承 Worker Token 或其他服务凭据。认证临时目录在准备结束后删除。
 - diff 由工作区本地 `git diff` 生成，复用 `diff_prep.py` 的 lockfile/生成物/二进制过滤，并计算 diffstat。
 - 成功后删除整个 run 目录；失败时写 `.retain-until` 并保留 `workspace_retention_hours`。Worker 启动及每次准备前清扫已过期目录。
 

@@ -19,8 +19,35 @@ from uuid import uuid4
 from testing_agent_ai_worker.agent.base import AgentResult
 
 PINNED_VERSION = "1.3.0"
+# Only variables needed to start Node/Pi and locate tools cross the process
+# boundary. Worker tokens and unrelated service credentials are never inherited.
+PI_ENV_ALLOWLIST = (
+    "PATH",
+    "HOME",
+    "USERPROFILE",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "SystemRoot",
+    "WINDIR",
+    "COMSPEC",
+    "PATHEXT",
+)
+PI_ENV_PREFIX = "PI_"
 _CHILDREN: set[int] = set()
 _CHILD_LOCK = threading.Lock()
+
+
+def pi_subprocess_env(overrides: dict[str, str]) -> dict[str, str]:
+    """Build the minimal environment for a Pi RPC child process."""
+
+    env = {key: os.environ[key] for key in PI_ENV_ALLOWLIST if key in os.environ}
+    env.update({key: value for key, value in os.environ.items() if key.startswith(PI_ENV_PREFIX)})
+    env.update(overrides)
+    return env
 
 
 def check_runtime(executable: str) -> None:
@@ -147,13 +174,14 @@ class Pi:
                 "cacheWarming": "off",
             }
             (agent_dir / "settings.json").write_text(json.dumps(settings))
-            env = {
-                **os.environ,
-                "PI_CODING_AGENT_DIR": temp,
-                "MTX_PI_API_KEY": c["api_key"],
-                "PI_OFFLINE": "1",
-                "PI_TELEMETRY": "0",
-            }
+            env = pi_subprocess_env(
+                {
+                    "PI_CODING_AGENT_DIR": temp,
+                    "MTX_PI_API_KEY": c["api_key"],
+                    "PI_OFFLINE": "1",
+                    "PI_TELEMETRY": "0",
+                }
+            )
             command = [
                 c["executable"],
                 "--mode",

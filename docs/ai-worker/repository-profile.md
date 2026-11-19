@@ -26,7 +26,7 @@ UI 生成只使用仓库 pin；历史 ZIP 来源的归档下载路径已随旧�
 - 仓库画像只 clone 工作分支 HEAD，不解析基线、不生成 diff。
 - 每次 attempt 使用 `runs/<attemptId>/code/`，单仓库失败删除半成品并记为不可分析。
 - 成功删除工作区；失败保留 `repository_profile.workspace_retention_hours`（默认 24 小时）。
-- token 只通过临时 askpass 环境变量传入，不写 remote URL、`.git/config`、日志或 prompt。
+- token 只通过临时 askpass 环境变量传入，不写 remote URL、`.git/config`、日志或 prompt。git 子进程只继承 PATH、临时目录、locale 和 Windows 启动变量，不继承 Worker Token 或其他服务凭据。
 
 ## 模型调用
 

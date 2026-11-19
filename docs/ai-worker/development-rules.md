@@ -17,6 +17,8 @@
 - 新任务类型必须同时更新分派、任务载荷、执行器、结果解析与控制面消费方；不能只在提示词中添加名称就视为支持新任务。
 - 调整并发、停止或中断策略时，必须保留独立任务 workspace 和任务关联身份，并验证心跳及结果回传，不套用其他 Worker 的排空期限。
 
+Pi 和 git 子进程不得继承完整 `os.environ`。Pi 使用 `agent/pi.py` 的 `PI_ENV_ALLOWLIST`（PATH、HOME、临时目录、locale、Windows 启动变量）加父进程 `PI_*`，并由代码显式注入 `MTX_PI_API_KEY`、`PI_CODING_AGENT_DIR`、`PI_OFFLINE` 和 `PI_TELEMETRY`；git 使用 `tasks/git_workspace.py` 的 `GIT_ENV_ALLOWLIST` 加显式 askpass 配置和 `GIT_PASSWORD`。Worker Token、GitLab token、云凭据及其他服务秘密不得进入子进程。新增子进程依赖（如代理或自定义 CA）时必须按最小范围显式加入白名单并补秘密标记回归，不能整体回退到父环境。
+
 ## 输入 产物与回传
 
 任务通过控制面领取，权限材料按任务协议获取。技能执行前按当前任务或阶段从控制面取得默认技能，验证下载大小与 SHA-256；失败按既有契约报告，不静默退回旧技能或复用其他运行输入。默认技能和项目自定义技能的参与范围以领域规格为准。

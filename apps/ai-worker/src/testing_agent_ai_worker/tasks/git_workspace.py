@@ -22,6 +22,22 @@ from testing_agent_ai_worker.agent.paths import resolve_runtime_paths, resolve_t
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.task import GitlabCredentials, RepositoryBinding, Task
 
+# Git needs PATH plus temporary/locale settings. HOME and every credential are
+# supplied explicitly by git_env(); unrelated worker secrets never inherit.
+GIT_ENV_ALLOWLIST = (
+    "PATH",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "SystemRoot",
+    "WINDIR",
+    "COMSPEC",
+    "PATHEXT",
+)
+
 
 class GitWorkspaceError(RuntimeError):
     """Git workspace preparation failed; the message is safe to show to users."""
@@ -248,7 +264,7 @@ def git_env(auth_dir: Path, credential: GitlabCredentials) -> dict[str, str]:
     home.mkdir(mode=0o700)
     config_global = auth_dir / "gitconfig"
     config_global.write_text("", encoding="utf-8")
-    env = dict(os.environ)
+    env = {key: os.environ[key] for key in GIT_ENV_ALLOWLIST if key in os.environ}
     env.update(
         {
             "HOME": str(home),
