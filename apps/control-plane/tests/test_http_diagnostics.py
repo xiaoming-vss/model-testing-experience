@@ -224,7 +224,16 @@ def test_official_startup_uses_safe_logger_and_disables_raw_access_logs(monkeypa
     from testing_agent import main
 
     original = deepcopy(LOGGING_CONFIG)
-    settings = SimpleNamespace(http_host="127.0.0.1", http_port=8000, env="test")
+    settings = SimpleNamespace(
+        http_host="127.0.0.1",
+        http_port=8000,
+        env="test",
+        jwt_key="test-jwt-key-0123456789abcdef0123456789",
+        integration_key="test-integration-key-0123456789abcdef",
+        worker_key="test-worker-key-0123456789abcdef0123",
+        integration_worker_key="",
+        perf_worker_key="",
+    )
     monkeypatch.setattr("sys.argv", ["control-plane"])
     monkeypatch.setattr(main, "load_settings", lambda path: settings)
     monkeypatch.setattr(main, "seed_super_admin", AsyncMock())
