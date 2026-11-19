@@ -331,7 +331,7 @@ PVC 的 `storageClassName` 为空时使用集群默认 StorageClass。
 
 ## 升级和回滚
 
-每个 chart 独立升级：
+发布前按[发布检查清单](release-checklist.md)核对测试、镜像 digest、数据库 baseline、技能同步和备份。每个 chart 独立升级：
 
 ```sh
 helm upgrade control-plane deploy/helm/charts/control-plane \
