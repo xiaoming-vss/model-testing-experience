@@ -136,8 +136,9 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | CSS 结构检查 | `npm run check:css:structure` | — |
 | CSS 全部检查 | `npm run check:css:all` | 等价于 `check:css` + `check:css:structure` |
 | feature 边界检查 | `npm run check:boundaries` | — |
+| Tailwind className 检查 | `npm run check:tailwind` | `!` 零容忍；重复 utility 串按 `scripts/tailwind-class-budget.json` ratchet |
 | 构建 | `npm run build` | — |
-| 完整静态验证 | `npm run verify` | 包含 type-check、lint、主题/CSS/边界检查和 build；**不包含** `npm test` |
+| 完整静态验证 | `npm run verify` | 包含 type-check、lint、主题/CSS/边界/Tailwind 检查和 build；**不包含** `npm test` |
 
 前端交付前至少执行 `npm run verify` 和 `npm test`。真实浏览器布局、窄屏、浅色/深色和列表表面观感仍需按[界面规范](studio/UI-GUIDELINES.md)人工核对；jsdom 不能替代真实布局验收。
 

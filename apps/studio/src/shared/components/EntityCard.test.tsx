@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { EntityCard } from './EntityCard'
+import entityCardModuleCss from '@/shared/styles/entity-card.module.css?raw'
 
 afterEach(() => {
   cleanup()
@@ -70,4 +71,9 @@ it('支持兼容类、标题层级与 footer/actions 类', () => {
   expect(heading.closest('article')).toHaveClass('entity-card', 'legacy-card')
   expect(screen.getByText('备注')).toHaveClass('entity-card-note', 'legacy-note')
   expect(screen.getByRole('button', { name: '操作' }).parentElement).toHaveClass('entity-card-actions', 'legacy-actions')
+})
+
+it('标题链接通过模块选择器继承颜色，不依赖 important utility', () => {
+  expect(entityCardModuleCss).toMatch(/\.title a\s*\{[^}]*color:\s*inherit/)
+  expect(entityCardModuleCss).not.toMatch(/!important/)
 })

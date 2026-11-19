@@ -24,9 +24,9 @@ studio 当前有 106 个 CSS 文件、26,104 行、5,260 条规则、18,728 条�
 
 **实施补充（2026-11-17 首次迁移）**：迁移一个页面时，除删除原 CSS 文件外，还要清理 CSS Modules 中 0 引用的类、页面里重复的 Ant Design 深层规则和重复 utility 串；共享 `*.module.css` 不得包含 feature 私有选择器或 DOM 契约，宿主适配留在 feature 的 `styles/`；重复字号、断点登记到 `tailwind.css` 的 `@theme`；删除或改名样式文件时同步更新 `README.md`、`UI-GUIDELINES.md` 与 STRUCTURE 的实现位置。检查命令见 `npm run check:css:all` 与 STRUCTURE 的 S15/S16。
 
-存量整改已完成（2026-11-18，阶段 0–45），后续只允许删除或收缩；预算 ratchet 由 `scripts/css-budget.json` 与 `scripts/css-structure-budget.json` 维持。
+存量整改已完成（2026-11-18，阶段 0–45），后续只允许删除或收缩；预算 ratchet 由 `scripts/css-budget.json`、`scripts/css-structure-budget.json` 与 `scripts/tailwind-class-budget.json` 维持。
 
-度量改用声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体，不以行数判断；行数会被压缩与展开格式严重扭曲。检查已落地：`scripts/check-css-structure.mjs` 统计规则体与重复体、约束全局/跨 feature 导入和共享 Module 私有选择器；`scripts/check-css-budget.mjs` 继续约束 `!important`/长前缀/未定义变量；`check-theme-colors.mjs` 识别 className 中的任意色值。三项均接入 `npm run verify`。
+度量改用声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体，不以行数判断；行数会被压缩与展开格式严重扭曲。检查已落地：`scripts/check-css-structure.mjs` 统计规则体与重复体、约束全局/跨 feature 导入和共享 Module 私有选择器；`scripts/check-css-budget.mjs` 继续约束 `!important`/长前缀/未定义变量；`check-theme-colors.mjs` 识别 className 中的任意色值；`check-tailwind-classes.mjs` 通过 TSX AST 禁止 className 中的 `!` 修饰符，并按基线 ratchet 重复 utility 串。四项均接入 `npm run verify`。
 
 **已考虑的其他选项**：
 

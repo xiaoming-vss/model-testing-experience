@@ -81,7 +81,7 @@ export function PerformanceRunsPage() {
       title: '进度',
       width: 190,
       render: (_, run) => <div className="flex min-w-[150px] items-center gap-2">
-        <Progress percent={progress(run)} size="small" showInfo={false} className="!mb-0 flex-1" />
+        <Progress percent={progress(run)} size="small" showInfo={false} className="mb-0 flex-1" />
         <span className="shrink-0 text-[11px] text-app-surface-text-muted">{run.completedCount + run.failedCount + run.skippedCount}/{run.totalCount}</span>
       </div>,
     },

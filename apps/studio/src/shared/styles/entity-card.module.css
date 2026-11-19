@@ -1,0 +1,5 @@
+/* 标题链接继承卡片标题色：全局 `a` 规则未分层，utility 的 text-inherit 会被压过，
+ * 这里用模块选择器提升特异性，避免使用 Tailwind 的 `!` 修饰符。 */
+.title a {
+  color: inherit;
+}

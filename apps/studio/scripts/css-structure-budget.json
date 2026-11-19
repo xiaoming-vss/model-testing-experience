@@ -201,6 +201,12 @@
       "selectors": 2,
       "layoutDeclarations": 0
     },
+    "src/shared/styles/entity-card.module.css": {
+      "rules": 1,
+      "declarations": 1,
+      "selectors": 1,
+      "layoutDeclarations": 0
+    },
     "src/shared/styles/foundation-tokens.css": {
       "rules": 2,
       "declarations": 528,

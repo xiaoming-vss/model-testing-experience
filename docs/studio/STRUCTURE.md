@@ -25,7 +25,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
+> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查、S16 的 CSS 结构与 TSX className 门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -92,7 +92,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
 | S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；详情页板面必须显式追加 `workbench-panel-flat`，`shell-header.css` 用 `.app-shell-macos .workbench-panel.workbench-panel-flat` 统一压平玻璃底、内高光、阴影与 backdrop，页面不再各写高权重覆盖 | 评审 + 扫描脚本（**待强制**） |
 | S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 45 后长前缀为 0、`!important` 49 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
-| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；存量整改已完成 |
+| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；`npm run check:tailwind`（**已实现**，接入 `verify`）：TSX className 的 `!` 零容忍、重复 utility 串按基线 ratchet；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；存量整改已完成 |
 
 数据表行分隔由 `app/styles/theme.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查数据行覆盖及变量归属。
 
@@ -472,5 +472,4 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 1. **S1 上 ESLint** —— `shared/`、`src/utils/`、`src/services/` 反向引用 feature 仍需人工发现；存量豁免按文件显式列名。S3 已由 `check:boundaries` 覆盖。
 2. **C1、C3、C4、C8 上 ESLint `max-lines`** —— 现状违规按当前行数冻结在豁免名单里，新文件直接受 400/300/600 上限约束。
 3. **S6–S13 的剩余扫描** —— 位置、前缀、token 和孤儿文件尚未全部机械化；CSS 结构与预算已由 `check:css:all` 覆盖可判定部分。
-4. **S16 的 TSX className 检查** —— CSS 文件、结构与预算已落地；`!` 后缀和重复 utility 串仍需扫描脚本，当前靠评审与 `check:theme`。
-5. **把检查挂到会自动跑的地方** —— 没有 CI 和 hook 的话，上面几条依然只是文档。
+4. **把检查挂到会自动跑的地方** —— 没有 CI 和 hook 的话，上面几条依然只是文档。
