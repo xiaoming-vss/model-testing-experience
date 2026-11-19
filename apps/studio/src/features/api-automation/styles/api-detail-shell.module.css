@@ -152,7 +152,7 @@
 
 .scope :global(.api-wb-hdr-table tbody td) {
   padding: 4px 12px;
-  border-bottom: 1px solid var(--srf-divider);
+  border-bottom: 1px solid var(--app-list-row-border);
   vertical-align: middle;
 }
 

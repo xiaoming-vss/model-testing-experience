@@ -131,9 +131,9 @@
     },
     "src/features/interface-library/styles/interface-library.module.css": {
       "rules": 11,
-      "declarations": 28,
+      "declarations": 22,
       "selectors": 11,
-      "layoutDeclarations": 11
+      "layoutDeclarations": 7
     },
     "src/features/projects/styles/sprint-overview.module.css": {
       "rules": 29,
