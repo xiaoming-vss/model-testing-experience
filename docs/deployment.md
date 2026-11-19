@@ -28,6 +28,22 @@ python3 scripts/manage.py upgrade-config
 
 `redis.url` 留空时 Compose 启动内置 Redis，仅通过 `127.0.0.1:${REDIS_PORT}` 发布；填写 `redis://` 或 `rediss://` 地址时自动叠加 `deploy/compose.external-redis.yaml`，不启动本地 `redis` 服务，也不生成 `REDIS_PORT`。外部地址必须同时能被控制面和 api-ui-worker 访问。
 
+## 环境区分
+
+| 维度 | 开发/验证 | 生产 |
+| --- | --- | --- |
+| 部署方式 | 本机 Compose，`shared.bind_host = 127.0.0.1` | Kubernetes chart-per-service 或受控 Compose |
+| namespace / 配置 | `mtx-dev`；`.runtime/k8s/*-values.yaml` | 独立 namespace；values 位于仓库外受控目录，由部署流水线生成 |
+| 数据库 / Redis | 内置或共享测试实例 | 外部高可用 MySQL、外部 Redis；启用备份和最小权限账号 |
+| S3 | 测试桶、测试前缀 | 生产桶、独立前缀、CORS、最小权限和备份策略 |
+| 集成执行 | 默认关闭或单项目灰度 | 仅白名单项目启用，独立 Worker 令牌和运行代次 |
+| 副本 / 资源 | 默认 1–2 副本，资源可留空 | 控制面多副本，Worker 按队列扩容，显式 requests/limits |
+| 暴露 / 观测 | 本机端口或 NodePort HTTP | Ingress/内部负载均衡、TLS、集中日志和监控 |
+| 备份 / 演练 | 可选 | 每日及变更前备份，至少季度恢复演练 |
+| 发布门禁 | 根测试和 Compose 配置检查 | 按[发布检查清单](release-checklist.md)执行，记录镜像 digest |
+
+开发环境可以使用简化配置；生产环境不得复用开发数据库、桶、Redis 或 Worker 令牌。K8s 的 namespace、values 覆盖和秘密处理见[环境与 values 覆盖](deployment-k8s.md#环境与-values-覆盖)。
+
 ## Kubernetes
 
 平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含性能 Worker；MySQL、Redis、S3 使用外部地址。

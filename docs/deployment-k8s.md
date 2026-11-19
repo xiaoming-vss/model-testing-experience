@@ -240,9 +240,76 @@ python3 scripts/check_k8s_config.py \
 - integration-worker 的 `config` 渲染出的 TOML 挂到 `/app/config/local.toml`，`APP_CONF` 与 `--config` 都指向它。
 - 这些 ConfigMap 使用 `subPath` 挂载；修改 values 后 `checksum/config` 会触发对应 Deployment/StatefulSet 滚动更新。
 
+## 环境与 values 覆盖
+
+仓库只提供 chart 默认 values 和以下覆盖示例，不提交任何真实生产 values 或秘密。开发与生产的建议差异：
+
+| 维度 | dev | prod |
+| --- | --- | --- |
+| namespace | `mtx-dev` | 独立生产 namespace（示例 `mtx-prod`），由发布记录固定 |
+| values 文件 | `.runtime/k8s/<service>-values.yaml`，从仓库默认值复制 | 仓库外受控目录，由部署流水线从外部配置/秘密管理器生成 |
+| 镜像 | 本地或 CI tag，`pullPolicy: Always` | 与发布版本一致的 tag + digest，`pullPolicy: IfNotPresent` |
+| 副本 | control-plane 2；Worker 和 Studio 1 | control-plane ≥ 3；无状态 Worker 按队列扩容；integration-worker 保持 1 |
+| 资源 | 可留空 | 每个服务显式 requests/limits，并配置调度和 PDB |
+| MySQL | 内置或共享测试库 | 外部高可用 MySQL，独立应用账号，连接池按副本计算 |
+| Redis | 内置或共享测试实例 | 外部 Redis（`redis.url`），启用认证/TLS 和隔离网络 |
+| S3 | 测试桶/前缀 | 生产桶/独立前缀，最小权限、CORS 和备份策略 |
+| 集成执行 | `enabled: false` 或单项目灰度 | 仅白名单 `project_ids` 启用，使用独立令牌和 `runtime_generation` |
+| 暴露 | NodePort + HTTP | Ingress/内部负载均衡 + TLS；chart 本身不含 Ingress |
+| 备份/演练 | 可选 | 每日及变更前备份，至少季度恢复演练 |
+
+生产覆盖示例（仅展示覆盖形式，DSN、密钥、令牌和 S3 凭据由流水线注入，不能写入本文件）：
+
+```yaml
+# control-plane 生产覆盖示例
+replicaCount: 3
+image:
+  registry: registry.example.com
+  tag: "2026.11.0"
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+config:
+  data:
+    db:
+      user:
+        pool_size: 40
+        max_overflow: 20
+  integration_execution:
+    enabled: true
+    project_ids: [123]
+    runtime_generation: "<由流水线注入>"
+```
+
+Worker 覆盖示例：
+
+```yaml
+# ai-worker 生产覆盖示例
+replicaCount: 2
+image:
+  registry: registry.example.com
+  tag: "2026.11.0"
+  pullPolicy: IfNotPresent
+config:
+  platform:
+    worker_token: "<由流水线注入>"
+```
+
+## 秘密处理
+
+- 真实 DSN、JWT/integration key、Worker 令牌、S3 凭据和初始管理员口令只由外部秘密管理器或 CI 在部署时注入；不要写入仓库、命令历史或发布记录。
+- `imagePullSecrets` 使用预先创建的 Kubernetes Secret；生产 values 只引用 Secret 名称。
+- 当前 chart 把 `config` 渲染为 ConfigMap，秘密会出现在 ConfigMap 中。生产必须开启 etcd encryption at rest、限制 ConfigMap/Pod 的 RBAC，并在发布记录中注明该限制；后续若改为 Secret 引用，按配置变更流程更新本文件和 chart。
+- 发布前按[发布检查清单](release-checklist.md)确认 values 来源、权限、备份和回滚材料。
+
 ## 安装
 
-每个 chart 独立安装。建议先安装 control-plane，再安装 Studio 和 Worker：
+每个 chart 独立安装。建议先安装 control-plane，再安装 Studio 和 Worker。以下命令以 `mtx-dev` 和 `.runtime/k8s/` 为例；生产执行时替换为发布记录中的 namespace、仓库外 values 路径和镜像 digest。
 
 ```sh
 kubectl create namespace mtx-dev
