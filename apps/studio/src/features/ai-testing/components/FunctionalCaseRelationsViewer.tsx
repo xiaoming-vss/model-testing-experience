@@ -17,6 +17,7 @@ import {
 import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
+import caseRelationsStyles from '@/shared/styles/case-relations.module.css'
 import { api } from '@/services/api'
 import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
 
@@ -106,7 +107,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
 
   return (
     <ProjectAccessScope resourceError={taskQuery.error} projectId={taskQuery.data?.projectId ?? ''}>
-      <div className={`ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden${embedded ? " is-embedded bg-[var(--app-surface)]" : " rounded-lg border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-layout)]"}`}>
+      <div className={`ai-relations-page ${caseRelationsStyles.scope} flex h-full max-h-full min-h-0 flex-col overflow-hidden${embedded ? " is-embedded bg-[var(--app-surface)]" : " rounded-lg border border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-layout)]"}`}>
         {sidebarTools}
         {!embedded ? <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2.5 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-[9px]">
           {onBack ? (

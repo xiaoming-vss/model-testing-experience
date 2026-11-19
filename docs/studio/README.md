@@ -32,9 +32,10 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试
 | `app/main.tsx` | 真正的应用装配入口 |
 | `app/router/routes.tsx` | 顶层路由 |
 | `app/layouts/AppShell.tsx` | 登录后的整体框架，业务页面在内部二次分发 |
+| `app/pages/` | 应用级页面编排：资产库、需求详情、测试单图谱与测试工作区 |
 | `app/providers/` | Query 与主题 Provider |
 | `app/styles/` | 主题与设计断言测试 |
-| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`test-orders`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`bugs`、`profile`、`admin` |
+| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`test-orders`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`bugs`、`profile`、`admin` |
 | `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
 | `domain/projects/` | 项目/权限/迭代/环境平台能力：项目 API、类型、workbench store、项目访问与迭代 hooks、环境抽屉与权限门控组件；普通 feature 只从这里引用 |
 | `domain/requirements/` | 跨 feature 的需求领域类型（如下拉选项摘要） |
@@ -66,10 +67,11 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
 | `ai-task-detail.module.css` | AI 页面 token/表面、CodeMirror 折叠、任务卡与运行表、需求生成工作区、UI 生成与模型连接弹窗 |
-| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚、继续优化侧栏与关系图谱/查看器 |
+| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚与继续优化侧栏 |
 | `generation-canvas.module.css` | 生成画布、阶段卡片、阅读态与阶段检查器 |
 | `artifact-cases.module.css` | 用例名称树、用例浏览器、生成用例审核字段与仓库画像 |
 | `ui-stage-visual.module.css` | UI 三阶段可视化的深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局/排版在 `components/uiStageVisual/uiStageVisualClasses.ts` |
+| `shared/styles/case-relations.module.css` | 用例关系图谱的 React Flow 节点、阅读浮层与 JSON 页签皮肤；需求生成链与测试单图谱共用 |
 
 需求评审、测试点、测试范围分析和材料整理使用 `shared/components/ArtifactView` + Tailwind；公共原语的复杂皮肤只在 `shared/styles/run-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不新增同构布局 CSS。
 
@@ -93,7 +95,8 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 禅道 MCP 卡片不再有独立 Module；标题、状态、实例省略与间距均由 `ZentaoMcpServiceCard.tsx` 的 utility 表达。
 - `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。`src/index.css` 不再重复声明控件 `font-family`，避免未分层规则压过 `font-mono`。
 - `src/features` 下没有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
-- TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责。
+- TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责；应用级编排位于 `app/pages/`，不再归属单个 feature。
+- 用例关系图谱（需求生成链与测试单共用）的 React Flow 节点、阅读浮层与 JSON 页签皮肤位于 `shared/styles/case-relations.module.css`；宿主根节点挂 `.scope`，不再由 test-orders 跨 feature 导入 ai-testing 的 Module。
 - 共享 `tp-list-toolbar` 的搜索框宽度已迁到页面 `w-72` utility；工具栏表面、最小高度与 `.api-filter-field`/`.api-filter-group`/`.api-filter-field-label` 原语位于 `@layer components`，utility 可在页面按需覆盖。UI 列表搜索框用 `min-w-64 max-narrow:w-full max-narrow:min-w-0` 表达原 256px 下限。
 
 ### 公共表格与按钮

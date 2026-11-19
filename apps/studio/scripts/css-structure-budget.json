@@ -23,9 +23,7 @@
     "src/shared/styles/tailwind.css",
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
-  "crossFeatureCssImports": [
-    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/generation-chain.module.css"
-  ],
+  "crossFeatureCssImports": [],
   "orphanCss": [],
   "sharedModuleViolations": [],
   "files": {
@@ -71,6 +69,12 @@
       "selectors": 6,
       "layoutDeclarations": 3
     },
+    "src/domain/projects/styles/environment-drawer.module.css": {
+      "rules": 11,
+      "declarations": 37,
+      "selectors": 12,
+      "layoutDeclarations": 22
+    },
     "src/features/ai-testing/styles/ai-task-detail.module.css": {
       "rules": 48,
       "declarations": 151,
@@ -90,10 +94,10 @@
       "layoutDeclarations": 208
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 121,
-      "declarations": 381,
-      "selectors": 126,
-      "layoutDeclarations": 208
+      "rules": 95,
+      "declarations": 269,
+      "selectors": 97,
+      "layoutDeclarations": 155
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
       "rules": 96,
@@ -130,12 +134,6 @@
       "declarations": 28,
       "selectors": 11,
       "layoutDeclarations": 11
-    },
-    "src/domain/projects/styles/environment-drawer.module.css": {
-      "rules": 11,
-      "declarations": 37,
-      "selectors": 12,
-      "layoutDeclarations": 22
     },
     "src/features/projects/styles/sprint-overview.module.css": {
       "rules": 29,
@@ -190,6 +188,12 @@
       "declarations": 60,
       "selectors": 28,
       "layoutDeclarations": 15
+    },
+    "src/shared/styles/case-relations.module.css": {
+      "rules": 26,
+      "declarations": 112,
+      "selectors": 29,
+      "layoutDeclarations": 53
     },
     "src/shared/styles/chart-tokens.css": {
       "rules": 2,

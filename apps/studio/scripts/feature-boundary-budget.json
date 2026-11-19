@@ -1,5 +1,5 @@
 {
-  "total": 26,
+  "total": 20,
   "files": {
     "src/features/admin/pages/AccountManagementPage.tsx": 1,
     "src/features/ai-testing/hooks/useRequirementCodeRiskWorkspace.tsx": 1,
@@ -10,10 +10,9 @@
     "src/features/projects/pages/ProjectsPage.tsx": 4,
     "src/features/requirements/components/RequirementDocumentPreviewModal.tsx": 1,
     "src/features/test-orders/components/AddCasesFromLibraryModal.tsx": 2,
-    "src/features/test-orders/components/TestOrderGraphViewer.tsx": 5,
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx": 4,
     "src/features/test-orders/components/visualization/CaseVisualizationPanel.tsx": 1,
     "src/features/test-orders/components/visualization/VisualizationBatchButton.tsx": 1,
-    "src/features/test-orders/pages/TestOrderWorkspacePage.tsx": 1,
-    "src/features/testing/pages/TestingPage.tsx": 5
+    "src/features/test-orders/pages/TestOrderWorkspacePage.tsx": 1
   }
 }

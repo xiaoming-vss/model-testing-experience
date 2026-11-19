@@ -1,4 +1,4 @@
-import { resolveTestingTab } from '@/features/testing/components/testingTab'
+import { resolveTestingTab } from '@/app/layouts/testingTab'
 
 export function testingTabForLocation(pathname: string, search: string) {
   return pathname.startsWith('/test-orders') ? 'orders'

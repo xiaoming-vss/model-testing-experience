@@ -22,8 +22,9 @@ const init = process.argv.includes('--init')
 const update = process.argv.includes('--update')
 
 // json-editor-* / api-case-run-result-* / api-collection-run-* / base-services-* 是 shared 组件或跨 feature 视图的兼容类族。
+// ai-relations-* / ai-hierarchy-* 是 shared/styles/case-relations.module.css 对应的用例图谱视图类族。
 // success/failed/error/skipped/expanded/compact 是这些视图共用的状态修饰类。
-const THIRD_PARTY_CLASS = /^(?:ant-|anticon|cm-|react-flow|recharts|hljs|mermaid|json-editor-|api-case-run-result-|api-collection-|base-services-|sprint-card-|success|failed|error|skipped|expanded|compact)/
+const THIRD_PARTY_CLASS = /^(?:ant-|anticon|cm-|react-flow|recharts|hljs|mermaid|json-editor-|api-case-run-result-|api-collection-|base-services-|sprint-card-|ai-relations-|ai-hierarchy-|success|failed|error|skipped|expanded|compact)/
 const SUBSTANTIVE_BODY = /\S/
 // 普通页面布局声明。用于阶段 39+ 跟踪 B 类 Module 还剩多少本可 utility 化的结构；
 // 第三方深层规则与高度链也会被计入，因此只作为向下 ratchet 的存量指标，不作为绝对禁令。
@@ -155,10 +156,11 @@ function sharedModuleViolations(path, text) {
   const violations = []
   for (const match of maskComments(text).matchAll(/:global\(([^)]*)\)/g)) {
     const selector = match[1]
-    for (const token of selector.matchAll(/\.([a-zA-Z_][\w-]*)/g)) {
-      if (THIRD_PARTY_CLASS.test(token[1])) continue
+    // 共享视图类族可以拥有自己的后代类名；判定只看选择器第一个类，
+    // 避免把 `.ai-relations-node .node-title` 里的内部结构类误判成 feature 私有选择器。
+    const firstClass = selector.match(/\.([a-zA-Z_][\w-]*)/)
+    if (firstClass && !THIRD_PARTY_CLASS.test(firstClass[1])) {
       violations.push(`${rel(path)}: ${match[0]}`)
-      break
     }
   }
   return [...new Set(violations)]

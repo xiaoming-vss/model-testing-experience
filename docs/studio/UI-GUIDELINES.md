@@ -300,7 +300,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 - `src/app/styles/listSurfaceConsistency.test.ts`：部分表头、行高、内边距、背景及圆角约定。
 - `src/app/styles/listNameConsistency.test.ts`：部分列表名称的样式一致性；已知覆盖限制见该测试及 STRUCTURE。
 - `src/app/layouts/AppSidebar.test.tsx`：侧栏交互、选中状态与范围参数。
-- `src/features/testing/pages/TestingPage.test.tsx`：测试工作区 Tab、键盘操作、历史返回、旧链接及 Bug 独立入口。
+- `src/app/pages/TestingPage.test.tsx`：测试工作区 Tab、键盘操作、历史返回、旧链接及 Bug 独立入口。
 - `src/features/ai-testing/components/RequirementDesignWorkspace.test.tsx`：生成全景入口、代码风险工作区、空态与只读边界。
 - 测试资产各页面的 `*.test.tsx`：各自搜索、刷新、列表及操作行为。
 

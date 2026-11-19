@@ -8,7 +8,7 @@ import {
   isLegacyLibraryTab,
   resolveTestingTab,
   type TestingTab,
-} from '@/features/testing/components/testingTab'
+} from '@/app/layouts/testingTab'
 import { UiAutomationPage } from '@/features/ui-automation/pages/UiAutomationPage'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 

@@ -141,7 +141,9 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | API 测试 | `features/api-automation/styles/api-detail-shell.module.css` + `api-detail-rules.module.css`；列表、详情两栏、顶栏、用例行、请求面板与后置操作布局在页面与组件 utility |
 | UI 测试 | `features/ui-automation/styles/ui-suite.module.css` + `ui-detail-shell.module.css`；右栏卡片原语在 `shared/components/RunCard.tsx` |
 | 性能测试 | 复用 `tp-*` 与 `shared/components/EntityCard.tsx` 内置卡片 utility；新样式使用 Tailwind utility，不新增页面级全局 CSS |
-| TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `features/testing/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
+| TestingPage 外壳 | 无独立 Module；标签外壳、pane 与子页高度链由 `app/pages/TestingPage.tsx` 的 Tailwind utility 负责 |
+
+用例关系图谱的 React Flow 节点、阅读浮层与 JSON 页签皮肤位于 `shared/styles/case-relations.module.css`，需求生成链与测试单图谱共用；宿主根节点挂 `.scope`，布局由组件 utility 负责。
 
 `shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与列表面板契约；快速过滤条、页面工具栏与 API/性能工具栏的布局已迁到组件 utility。
 

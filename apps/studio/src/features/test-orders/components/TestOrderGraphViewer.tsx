@@ -28,7 +28,7 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { getErrorMessage } from '@/utils/format'
-import chainStyles from '@/features/ai-testing/styles/generation-chain.module.css'
+import caseRelationsStyles from '@/shared/styles/case-relations.module.css'
 
 const { Text } = Typography
 
@@ -224,7 +224,7 @@ export function TestOrderGraphViewer({
 
   return (
     <>
-      <div className={`test-order-graph-viewer ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-[10px] border border-[var(--app-surface-border)] bg-[var(--app-surface)] ${chainStyles.scope}`}>
+      <div className={`test-order-graph-viewer ai-relations-page flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-[10px] border border-[var(--app-surface-border)] bg-[var(--app-surface)] ${caseRelationsStyles.scope}`}>
         {toolbar}
         <div className="ai-relations-page-bar flex flex-none flex-wrap items-center gap-2 border-b border-[var(--ant-color-border-secondary)] bg-[var(--ant-color-bg-container)] px-4 py-2.5">
           <div className="test-order-graph-status flex items-center gap-2">

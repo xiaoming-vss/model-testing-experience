@@ -9,7 +9,7 @@ import {
   type AssetLibraryTab,
 } from './navigation'
 import { TopNavTabMenu } from './TopNavTabMenu'
-import { TESTING_TAB_OPTIONS } from '@/features/testing/components/testingTab'
+import { TESTING_TAB_OPTIONS } from '@/app/layouts/testingTab'
 import {
   BASE_SERVICE_TABS,
   resolveBaseServiceTab,
