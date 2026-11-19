@@ -85,7 +85,7 @@ CLI 只按超级管理员标记定位账号，不创建第二个账号；不存�
 python3 scripts/manage.py migrate
 ```
 
-迁移 `20261020_0040` 为 `users` 增加超级管理员、账号状态、强制改密、密码更新时间、令牌版本和登录失败锁定字段，并新增 `login_rate_limits` 表。历史账号的 `status` 为 `active`、`must_change_password=false`、`token_version=0`；邮箱列保持可空以兼容存量数据，新注册和个人设置按必填校验。存量空邮箱由系统超级管理员在账号管理中补填。
+当前唯一 baseline 已为 `users` 增加超级管理员、账号状态、强制改密、密码更新时间、令牌版本和登录失败锁定字段，并新增 `login_rate_limits` 表。历史账号的 `status` 为 `active`、`must_change_password=false`、`token_version=0`；邮箱列保持可空以兼容存量数据，新注册和个人设置按必填校验。存量空邮箱由系统超级管理员在账号管理中补填。
 
 `python3 scripts/manage.py upgrade-config` 会为已有统一配置补齐超级管理员、登录限流和 JWT 有效期配置；生成的控制面配置由 `configure` 写入运行配置。修改 JWT 有效期或轮换密钥后需要重启控制面。
 

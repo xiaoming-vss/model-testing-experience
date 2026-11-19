@@ -26,7 +26,7 @@
 ## 恢复到隔离目标
 
 1. 准备独立的空 MySQL 数据库和空私有桶。桶名、数据库名必须与快照源不同。目标存储凭证只授权目标桶，不覆盖在线源环境。
-2. 在独立恢复检出中配置其忽略的 `config/platform.toml`，再通过 `scripts/manage.py configure --mode local` 生成恢复用控制面配置。保持应用及 Worker 停止，保留原 integration key 的解密能力，并使用隔离的 JWT / Worker 令牌。设置新的 `shared.integration_worker_token` 和 `shared.integration_runtime_generation`，将 `control_plane.integration_execution` 的 `enabled`、`accept_submissions`、`claim_enabled` 全部设为 false；恢复工具会拒绝旧令牌、旧代次及打开的开关。运行与快照匹配的应用代码；含集成任务的当前备份需要已交付的维护迁移 `20261007_0031`。
+2. 在独立恢复检出中配置其忽略的 `config/platform.toml`，再通过 `scripts/manage.py configure --mode local` 生成恢复用控制面配置。保持应用及 Worker 停止，保留原 integration key 的解密能力，并使用隔离的 JWT / Worker 令牌。设置新的 `shared.integration_worker_token` 和 `shared.integration_runtime_generation`，将 `control_plane.integration_execution` 的 `enabled`、`accept_submissions`、`claim_enabled` 全部设为 false；恢复工具会拒绝旧令牌、旧代次及打开的开关。运行与快照匹配的应用代码。当前仓库只保留唯一 baseline `20261103_0001_v1_baseline`；空库恢复执行 `alembic upgrade head` 即创建全部结构。来自旧版本的快照需使用对应历史版本的代码与迁移，不能用当前 baseline 直接升级旧库。
 3. 在该检出的 `apps/control-plane` 中恢复受信任的备份目录：
 
 ```bash
@@ -35,7 +35,7 @@
 
 工具先验证整份快照，拒绝原桶、原数据库及非空目标；复制对象后再次 GET 校验大小和 SHA-256，重建表与数据，核对恢复行数，将 `stored_files.bucket` 改为目标桶。文件 ID、对象 Key、正文 data-file-id 和业务引用保持原值。所有非终态或含未决写入的集成任务进入 quarantined，原步骤与回执保留；新的运行代次和令牌指纹写入持久化恢复门控。数据库恢复不会回滚禅道，误开配置也不能重放这些任务。DDL / 数据只能从受控、可信的备份恢复；文件哈希检测损坏，不提供备份来源认证。
 
-4. 用隔离账号验证需求原件、Bug 当前/历史图片、源码快照、技能清单和运行产物的稳定文件入口；核对 Alembic 版本、业务引用和文件哈希。恢复后在离线目标执行 `alembic upgrade head`，核对放行记录需要迁移 `20261007_0032`。联合备份不包含桶的运行配置；按恢复前端的实际 Origin 配置目标桶 CORS（GET/HEAD/POST），验证浏览器读取及上传，不能用无 Origin 的 GET 成功替代。执行下面的只读命令查看集成隔离任务和当前关联；任务按返回的 nextAfterId 翻页，关联按 nextMappingOffset 翻页，两份清单都需要核对。
+4. 用隔离账号验证需求原件、Bug 当前/历史图片、源码快照、技能清单和运行产物的稳定文件入口；核对 Alembic 版本、业务引用和文件哈希。恢复后在离线目标执行 `alembic upgrade head`；当前 baseline 已包含核对放行记录所需结构。联合备份不包含桶的运行配置；按恢复前端的实际 Origin 配置目标桶 CORS（GET/HEAD/POST），验证浏览器读取及上传，不能用无 Origin 的 GET 成功替代。执行下面的只读命令查看集成隔离任务和当前关联；任务按返回的 nextAfterId 翻页，关联按 nextMappingOffset 翻页，两份清单都需要核对。
 
 ```bash
 .venv/bin/python -m testing_agent.cli.integration_maintenance restore-review --config config/local.toml --limit 100

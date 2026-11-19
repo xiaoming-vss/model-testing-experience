@@ -168,7 +168,7 @@ MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 MTX_TEST_ZENTAO_MCP_SOURCE_DEADLINE=1 \
 
 该检查使用真实发布二进制及隔离 HTTP 来源，验证 60 秒截止、明确失败与未执行 POST /files；真实 S3/禅道链路结果和 180 秒成功响应延迟场景已记入集成验收记录并归档。
 
-发布控制面代码时执行数据库迁移至 `20261004_0026`，部署 Studio 的本轮构建。MCP、控制面迁移和 Studio 三者应一起升级；升级后读取工具列表应出现 `upload_bug_attachment`、`get_bug_attachment`。具体执行入口沿用部署现有流程；独立控制面可在应用目录执行 `uv run alembic upgrade head`，平台容器模式沿用既有迁移服务。
+发布控制面代码时，在空库执行 `uv run alembic upgrade head`（唯一 baseline 已包含附件表结构），并部署 Studio 的本轮构建。MCP、控制面迁移和 Studio 三者应一起升级；升级后读取工具列表应出现 `upload_bug_attachment`、`get_bug_attachment`。具体执行入口沿用部署现有流程；独立控制面可在应用目录执行 `uv run alembic upgrade head`，平台容器模式沿用既有迁移服务。
 
 隔离协议验收可在仓库根目录运行：
 
@@ -181,9 +181,9 @@ MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 \
 
 真实业务验收仍须使用当前成员 Token 和测试 Bug：首次推送及已有 Bug 补传截图、视频、日志，确认附件出现在正确 Bug 的附件区，登录后能查看或下载；重复推送不产生重复文件。隔离网络和数据库测试无法替代此验收。图片可能被禅道原生压缩，待核对的文件若不再匹配原字节摘要，不自动关联或重传。
 
-### 本机升级与发布核对（2026-10-04）
+### 本机升级与发布核对（2026-10-04，历史记录）
 
-本机独立部署 `/home/xiaoming/zentao-mcp-deploy` 已升级附件版，MCP 与下载转发容器均健康；工具列表确认包含上传及核对工具。数据库已到 `20261004_0027`。现有 S3 签名地址为 `http://localhost:19000`，本机通过共享 MCP 网络命名空间的 IPv4/IPv6 回环转发访问 `rustfs:9000`，不修改签名地址；此转发属于本机配置，其他部署应使用实际可达的 S3 来源。Bug #6 的五个附件从 MCP 容器下载成功，大小及 SHA-256 均匹配；禅道 PHP 上传和请求体上限均为 128M。升级前 Compose 和 YAML 保存在独立部署目录的 `backup-attachments-20261004-193006/`。这些检查尚不代表真实禅道附件上传、查看与下载验收完成。
+本机独立部署 `/home/xiaoming/zentao-mcp-deploy` 已升级附件版，MCP 与下载转发容器均健康；工具列表确认包含上传及核对工具。数据库当时已到 `20261004_0027`（历史版本；该结构已并入当前 baseline）。现有 S3 签名地址为 `http://localhost:19000`，本机通过共享 MCP 网络命名空间的 IPv4/IPv6 回环转发访问 `rustfs:9000`，不修改签名地址；此转发属于本机配置，其他部署应使用实际可达的 S3 来源。Bug #6 的五个附件从 MCP 容器下载成功，大小及 SHA-256 均匹配；禅道 PHP 上传和请求体上限均为 128M。升级前 Compose 和 YAML 保存在独立部署目录的 `backup-attachments-20261004-193006/`。这些检查尚不代表真实禅道附件上传、查看与下载验收完成。
 
 ## 影响版本与指派人接口定义补丁（2026-10-06）
 
@@ -220,4 +220,4 @@ MTX_TEST_ZENTAO_MCP_BUG_OPTIONS=1 \
 
 镜像 `xiaoming-x/zentao-mcp:2026-10-09-pullfiles`（摘要 `sha256:0cb19a9e…`，以仓库实际为准）已构建并推送；`get_bug_attachment` 新增可选 `uploadUrl`——平台签发的预签名 PUT 票据，工具在权属与大小校验后把内容回传平台，供禅道 Bug 反向导入的附件与正文图片使用。无票据时行为与旧版一致。本机 Compose 已固定新摘要并重新生成 bug-options 接口补丁，MCP 与附件转发容器重建后健康，工具列表确认 `uploadUrl` 已生效。
 
-构建说明：本机无法访问 docker.io，alpine:3.21 经 daocloud 镜像源拉取；Go 构建使用 `GOPROXY=https://goproxy.cn,direct`；发布镜像相对源码 Dockerfile 补充了 `ENV GOPROXY`、`COPY docs/zentao-openapi.json /config/` 与 `ENTRYPOINT`（与历史发布镜像布局一致）。控制面已升级至包含文件管线的版本并应用迁移 `20261009_0037`。真实禅道的附件与正文图片拉取验收待用户在平台执行。
+构建说明：本机无法访问 docker.io，alpine:3.21 经 daocloud 镜像源拉取；Go 构建使用 `GOPROXY=https://goproxy.cn,direct`；发布镜像相对源码 Dockerfile 补充了 `ENV GOPROXY`、`COPY docs/zentao-openapi.json /config/` 与 `ENTRYPOINT`（与历史发布镜像布局一致）。控制面已升级至包含文件管线的版本并应用当时的迁移 `20261009_0037`（历史记录；当前 baseline 已包含该结构）。真实禅道的附件与正文图片拉取验收待用户在平台执行。
