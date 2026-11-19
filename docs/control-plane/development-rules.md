@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：control-plane maintainer
-- 最近复核：2026-11-19
+- 最近复核：2026-11-20
 - 复核周期：每季度
 - 适用范围：`apps/control-plane/` 及控制面与各 Worker 的接口协作
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
@@ -17,7 +17,7 @@
 
 开发前先阅读根目录与目标项目的 `AGENTS.md`，通过 [CONTEXT-MAP](../../CONTEXT-MAP.md) 找到[控制面领域上下文](CONTEXT.md)及相关 ADR。跨项目变更同时阅读对应项目的上下文和接口契约。
 
-- 功能规格与实现工单放在仓库根目录 `.scratch/<feature-slug>/`，规格使用 `spec.md`，工单分别放在 `issues/` 下。功能变更优先依据对应规格及已确认的补充要求。
+- 进行中的功能规格与实现工单放在仓库根目录 `.scratch/<feature-slug>/`，规格使用 `spec.md`，工单分别放在 `issues/` 下。`.scratch/` 是本地工作区；需要长期追溯的规格快照和验收证据按[长期记录](../records/README.md)提升到 `docs/control-plane/records/`，规范、README 和 ADR 不得只链接 `.scratch/`。
 - 业务术语使用 CONTEXT 中的名称，例如项目共享服务、服务个人授权、候选生成结果、测试单和执行条目。
 - 与现有 ADR 冲突时明确说明原因及行为变化；确认新决策后记录 ADR，不静默替换原有语义。已经明确被后续 ADR 替代的部分按新决策执行。
 - 六个应用保持独立依赖、锁文件、Dockerfile 和启动入口。控制面变更不顺带合并 Worker 运行环境，也不清理与本次任务无关的工作区修改。

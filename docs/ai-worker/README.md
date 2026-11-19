@@ -149,9 +149,12 @@ Worker 每次执行前按任务类型／阶段从控制面获取默认技能清�
 - [代码分析代码工作区与上下文回执](code-analysis-context.md)
 - [仓库画像分析](repository-profile.md)
 - [功能测试范围分析](test-scope-analysis.md)
+- [功能测试需求分析产物](functional-analysis-output.md)
 - [按模块并发生成完整用例](module-case-generation.md)
+- [外部完整用例生成与评审调研](external-case-generation-research.md)（历史调研）
 - [S3 任务文件读取](file-storage.md)
 - [需求分析两阶段与 JSON 产物设计](requirement-analysis-two-stage-design.md)（实施前设计）
+- [ADR 索引](ADR.md)
 
 ## API / UI 用例输出自动修正（2026-10-09）
 

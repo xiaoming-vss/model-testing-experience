@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：platform maintainers
-- 最近复核：2026-11-19
+- 最近复核：2026-11-20
 - 复核周期：每季度
 - 适用范围：全仓库检查、测试、构建与部署校验命令
 - 变更/废弃：按[规范变更检查清单](agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
@@ -180,7 +180,7 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 
 | 目标 | 命令 | 说明 |
 | --- | --- | --- |
-| `.scratch` 临时副本 | 按目录确认后 `rm -rf .scratch/<临时目录>` | 当前整改工单在 `.scratch/full-remediation-2026-11/`，清理前先归档工单记录 |
+| `.scratch` 临时副本 | 按目录确认后 `rm -rf .scratch/<临时目录>` | 先按[`.scratch` 生命周期](agents/issue-tracker.md#scratch-生命周期与长期记录)把规格与验收证据提升到 `docs/<project>/records/`；未提升的本地工件不作为长期证据 |
 | Studio 依赖 | `rm -rf apps/studio/node_modules` | 用 `npm ci` 重新安装 |
 | API/UI 运行产物 | `rm -rf apps/api-ui-worker/artifacts` | 先确认没有待排查的截图或 Trace |
 | Worker 运行状态 | `rm -rf apps/*/runtime` | 删除健康文件、证据日志和运行工作区；需要重新启动或恢复 |

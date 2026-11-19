@@ -149,7 +149,7 @@ npm run dev           # 默认 127.0.0.1:5173
 
 - [内置 MCP 配置](builtin-mcp.md)
 - [Bug 手动推送到禅道](../control-plane/bug-zentao-push.md)
-- [Bug 管理需求核对与页面整理](bug-management-review.md)
+- [Bug 管理需求核对与页面整理（历史记录）](records/2026-09-28-bug-management-review.md)
 
 - [文件直传与预览](file-storage.md)
 
