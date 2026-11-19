@@ -40,8 +40,8 @@ uv run --locked --extra dev pytest tests/test_architecture_layers.py -q
 | --- | --- | --- |
 | `services/project.py::list_members` 的 owner/member 查询 | `ProjectRepository.owner`、`ProjectRepository.member_rows` | `test_project_membership_api.py` |
 | `services/worker_skills.py::authorized_skill` 的默认技能查询 | `WorkerTaskRepository.default_skill` | `test_worker_contract.py` |
-| `services/code_risk_analysis.py::gitlab_credentials_payload` | `IntegrationConnectionRepository.get_active_for_user` | `test_code_risk_analysis_task.py`、`test_code_risk_latest_runs.py` |
-| `services/environment_access.py::authorized_environment_vars` | `ApiEnvironmentVarRepository.list_by_environment` | `test_remaining_control_plane.py`、`test_ui_variables.py` |
+| `services/code_risk_analysis.py::gitlab_credentials_payload` | `IntegrationConnectionRepository.get_active_for_user` | `test_code_risk_snapshot.py`、`test_code_risk_credentials.py`、`test_code_risk_worker_api.py`、`test_code_risk_latest_runs.py` |
+| `services/environment_access.py::authorized_environment_vars` | `ApiEnvironmentVarRepository.list_by_environment` | `test_ai_task_snapshots.py`、`test_ui_variables.py` |
 | `services/integration_runtime.py` | `IntegrationRuntimeRepository.restored`、`isolated_scope` | `test_integration_maintenance.py` |
 | `services/repository_profile_versions.py::_profile_attempts` | `GenerationChainRepository.profile_attempts` | `test_repository_profile_api.py`、`test_repository_profile_task.py` |
 | `services/stage_storage/version_views.py` | `GenerationChainRepository.version`、`version_for_stage`、`latest_requirement_analysis_task`、`attempt` | `test_generation_chain.py`、`test_generation_chain_api.py` |
