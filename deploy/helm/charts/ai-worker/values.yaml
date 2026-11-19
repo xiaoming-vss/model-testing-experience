@@ -47,9 +47,10 @@ config:
     request_timeout_seconds: 60
 
   # 执行底座。backend 只决定实际渲染和生效的子配置。
-  # 当前代码仅支持 pi；nanobot 配置保留用于兼容。
+  # 默认值与 config/platform.example.toml 保持一致；K8s 集群改用 pi 时，
+  # 同步修改 platform.toml 的 [ai_worker.agent].backend，再运行配置一致性检查。
   agent:
-    backend: pi
+    backend: nanobot
 
     nanobot:
       runtime_root: /data/runtime

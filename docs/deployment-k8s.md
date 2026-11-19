@@ -58,7 +58,7 @@ deploy/helm/charts/
 
 按“漂移是否会造成启动失败、认证失败或数据不可达”划分，而不是要求所有字段相同。chart 的副本数、资源、镜像 tag、存储大小、Service/NodePort 属于集群自身的发布参数，不属于平台共享配置。
 
-选定 B：`platform.toml` 是共享语义的唯一事实源；K8s values 可以覆盖与集群绑定、且不影响共享语义的字段。检查命令为 `python3 scripts/check_k8s_config.py`，实现、测试与命令矩阵登记见工单 17。
+选定 B：`platform.toml` 是共享语义的唯一事实源；K8s values 可以覆盖与集群绑定、且不影响共享语义的字段。检查命令为 `python3 scripts/check_k8s_config.py`：默认对比平台示例与 chart 默认 values，部署时加 `--platform-config config/platform.toml --values-dir .runtime/k8s`。命令与前置条件见[验证命令矩阵](commands.md#根目录与部署编排)。
 
 ### 必须一致的关键字段
 
@@ -80,7 +80,7 @@ deploy/helm/charts/
 - 密钥、令牌只比较相等性，不输出原值；空值和 `GENERATE`、`change-me` 等占位值按未配置处理并报告，不视为一致。
 - `database.url` 或 `redis.url` 为空表示 Compose 使用内置服务。此时 K8s 必须显式填写外部数据库地址，Redis 可以留空降级；不拿 Compose 内置地址与 K8s 地址比较。
 - 超级管理员的 `initial_password` 只检查非占位；它仅在首次启动 seed 时使用，允许每个集群独立设置。
-- `agent.backend` 必须一致；chart 默认值与平台示例的差异在工单 17 修正，不作为例外保留。
+- `agent.backend` 必须一致；ai-worker chart 默认值与平台示例同为 `nanobot`，切换为 `pi` 时两侧同步修改。
 
 ### 明确例外（允许不同）
 
@@ -193,7 +193,7 @@ control-plane 需要确认：
 
 Worker 需要额外确认：
 
-- ai-worker：`config.platform.worker_token` 与控制面 `security.worker.key` 一致；`config.agent.backend` 为 `pi` 或 `nanobot`；路径使用 `/data/runtime` 和 `/app/logs`。
+- ai-worker：`config.platform.worker_token` 与控制面 `security.worker.key` 一致；`config.agent.backend` 与 `ai_worker.agent.backend` 一致（默认 `nanobot`）；路径使用 `/data/runtime` 和 `/app/logs`。
 - api-ui-worker：`config.control_plane.worker_token` 与控制面一致；`config.notifications.redis_url` 在集群内可达；`config.ui.artifacts_dir` 为 `/app/artifacts`。
 - integration-worker：`config.control_plane.worker_token` 与控制面 `security.integration_worker.key` 一致；`config.worker.health_file` / `evidence_file` 位于 `/app/runtime`。
 
@@ -220,6 +220,16 @@ imagePullSecrets:
 ```
 
 各服务都在 `config` 下填结构化配置，结构与对应 TOML 一一对应。
+
+填写完成后运行一致性检查（strict 模式，缺少关键字段会失败）：
+
+```sh
+python3 scripts/check_k8s_config.py \
+  --platform-config config/platform.toml \
+  --values-dir .runtime/k8s
+```
+
+脚本只输出字段名和 empty/placeholder/differs 状态，不打印密钥、DSN 或 token 原值。
 
 注意：
 
@@ -353,7 +363,7 @@ helm rollback control-plane <revision> -n mtx-dev
 - 无 Ingress/TLS；Studio 通过 NodePort 暴露。
 - 无 Prometheus/Loki 接入；日志走 stdout，ai-worker 本地日志在 PVC。
 - S3 endpoint 必须浏览器可达，否则预签名上传/下载失败。
-- 各 chart 的 values 由用户分别维护；关键字段必须与 `config/platform.toml` 一致，清单和例外见[配置事实源与一致性策略](#配置事实源与一致性策略)。当前由人工核对，自动校验脚本在工单 17 落地。
+- 各 chart 的 values 由用户分别维护；关键字段必须与 `config/platform.toml` 一致，部署前运行 `python3 scripts/check_k8s_config.py --platform-config config/platform.toml --values-dir .runtime/k8s`，清单和例外见[配置事实源与一致性策略](#配置事实源与一致性策略)。
 
 ## 排障
 

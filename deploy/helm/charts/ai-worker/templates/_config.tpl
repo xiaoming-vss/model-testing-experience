@@ -5,7 +5,7 @@
 渲染成浮点科学计数法。agent 只渲染 backend 选中的子配置。
 */}}
 {{- define "ai-worker.configToml" -}}
-{{- $backend := .Values.config.agent.backend | default "pi" -}}
+{{- $backend := .Values.config.agent.backend | default "nanobot" -}}
 {{- if not (has $backend (list "nanobot" "pi")) -}}
 {{- fail "config.agent.backend must be nanobot or pi" -}}
 {{- end -}}
