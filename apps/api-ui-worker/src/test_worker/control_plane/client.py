@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict
 from typing import Any
@@ -28,12 +29,74 @@ from ..contracts.types import (
 )
 
 
-class ControlPlaneRequestError(Exception):
-    """Control-plane HTTP failure with a machine-readable status."""
+CONTROL_PLANE_ROUTE_LIMIT = 200
+_SAFE_ERROR_CODE = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
+_SAFE_STATUS_DETAILS = {
+    400: "bad request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not found",
+    405: "method not allowed",
+    409: "conflict",
+    410: "gone",
+    422: "validation failed",
+    429: "rate limited",
+}
 
-    def __init__(self, message: str, status_code: int) -> None:
-        super().__init__(message)
+
+def _safe_route(pathname: str) -> str:
+    route = pathname.split("?", 1)[0].strip()
+    if not route:
+        return "/"
+    return route[:CONTROL_PLANE_ROUTE_LIMIT]
+
+
+def _status_detail(status_code: int) -> str:
+    if status_code in _SAFE_STATUS_DETAILS:
+        return _SAFE_STATUS_DETAILS[status_code]
+    return "server error" if status_code >= 500 else "request rejected"
+
+
+def _safe_error_code(response: httpx.Response) -> str:
+    """Extract only a token-shaped error code; never retain the response body."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    code = payload.get("code")
+    if isinstance(code, bool):
+        return ""
+    if isinstance(code, int):
+        code = str(code)
+    if not isinstance(code, str):
+        return ""
+    code = code.strip()
+    return code if _SAFE_ERROR_CODE.fullmatch(code) else ""
+
+
+class ControlPlaneRequestError(Exception):
+    """Control-plane HTTP failure with a fixed, body-free message."""
+
+    def __init__(
+        self,
+        method: str,
+        pathname: str,
+        status_code: int,
+        error_code: str = "",
+    ) -> None:
+        self.method = method.upper()
+        self.pathname = _safe_route(pathname)
         self.status_code = status_code
+        self.error_code = error_code if _SAFE_ERROR_CODE.fullmatch(error_code) else ""
+        message = (
+            f"control plane request failed: {self.method} {self.pathname} -> "
+            f"{status_code} {_status_detail(status_code)}"
+        )
+        if self.error_code:
+            message += f" (code={self.error_code})"
+        super().__init__(message)
 
 
 class ExecutionLeaseLost(Exception):
@@ -75,15 +138,22 @@ class ControlPlaneClient:
 
     def claim_next_task(self) -> dict[str, Any] | None | NotImplementedType:
         """Claim the globally oldest task, falling back against an older server."""
+        pathname = "/internal/api-worker/tasks/claim-next"
         response = self._client.post(
-            "/internal/api-worker/tasks/claim-next",
+            pathname,
             json={"workerId": self._config.worker_id},
         )
         if response.status_code == 404:
             return NotImplemented
         if response.status_code == 204:
             return None
-        response.raise_for_status()
+        if response.is_error:
+            raise ControlPlaneRequestError(
+                "POST",
+                pathname,
+                response.status_code,
+                _safe_error_code(response),
+            )
         return self._unwrap_response_data(response.json())
 
     def claim_task(self) -> UiWorkerTask | None:
@@ -466,8 +536,7 @@ class ControlPlaneClient:
 
                 response.raise_for_status()
 
-                text = response.text
-                if not text:
+                if not response.content:
                     return None
 
                 return self._unwrap_response_data(response.json())
@@ -477,9 +546,10 @@ class ControlPlaneClient:
                     time.sleep(0.2)
                     continue
                 raise ControlPlaneRequestError(
-                    f"control plane request failed: {method} {pathname} -> "
-                    f"{e.response.status_code} {e.response.text}",
+                    method,
+                    pathname,
                     e.response.status_code,
+                    _safe_error_code(e.response),
                 ) from e
             except Exception as e:
                 if attempt < retries:
@@ -487,7 +557,8 @@ class ControlPlaneClient:
                     time.sleep(0.2)
                     continue
                 raise Exception(
-                    f"control plane request failed: {method} {pathname} -> {str(e)}"
+                    f"control plane request failed: {method.upper()} "
+                    f"{_safe_route(pathname)} -> {type(e).__name__}"
                 ) from e
 
     def _unwrap_response_data(self, payload: Any) -> dict[str, Any] | None:

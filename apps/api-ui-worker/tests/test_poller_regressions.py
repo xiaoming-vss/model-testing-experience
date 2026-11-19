@@ -17,7 +17,7 @@ def test_explicitly_rejected_lease_cancels_active_execution(domain):
 
     class Client:
         def task_stop_requested(self, *_args):
-            raise ControlPlaneRequestError("rejected", 400)
+            raise ControlPlaneRequestError("GET", "/task", 400)
 
     async def run():
         async def operation():
@@ -50,7 +50,7 @@ def test_explicitly_rejected_lease_cancels_active_execution(domain):
 def test_step_progress_stops_only_on_explicit_control_plane_rejection(status, rejected):
     class Client:
         def report_ui_steps(self, *_args):
-            raise ControlPlaneRequestError("unavailable", status)
+            raise ControlPlaneRequestError("GET", "/task", status)
 
     async def run():
         if rejected:

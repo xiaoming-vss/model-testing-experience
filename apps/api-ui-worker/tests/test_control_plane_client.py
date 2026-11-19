@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import replace
 
 import httpx
+import pytest
 
 from test_worker.contracts.types import WorkerConfig
-from test_worker.control_plane.client import ControlPlaneClient
+from test_worker.control_plane.client import ControlPlaneClient, ControlPlaneRequestError
 
 
 class FakeHttpClient:
@@ -13,6 +14,9 @@ class FakeHttpClient:
         self.response = response
 
     def request(self, method: str, pathname: str, json: dict | None = None) -> httpx.Response:
+        return self.response
+
+    def post(self, pathname: str, json: dict | None = None) -> httpx.Response:
         return self.response
 
 
@@ -179,3 +183,75 @@ def test_ui_suite_snapshot_uses_outer_task_id_and_suite_run_id() -> None:
     assert snapshot.suite_run is not None
     assert snapshot.suite_run.task_id == "task-1"
     assert snapshot.suite_run.run_id == "suite-run-1"
+
+
+def test_request_error_keeps_route_and_status_without_response_body() -> None:
+    client = ControlPlaneClient(_config())
+    request = httpx.Request(
+        "GET", "http://control-plane/internal/ui-worker/tasks/task-1/snapshot"
+    )
+    client._client = FakeHttpClient(
+        httpx.Response(
+            500,
+            text='{"code":"INTERNAL_ERROR","message":"SECRET-MARKER response body"}',
+            request=request,
+        )
+    )
+
+    with pytest.raises(ControlPlaneRequestError) as caught:
+        client._request("GET", "/internal/ui-worker/tasks/task-1/snapshot")
+
+    message = str(caught.value)
+    assert "GET" in message
+    assert "/internal/ui-worker/tasks/task-1/snapshot" in message
+    assert "500" in message
+    assert "server error" in message
+    assert "code=INTERNAL_ERROR" in message
+    assert "SECRET-MARKER" not in message
+
+
+def test_request_error_without_json_code_uses_generic_status_text() -> None:
+    client = ControlPlaneClient(_config())
+    request = httpx.Request(
+        "PATCH", "http://control-plane/internal/ui-worker/tasks/task-1"
+    )
+    client._client = FakeHttpClient(
+        httpx.Response(400, text="SECRET-MARKER raw body", request=request)
+    )
+
+    with pytest.raises(ControlPlaneRequestError) as caught:
+        client._request("PATCH", "/internal/ui-worker/tasks/task-1?token=SECRET-MARKER")
+
+    message = str(caught.value)
+    assert "PATCH /internal/ui-worker/tasks/task-1 -> 400 bad request" in message
+    assert "SECRET-MARKER" not in message
+    assert "code=" not in message
+
+
+def test_claim_next_task_error_uses_safe_message() -> None:
+    client = ControlPlaneClient(_config())
+    request = httpx.Request(
+        "POST", "http://control-plane/internal/api-worker/tasks/claim-next"
+    )
+    client._client = FakeHttpClient(
+        httpx.Response(503, text="SECRET-MARKER unavailable", request=request)
+    )
+
+    with pytest.raises(ControlPlaneRequestError) as caught:
+        client.claim_next_task()
+
+    message = str(caught.value)
+    assert "POST /internal/api-worker/tasks/claim-next -> 503 server error" in message
+    assert "SECRET-MARKER" not in message
+
+
+def test_control_plane_error_constructor_drops_unsafe_error_codes() -> None:
+    error = ControlPlaneRequestError(
+        "GET", "/task?token=SECRET-MARKER", 403, "BAD CODE"
+    )
+
+    assert error.status_code == 403
+    assert error.pathname == "/task"
+    assert error.error_code == ""
+    assert "SECRET-MARKER" not in str(error)
+    assert "BAD CODE" not in str(error)

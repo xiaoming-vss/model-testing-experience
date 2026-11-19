@@ -352,7 +352,7 @@ def test_completion_cleanup_does_not_log_expected_missing_heartbeat(monkeypatch)
 
     class Client:
         def report_task_heartbeat(self, task_id, payload):
-            raise ControlPlaneRequestError("already retired", 404)
+            raise ControlPlaneRequestError("POST", "/task", 404)
 
     async def run():
         poller = TaskPoller(
