@@ -54,7 +54,6 @@
 .scope :global(.gc-lane-empty:hover) { border-color: var(--gc-blue); background: var(--gc-blue-soft); }
 
 /* Modal */
-.scope :global(.generation-chain-modal .ant-modal-content) { display: flex; flex-direction: column; height: min(820px, calc(100dvh - 32px)); padding: 0; overflow: hidden; }
 .scope :global(.generation-chain-modal .ant-modal-header) { flex: 0 0 auto; margin: 0; padding: 16px 64px 16px 24px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
 .scope :global(.generation-chain-modal .ant-modal-body) { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 0; }
 .scope :global(.generation-chain-modal .ant-modal-footer) { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
@@ -97,11 +96,6 @@
 }
 @media (max-width: 640px), (max-height: 700px) {
   .scope :global(.generation-chain-modal :is(.ant-modal-container, .ant-modal-content)) { height: calc(100dvh - 32px); }
-}
-/* API 用例和设计弹窗在对应页签里按内容自适应高度，这里保持一致。 */
-.scope :global(.generation-chain-modal:has(.gc-artifact-scroll:is(.is-api-cases, .is-api-design)) :is(.ant-modal-container, .ant-modal-content)) {
-  height: auto;
-  max-height: min(94dvh, 1200px);
 }
 .scope :global(.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage)) {
   margin: 0 -24px;

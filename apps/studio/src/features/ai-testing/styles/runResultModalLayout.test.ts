@@ -43,6 +43,12 @@ afterEach(() => {
 })
 
 describe('运行结果弹框布局', () => {
+  it('产物弹窗只保留统一高度，不保留被覆盖的 820px 或 API 自适应例外', () => {
+    expect(revisionModuleCss).toContain('height: min(94dvh, 1200px)')
+    expect(revisionModuleCss).not.toContain('height: min(820px')
+    expect(revisionModuleCss).not.toMatch(/is-api-cases[\s\S]{0,200}height:\s*auto/)
+  })
+
   it('继续优化保留横向工作区', () => {
     document.head.innerHTML = `<style>${revisionCss}</style>`
     document.body.innerHTML = `

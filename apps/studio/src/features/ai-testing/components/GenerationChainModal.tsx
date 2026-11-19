@@ -39,6 +39,7 @@ import { generationChainApi } from '../api/generationChain.api'
 import { diffArtifact, diffStats } from '../utils/chainArtifact'
 import { formatRawArtifact } from '../utils/artifactFormat'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
+import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { GenerationArtifactDiff } from './GenerationArtifactDiff'
 import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 import chainStyles from '../styles/generation-chain.module.css'
@@ -294,12 +295,16 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
 
   if (!selected) return null
   if (detail.isPending && !stage) {
-    return <GenerationArtifactFrame embedded={embedded} open={open} onCancel={onClose} footer={null} width={720} centered><Spin /></GenerationArtifactFrame>
+    return <GenerationArtifactFrame embedded={embedded} open={open} onCancel={onClose} footer={null} width={ARTIFACT_MODAL_WIDTH} centered rootClassName={artifactScopes} className="generation-chain-modal">
+      <div className="flex min-h-0 flex-1 items-center justify-center"><Spin /></div>
+    </GenerationArtifactFrame>
   }
   if (detail.error && !stage) {
-    return <GenerationArtifactFrame embedded={embedded} open={open} onCancel={onClose} footer={null} width={720} centered>
-      <Alert showIcon type="error" title="阶段详情读取失败" description={String(detail.error)}
-        action={<Button onClick={() => void detail.refetch()}>重试</Button>} />
+    return <GenerationArtifactFrame embedded={embedded} open={open} onCancel={onClose} footer={null} width={ARTIFACT_MODAL_WIDTH} centered rootClassName={artifactScopes} className="generation-chain-modal">
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+        <Alert showIcon type="error" title="阶段详情读取失败" description={String(detail.error)}
+          action={<Button onClick={() => void detail.refetch()}>重试</Button>} />
+      </div>
     </GenerationArtifactFrame>
   }
   if (!stage || !chain) return null
@@ -406,7 +411,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     open={open}
     onCancel={onClose}
     footer={embedded ? null : footer}
-    width={stageKind === 'api' ? 'min(1620px, calc(100vw - 72px))' : 'min(2000px, calc(100vw - 56px))'}
+    width={ARTIFACT_MODAL_WIDTH}
     centered
     destroyOnHidden
     rootClassName={artifactScopes}

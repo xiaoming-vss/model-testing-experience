@@ -1,3 +1,4 @@
+import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button, Tooltip } from 'antd'
 import { createPortal } from 'react-dom'
@@ -51,7 +52,7 @@ export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, dis
     </section>, inspectorActionContainer,
   ) : null
   return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={onClose} footer={null}
-    width="min(2000px, calc(100vw - 56px))" centered mask={{ closable: false }} destroyOnHidden
+    width={ARTIFACT_MODAL_WIDTH} centered mask={{ closable: false }} destroyOnHidden
     className={`ai-relations-modal generation-chain-relations-modal${sidebarMode ? ' gc-relations-inspector' : ''}`} title="用例图谱">
     {!sidebarMode ? <div className="gc-relations-toolbar flex items-center justify-end gap-3 pb-2.5">{action}</div> : null}
     {runId ? <div className={`gc-relations-body${sidebarMode ? ' flex min-h-0 flex-1 overflow-hidden' : ' h-[min(76dvh,900px)] min-h-[360px]'}`}>

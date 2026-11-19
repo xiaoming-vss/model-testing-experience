@@ -94,10 +94,10 @@
       "layoutDeclarations": 208
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 95,
-      "declarations": 269,
-      "selectors": 97,
-      "layoutDeclarations": 155
+      "rules": 93,
+      "declarations": 262,
+      "selectors": 95,
+      "layoutDeclarations": 148
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
       "rules": 96,

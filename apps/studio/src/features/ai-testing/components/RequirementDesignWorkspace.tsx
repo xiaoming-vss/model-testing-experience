@@ -1,3 +1,4 @@
+import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { useState, type ReactNode } from 'react'
 import { Modal } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
@@ -33,7 +34,7 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
     <div className="ai-requirement-design-panel ai-requirement-generation-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
     </div>
-    <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width="min(2000px, calc(100vw - 56px))" centered destroyOnHidden
+    <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width={ARTIFACT_MODAL_WIDTH} centered destroyOnHidden
       rootClassName={taskStyles.scope}
       className="requirement-code-risk-dialog" title="代码风险分析">
       <RequirementCodeRiskPanel workspace={codeRisk} canWrite={canWrite} />
