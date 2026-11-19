@@ -189,7 +189,7 @@ control-plane 需要确认：
 3. 把 `config.storage.s3` 的 endpoint、bucket、access_key、secret_key 改成实际值；endpoint 必须同时被浏览器和 Worker 访问到。
 4. 确认 `config.security.jwt.key`、`config.security.integration.key`、`config.security.worker.key`、`config.security.integration_worker.key` 在各副本/各服务间一致。
 5. 确认 `config.security.super_admin.username`、`email` 已填写；首次启动会 seed 超级管理员。
-6. 确认 `config.http.host = "0.0.0.0"`；使用 `config/local.example.toml` 的 `127.0.0.1` 会导致探针和 Studio 代理无法访问。
+6. 确认 `config.http.host = "0.0.0.0"`；本地生成配置的 `127.0.0.1` 会导致探针和 Studio 代理无法访问。
 
 Worker 需要额外确认：
 

@@ -195,7 +195,7 @@ uv run --locked --extra dev alembic upgrade head
 
 ## 对外接口
 
-默认监听 9000（Dockerfile `EXPOSE 9000`）。注意代码内兜底常量是 8000，与示例配置和镜像不一致。
+默认监听 9000（Dockerfile `EXPOSE 9000`，代码兜底值、示例配置和镜像一致）。
 
 - `GET /v1/health`：健康检查
 - `/v1/*` 业务接口：路由模块挂在 `/v1` 前缀下，覆盖登录注册、项目与成员、迭代、需求、功能/API/UI/性能测试资产与运行、各类 AI 任务、禅道与 GitLab 与 LLM 集成、监控接入、共享服务、资源绑定与项目技能

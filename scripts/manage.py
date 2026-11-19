@@ -135,6 +135,18 @@ def _migrate_agent_config(data):
             target_worker.setdefault(key, copy.deepcopy(value))
 
 
+def _fill_missing(target, defaults):
+    for key, value in defaults.items():
+        if isinstance(value, dict):
+            nested = target.get(key)
+            if not isinstance(nested, dict):
+                nested = {}
+                target[key] = nested
+            _fill_missing(nested, value)
+        else:
+            target.setdefault(key, copy.deepcopy(value))
+
+
 def upgrade_config(root=ROOT):
     """Add newer settings while preserving existing values and file mode."""
     path = root / "config/platform.toml"
@@ -156,16 +168,11 @@ def upgrade_config(root=ROOT):
     example_control_plane = read(root / "config/platform.example.toml").get(
         "control_plane", {}
     )
-    defaults = example_control_plane["integration_execution"]
-    settings = data.setdefault("control_plane", {}).setdefault("integration_execution", {})
-    for key, value in defaults.items():
-        settings.setdefault(key, copy.deepcopy(value))
-    security_defaults = example_control_plane.get("security", {})
-    security = data.setdefault("control_plane", {}).setdefault("security", {})
+    control_plane = data.setdefault("control_plane", {})
+    _fill_missing(control_plane, example_control_plane)
+    security = control_plane.setdefault("security", {})
     for section in ("super_admin", "login", "jwt"):
         target = security.setdefault(section, {})
-        for key, value in security_defaults.get(section, {}).items():
-            target.setdefault(key, copy.deepcopy(value))
         for key, value in list(target.items()):
             if value == "GENERATE":
                 target[key] = secrets.token_hex(16)
@@ -321,7 +328,6 @@ def configurations(data, mode, root=ROOT):
     redis_url = external_redis_url(data)
     redis_url = redis_url or f"redis://{redis_host}:{redis_port}/0"
     specs = {
-        "control-plane": ("config/local.example.toml", "control_plane"),
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
         "api-ui-worker": ("config.example.toml", "api_ui_worker"),
         "integration-worker": ("config/local.example.toml", "integration_worker"),
@@ -331,26 +337,23 @@ def configurations(data, mode, root=ROOT):
         name: merge(read(root / PROJECTS[name] / file), data.get(section, {}))
         for name, (file, section) in specs.items()
     }
-    result["control-plane"] = merge(
-        result["control-plane"],
-        {
-            "env": "production" if docker else "local",
-            "http": {
-                "host": "0.0.0.0" if docker else host,
-                "port": 9000 if docker else s["control_plane_port"],
-            },
-            "security": {
-                "jwt": {"key": s["jwt_key"]},
-                "integration": {"key": s["integration_key"]},
-                "worker": {"key": s["worker_token"]},
-                "integration_worker": {"key": s["integration_worker_token"]},
-                "perf_worker": {"key": s["perf_worker_token"]},
-            },
-            "integration_execution": {"runtime_generation": s["integration_runtime_generation"]},
-            "data": {"db": {"user": {"dsn": dsn}}},
-            "test_run_notifications": {"redis_url": redis_url},
+    result["control-plane"] = merge(data.get("control_plane", {}), {
+        "env": "production" if docker else "local",
+        "http": {
+            "host": "0.0.0.0" if docker else host,
+            "port": 9000 if docker else s["control_plane_port"],
         },
-    )
+        "security": {
+            "jwt": {"key": s["jwt_key"]},
+            "integration": {"key": s["integration_key"]},
+            "worker": {"key": s["worker_token"]},
+            "integration_worker": {"key": s["integration_worker_token"]},
+            "perf_worker": {"key": s["perf_worker_token"]},
+        },
+        "integration_execution": {"runtime_generation": s["integration_runtime_generation"]},
+        "data": {"db": {"user": {"dsn": dsn}}},
+        "test_run_notifications": {"redis_url": redis_url},
+    })
     result["control-plane"].setdefault("security", {}).pop("ldap", None)
     backend = selected_agent_backend(data)
     agent_overrides = data.get("ai_worker", {}).get("agent", {})

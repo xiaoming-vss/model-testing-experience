@@ -40,9 +40,20 @@ user = "testing_agent"
 password = "GENERATE"
 root_password = "GENERATE"
 
-# 以下配置覆盖各项目的示例配置；地址、令牌和存储路径由 shared 统一生成。
+# 控制面配置的唯一来源；地址、令牌和存储路径由 shared 统一生成。
 # 每个控制面进程最多 pool_size + max_overflow 条数据库连接。
+[control_plane]
+env = "local"
+
+[control_plane.http]
+host = "127.0.0.1"
+port = 9000
+
+[control_plane.test_run_notifications]
+redis_url = ""
+
 [control_plane.data.db.user]
+driver = "mysql"
 pool_size = 20
 max_overflow = 10
 
@@ -73,6 +84,7 @@ rate_limit_window_minutes = 15
 
 [control_plane.security.jwt]
 # 普通本地账号与超级管理员的 JWT 有效期。
+expire_hours = 72
 user_expire_hours = 72
 super_admin_expire_hours = 24
 

@@ -155,7 +155,7 @@ class Settings:
             s3=ObjectStorageSettings(**data.get("storage", {}).get("s3", {})),
             env=data.get("env", "local"),
             http_host=data.get("http", {}).get("host", "127.0.0.1"),
-            http_port=int(data.get("http", {}).get("port", 8000)),
+            http_port=int(data.get("http", {}).get("port", 9000)),
             jwt_key=jwt.get("key", "change-me"),
             jwt_expire_hours=int(jwt.get("expire_hours", 168)),
             jwt_user_expire_hours=int(jwt.get("user_expire_hours", 72)),
