@@ -159,6 +159,12 @@ def upgrade_config(root=ROOT):
     shared = data.setdefault("shared", {})
     # Retired before any runtime consumer existed; older local files may still carry it.
     shared.pop("public_host", None)
+    perf_worker = data.setdefault("perf_worker", {})
+    perf_runner = perf_worker.setdefault("runner", {})
+    perf_runner.pop("keep_failed_workspace_hours", None)
+    perf_k6 = perf_worker.setdefault("k6", {})
+    if not str(perf_k6.get("expected_version", "")).strip():
+        perf_k6["expected_version"] = "2.3.0"
     for key in ("integration_worker_token", "perf_worker_token", "integration_runtime_generation"):
         if key not in shared or shared[key] == "GENERATE":
             value = secrets.token_hex(32)

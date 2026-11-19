@@ -17,14 +17,13 @@ shutdown_grace_seconds = 60
 
 [k6]
 binary = "k6"
-# 留空表示只校验二进制存在；生产部署应填写与镜像一致的版本。
-expected_version = ""
+# 生产部署应与镜像内 k6 版本一致；启动和每次执行都会校验。
+expected_version = "2.3.0"
 
 [runner]
 workspace_root = "./runtime/runs"
 max_duration_seconds = 3600
 stop_grace_seconds = 30
-keep_failed_workspace_hours = 24
 max_data_file_mb = 50
 max_summary_mb = 5
 

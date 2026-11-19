@@ -26,6 +26,7 @@ from testing_agent_perf_worker.contracts.worker import (
 from testing_agent_perf_worker.core.errors import (
     ControlPlaneError,
     DataFileError,
+    ExecutionError,
     LeaseLostError,
 )
 from testing_agent_perf_worker.runner.k6 import K6Execution
@@ -137,6 +138,9 @@ class FakeRunner:
 
     def __init__(self, settings: Any) -> None:
         self.settings = settings
+
+    async def check_version(self) -> str:
+        return "2.3.0"
 
     async def run(self, compiled: Any, workspace: Any, stop_event: Any = None) -> K6Execution:
         return self.executions.pop(0)
@@ -422,3 +426,44 @@ async def test_shutdown_during_k6_run_reports_stopped(
 
     assert client.completions[0]["status"] == "stopped"
     assert "关闭" in client.completions[0]["errorMessage"]
+
+
+@pytest.mark.asyncio
+async def test_startup_rejects_mismatched_k6_before_claiming(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    class RejectingRunner:
+        def __init__(self, settings: Any) -> None:
+            self.settings = settings
+
+        async def check_version(self) -> str:
+            raise ExecutionError("k6 版本不匹配: 期望 2.3.0，实际 2.2.0")
+
+    monkeypatch.setattr(poller_module, "K6Runner", RejectingRunner)
+    client = FakeClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    with pytest.raises(ExecutionError, match="k6 版本不匹配"):
+        await poller.run()
+
+    assert client.completions == []
+    assert client.closed is True
+
+
+@pytest.mark.asyncio
+async def test_shutdown_grace_cancels_an_active_run_that_does_not_stop(tmp_path: Path):
+    settings = _settings(tmp_path)
+    settings.worker.shutdown_grace_seconds = 1
+    poller = PerfPoller(settings, client=FakeClient())  # type: ignore[arg-type]
+    poller._active = True
+    execution = asyncio.create_task(asyncio.sleep(30))
+    poller._execution_task = execution
+    started = time.monotonic()
+
+    poller.request_shutdown()
+
+    with pytest.raises(asyncio.CancelledError):
+        await execution
+    assert time.monotonic() - started < 3
+    assert poller._shutdown_watchdog is not None
+    await asyncio.gather(poller._shutdown_watchdog, return_exceptions=True)

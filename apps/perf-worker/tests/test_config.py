@@ -53,8 +53,10 @@ def test_defaults_are_local_once_configuration() -> None:
     settings = Settings()
     assert settings.mode == "once"
     assert settings.k6.binary == "k6"
+    assert settings.k6.expected_version == "2.3.0"
     assert settings.runner.workspace_root == "./runtime/runs"
     assert settings.worker.health_file == "./runtime/health.json"
+    assert not hasattr(settings.runner, "keep_failed_workspace_hours")
 
 
 def test_load_resolves_relative_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -122,6 +124,14 @@ def test_invalid_health_age_raises(tmp_path: Path) -> None:
     config = _write(tmp_path / "config.toml", _config_text(health_age=10))
 
     with pytest.raises(ConfigError):
+        load_settings(config)
+
+
+def test_removed_workspace_retention_field_is_rejected(tmp_path: Path) -> None:
+    text = _config_text().replace("[runner]\n", "[runner]\nkeep_failed_workspace_hours = 24\n")
+    config = _write(tmp_path / "config.toml", text)
+
+    with pytest.raises(ConfigError, match="keep_failed_workspace_hours"):
         load_settings(config)
 
 

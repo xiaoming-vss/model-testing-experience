@@ -43,7 +43,7 @@ class K6Settings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     binary: str = "k6"
-    expected_version: str = ""
+    expected_version: str = "2.3.0"
 
 
 class RunnerSettings(BaseModel):
@@ -52,7 +52,6 @@ class RunnerSettings(BaseModel):
     workspace_root: str = "./runtime/runs"
     max_duration_seconds: int = Field(default=3600, ge=1, le=86400)
     stop_grace_seconds: int = Field(default=30, ge=1, le=600)
-    keep_failed_workspace_hours: int = Field(default=24, ge=0, le=720)
     max_data_file_mb: int = Field(default=50, ge=1, le=1024)
     max_summary_mb: int = Field(default=20, ge=1, le=1024)
 

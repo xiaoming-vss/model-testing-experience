@@ -44,6 +44,8 @@ uv run --locked mtx-perf-worker --config config/local.toml
 
 配置优先级：`--config` > `APP_CONF` > `./config/local.toml`。相对运行路径按当前工作目录解析。生产配置由仓库根目录的 `scripts/manage.py` 从 `config/platform.toml` 生成，使用独立的 `shared.perf_worker_token`，不要提交 `config/local.toml`。
 
+镜像内固定 k6 `2.3.0`；配置模型默认和示例均使用同一版本。`poll` 模式在领取任务前校验版本，每次执行前再次校验；`once` 模式在执行前校验。版本不匹配时 Worker 明确失败，不回退到未验证的 k6 二进制。
+
 关键配置：
 
 | 配置 | 作用 |
@@ -55,9 +57,9 @@ uv run --locked mtx-perf-worker --config config/local.toml
 | `[worker].poll_interval_seconds` | 空队列轮询间隔，默认 2 秒 |
 | `[worker].heartbeat_interval_seconds` | 租约心跳间隔，默认 10 秒 |
 | `[worker].lease_margin_seconds` | 本地判定租约失效的提前量 |
-| `[worker].shutdown_grace_seconds` | SIGTERM 后停止领取并等待当前运行退出的时间 |
+| `[worker].shutdown_grace_seconds` | SIGTERM 后停止领取并等待当前运行退出的时间；超过后取消仍在执行的运行 |
 | `[k6].binary` | k6 可执行文件，默认 `k6` |
-| `[k6].expected_version` | 非空时校验版本，生产应与镜像一致 |
+| `[k6].expected_version` | 期望的 k6 版本；默认和各环境示例为 `2.3.0`，poll 启动和每次执行前校验，不匹配明确失败 |
 | `[runner].workspace_root` | 每次运行的独立工作目录根 |
 | `[runner].max_duration_seconds` | Worker 兜底执行时长 |
 | `[runner].stop_grace_seconds` | SIGINT 后的优雅停止宽限期 |

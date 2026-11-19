@@ -68,6 +68,8 @@ class PerfPoller:
         self.stop_event = asyncio.Event()
         self.stop_reason: StopReason | None = None
         self._active = False
+        self._execution_task: asyncio.Task[None] | None = None
+        self._shutdown_watchdog: asyncio.Task[None] | None = None
 
     async def run(self) -> None:
         loop = asyncio.get_running_loop()
@@ -77,6 +79,7 @@ class PerfPoller:
             except (NotImplementedError, RuntimeError):
                 pass
         try:
+            await K6Runner(self.settings).check_version()
             self.health.progress("polling")
             while not self.shutdown_event.is_set():
                 try:
@@ -93,9 +96,25 @@ class PerfPoller:
                     self.health.progress("polling")
                     await self._wait_or_shutdown(self.settings.worker.poll_interval_seconds)
                     continue
-                await self._execute(claim)
+                self._execution_task = asyncio.create_task(
+                    self._execute(claim), name=f"perf-execute-{claim.task_id}"
+                )
+                try:
+                    await self._execution_task
+                except asyncio.CancelledError:
+                    if not self.shutdown_event.is_set():
+                        raise
+                    logger.warning(
+                        "active run canceled after shutdown grace task_id=%s", claim.task_id
+                    )
+                finally:
+                    self._execution_task = None
                 self.health.progress("polling")
         finally:
+            if self._shutdown_watchdog is not None:
+                self._shutdown_watchdog.cancel()
+                await asyncio.gather(self._shutdown_watchdog, return_exceptions=True)
+                self._shutdown_watchdog = None
             for sig in (signal.SIGTERM, signal.SIGINT):
                 try:
                     loop.remove_signal_handler(sig)
@@ -108,6 +127,20 @@ class PerfPoller:
         self.shutdown_event.set()
         if self._active:
             self._request_stop(StopReason.SHUTDOWN)
+            if self._execution_task is not None and self._shutdown_watchdog is None:
+                self._shutdown_watchdog = asyncio.create_task(
+                    self._enforce_shutdown_grace(self._execution_task)
+                )
+
+    async def _enforce_shutdown_grace(self, execution: asyncio.Task[None]) -> None:
+        try:
+            await asyncio.wait_for(
+                asyncio.shield(execution),
+                timeout=float(self.settings.worker.shutdown_grace_seconds),
+            )
+        except TimeoutError:
+            logger.warning("shutdown grace expired; canceling active run")
+            execution.cancel()
 
     async def _wait_or_shutdown(self, timeout: float) -> None:
         if self.shutdown_event.is_set():

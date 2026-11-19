@@ -107,7 +107,9 @@ class WorkerConventionTests(unittest.TestCase):
             '"workerId"',
             source("apps/ai-worker/src/testing_agent_ai_worker/platform/result_sink.py"),
         )
-        api = source("apps/api-ui-worker/src/test_worker/control_plane/client.py")
+        api = source(
+            "apps/api-ui-worker/src/test_worker/control_plane/client.py"
+        ) + source("apps/api-ui-worker/src/test_worker/contracts/parsing.py")
         for field in ('"taskId"', '"workerId"', '"leaseSeconds"', '"stopRequested"', '"heartbeatAt"'):
             self.assertIn(field, api)
         perf = source("apps/perf-worker/src/testing_agent_perf_worker/contracts/spec.py") + source(

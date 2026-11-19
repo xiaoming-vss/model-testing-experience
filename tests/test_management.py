@@ -190,6 +190,25 @@ class ManagementTests(unittest.TestCase):
             for config in manage.configurations(upgraded, mode, self.root).values():
                 self.assertNotIn("public_host", str(config))
 
+    def test_upgrade_removes_retired_perf_field_and_pins_k6_version(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old["perf_worker"]["runner"]["keep_failed_workspace_hours"] = 24
+        old["perf_worker"]["k6"]["expected_version"] = ""
+        manage.write(path, manage.toml_text(old), permissions=0o600)
+
+        manage.upgrade_config(self.root)
+
+        upgraded = manage.read(path)
+        self.assertNotIn(
+            "keep_failed_workspace_hours", upgraded["perf_worker"]["runner"]
+        )
+        self.assertEqual(upgraded["perf_worker"]["k6"]["expected_version"], "2.3.0")
+        for mode in ("local", "docker"):
+            config = manage.configurations(upgraded, mode, self.root)["perf-worker"]
+            self.assertNotIn("keep_failed_workspace_hours", config["runner"])
+            self.assertEqual(config["k6"]["expected_version"], "2.3.0")
+
     def test_asset_import_limits_are_generated_for_both_modes(self):
         self.data["control_plane"]["asset_import"]["max_items"] = 123
         for mode in ("local", "docker"):
@@ -374,7 +393,7 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(
             docker["perf-worker"]["runner"]["workspace_root"], "/app/runtime/runs"
         )
-        self.assertEqual(docker["perf-worker"]["k6"]["expected_version"], "")
+        self.assertEqual(docker["perf-worker"]["k6"]["expected_version"], "2.3.0")
         self.assertEqual(
             tomllib.loads(manage.toml_text(local["perf-worker"])),
             local["perf-worker"],
