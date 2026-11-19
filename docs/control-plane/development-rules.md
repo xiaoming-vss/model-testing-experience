@@ -65,7 +65,7 @@ Ruff 配置以应用 `pyproject.toml` 为准，当前行宽为 100，检查规�
 浏览器业务接口保持 `/v1/*` 契约，普通响应采用 `code`、`message`、`data` 信封。通过 `ApiResponse`、`success_payload` 和现有请求响应模型表达结构。Worker 接口保持各自 `/internal/*` 协议，不用浏览器信封统一覆盖既有特殊响应。
 
 - Python 内部字段通常使用 `snake_case`，对外 JSON 使用已有的 camelCase alias。通过模型序列化处理别名，不在不同 handler 中维护不同转换规则。
-- 新增接口明确 `response_model`。新增字段、修改可空性、错误码或分页行为时，同步检查 Studio 与相应 Worker 的消费方式。
+- 新增接口明确 `response_model`。新增字段、修改可空性、错误码或分页行为时，同步检查 Studio 与相应 Worker 的消费方式，并按[响应字段兼容检查清单](../agents/api-change-checklist.md)记录核对结果。
 - PATCH 按字段是否提交及其定义处理，区分缺省、空字符串和 `null`；仅允许修改明确列出的字段，不把请求字典整体写入 ORM 对象。更新 handler 使用 `exclude_unset=True`，service 使用 `model_fields_set`；请求模型默认 `extra="forbid"`。字段语义和例外清单见[请求契约](request-contracts.md)。
 - 业务错误复用 `core/errors.py`。抛出命名错误使用 `raise ErrNotFound()` 这样的调用形式，创建请求自己的异常实例；需要动态消息时使用现有错误构造方式。
 - HTTP 状态与业务错误码同时遵循既有契约。保留内部 Worker 未授权等已有响应例外；不能为了“统一”而破坏客户端已依赖的行为。
