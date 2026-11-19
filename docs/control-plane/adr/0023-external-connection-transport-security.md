@@ -22,9 +22,24 @@
 ## 后果
 
 - 默认配置下 HTTP 连接会被拒绝，错误信息要求显式开启 `allowHttp`；这是有意的破坏性变更，避免静默降级。
-- 升级前已存在的 HTTP 连接在第一次认证或资源请求时会被拒绝，需要用户重新保存连接并勾选「允许明文 HTTP」。已有开发库可执行：
-  `UPDATE shared_services SET allow_http = 1 WHERE base_url LIKE 'http://%';`
-- 个人连接的开关保存在 `extra_json`，无开关的旧记录按 `false` 处理；重新授权会补齐。
+- 升级前已存在的 HTTP 连接在第一次认证或资源请求时会被拒绝，需要用户重新保存连接并勾选「允许明文 HTTP」。已有开发库可先补列，再执行：
+  ```sql
+  ALTER TABLE shared_services
+    ADD COLUMN allow_http TINYINT(1) NOT NULL DEFAULT 0
+      COMMENT '禅道/GitLab 服务地址是否允许明文 HTTP',
+    ADD COLUMN insecure_skip_verify TINYINT(1) NOT NULL DEFAULT 0
+      COMMENT '禅道/GitLab 的 HTTPS 是否跳过证书校验';
+
+  UPDATE shared_services SET allow_http = 1 WHERE base_url LIKE 'http://%';
+  ```
+- 个人连接的开关保存在 `extra_json`，无开关的旧记录按 `false` 处理；重新授权会补齐。批量升级可直接写入旧记录：
+  ```sql
+  UPDATE integration_connections
+  SET extra_json = JSON_SET(COALESCE(extra_json, JSON_OBJECT()),
+                            '$.allowHttp', true,
+                            '$.insecureSkipVerify', false)
+  WHERE provider IN ('gitlab', 'zentao') AND base_url LIKE 'http://%';
+  ```
 - 自签名 HTTPS 用户需要显式勾选跳过校验，否则连接失败；日志会持续提示风险。
 - API 请求和响应新增 `allowHttp` / `insecureSkipVerify` 字段，前后端需同批发布。
 
