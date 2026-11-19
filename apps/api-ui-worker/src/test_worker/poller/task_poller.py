@@ -46,6 +46,21 @@ class UserStopped(Exception):
     """A user requested cancellation of the current task."""
 
 
+class ReportDeliveryError(Exception):
+    """Execution finished but its result or artifacts could not be delivered."""
+
+    def __init__(self, task_id: str, error: BaseException) -> None:
+        self.task_id = task_id
+        self.error_type = type(error).__name__
+        self.status_code = getattr(error, "status_code", None)
+        message = (
+            f"result delivery failed: task_id={task_id} error_type={self.error_type}"
+        )
+        if isinstance(self.status_code, int):
+            message += f" status_code={self.status_code}"
+        super().__init__(message)
+
+
 class TaskPoller:
     """任务轮询器类"""
 
@@ -255,8 +270,29 @@ class TaskPoller:
                 else self._control_plane_client.report_api_task_completed
             )
             await asyncio.to_thread(callback, task_id, result)
+        except Exception as error:
+            # The execution already finished. Reporting failure is not an
+            # execution failure and must not synthesize a second error result.
+            raise ReportDeliveryError(task_id, error) from error
         finally:
             self._finishing_tasks.discard(task_id)
+
+    @staticmethod
+    def _log_report_delivery_failure(
+        domain: str,
+        task_id: str,
+        task_type: str,
+        error: ReportDeliveryError,
+    ) -> None:
+        logger.error(
+            f"{domain} task result delivery failed",
+            {
+                "taskId": task_id,
+                "taskType": task_type,
+                "errorType": error.error_type,
+                "statusCode": error.status_code,
+            },
+        )
 
     async def _handle_task(self, task: UiWorkerTask) -> None:
         """
@@ -316,8 +352,14 @@ class TaskPoller:
             else:
                 raise ValueError(f"未知任务类型: {task.task_type}")
 
-            # 上报任务完成
-            await self._report_completion("ui", task.task_id, result)
+            # 上报任务完成；回传失败不等于执行失败，不合成 error 结果。
+            try:
+                await self._report_completion("ui", task.task_id, result)
+            except ReportDeliveryError as error:
+                self._log_report_delivery_failure(
+                    "ui", task.task_id, task.task_type, error
+                )
+                return
             logger.info(
                 "task completed",
                 {
@@ -508,7 +550,11 @@ class TaskPoller:
             else:
                 raise ValueError(f"未知 API 任务类型: {task_type}")
 
-            await self._report_completion("api", task_id, result)
+            try:
+                await self._report_completion("api", task_id, result)
+            except ReportDeliveryError as error:
+                self._log_report_delivery_failure("api", task_id, task_type, error)
+                return
             logger.info(
                 "api task completed",
                 {
@@ -545,7 +591,9 @@ class TaskPoller:
                         "error": str(e),
                     },
                 )
-                await self._report_api_task_error(task, "worker shutting down", started_at)
+                await self._report_api_task_error(
+                    task, "worker shutting down", started_at
+                )
                 raise asyncio.CancelledError() from e
             logger.error(
                 "api task execution error",

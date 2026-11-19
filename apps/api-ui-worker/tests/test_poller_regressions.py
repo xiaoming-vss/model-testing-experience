@@ -1,12 +1,16 @@
 import asyncio
+import json
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
+from test_worker.contracts.types import UiCaseRunResult, UiWorkerTask
 from test_worker.control_plane.client import (
     ControlPlaneRequestError,
     ExecutionLeaseLost,
 )
+from test_worker.poller import task_poller
 from test_worker.poller.task_poller import TaskPoller
 from test_worker.ui.step_progress import report_steps
 
@@ -249,3 +253,158 @@ def test_ui_snapshot_logging_does_not_disclose_step_credentials():
         asyncio.run(run())
     assert any(message == "task completed" for message, _ in events)
     assert marker not in json.dumps(events)
+
+
+def _ui_success_result() -> UiCaseRunResult:
+    return UiCaseRunResult(
+        task_id="task-1",
+        run_id="run-1",
+        case_id="case-1",
+        status="success",
+        success=True,
+        started_at="2026-11-19T00:00:00+00:00",
+        finished_at="2026-11-19T00:00:01+00:00",
+        duration_ms=1000,
+    )
+
+
+@pytest.mark.parametrize("record_before_raise", [True, False])
+def test_ui_completion_delivery_failure_is_not_execution_error(record_before_raise):
+    completed = []
+    events = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            return SimpleNamespace(case_run=SimpleNamespace())
+
+        def report_task_completed(self, task_id, result):
+            if record_before_raise:
+                completed.append(result)
+            raise ControlPlaneRequestError(
+                "POST", f"/internal/ui-worker/tasks/{task_id}/completed", 503
+            )
+
+    class Runner:
+        async def run(self, snapshot):
+            return _ui_success_result()
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            Runner(),
+            None,
+        )
+        await poller._handle_task(
+            UiWorkerTask(
+                task_id="task-1",
+                task_type="case_debug",
+                run_id="run-1",
+                case_id="case-1",
+            )
+        )
+
+    with patch.object(
+        task_poller.logger,
+        "error",
+        side_effect=lambda message, meta: events.append((message, meta)),
+    ):
+        asyncio.run(run())
+
+    assert len(completed) == (1 if record_before_raise else 0)
+    assert any(message == "ui task result delivery failed" for message, _ in events)
+    assert not any(message == "task execution error" for message, _ in events)
+    assert "SECRET-MARKER" not in json.dumps(events)
+
+
+def test_api_upload_failure_is_not_execution_error():
+    completed = []
+    events = []
+
+    class Client:
+        def report_api_task_started(self, *args):
+            pass
+
+        def get_api_task_snapshot(self, task_id):
+            return {"caseRun": {"caseId": "case-1"}}
+
+        def report_api_task_completed(self, task_id, result):
+            completed.append(result)
+            raise ValueError("Artifact S3 upload failed: SECRET-MARKER path")
+
+    class Runner:
+        async def run(self, snapshot):
+            return {"status": "success", "success": True}
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        poller._api_case_runner = Runner()
+        await poller._handle_api_task(
+            {
+                "taskId": "task-1",
+                "taskType": "api_case_debug",
+                "runId": "run-1",
+            }
+        )
+
+    with patch.object(
+        task_poller.logger,
+        "error",
+        side_effect=lambda message, meta: events.append((message, meta)),
+    ):
+        asyncio.run(run())
+
+    assert len(completed) == 1
+    assert completed[0]["success"] is True
+    assert any(message == "api task result delivery failed" for message, _ in events)
+    assert not any(message == "api task execution error" for message, _ in events)
+    assert "SECRET-MARKER" not in json.dumps(events)
+
+
+def test_execution_failure_still_reports_error_once():
+    completed = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            return SimpleNamespace(case_run=SimpleNamespace())
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    class Runner:
+        async def run(self, snapshot):
+            raise ValueError("assertion failed")
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            Runner(),
+            None,
+        )
+        await poller._handle_task(
+            UiWorkerTask(
+                task_id="task-1",
+                task_type="case_debug",
+                run_id="run-1",
+                case_id="case-1",
+            )
+        )
+
+    asyncio.run(run())
+
+    assert len(completed) == 1
+    assert completed[0].status == "error"
+    assert completed[0].success is False
+    assert completed[0].error_message == "assertion failed"
