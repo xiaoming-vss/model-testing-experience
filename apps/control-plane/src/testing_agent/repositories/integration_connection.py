@@ -12,7 +12,13 @@ class IntegrationConnectionRepository(ResourceRepository):
     id_column = "connection_id"
 
     async def get(
-        self, user_id: str, provider: str, connection_id: str, project_id: str = ""
+        self,
+        user_id: str,
+        provider: str,
+        connection_id: str,
+        project_id: str = "",
+        *,
+        lock: bool = False,
     ) -> IntegrationConnection | None:
         stmt = select(IntegrationConnection).where(
             IntegrationConnection.connection_id == connection_id,
@@ -21,6 +27,8 @@ class IntegrationConnectionRepository(ResourceRepository):
         )
         if project_id:
             stmt = stmt.where(IntegrationConnection.project_id.in_(("", project_id)))
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
         return await self.session.scalar(stmt)
 
     async def list(

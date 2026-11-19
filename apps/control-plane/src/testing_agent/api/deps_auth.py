@@ -60,7 +60,11 @@ def verify_worker_token(
     x_worker_token: Annotated[str | None, Header(alias="X-Worker-Token")] = None,
     settings: Settings = Depends(get_settings),
 ) -> None:
-    if not settings.worker_key or not x_worker_token or x_worker_token != settings.worker_key:
+    if (
+        not settings.worker_key
+        or not x_worker_token
+        or not compare_digest(x_worker_token.encode(), settings.worker_key.encode())
+    ):
         raise ErrUnauthorized()
 
 

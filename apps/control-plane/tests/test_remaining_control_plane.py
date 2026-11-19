@@ -145,7 +145,7 @@ class FakeZentaoResourceClient:
 
 
 class FakeIntegrationRepositoryForZentaoBrowse:
-    async def get(self, user_id, provider, connection_id, project_id=""):
+    async def get(self, user_id, provider, connection_id, project_id="", *, lock=False):
         assert user_id == "user-1"
         assert provider == "zentao"
         assert connection_id == "conn-1"
@@ -290,7 +290,7 @@ class FakeIntegrationRepositoryForConnectionAuth:
         self.rows = []
         self.commits = 0
 
-    async def get(self, user_id, provider, connection_id, project_id=""):
+    async def get(self, user_id, provider, connection_id, project_id="", *, lock=False):
         return next(
             (
                 row
@@ -947,7 +947,7 @@ async def test_update_llm_connection_model_id_replaces_json_payload_for_persiste
     class FakeRepository:
         session = SimpleNamespace(scalar=AsyncMock(return_value=None))
 
-        async def get(self, user_id, provider, connection_id, project_id=""):
+        async def get(self, user_id, provider, connection_id, project_id="", *, lock=False):
             assert user_id == "user-1"
             assert provider == "llm"
             assert connection_id == "conn-1"

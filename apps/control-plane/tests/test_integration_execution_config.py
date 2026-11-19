@@ -1,10 +1,13 @@
+from secrets import compare_digest as real_compare_digest
+
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
+from testing_agent.api import deps_auth
 from testing_agent.api.deps import verify_integration_worker_token, verify_worker_token
 from testing_agent.core.config import Settings, get_settings
-from testing_agent.core.errors import AppError
+from testing_agent.core.errors import AppError, ErrUnauthorized
 
 
 def test_legacy_config_remains_disabled_and_empty_pilot_does_not_select_all():
@@ -115,3 +118,23 @@ def test_service_tokens_cannot_cross_worker_route_domains():
     assert client.get("/integration", headers={"X-Worker-Token": "dedicated"}).status_code == 200
     assert client.get("/existing", headers={"X-Worker-Token": "old"}).status_code == 200
     assert client.get("/integration").status_code == 401
+
+
+def test_worker_token_comparison_uses_compare_digest(monkeypatch):
+    settings = Settings.from_mapping({"security": {"worker": {"key": "worker-secret"}}})
+    calls = []
+
+    def recording_compare(left, right):
+        calls.append((left, right))
+        return real_compare_digest(left, right)
+
+    monkeypatch.setattr(deps_auth, "compare_digest", recording_compare)
+
+    assert deps_auth.verify_worker_token("worker-secret", settings) is None
+    with pytest.raises(type(ErrUnauthorized)):
+        deps_auth.verify_worker_token("wrong-secret", settings)
+
+    assert calls == [
+        (b"worker-secret", b"worker-secret"),
+        (b"wrong-secret", b"worker-secret"),
+    ]

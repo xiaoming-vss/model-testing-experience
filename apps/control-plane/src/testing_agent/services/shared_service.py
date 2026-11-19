@@ -276,6 +276,9 @@ class SharedServiceService:
                 "allowHttp": bool(getattr(resource, "allow_http", False)),
                 "insecureSkipVerify": bool(getattr(resource, "insecure_skip_verify", False)),
             }
+        # End the read transaction before any external discovery; the resource
+        # is re-read with a lock below and its endpoint is compared again.
+        await self.session.commit()
         info = None
         if provider == "mcp":
             try:
@@ -283,7 +286,6 @@ class SharedServiceService:
             except AppError as exc:
                 if exc.http_code != 502:
                     raise
-        await self.session.commit()
         resource = await self.get_resource(user_id, project_id, provider, service_id, lock=True)
         if resource.base_url != endpoint:
             raise AppError(409, "服务地址已变更，请刷新后重新授权", 409)

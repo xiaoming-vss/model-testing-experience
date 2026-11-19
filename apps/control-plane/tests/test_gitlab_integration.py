@@ -22,7 +22,7 @@ class FakeIntegrationConnectionRepository:
     def __init__(self):
         self.rows = []
 
-    async def get(self, user_id, provider, connection_id, project_id=""):
+    async def get(self, user_id, provider, connection_id, project_id="", *, lock=False):
         return next(
             (
                 row

@@ -5,6 +5,7 @@ from typing import Any
 
 from testing_agent.core.enums import ConnectionStatus
 from testing_agent.core.errors import (
+    AppError,
     ErrBadRequest,
     ErrIntegrationConnectionAuthFailed,
     ErrNotFound,
@@ -97,9 +98,17 @@ class IntegrationConnectionService:
         )
 
     async def get_owned(
-        self, user_id: str, provider: str, connection_id: str, project_id: str = ""
+        self,
+        user_id: str,
+        provider: str,
+        connection_id: str,
+        project_id: str = "",
+        *,
+        lock: bool = False,
     ) -> IntegrationConnection:
-        connection = await self.repository.get(user_id, provider, connection_id, project_id)
+        connection = await self.repository.get(
+            user_id, provider, connection_id, project_id, lock=lock
+        )
         if connection is None:
             raise ErrNotFound()
         return connection
@@ -139,6 +148,10 @@ class IntegrationConnectionService:
             if not name or not base_url or not account or not password.strip():
                 raise ErrBadRequest()
             self._require_secure_scheme(base_url, allow_http)
+            if commit:
+                # Do not hold the read transaction opened by the access check
+                # while waiting for the external authentication service.
+                await self.repository.session.commit()
             auth_result = await self._authenticate_zentao(
                 base_url,
                 account,
@@ -146,6 +159,7 @@ class IntegrationConnectionService:
                 allow_http=allow_http,
                 insecure_skip_verify=insecure_skip_verify,
             )
+            await self.ensure_project_access(user_id, project_id)
             secret_json = {"password": self._encrypt_secret(body.get("password", ""))}
             extra_json: dict[str, Any] = {
                 "allowHttp": allow_http,
@@ -181,12 +195,17 @@ class IntegrationConnectionService:
             access_token_value = str(body.get("accessToken") or "").strip()
             if not name or not access_token_value:
                 raise ErrBadRequest()
+            if commit:
+                # Do not hold the read transaction opened by the access check
+                # while waiting for the external authentication service.
+                await self.repository.session.commit()
             await self._validate_gitlab(
                 base_url,
                 access_token_value,
                 allow_http=allow_http,
                 insecure_skip_verify=insecure_skip_verify,
             )
+            await self.ensure_project_access(user_id, project_id)
             secret_json = {}
             extra_json = {
                 "allowHttp": allow_http,
@@ -279,48 +298,9 @@ class IntegrationConnectionService:
         if linked and any(key in body for key in ("name", "baseUrl", "modelId")):
             raise ErrBadRequest()
         if provider == "gitlab":
-            name = str(body.get("name", connection.name)).strip()
-            if not name:
-                raise ErrBadRequest()
-            old_allow, old_insecure = connection_security_flags(connection.extra_json)
-            allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
-            base_url = self._normalize_gitlab_base_url(
-                str(body.get("baseUrl", connection.base_url))
+            return await self._update_gitlab(
+                connection, connection_id, body, user_id, project_id, commit=commit
             )
-            self._require_secure_scheme(base_url, allow_http)
-            flags_changed = (allow_http, insecure_skip_verify) != (old_allow, old_insecure)
-            credentials_changed = "baseUrl" in body or "accessToken" in body or flags_changed
-            if "accessToken" in body:
-                access_token = str(body["accessToken"] or "").strip()
-                if not access_token:
-                    raise ErrBadRequest()
-            else:
-                access_token = self._decrypt_gitlab_token(connection.access_token)
-            if credentials_changed:
-                await self._validate_gitlab(
-                    base_url,
-                    access_token,
-                    allow_http=allow_http,
-                    insecure_skip_verify=insecure_skip_verify,
-                )
-            connection.name = name
-            connection.base_url = base_url
-            extra = dict(connection.extra_json or {})
-            extra["allowHttp"] = allow_http
-            extra["insecureSkipVerify"] = insecure_skip_verify
-            connection.extra_json = extra
-            if "accessToken" in body:
-                connection.access_token = self._encrypt_gitlab_token(access_token)
-            if credentials_changed:
-                connection.status = ConnectionStatus.ACTIVE.value
-                connection.last_auth_at = datetime.now(UTC)
-                connection.last_auth_error = ""
-            if commit:
-                await self.repository.commit()
-            else:
-                await self.repository.session.flush()
-            await self.repository.refresh(connection)
-            return dump_connection(connection)
         if provider == "mcp":
             if set(body) != {"token"} or not str(body["token"] or "").strip():
                 raise ErrBadRequest()
@@ -341,41 +321,56 @@ class IntegrationConnectionService:
         allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
         flags_changed = (allow_http, insecure_skip_verify) != (old_allow, old_insecure)
         old_password = self._zentao_password(connection) if provider == "zentao" else ""
-        for key, attr in {"name": "name", "baseUrl": "base_url", "account": "account"}.items():
-            if key in body:
-                setattr(connection, attr, body[key])
+        name = body.get("name", connection.name)
+        base_url = body.get("baseUrl", connection.base_url)
+        account = body.get("account", connection.account)
+        secret = dict(connection.secret_json or {})
+        if "password" in body:
+            secret["password"] = self._encrypt_secret(str(body["password"]))
+        if "apiKey" in body:
+            secret["apiKey"] = self._encrypt_secret(str(body["apiKey"]))
+        extra = dict(connection.extra_json or {})
         if provider == "zentao":
-            extra = dict(connection.extra_json or {})
             extra["allowHttp"] = allow_http
             extra["insecureSkipVerify"] = insecure_skip_verify
-            connection.extra_json = extra
-        if "password" in body:
-            secret = dict(connection.secret_json or {})
-            secret["password"] = self._encrypt_secret(str(body["password"]))
-            connection.secret_json = secret
-        if "apiKey" in body:
-            secret = dict(connection.secret_json or {})
-            secret["apiKey"] = self._encrypt_secret(str(body["apiKey"]))
-            connection.secret_json = secret
         if "modelId" in body:
-            extra = dict(connection.extra_json or {})
             extra["modelId"] = body["modelId"]
-            connection.extra_json = extra
-        if provider == "zentao" and (
-            connection.base_url != old_base_url
-            or connection.account != old_account
+        credentials_changed = provider == "zentao" and (
+            base_url != old_base_url
+            or account != old_account
             or ("password" in body and body["password"] != old_password)
             or flags_changed
-        ):
-            self._require_secure_scheme(connection.base_url, allow_http)
-            password = self._zentao_password(connection)
+        )
+        auth_result = None
+        if credentials_changed:
+            self._require_secure_scheme(base_url, allow_http)
+            password = (
+                str(body["password"]) if "password" in body else self._zentao_password(connection)
+            )
+            expected_updated_at = connection.updated_at
+            # End the read transaction before waiting on the external service.
+            if commit:
+                await self.repository.commit()
             auth_result = await self._authenticate_zentao(
-                connection.base_url,
-                connection.account,
+                base_url,
+                account,
                 password,
                 allow_http=allow_http,
                 insecure_skip_verify=insecure_skip_verify,
             )
+            connection = await self._reload_locked(
+                user_id,
+                provider,
+                connection_id,
+                project_id,
+                expected_updated_at=expected_updated_at,
+            )
+        connection.name = name
+        connection.base_url = base_url
+        connection.account = account
+        connection.extra_json = extra
+        connection.secret_json = secret
+        if auth_result is not None:
             self._apply_zentao_auth_success(connection, auth_result)
         if commit:
             await self.repository.commit()
@@ -383,6 +378,82 @@ class IntegrationConnectionService:
             await self.repository.session.flush()
         await self.repository.refresh(connection)
         return dump_connection(connection)
+
+    async def _update_gitlab(
+        self,
+        connection: IntegrationConnection,
+        connection_id: str,
+        body: dict[str, Any],
+        user_id: str,
+        project_id: str,
+        *,
+        commit: bool,
+    ) -> dict:
+        name = str(body.get("name", connection.name)).strip()
+        if not name:
+            raise ErrBadRequest()
+        old_allow, old_insecure = connection_security_flags(connection.extra_json)
+        allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
+        base_url = self._normalize_gitlab_base_url(str(body.get("baseUrl", connection.base_url)))
+        self._require_secure_scheme(base_url, allow_http)
+        flags_changed = (allow_http, insecure_skip_verify) != (old_allow, old_insecure)
+        credentials_changed = "baseUrl" in body or "accessToken" in body or flags_changed
+        if "accessToken" in body:
+            access_token = str(body["accessToken"] or "").strip()
+            if not access_token:
+                raise ErrBadRequest()
+        else:
+            access_token = self._decrypt_gitlab_token(connection.access_token)
+        if credentials_changed:
+            expected_updated_at = connection.updated_at
+            # End the read transaction before waiting on the external service.
+            if commit:
+                await self.repository.commit()
+            await self._validate_gitlab(
+                base_url,
+                access_token,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
+            )
+            connection = await self._reload_locked(
+                user_id,
+                "gitlab",
+                connection_id,
+                project_id,
+                expected_updated_at=expected_updated_at,
+            )
+        connection.name = name
+        connection.base_url = base_url
+        extra = dict(connection.extra_json or {})
+        extra["allowHttp"] = allow_http
+        extra["insecureSkipVerify"] = insecure_skip_verify
+        connection.extra_json = extra
+        if "accessToken" in body:
+            connection.access_token = self._encrypt_gitlab_token(access_token)
+        if credentials_changed:
+            connection.status = ConnectionStatus.ACTIVE.value
+            connection.last_auth_at = datetime.now(UTC)
+            connection.last_auth_error = ""
+        if commit:
+            await self.repository.commit()
+        else:
+            await self.repository.session.flush()
+        await self.repository.refresh(connection)
+        return dump_connection(connection)
+
+    async def _reload_locked(
+        self,
+        user_id: str,
+        provider: str,
+        connection_id: str,
+        project_id: str,
+        *,
+        expected_updated_at: datetime | None,
+    ) -> IntegrationConnection:
+        connection = await self.get_owned(user_id, provider, connection_id, project_id, lock=True)
+        if connection.updated_at != expected_updated_at:
+            raise AppError(409, "集成连接在外部认证期间已被修改，请重试", 409)
+        return connection
 
     async def reauth_zentao(
         self,
@@ -393,25 +464,37 @@ class IntegrationConnectionService:
     ) -> dict:
         await self.ensure_project_access(user_id, project_id)
         connection = await self.get_owned(user_id, "zentao", connection_id, project_id)
-        connection.status = ConnectionStatus.ACTIVE.value
-        connection.last_auth_at = datetime.now(UTC)
-        connection.last_auth_error = ""
         if body and body.get("password"):
-            secret = connection.secret_json or {}
-            secret["password"] = self._encrypt_secret(str(body["password"]))
-            connection.secret_json = secret
-        password = self._zentao_password(connection)
+            password = str(body["password"])
+        else:
+            password = self._zentao_password(connection)
         allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
         self._require_secure_scheme(connection.base_url, allow_http)
+        base_url = connection.base_url
+        account = connection.account
+        expected_updated_at = connection.updated_at
+        # End the read transaction before waiting on the external service.
+        await self.repository.commit()
         try:
             auth_result = await self.zentao_auth_provider.authenticate(
-                connection.base_url,
-                connection.account,
+                base_url,
+                account,
                 password,
                 allow_http=allow_http,
                 insecure_skip_verify=insecure_skip_verify,
             )
         except Exception as exc:
+            connection = await self._reload_locked(
+                user_id,
+                "zentao",
+                connection_id,
+                project_id,
+                expected_updated_at=expected_updated_at,
+            )
+            if body and body.get("password"):
+                secret = dict(connection.secret_json or {})
+                secret["password"] = self._encrypt_secret(str(body["password"]))
+                connection.secret_json = secret
             self._apply_zentao_auth_failure(connection, str(exc))
             await self.repository.commit()
             await self.repository.refresh(connection)
@@ -419,6 +502,17 @@ class IntegrationConnectionService:
                 ErrIntegrationConnectionAuthFailed,
                 truncate_error(str(exc)),
             ) from exc
+        connection = await self._reload_locked(
+            user_id,
+            "zentao",
+            connection_id,
+            project_id,
+            expected_updated_at=expected_updated_at,
+        )
+        if body and body.get("password"):
+            secret = dict(connection.secret_json or {})
+            secret["password"] = self._encrypt_secret(str(body["password"]))
+            connection.secret_json = secret
         self._apply_zentao_auth_success(connection, auth_result)
         await self.repository.commit()
         await self.repository.refresh(connection)
@@ -441,11 +535,22 @@ class IntegrationConnectionService:
             access_token = self._decrypt_gitlab_token(connection.access_token)
         allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
         self._require_secure_scheme(connection.base_url, allow_http)
+        base_url = connection.base_url
+        expected_updated_at = connection.updated_at
+        # End the read transaction before waiting on the external service.
+        await self.repository.commit()
         await self._validate_gitlab(
-            connection.base_url,
+            base_url,
             access_token,
             allow_http=allow_http,
             insecure_skip_verify=insecure_skip_verify,
+        )
+        connection = await self._reload_locked(
+            user_id,
+            "gitlab",
+            connection_id,
+            project_id,
+            expected_updated_at=expected_updated_at,
         )
         if body and "accessToken" in body:
             connection.access_token = self._encrypt_gitlab_token(access_token)
