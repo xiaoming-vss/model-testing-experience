@@ -1,5 +1,5 @@
 import { isYamlFileName, type CaseImportMode } from '@/features/api-automation/utils/detailView'
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
+import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
 import { cx } from '@/shared/utils/cx'

@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { listItems, listTotal } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
-import { projectsApi } from '../api/projects.api'
-import { useProjectAccess } from '../hooks/useProjectAccess'
-import type { TestReportGenerateRun } from '../types'
+import { projectsApi } from '@/domain/projects/api/projects.api'
+import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
+import type { TestReportGenerateRun } from '@/domain/projects/types'
 
 const statusLabels: Record<string, string> = {
   pending: '待执行', queued: '排队中', claimed: '已领取', running: '生成中',

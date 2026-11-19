@@ -1,6 +1,6 @@
 import { Button } from 'antd'
 import { useState } from 'react'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import type { UiGenerationRunInputs, UiGenerationSourceInputs } from '../api/generationChain.api'
 import { useUiGenerationSourceSelection } from '../hooks/useUiGenerationSourceSelection'
 import { UiGenerationInputsModal } from './UiGenerationInputsModal'

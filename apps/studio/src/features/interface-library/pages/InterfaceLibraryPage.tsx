@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Button, Spin } from 'antd'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { listItems } from '@/services/api'
 import { usePaneActive } from '@/shared/ui/paneActivity'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'

@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { EntityCard } from '@/shared/components/EntityCard'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -19,13 +19,13 @@ import type { InputRef } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
+import { EnvironmentDrawer } from '@/domain/projects/components/EnvironmentDrawer'
 import { CollectionDrawer, type CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
-import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
-import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
-import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
+import { useProjectRequirementOptions } from '@/domain/projects/hooks/useProjectRequirementOptions'
+import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
+import { useSprintRequirementScope } from '@/domain/projects/hooks/useSprintRequirementScope'
 import { api, listItems, type ApiCollection, type ApiEnvironment } from '@/services/api'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import {
   formatTime,
   getErrorMessage,

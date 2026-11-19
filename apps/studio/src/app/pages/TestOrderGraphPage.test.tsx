@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { api } from '@/services/api'
 import { TestOrderGraphPage } from './TestOrderGraphPage'
 

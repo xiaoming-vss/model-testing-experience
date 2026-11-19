@@ -1,11 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
 import { Alert, Spin } from 'antd'
 import { Navigate, useLocation } from 'react-router-dom'
-import { ProjectAccessValueProvider } from '@/features/projects/components/ProjectAccessProvider'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
-import type { ProjectAccessValue } from '@/features/projects/hooks/projectAccessContext'
-import { ProjectScope } from '@/features/projects/hooks/projectScope'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { ProjectAccessValueProvider } from '@/domain/projects/components/ProjectAccessProvider'
+import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
+import type { ProjectAccessValue } from '@/domain/projects/hooks/projectAccessContext'
+import { ProjectScope } from '@/domain/projects/hooks/projectScope'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 
 export function ProjectRouteGuard({ children }: { children: ReactNode }) {
   const projectId = useWorkbenchStore((state) => state.activeProjectId)

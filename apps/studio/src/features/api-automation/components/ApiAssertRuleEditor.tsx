@@ -3,7 +3,7 @@ import {
   assertSourceOptions
 } from '@/features/api-automation/config/collectionConfig'
 import { type AssertRuleFormValues } from '@/features/api-automation/utils/detailView'
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
+import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
 import {
   type ApiAssertComparator,
   type ApiAssertRule,

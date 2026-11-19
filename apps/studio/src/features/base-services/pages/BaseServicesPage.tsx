@@ -4,7 +4,7 @@ import { PerfMonitoringPanel } from '@/features/performance/components/PerfMonit
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
+import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
 import { BASE_SERVICE_TABS, resolveBaseServiceTab } from '../baseServiceTabs'
 
 export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) {

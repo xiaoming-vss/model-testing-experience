@@ -1,5 +1,5 @@
 import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, InputNumber, Select } from 'antd'
 import type { FormInstance } from 'antd'
 import { getErrorMessage } from '@/utils/format'

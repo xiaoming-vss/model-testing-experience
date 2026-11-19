@@ -7,7 +7,7 @@ import { bugsApi } from '@/features/bugs/api/bugs.api'
 import { performanceApi } from '@/features/performance/api/performance.api'
 import { functionTestingApi } from '@/features/test-cases/api/functionTesting.api'
 import { testOrdersApi } from '@/features/test-orders/api/testOrders.api'
-import { projectsApi } from '@/features/projects/api/projects.api'
+import { projectsApi } from '@/domain/projects/api/projects.api'
 import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { uiAutomationApi } from '@/features/ui-automation/api/uiAutomation.api'
 
@@ -46,7 +46,7 @@ export type {
   SprintDailyMetricsTestStats,
   SprintUpdatePayload,
   TestReportGenerateRun,
-} from '@/features/projects/types'
+} from '@/domain/projects/types'
 export type {
   Requirement,
   RequirementCreatePayload,

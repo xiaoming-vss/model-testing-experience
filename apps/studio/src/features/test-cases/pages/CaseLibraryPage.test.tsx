@@ -1,5 +1,5 @@
 import { seedOwnerProject } from '@/test/projectAccess'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -12,7 +12,7 @@ import { CaseLibraryPage } from './CaseLibraryPage'
 const testScope = vi.hoisted(() => ({ sprintId: 'sprint-1', requirementId: undefined as string | undefined }))
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/features/projects/hooks/useActiveSprint', () => ({
+vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
   useActiveSprint: () => ({
     activeSprintId: 'sprint-1',
     sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
@@ -24,7 +24,7 @@ vi.mock('@/features/projects/hooks/useActiveSprint', () => ({
     ],
   }),
 }))
-vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
+vi.mock('@/domain/projects/hooks/useSprintRequirementScope', () => ({
   useSprintRequirementScope: () => ({
     currentSprintSelection: null,
     currentRequirementSelection: null,
@@ -42,7 +42,7 @@ vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
     selectSprint: vi.fn(),
   }),
 }))
-vi.mock('@/features/projects/hooks/useProjectRequirementOptions', () => ({
+vi.mock('@/domain/projects/hooks/useProjectRequirementOptions', () => ({
   useProjectRequirementOptions: () => ({
     allRequirements: [],
     allRequirementsQuery: { isLoading: false, error: null },

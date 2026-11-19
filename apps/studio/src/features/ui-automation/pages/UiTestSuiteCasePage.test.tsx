@@ -13,7 +13,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
  * 这组测试锁住设计稿要求的结构钩子与三条主链路：运行测试集、切换当前用例、调试运行后在右栏读结果。
  */
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({
   useProjectAccess: () => ({ can: () => true, loading: false, error: null }),
 }))
 vi.mock('@/shared/utils/feedback', async (importOriginal) => ({

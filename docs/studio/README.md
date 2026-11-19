@@ -36,6 +36,8 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试
 | `app/styles/` | 主题与设计断言测试 |
 | `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`test-orders`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`bugs`、`profile`、`admin` |
 | `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
+| `domain/projects/` | 项目/权限/迭代/环境平台能力：项目 API、类型、workbench store、项目访问与迭代 hooks、环境抽屉与权限门控组件；普通 feature 只从这里引用 |
+| `domain/requirements/` | 跨 feature 的需求领域类型（如下拉选项摘要） |
 | `services/api.ts` | 各 feature API 的聚合出口 |
 | `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
 | `test/`、`utils/` | 测试辅助与工具函数 |
@@ -52,7 +54,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
 - 性能测试复用同一 EnvironmentDrawer 管理 `kind=perf` 的环境；测试集列表、工作台、EntityCard、串行运行记录和监控接入面板沿用测试工作区与基础服务的公共骨架，详见[性能测试](performance-testing.md)。
-- UI 自动化复用 `features/projects/components/EnvironmentDrawer` 管理 `kind=ui` 的环境：列表工具栏、详情顶栏和调试运行都从项目 UI 环境中选择，缺变量时弹窗内联补齐后重新提交。步骤编辑器的「插入变量」弹窗复用 API 自动化的动态值选择交互，列出当前 UI 环境变量、`baseUrl` 和 UI 内置函数；XPath 定位自动插入 `{{名字|xpath}}`。步骤编辑器也可配置后置提取（`saveTo`），执行控制台汇总实际引用与写回。协议见 [UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
+- UI 自动化复用 `domain/projects/components/EnvironmentDrawer` 管理 `kind=ui` 的环境：列表工具栏、详情顶栏和调试运行都从项目 UI 环境中选择，缺变量时弹窗内联补齐后重新提交。步骤编辑器的「插入变量」弹窗复用 API 自动化的动态值选择交互，列出当前 UI 环境变量、`baseUrl` 和 UI 内置函数；XPath 定位自动插入 `{{名字|xpath}}`。步骤编辑器也可配置后置提取（`saveTo`），执行控制台汇总实际引用与写回。协议见 [UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
 - `shared/utils/` 集中下载、分页文案与值格式化。任务产物使用 `formatStructuredContent` 保留 JSON 字符串表示；一般展示使用 `prettyPrintValue`，两者空值和字符串行为不同。
 
 ### AI 测试样式归属

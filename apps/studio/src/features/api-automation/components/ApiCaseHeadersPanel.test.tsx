@@ -11,10 +11,10 @@ import { afterEach, expect, it, vi } from 'vitest'
  * 这组测试锁住四个入口：预设注入、回车新增、清空未启用、批量编辑 RAW。
  */
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({
   useProjectAccess: () => ({ can: () => true, loading: false, error: null }),
 }))
-vi.mock('@/features/projects/hooks/projectScope', () => ({
+vi.mock('@/domain/projects/hooks/projectScope', () => ({
   useScopedProjectId: () => 'project-1',
 }))
 vi.mock('@/shared/utils/feedback', async (importOriginal) => ({

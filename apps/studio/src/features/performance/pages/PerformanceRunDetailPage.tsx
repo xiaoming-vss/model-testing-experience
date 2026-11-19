@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons'
 import { Alert, Button, Card, Descriptions, Empty, Segmented, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
-import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
+import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'

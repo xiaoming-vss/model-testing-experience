@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ProjectMembersModal } from './ProjectMembersModal'
-import { ProjectActionButton } from './ProjectActionButton'
-import { ProjectAccessScope } from './ProjectAccessScope'
-import type { ProjectRole } from '../types'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
+import type { ProjectRole } from '@/domain/projects/types'
 
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); vi.restoreAllMocks() })

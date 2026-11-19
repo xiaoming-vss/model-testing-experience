@@ -4,7 +4,7 @@ import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseN
 import { saveBlob } from '@/shared/utils/download'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
 import { buildCaseNameTree, countCaseNameTree } from '@/features/ai-testing/utils/caseNameTree'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import artifactStyles from '@/shared/styles/run-view.module.css'
 import { cx } from '@/shared/utils/cx'

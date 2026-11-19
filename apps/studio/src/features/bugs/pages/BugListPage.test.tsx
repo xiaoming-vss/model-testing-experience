@@ -1,5 +1,5 @@
 import { seedOwnerProject } from '@/test/projectAccess'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -10,7 +10,7 @@ import { api } from '@/services/api'
 import { BugListPage } from './BugListPage'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/features/projects/hooks/useActiveSprint', () => ({
+vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
   useActiveSprint: () => ({
     activeSprintId: 'sprint-1',
     sprints: [{ sprintId: 'sprint-1', name: 'V2.3 迭代' }],

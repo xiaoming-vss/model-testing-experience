@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { testOrdersApi } from '../api/testOrders.api'
 import { TestOrderGraphHistoryDrawer } from './TestOrderGraphHistoryDrawer'
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 

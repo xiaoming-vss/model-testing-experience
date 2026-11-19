@@ -131,7 +131,7 @@
       "selectors": 11,
       "layoutDeclarations": 11
     },
-    "src/features/projects/styles/environment-drawer.module.css": {
+    "src/domain/projects/styles/environment-drawer.module.css": {
       "rules": 11,
       "declarations": 37,
       "selectors": 12,

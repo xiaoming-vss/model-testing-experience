@@ -2,7 +2,7 @@ import { Button, Dropdown, Modal, Space, Tooltip } from 'antd'
 import { MoreOutlined } from '@ant-design/icons'
 import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
-import { ProjectActionButton } from './ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 
 export function RequirementRowActions({ name, canWrite, canManage, deleting, showBinding = false, onEdit, onBind, onCodeBind, onDelete }: {
   showBinding?: boolean; name: string; canWrite: boolean; canManage: boolean; deleting: boolean

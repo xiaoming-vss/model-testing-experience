@@ -8,7 +8,7 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { invalidateBug } from '../utils/invalidateBug'
 import type { Bug, BugAction } from '../types'
-import { isBugOnlyProject, hasProjectPermission } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, hasProjectPermission } from '@/domain/projects/hooks/useProjectAccess'
 import { DELETED_ACCOUNT_LABEL } from '@/shared/components/UserReference/UserReference'
 import { useBugScope } from './useBugScope'
 

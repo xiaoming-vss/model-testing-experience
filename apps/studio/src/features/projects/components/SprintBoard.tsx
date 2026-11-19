@@ -7,8 +7,8 @@ import { EntityCard } from '@/shared/components/EntityCard'
 import { ListSurface } from '@/shared/components/ListSurface'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { formatTime, getErrorMessage, normalizeSprintId, pickEndTime, pickStartTime } from '@/utils/format'
-import type { Sprint } from '../types'
-import { ProjectActionButton } from './ProjectActionButton'
+import type { Sprint } from '@/domain/projects/types'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 
 const groups = [
   { key: 'running', label: '进行中' },

@@ -1,13 +1,13 @@
-import { ProjectActionButton } from './ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Alert, Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { projectsApi } from '../api/projects.api'
-import { roleLabels, useProjectAccess } from '../hooks/useProjectAccess'
-import { useWorkbenchStore } from '../store/workbench.store'
+import { projectsApi } from '@/domain/projects/api/projects.api'
+import { roleLabels, useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { listItems } from '@/shared/api/request'
 import { getErrorMessage } from '@/utils/format'
-import type { ProjectMember } from '../types'
+import type { ProjectMember } from '@/domain/projects/types'
 
 const roles = [{ value: 'member', label: '普通成员' }, { value: 'viewer', label: '只读成员' }, { value: 'developer', label: '开发（仅 Bug）' }]
 

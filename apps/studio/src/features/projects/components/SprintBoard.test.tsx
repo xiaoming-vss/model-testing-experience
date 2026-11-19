@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { seedOwnerProject } from '@/test/projectAccess'
 import { SprintBoard } from './SprintBoard'
-import type { Sprint } from '../types'
+import type { Sprint } from '@/domain/projects/types'
 
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()) })

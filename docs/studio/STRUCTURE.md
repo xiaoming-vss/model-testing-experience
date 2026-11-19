@@ -50,22 +50,24 @@ app/          应用装配：路由、布局外壳、provider、全局样式
   ↓
 features/     业务功能：每个 feature 一个目录，自治
   ↓
+domain/       跨 feature 领域能力：运行轮询、项目/权限/迭代/环境
+  ↓
 shared/       通用能力：无业务语义的工具、组件、请求封装、主题 store
 ```
 
-`src/utils/` 与 `src/services/` 视为 shared 层同级（`services/api.ts` 是各 feature api 的聚合出口，`utils/` 是跨 feature 的适配层）。
+`src/utils/` 与 `src/services/` 视为 shared 层同级（`services/api.ts` 是各 feature api 的聚合出口，`utils/` 是跨 feature 的适配层）。`src/domain/` 只依赖 shared 层与通用库，不得 import `features/`。
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S1 | `shared/`、`src/utils/`、`src/services/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts:1` import `features/auth/store/auth.store`；`src/utils/updatePayload.ts:17-19` import 3 个 feature 的表单类型 | ESLint `no-restricted-imports`（**待强制**） |
-| S2 | `app/` 可以 import `features/` 与 `shared/`；`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint + `npm run check:boundaries`（**已实现**，与 S3 使用同一规则块） |
+| S1 | `shared/`、`src/utils/`、`src/services/`、`src/domain/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts:1` import `features/auth/store/auth.store`；`src/utils/updatePayload.ts` import 2 个 feature 的表单类型 | ESLint `no-restricted-imports`（**待强制**） |
+| S2 | `app/` 可以 import `features/`、`domain/` 与 `shared/`；`features/` 可以 import `domain/` 与 `shared/`，`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint + `npm run check:boundaries`（**已实现**，与 S3 使用同一规则块） |
 
 ## 二、feature 边界
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
 | S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint + `npm run check:boundaries`（**已实现**，接入 `verify`）：按 feature 生成规则块，各自忽略自身目录；存量违规按文件记入 `scripts/feature-boundary-budget.json`，只减不增 |
-| S4 | **归属判定（一句话）：被 2 个以上 feature 使用的代码必须上提。** 无业务语义 → `shared/`；有业务语义 → 提到 `app/` 或独立领域模块 | 用例关系图谱 `ai-testing/utils/caseRelationsGraph.ts`（483 行）被 test-orders 引用却留在 ai-testing；`projects` 被 3 个 feature 依赖（api-automation 16 处、ui-automation 13 处、base-services 10 处），是事实上的平台层却从未上提 | 评审 + 定期依赖图核对（**待强制**） |
+| S4 | **归属判定（一句话）：被 2 个以上 feature 使用的代码必须上提。** 无业务语义 → `shared/`；有业务语义 → 提到 `app/` 或 `domain/` 领域模块 | 用例关系图谱 `ai-testing/utils/caseRelationsGraph.ts`（483 行）被 test-orders 引用却留在 ai-testing；`projects` 的平台能力已上提到 `src/domain/projects/`（项目/权限/迭代/环境），普通 feature 不再引用其 hooks/components/store 内部路径 | 评审 + 定期依赖图核对（**待强制**） |
 | S5 | `shared/` 准入两条：**无业务语义** + **全站唯一实现**。「全站唯一实现」必须列成显式清单，新增条目需评审 | 文件下载已统一到 `shared/utils/download.ts` 的 `saveBlob`；对象解析已统一到 `shared/utils/value.ts` 的 `toRecord` / `toRecordArray` | 清单见本节末（**待强制**） |
 
 `shared/` 的「全站唯一实现」清单（新增需评审）：
@@ -415,7 +417,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S11 | feature 目录固定为 `api/`、`components/`、`hooks/`、`pages/`、`styles/`、`utils/`，加一个 `types.ts`。新增目录名需走 ADR（`docs/studio/adr/`） | 实际另有 `store/`×2（auth、projects）、`config/`×2（api-automation、ui-automation）、`constants/`×1、`__fixtures__/`×1 | 扫描脚本白名单（**待强制**） |
+| S11 | feature 目录固定为 `api/`、`components/`、`hooks/`、`pages/`、`styles/`、`utils/`，加一个 `types.ts`。新增目录名需走 ADR（`docs/studio/adr/`） | 实际另有 `store/`×1（auth）、`config/`×2（api-automation、ui-automation）、`constants/`×1、`__fixtures__/`×1 | 扫描脚本白名单（**待强制**） |
 | S12 | 组件目录与散文件的取舍：有子文件（样式、测试、index）的组件用目录，单文件组件用散文件。同类依赖不得散落 | `shared/components/` 中 `ActionButton/`、`JsonEditor/`、`MtxLogo/`、`TextCodeEditor/` 是目录，而 `codeEditorTheme.ts` 是散文件——它实际是 `JsonEditor`(`JsonEditor.tsx:18`) 与 `TextCodeEditor`(`TextCodeEditor.tsx:16`) 两个组件的共享依赖，却与四个组件目录并列成同级散文件 | 评审（**待强制**） |
 | S13 | 死代码零容忍：无人引用的 CSS、失效的 lint 覆盖块、空目录，发现即删 | `app/styles/shell.css` 拆分前保留 `.project-requirement-list-*`、`.workbench-project-toolbar`、`.sprint-card-title/value/description` 等零引用选择器（需求列表已改为卡片），2026-11-17 阶段 4 已随 `workbench.css` 拆分删除；`eslint.config.js:25-30` 针对已不存在的 `src/components/**`、`src/pages/**` 关闭规则，该放行从未生效。2026-09-23 按这条规则扫了一轮：删掉 82 条无人引用的规则、瘦身 42 条选择器列表，6 个文件共减约 1500 行（`testing/styles/index.css` 2579 → 1844、`test-cases/styles/index.css` 378 → 268、`ui-automation/styles/index.css` 934 → 755、`src/index.css` 159 → 92、`shared/styles/page-frame.css` 1444 → 1135、`test-orders/styles/workspace-v2.css` 579 → 508）。删完在四个列表页做了逐元素计算样式比对，零差异（判据见 README 的那一段） | 扫描脚本孤儿检查（**待强制**）；**扫描器不能自动决定删什么**：`segment-${key}`、`tone-${tone}` 这类拼接会被误判成死类（实测把 `.segment-passed`、`.tone-orange` 判死过），`.ant-*` / `.cm-*` / `.react-flow*` / `.recharts*` 是三方类名同样会被判死；必须逐个类名回到 TS 里确认零引用、且不是 `前缀-${...}` 的动态分支，再按显式白名单删 |
 

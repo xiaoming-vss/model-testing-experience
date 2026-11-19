@@ -1,5 +1,5 @@
 import { RichTextEditor } from '@/shared/components/RichTextEditor'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { UploadOutlined } from '@ant-design/icons'
 import { Alert, Drawer, Form, Input, Progress, Select, Upload } from 'antd'
 import type { FormInstance, UploadFile } from 'antd'

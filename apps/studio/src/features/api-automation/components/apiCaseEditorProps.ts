@@ -1,6 +1,6 @@
 import type { ApiCaseFormValues } from '@/features/api-automation/utils/apiCaseEditor'
 import type { ApiEnvironment } from '@/features/api-automation/types'
-import type { ProjectAction } from '@/features/projects/types'
+import type { ProjectAction } from '@/domain/projects/types'
 import type { ListResponse } from '@/shared/api/request'
 import type { JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import type {

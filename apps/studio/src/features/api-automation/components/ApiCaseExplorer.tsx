@@ -1,7 +1,7 @@
 import { SearchOutlined } from '@ant-design/icons'
 import { Button, Empty, Input, Popconfirm, Tooltip } from 'antd'
 import { memo, useEffect, useState, type DragEvent } from 'react'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import type { ApiCase } from '@/services/api'
 import { DRAFT_CASE_ID, methodTone } from '../config/collectionConfig'
 import { getCaseDisplayPath, getCaseId } from '../utils/apiCaseEditor'

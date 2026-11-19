@@ -2,10 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
-import { projectsApi } from '../api/projects.api'
+import { projectsApi } from '@/domain/projects/api/projects.api'
 import { TestReportHistoryDrawer } from './TestReportHistoryDrawer'
 
-vi.mock('../hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 

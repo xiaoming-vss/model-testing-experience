@@ -1,4 +1,4 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import taskStyles from '../styles/ai-task-detail.module.css'
 import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Input, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'

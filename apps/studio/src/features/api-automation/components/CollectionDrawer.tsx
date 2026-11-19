@@ -1,4 +1,4 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, Select } from 'antd'
 import type { FormInstance } from 'antd'
 import { getErrorMessage } from '@/utils/format'

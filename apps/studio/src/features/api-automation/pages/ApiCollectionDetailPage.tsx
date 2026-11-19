@@ -14,8 +14,8 @@ import { useApiCollectionData } from '../hooks/useApiCollectionData'
 import { useApiExecution } from '../hooks/useApiExecution'
 import { useApiRuleEditing } from '../hooks/useApiRuleEditing'
 
-import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
+import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import {
   api,
   type ApiCase,

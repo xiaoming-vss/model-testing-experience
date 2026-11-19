@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { AiSkillLibraryPage } from './AiSkillLibraryPage'
 import { api, type AiSkillLibraryItem } from '@/services/api'
 
-vi.mock('@/features/projects/hooks/useActiveProject', () => ({
+vi.mock('@/domain/projects/hooks/useActiveProject', () => ({
   useActiveProject: () => ({ activeProjectId: 'project-1', projectsQuery: { error: null } }),
 }))
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))

@@ -1,4 +1,4 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Popconfirm, Tooltip } from 'antd'
 
 /** 卡片操作组：运行 / 编辑 / 删除。卡片容器负责阻止点击冒泡，这里只渲染按钮。 */

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { usePaneActive } from '@/shared/ui/paneActivity'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { bugsApi } from '../api/bugs.api'
 
 /** Bug-only members receive labels, never full sprint or project-member resources. */

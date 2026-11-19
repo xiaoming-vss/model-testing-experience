@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
 import userEvent from '@testing-library/user-event'
 import { ProjectsPage } from './ProjectsPage'
-import { useWorkbenchStore } from '../store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.restoreAllMocks() })

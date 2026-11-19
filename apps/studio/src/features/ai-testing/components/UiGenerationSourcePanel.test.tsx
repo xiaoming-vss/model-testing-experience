@@ -11,7 +11,7 @@ import type {
 } from '../api/generationChain.api'
 import { UiGenerationSourcePanel } from './UiGenerationSourcePanel'
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 
 const clients: QueryClient[] = []
 afterEach(() => {

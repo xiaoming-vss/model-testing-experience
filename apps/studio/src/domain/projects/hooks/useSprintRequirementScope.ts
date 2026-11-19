@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { RequirementOption } from '@/features/requirements/types'
+import type { RequirementOption } from '@/domain/requirements/types'
 import { useQuery } from '@tanstack/react-query'
 import { api, type Requirement, type Sprint } from '@/services/api'
 import { normalizeRequirementId, normalizeSprintId, pickCreatedAt } from '@/utils/format'

@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { normalizeSprintId, pickCreatedAt } from '@/utils/format'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
-import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
+import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
 import { SPRINTS_STALE_TIME } from './requirementQueries'
 
 export function useActiveSprint(enabled = true) {

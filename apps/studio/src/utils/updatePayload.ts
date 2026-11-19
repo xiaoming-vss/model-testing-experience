@@ -15,7 +15,7 @@ import type {
   UiTestSuite,
 } from '../services/api'
 import type { CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
-import type { SprintFormValues } from '@/features/projects/components/SprintDrawer'
+import type { SprintFormValues } from '@/domain/projects/types'
 import type { UiTestSuiteFormValues } from '@/features/ui-automation/components/UiTestSuiteDrawer'
 import {
   normalizeText,

@@ -1,15 +1,8 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import type { DateLikeValue, SprintFormValues } from '@/domain/projects/types'
 import { Alert, DatePicker, Drawer, Form, Input } from 'antd'
 import type { FormInstance } from 'antd'
-import type { SprintCreatePayload } from '@/services/api'
 import { getErrorMessage } from '@/utils/format'
-
-type DateLikeValue = string | Date | { toDate?: () => Date; toISOString?: () => string } | null | undefined
-
-export type SprintFormValues = Omit<SprintCreatePayload, 'startTime' | 'endTime'> & {
-  startTime: DateLikeValue
-  endTime: DateLikeValue
-}
 
 function toTimestamp(value: DateLikeValue) {
   if (!value) return Number.NaN

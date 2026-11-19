@@ -52,7 +52,7 @@ vi.mock('../hooks/usePersonalLlmChoice', () => ({
     dialog: null,
   }),
 }))
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 
 const clients: QueryClient[] = []
 const readingActionHosts: HTMLElement[] = []

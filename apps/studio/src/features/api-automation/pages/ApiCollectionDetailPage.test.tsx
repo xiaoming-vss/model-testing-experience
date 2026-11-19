@@ -13,7 +13,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
  * 这组测试锁住设计稿要求的结构钩子与两条主链路：运行测试集、运行单条用例后在控制台读结果。
  */
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({
   useProjectAccess: () => ({ can: () => true, loading: false, error: null }),
 }))
 // ThemeProvider 会调用真实的 bindFeedbackMessage，所以这里只替换 message 本身。

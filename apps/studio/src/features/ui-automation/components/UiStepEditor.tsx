@@ -1,4 +1,4 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import {
   isValidUiIntegerOrVariable,
   isValidUiOpenUrl,
@@ -23,7 +23,7 @@ import { DownOutlined, EditOutlined, HolderOutlined } from '@ant-design/icons'
 import type { InputRef } from 'antd'
 import { Empty, Form, Input, Select, Switch, Tooltip } from 'antd'
 
-import type { ProjectAction } from '@/features/projects/types'
+import type { ProjectAction } from '@/domain/projects/types'
 
 import { UiStepResultBadge } from './UiStepResultBadge'
 import { useLayoutEffect, useRef, type JSX, type ReactNode } from 'react'

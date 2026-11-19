@@ -16,7 +16,7 @@ import {
 } from '../utils/caseRelationsGraph'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
-import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
+import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { api } from '@/services/api'
 import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
 

@@ -90,26 +90,7 @@ export type ZentaoRemoteOption = {
   [key: string]: unknown
 }
 
-export type ZentaoBindingTargetType = 'project' | 'sprint' | 'requirement'
-
-export type ZentaoBinding = {
-  mcpServiceId?: string
-  instanceUrl?: string
-  bindingId?: string
-  binding_id?: string
-  provider: 'zentao' | string
-  connectionId?: string
-  connection_id?: string
-  remoteResourceId?: string
-  remote_resource_id?: string
-  remoteNameSnapshot?: string
-  remote_name_snapshot?: string
-  status?: string
-  boundAt?: string
-  bound_at?: string
-  createdAt?: string
-  created_at?: string
-}
+export type { ZentaoBinding, ZentaoBindingTargetType } from '@/domain/projects/types'
 
 export type CreateZentaoBindingPayload = {
   mcpServiceId?: string

@@ -15,7 +15,7 @@ import {
   type ApiCaseFormValues
 } from '@/features/api-automation/utils/apiCaseEditor'
 import { Text } from '@/features/api-automation/utils/detailView'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { message } from '@/shared/utils/feedback'
 import {
   normalizeAssertRuleId,

@@ -1,4 +1,4 @@
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
+import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
 import { isYamlFileName, type CaseImportMode } from '@/features/ui-automation/utils/detailView'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'

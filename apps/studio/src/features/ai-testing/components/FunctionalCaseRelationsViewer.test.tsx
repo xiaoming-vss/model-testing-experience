@@ -12,7 +12,7 @@ vi.mock('@/services/api', () => ({
     getFunctionalCaseGenerateTaskRun: vi.fn(),
   },
 }))
-vi.mock('@/features/projects/components/ProjectAccessScope', () => ({
+vi.mock('@/domain/projects/components/ProjectAccessScope', () => ({
   ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children,
 }))
 vi.mock('@/shared/components/JsonEditor/JsonEditor', () => ({

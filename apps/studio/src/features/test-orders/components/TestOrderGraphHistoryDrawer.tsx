@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Drawer, Popconfirm, Space, Table, Tag } from 'antd'
 import { useState } from 'react'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { listItems, listTotal } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'

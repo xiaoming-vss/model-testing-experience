@@ -2,7 +2,7 @@ import { ZentaoMcpDeploymentHelp } from './ZentaoMcpDeploymentHelp'
 import { Alert, Checkbox, Drawer, Form, Input, Modal, Select, Typography } from 'antd'
 import type { FormInstance } from 'antd'
 import type { PersonalAuthorization, ServiceConfiguration, ServiceProvider, SharedService } from '../api/sharedServices.api'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 
 async function validateMcpUrl(_: unknown, value: string) {
   try {

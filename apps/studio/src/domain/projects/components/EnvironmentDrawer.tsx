@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { SearchOutlined } from '@ant-design/icons'
 import {
   Alert,

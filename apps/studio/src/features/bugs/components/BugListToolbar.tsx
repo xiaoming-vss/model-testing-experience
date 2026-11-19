@@ -1,6 +1,6 @@
 import { DownloadOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Popover, Select, Space, Tooltip } from 'antd'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { listItems } from '@/services/api'
 import { BUG_STATUS_LABELS, BUG_SEVERITY_LABELS, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 import type { useBugList } from '../hooks/useBugList'

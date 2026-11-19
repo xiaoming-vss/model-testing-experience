@@ -5,7 +5,7 @@ import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import type { Bug } from '../types'
-import { isBugOnlyProject, useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { useBugScope } from '../hooks/useBugScope'
 
 /** 独立转派：只更换责任人，不改变状态；转派历史写入动态。 */

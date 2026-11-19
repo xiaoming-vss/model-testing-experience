@@ -1,8 +1,27 @@
-import type { ZentaoBinding } from '@/features/base-services/types'
-
 export type ProjectRole = 'owner' | 'member' | 'viewer' | 'developer'
 export type ProjectAction = 'read' | 'write' | 'execute' | 'review' | 'manage' | 'project_read' | 'bug_read' | 'bug_handle'
 export type ProjectMember = { userId: string; name: string; role: ProjectRole }
+
+export type ZentaoBindingTargetType = 'project' | 'sprint' | 'requirement'
+
+export type ZentaoBinding = {
+  mcpServiceId?: string
+  instanceUrl?: string
+  bindingId?: string
+  binding_id?: string
+  provider: 'zentao' | string
+  connectionId?: string
+  connection_id?: string
+  remoteResourceId?: string
+  remote_resource_id?: string
+  remoteNameSnapshot?: string
+  remote_name_snapshot?: string
+  status?: string
+  boundAt?: string
+  bound_at?: string
+  createdAt?: string
+  created_at?: string
+}
 
 export type Project = {
   role?: ProjectRole
@@ -46,6 +65,13 @@ export type SprintCreatePayload = {
   description?: string
   startTime: string
   endTime: string
+}
+
+export type DateLikeValue = string | Date | { toDate?: () => Date; toISOString?: () => string } | null | undefined
+
+export type SprintFormValues = Omit<SprintCreatePayload, 'startTime' | 'endTime'> & {
+  startTime: DateLikeValue
+  endTime: DateLikeValue
 }
 
 export type ProjectUpdatePayload = Partial<Pick<Project, 'name' | 'description'>>

@@ -1,7 +1,7 @@
 import { FilterOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Popover, Tooltip } from 'antd'
 import { ActionButton } from '@/shared/components/ActionButton'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import type { TestOrder } from '../types'
 import {
   getTestOrderStatusMeta,

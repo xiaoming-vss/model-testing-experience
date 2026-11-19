@@ -120,7 +120,7 @@ Studio 在 `apps/studio/` 执行 `npm run verify`，类型检查、全项目 ESL
 
 ```sh
 npm test -- \
-  src/features/projects/hooks/useProjectAccess.test.ts \
+  src/domain/projects/hooks/useProjectAccess.test.ts \
   src/features/projects/components/ProjectMembership.test.tsx \
   src/app/layouts/AppShell.developer.test.tsx \
   src/app/layouts/AppShell.projectMenu.test.tsx \

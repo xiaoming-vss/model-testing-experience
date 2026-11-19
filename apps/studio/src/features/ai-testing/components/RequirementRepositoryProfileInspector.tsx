@@ -1,5 +1,5 @@
 import { Alert, Button, Spin, Tag, Tooltip } from 'antd'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { getErrorMessage } from '@/utils/format'
 import type { RequirementRepositoryProfileWorkspace } from '../hooks/useRequirementRepositoryProfileWorkspace'
 

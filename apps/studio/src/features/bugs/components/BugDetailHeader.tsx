@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowLeftOutlined, EditOutlined, SwapOutlined } from '@ant-design/icons'
 import { Button, Space, Tooltip } from 'antd'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import type { Bug, BugAction } from '../types'
 import { getBugActions, getBugStateLabel, formatBugNo, getBugActionLabel, getBugStatusTone } from '../utils/bugMeta'
 

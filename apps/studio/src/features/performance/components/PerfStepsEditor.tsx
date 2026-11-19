@@ -9,7 +9,7 @@ import {
   SaveOutlined,
 } from '@ant-design/icons'
 import { Button, Dropdown, Input, InputNumber, Popconfirm, Select, Space, Tabs, Tag, Tooltip } from 'antd'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { message } from '@/shared/utils/feedback'
 import {
   createPerfCheckRow,

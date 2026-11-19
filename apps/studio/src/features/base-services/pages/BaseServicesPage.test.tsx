@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BaseServicesPage } from './BaseServicesPage'
 
-vi.mock('@/features/projects/hooks/useActiveProject', () => ({
+vi.mock('@/domain/projects/hooks/useActiveProject', () => ({
   useActiveProject: () => ({ activeProjectId: 'project-1' }),
 }))
 vi.mock('../components/SharedServicesPanel', () => ({

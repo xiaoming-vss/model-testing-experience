@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { api } from '@/services/api'
-import type { RequirementOption } from '@/features/requirements/types'
+import type { RequirementOption } from '@/domain/requirements/types'
 import { normalizeRequirementId } from '@/utils/format'
 import { REQUIREMENTS_STALE_TIME } from './requirementQueries'
 

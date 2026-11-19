@@ -10,7 +10,7 @@ import { FunctionalCaseRelationsModal } from './FunctionalCaseRelationsModal'
 
 vi.mock('@/services/api', () => ({ api: { getFunctionalCaseGenerateTask: vi.fn(), getFunctionalCaseGenerateTaskRun: vi.fn() } }))
 vi.mock('../api/aiTesting.api', () => ({ aiTestingApi: { generateFunctionalCaseRelationAnalysis: vi.fn() } }))
-vi.mock('@/features/projects/components/ProjectAccessScope', () => ({ ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children }))
+vi.mock('@/domain/projects/components/ProjectAccessScope', () => ({ ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children }))
 vi.mock('./FunctionalCaseRelationsGraph', () => ({ FunctionalCaseRelationsGraph: ({ content }: { content: string }) => <div data-testid="relations-content">{content}</div> }))
 
 let client: QueryClient

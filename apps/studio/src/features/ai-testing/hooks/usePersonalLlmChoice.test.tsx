@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks() })
 function mount(count = 1, alwaysConfirm = true) {

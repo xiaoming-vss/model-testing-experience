@@ -3,7 +3,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
-import type { RequirementOption } from '@/features/requirements/types'
+import type { RequirementOption } from '@/domain/requirements/types'
 import { useProjectRequirementOptions } from './useProjectRequirementOptions'
 
 const optionItems: RequirementOption[] = [

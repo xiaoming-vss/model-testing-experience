@@ -15,7 +15,7 @@ import { RequirementDesignWorkspace } from './RequirementDesignWorkspace'
 vi.mock('../hooks/usePersonalLlmChoice', () => ({
   usePersonalLlmChoice: () => ({ choose: async () => 'mine', chooseRun: async () => ({ connectionId: 'mine', checkpointEnabled: true }), dialog: null }),
 }))
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 vi.mock('../api/generationChain.api', () => ({
   generationChainApi: {
     overview: vi.fn(), chain: vi.fn(), version: vi.fn(), run: vi.fn(),

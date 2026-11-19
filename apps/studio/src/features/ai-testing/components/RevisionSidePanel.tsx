@@ -8,7 +8,7 @@ import { downloadStoredFile, uploadStoredFile } from '@/shared/api/files'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import type { RevisionAttachment } from '../hooks/useRevisionAttachments'
 import { parseQuestionRevisionDraft, revisionInstructionText, updateQuestionRevisionDraft } from '../utils/functionalRevision'
 

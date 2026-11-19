@@ -8,7 +8,7 @@ import { zentaoMcpApi } from '../api/zentaoMcp.api'
 import { ZentaoBindingModal } from './ZentaoBindingPanel'
 
 const permissions = vi.hoisted(() => ({ manage: true }))
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => permissions.manage }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => permissions.manage }) }))
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 const clients: QueryClient[] = []
 function list<T>(items: T[]) { return Object.assign([...items], { items: [...items], total: items.length }) }

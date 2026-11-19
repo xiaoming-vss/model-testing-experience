@@ -1,7 +1,7 @@
 import { headerQuickInjectPresets } from '@/features/api-automation/config/collectionConfig'
 import type { TemplatesProps } from '@/features/api-automation/components/apiCaseEditorProps'
 import type { ApiCaseFormValues } from '@/features/api-automation/utils/apiCaseEditor'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { message } from '@/shared/utils/feedback'
 import {
   ClearOutlined,

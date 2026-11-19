@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { Sprint } from '@/features/projects/types'
+import type { Sprint } from '@/domain/projects/types'
 import { pickEndTime, pickStartTime } from '@/utils/format'
 
 const MAX_TIMEOUT_MS = 2_147_483_647

@@ -5,10 +5,10 @@ import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { PerfStepEditor } from './PerfStepsEditor'
 import { createPerfHeaderRow, createPerfStep } from '../utils/perfCaseForm'
 
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({
   useProjectAccess: () => ({ can: () => true, loading: false, error: null }),
 }))
-vi.mock('@/features/projects/hooks/projectScope', () => ({
+vi.mock('@/domain/projects/hooks/projectScope', () => ({
   useScopedProjectId: () => 'project-1',
 }))
 

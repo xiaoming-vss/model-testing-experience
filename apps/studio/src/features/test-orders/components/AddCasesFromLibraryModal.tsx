@@ -21,7 +21,7 @@ import {
 import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
+import { useProjectRequirementOptions } from '@/domain/projects/hooks/useProjectRequirementOptions'
 import { priorityColor } from '@/features/test-cases/utils/casePriority'
 import { readFunctionCaseContent } from '@/features/test-cases/utils/caseForm'
 import { api, listItems, listTotal, type FunctionCaseLibraryItem } from '@/services/api'

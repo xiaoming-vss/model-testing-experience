@@ -3,7 +3,7 @@ import type { TableProps } from 'antd'
 import { Link } from 'react-router-dom'
 import { AppIcon } from '@/shared/icons'
 import { DeletedAccountLabel } from '@/shared/components/UserReference/UserReference'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { pickCreatedAt, formatTime, pickUpdatedAt } from '@/utils/format'
 import type { Bug, BugAction, BugSortField } from '../types'
 import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, BUG_ACTION_ICONS, getBugStateLabel, getBugActions,

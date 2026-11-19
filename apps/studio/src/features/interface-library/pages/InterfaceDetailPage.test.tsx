@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { seedOwnerProject } from '@/test/projectAccess'
 import { ApiError } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -25,7 +25,7 @@ vi.mock('../api/interfaceLibrary.api', () => ({
     moveApiInterfaceToGroup: vi.fn(),
   },
 }))
-vi.mock('@/features/projects/hooks/useProjectRequirementOptions', () => ({
+vi.mock('@/domain/projects/hooks/useProjectRequirementOptions', () => ({
   useProjectRequirementOptions: () => ({
     allRequirements: [
       { requirementId: 'req-1', name: '下单流程', sprintId: 'sprint-1', sprintName: 'V1.0.0' },

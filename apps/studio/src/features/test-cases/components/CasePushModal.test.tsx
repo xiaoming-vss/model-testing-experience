@@ -6,7 +6,7 @@ import { functionTestingApi } from '../api/functionTesting.api'
 import { CasePushModal } from './CasePushModal'
 
 const access = vi.hoisted(() => ({ role: 'owner' }))
-vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ project: { role: access.role }, can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ project: { role: access.role }, can: () => true }) }))
 const row = { caseId: 'case', title: '登录成功', candidates: [{ id: 41, title: '登录成功' }], mappedRemoteCaseId: null, operation: null }
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
