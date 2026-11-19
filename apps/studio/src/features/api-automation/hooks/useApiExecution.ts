@@ -23,7 +23,7 @@ import {
 } from '@/utils/format'
 import { listItems, listTotal } from '@/shared/api/request'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const RUN_HISTORY_PAGE_SIZE = 20
 
@@ -355,6 +355,19 @@ export function useApiExecution({ collectionId }: Options) {
       queryClient.invalidateQueries({ queryKey: ['apiCollectionRuns', collectionId] })
     },
   })
+
+  const resetApiCaseRunStatus = useCallback(() => {
+    previousApiCaseRunStatusRef.current = ''
+  }, [])
+
+  const resetActiveCollectionRunStatus = useCallback(() => {
+    previousActiveRunStatusRef.current = ''
+  }, [])
+
+  const rememberActiveCollectionRunStatus = useCallback((status: ApiCollectionRunSummary['status']) => {
+    previousActiveRunStatusRef.current = status
+  }, [])
+
   return {
     runResult,
     setRunResult,
@@ -380,6 +393,9 @@ export function useApiExecution({ collectionId }: Options) {
     setCollectionRunItemViews,
     previousApiCaseRunStatusRef,
     previousActiveRunStatusRef,
+    resetApiCaseRunStatus,
+    resetActiveCollectionRunStatus,
+    rememberActiveCollectionRunStatus,
     collectionRunHistoryQuery,
     collectionRunHistory,
     collectionRunHistoryTotal,
