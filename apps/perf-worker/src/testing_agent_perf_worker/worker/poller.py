@@ -121,6 +121,13 @@ class PerfPoller:
         self.stop_event = asyncio.Event()
         self.stop_reason = None
         self._active = True
+        started_iso = datetime.now(UTC).isoformat()
+        started_monotonic = time.monotonic()
+        window = ExecutionWindow.start(
+            claim.lease_seconds,
+            self.settings.worker.lease_margin_seconds,
+            started_monotonic=started_monotonic,
+        )
         if self.shutdown_event.is_set():
             await self._report(
                 claim,
@@ -132,16 +139,10 @@ class PerfPoller:
                     "Worker 正在关闭，执行未启动",
                 ),
                 None,
+                window,
             )
             self._active = False
             return
-        started_iso = datetime.now(UTC).isoformat()
-        started_monotonic = time.monotonic()
-        window = ExecutionWindow.start(
-            claim.lease_seconds,
-            self.settings.worker.lease_margin_seconds,
-            started_monotonic=started_monotonic,
-        )
         workspace: Workspace | None = None
         heartbeat: asyncio.Task[None] | None = None
         snapshot: SnapshotResponse | None = None
@@ -163,6 +164,7 @@ class PerfPoller:
                         preflight_error,
                     ),
                     None,
+                    window,
                 )
                 return
             if snapshot.run_id != claim.run_id:
@@ -177,6 +179,7 @@ class PerfPoller:
                         preflight_error,
                     ),
                     None,
+                    window,
                 )
                 return
             try:
@@ -199,6 +202,7 @@ class PerfPoller:
                         "用户已停止运行",
                     ),
                     None,
+                    window,
                 )
                 return
             try:
@@ -216,6 +220,7 @@ class PerfPoller:
                         str(exc),
                     ),
                     None,
+                    window,
                 )
                 return
 
@@ -237,6 +242,7 @@ class PerfPoller:
                         preflight_error,
                     ),
                     workspace,
+                    window,
                 )
                 return
 
@@ -310,7 +316,7 @@ class PerfPoller:
                         started_iso,
                         preflight_error or "执行未启动",
                     )
-            await self._report(claim, result, workspace)
+            await self._report(claim, result, workspace, window)
         finally:
             window.stop()
             if heartbeat is not None:
@@ -408,19 +414,44 @@ class PerfPoller:
         claim: ClaimResponse,
         result: RunResult,
         workspace: Workspace | None,
+        window: ExecutionWindow,
     ) -> None:
         if workspace is not None:
             workspace.write_result(result.model_dump_json(by_alias=True, indent=2))
         payload = result.model_dump(by_alias=True, mode="json")
         payload["workerId"] = self.worker_id
-        try:
-            await self.client.complete(claim.task_id, payload)
-        except LeaseLostError:
-            logger.warning("completion rejected task_id=%s", claim.task_id)
-        except ControlPlaneError as exc:
-            logger.error("completion failed task_id=%s status=%s", claim.task_id, exc.status_code)
-        except Exception:
-            logger.exception("completion failed task_id=%s", claim.task_id)
+        attempt = 0
+        while True:
+            try:
+                await self.client.complete(claim.task_id, payload)
+                return
+            except LeaseLostError:
+                # The control plane has already rejected this attempt; retrying
+                # cannot make the result valid again.
+                logger.warning("completion rejected task_id=%s", claim.task_id)
+                return
+            except ControlPlaneError as exc:
+                logger.warning(
+                    "completion failed task_id=%s status=%s attempt=%s",
+                    claim.task_id,
+                    exc.status_code,
+                    attempt + 1,
+                )
+            except Exception:
+                logger.exception("completion failed task_id=%s", claim.task_id)
+                return
+            if not window.alive():
+                logger.error("completion abandoned after lease loss task_id=%s", claim.task_id)
+                return
+            remaining = window.remaining_seconds()
+            if remaining <= 0:
+                logger.error("completion abandoned after lease loss task_id=%s", claim.task_id)
+                return
+            delay = min(5.0, 0.5 * (2 ** min(attempt, 4)), remaining)
+            if delay <= 0:
+                return
+            await asyncio.sleep(delay)
+            attempt += 1
 
 
 def _worker_id(settings: Settings) -> str:

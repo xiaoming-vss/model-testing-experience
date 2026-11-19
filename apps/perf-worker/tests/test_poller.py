@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -21,8 +23,13 @@ from testing_agent_perf_worker.contracts.worker import (
     HeartbeatResponse,
     SnapshotResponse,
 )
-from testing_agent_perf_worker.core.errors import DataFileError, LeaseLostError
+from testing_agent_perf_worker.core.errors import (
+    ControlPlaneError,
+    DataFileError,
+    LeaseLostError,
+)
 from testing_agent_perf_worker.runner.k6 import K6Execution
+from testing_agent_perf_worker.runner.workspace import Workspace
 from testing_agent_perf_worker.worker import poller as poller_module
 from testing_agent_perf_worker.worker.lease import ExecutionWindow
 from testing_agent_perf_worker.worker.poller import PerfPoller, StopReason
@@ -286,3 +293,71 @@ def test_stop_reason_overrides_completed_result():
     assert stopped.status is RunStatus.STOPPED
     assert stopped.outcome is RunOutcome.STOPPED
     assert "关闭" in stopped.error_message
+
+
+@pytest.mark.asyncio
+async def test_completion_retries_until_control_plane_recovers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    FakeRunner.executions = [_execution()]
+    monkeypatch.setattr(poller_module, "K6Runner", FakeRunner)
+
+    class FlakyCompleteClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts = 0
+
+        async def complete(self, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+            self.attempts += 1
+            self.completions.append(payload)
+            if self.attempts <= 2:
+                raise ControlPlaneError("控制面暂时不可用", 503)
+            return {"status": "success"}
+
+    client = FlakyCompleteClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    await poller._execute(_CLAIM)
+
+    assert client.attempts == 3
+    assert len(client.completions) == 3
+    assert client.completions[0] == client.completions[1] == client.completions[2]
+    workspace = Path(poller.settings.runner.workspace_root) / "run-001"
+    assert json.loads((workspace / "result.json").read_text(encoding="utf-8"))["status"] == (
+        "completed"
+    )
+
+
+@pytest.mark.asyncio
+async def test_completion_stops_at_lease_deadline_and_keeps_result(tmp_path: Path):
+    class UnavailableClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts = 0
+
+        async def complete(self, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+            self.attempts += 1
+            raise ControlPlaneError("控制面暂时不可用", 503)
+
+    client = UnavailableClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+    workspace = Workspace.create(tmp_path / "workspaces", "run-001")
+    window = ExecutionWindow.start(
+        1,
+        0,
+        started_monotonic=time.monotonic() - 0.7,
+    )
+    result = poller_module._special_result(
+        "run-001",
+        RunStatus.STOPPED,
+        RunOutcome.STOPPED,
+        datetime.now(UTC).isoformat(),
+        "控制面执行租约已失效，执行已停止",
+    )
+
+    await poller._report(_CLAIM, result, workspace, window)
+
+    assert client.attempts >= 2
+    assert client.attempts < 5
+    saved = json.loads(workspace.result_path.read_text(encoding="utf-8"))
+    assert saved["status"] == "stopped"

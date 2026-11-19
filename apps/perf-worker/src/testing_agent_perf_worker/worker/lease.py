@@ -36,6 +36,10 @@ class ExecutionWindow:
         current = time.monotonic() if now is None else now
         return not self.lost and current < self.deadline
 
+    def remaining_seconds(self, *, now: float | None = None) -> float:
+        current = time.monotonic() if now is None else now
+        return max(0.0, self.deadline - current)
+
     def renew(
         self,
         lease_seconds: int,
