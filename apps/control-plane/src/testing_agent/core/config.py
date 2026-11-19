@@ -61,7 +61,7 @@ class IntegrationExecutionSettings:
 class SuperAdminSettings:
     username: str = ""
     email: str = ""
-    initial_password: str = "mtx123456"
+    initial_password: str = ""
 
     @property
     def configured(self) -> bool:

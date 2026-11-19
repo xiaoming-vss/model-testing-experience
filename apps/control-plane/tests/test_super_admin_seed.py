@@ -14,7 +14,7 @@ from testing_agent.core.config import Settings
 from testing_agent.core.security import verify_password
 from testing_agent.models import Base
 from testing_agent.models.user import User
-from testing_agent.services.super_admin import seed_super_admin
+from testing_agent.services.super_admin import _initial_password, seed_super_admin
 
 
 @compiles(LONGTEXT, "sqlite")
@@ -80,3 +80,13 @@ def test_seed_requires_configured_username_and_email():
     )
     with pytest.raises(RuntimeError, match="super_admin.username"):
         asyncio.run(seed_super_admin(settings))
+
+
+@pytest.mark.parametrize("password", ["", "   ", "GENERATE", "mtx123456", "short"])
+def test_initial_password_rejects_missing_or_placeholder_values(password):
+    with pytest.raises(RuntimeError, match="initial_password"):
+        _initial_password(password)
+
+
+def test_initial_password_accepts_explicit_value():
+    assert _initial_password("initial-password") == "initial-password"

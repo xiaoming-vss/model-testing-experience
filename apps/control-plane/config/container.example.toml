@@ -13,7 +13,7 @@ super_admin_expire_hours = 24
 [security.super_admin]
 username = "admin"
 email = "admin@example.com"
-initial_password = ""
+initial_password = "GENERATE"
 
 [security.login]
 max_failures = 5

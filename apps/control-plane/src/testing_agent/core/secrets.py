@@ -9,6 +9,7 @@ INSECURE_SECRETS = {
     "change-me",
     "change_me",
     "changeme",
+    "generate",
     "replace-with-local-integration-key",
     "mtx123456",
     "worker-token",

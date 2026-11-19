@@ -167,6 +167,17 @@ def upgrade_config(root=ROOT):
         for key, value in list(target.items()):
             if value == "GENERATE":
                 target[key] = secrets.token_hex(16)
+    super_admin = security.setdefault("super_admin", {})
+    initial_password = super_admin.get("initial_password", "")
+    if not isinstance(initial_password, str):
+        raise ValueError("control_plane.security.super_admin.initial_password must be a string")
+    normalized_password = initial_password.strip()
+    if (
+        len(normalized_password) < 8
+        or normalized_password.lower()
+        in {"mtx123456", "password", "secret", "change-me", "generate"}
+    ):
+        super_admin["initial_password"] = secrets.token_hex(16)
     if data == original:
         print("Unified configuration already has current settings.")
         return

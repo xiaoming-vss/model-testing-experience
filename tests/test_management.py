@@ -203,6 +203,20 @@ class ManagementTests(unittest.TestCase):
         ]
         self.assertEqual(len(set(keys)), 5)
 
+    def test_upgrade_config_generates_missing_initial_password(self):
+        path = self.root / "config/platform.toml"
+        data = manage.read(path)
+        data["control_plane"]["security"]["super_admin"]["initial_password"] = ""
+        manage.write(path, manage.toml_text(data), permissions=0o600)
+        manage.upgrade_config(self.root)
+        upgraded = manage.read(path)
+        password = upgraded["control_plane"]["security"]["super_admin"]["initial_password"]
+        self.assertGreaterEqual(len(password), 8)
+        self.assertNotIn(
+            password.lower(),
+            {"mtx123456", "password", "secret", "change-me", "generate"},
+        )
+
     def test_integration_config_upgrade_preserves_custom_values_permissions_and_secrets(self):
         path = self.root / "config/platform.toml"
         old = manage.read(path)

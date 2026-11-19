@@ -20,7 +20,7 @@ python3 scripts/manage.py upgrade-config
 
 该命令补齐专属令牌、共享运行代次、集成执行开关，以及系统超级管理员、登录限流和 JWT 有效期配置；保留已有密钥、自定义配置值及配置文件权限，重复执行保持文件原样。`init` 继续不修改已有文件。配置补齐不代表集成 Worker 拆分已经上线，`control_plane.integration_execution.enabled` 默认关闭。实施进度见[集成 Worker 实施记录](control-plane/integration-worker-implementation.md)。
 
-首次启动控制面前必须完成数据库迁移，并确认 `control_plane.security.super_admin.username`、`email` 已填写。控制面启动时要求数据库 DSN 非空；缺失会直接失败，DSN 由 `manage.py` 根据 `[database]` 或内置 MySQL 配置生成。JWT、集成密钥和 Worker 令牌必须至少 32 个字符，且不能使用 `change-me` 等占位值；不满足时控制面启动失败。`init`/`upgrade-config` 会为 `initial_password = "GENERATE"` 生成随机值；生产环境应显式设置密码或在首次登录时按强制改密流程修改。超级管理员丢失密码时使用运维 CLI，详见[认证、账号与系统管理员](control-plane/authentication.md)。
+首次启动控制面前必须完成数据库迁移，并确认 `control_plane.security.super_admin.username`、`email` 已填写。控制面启动时要求数据库 DSN 非空；缺失会直接失败，DSN 由 `manage.py` 根据 `[database]` 或内置 MySQL 配置生成。JWT、集成密钥和 Worker 令牌必须至少 32 个字符，且不能使用 `change-me` 等占位值；不满足时控制面启动失败。`init`/`upgrade-config` 会为缺失、空值或 `initial_password = "GENERATE"` 生成随机值；运行时仍为空或占位值则拒绝创建超级管理员。生产环境应显式设置强密码或在首次登录时按强制改密流程修改。超级管理员丢失密码时使用运维 CLI，详见[认证、账号与系统管理员](control-plane/authentication.md)。
 
 `shared` 统一定义服务地址、发布端口及认证密钥；`database.url` 指定已有数据库，留空时使用下方的内置数据库字段。`control_plane`、`ai_worker`、`api_ui_worker`、`integration_worker`、`perf_worker` 区块递归覆盖各项目示例配置中的同名字段。地址、令牌、监听端口和存储路径最终由管理脚本按运行模式统一设置。
 
