@@ -267,13 +267,33 @@ def test_provider_queries_do_not_import_connection_management_or_commit():
 
 def test_external_callers_do_not_use_connection_private_decryption():
     root = PROJECT_ROOT / "src/testing_agent"
+    connection_commands = root / "services/integration_connections"
     for path in root.rglob("*.py"):
-        if path == root / "services/integration_connection.py":
+        if (
+            path == root / "services/integration_connection.py"
+            or connection_commands in path.parents
+        ):
             continue
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Attribute):
                 assert node.attr != "_decrypt_secret", (
                     f"{path.name}: use the actor-bound public credential interface"
+                )
+
+
+def test_integration_connections_are_split_by_provider():
+    root = PROJECT_ROOT / "src/testing_agent"
+    service_path = root / "services/integration_connection.py"
+    assert len(service_path.read_text().splitlines()) < 400
+
+    package = root / "services/integration_connections"
+    for name in ("common.py", "zentao.py", "gitlab.py", "mcp.py", "llm.py"):
+        assert (package / name).exists(), f"integration_connections/{name} is missing"
+    for path in package.glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                assert node.module != "testing_agent.services.integration_connection", (
+                    f"{path.name}: provider commands must not import the service facade"
                 )
 
 

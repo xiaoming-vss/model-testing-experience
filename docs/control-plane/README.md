@@ -103,6 +103,7 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 | `services/worker_task.py` 的 ai_worker_task | 查找任务并检查当前执行授权；文档及技能入口复用它，调用方仍检查所需租约/资源条件 |
 | `services/worker_domains/` | AI、API、UI 各自维护快照和结果规则；公共协调层管理领取、租约与事件身份，集成写入使用独立协议 |
 | `services/personal_credentials.py` 的 PersonalCredentialAccess | 先检查本人归属、供应方、范围和状态，再解密；供应方查询与绑定不依赖连接管理的私有方法 |
+| `services/integration_connection.py` 与 `services/integration_connections/` | 门面保留连接 CRUD、权限及公开查询入口；GitLab、禅道、MCP、LLM 的凭据校验与外部认证在 provider 模块中实现，共享事务、加密和字段更新留在 common |
 | `services/bug_import/` | 远端读取、准备、本地写入和文件处理分开；事务提交由导入编排负责，提交后的附件失败不回滚已创建 Bug |
 | `file_verification.py` | 核验代次领取、事务外复制和当前权限/CAS 发布；持久保留未知对象回收依据 |
 | `skill_storage.py` / SkillPublisher | 项目上传、默认同步、旧路径迁移共用批次发布；复制目标独占、清单原子切换 |
