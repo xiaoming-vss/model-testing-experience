@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { lazy, useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
+import { RouteSuspense } from '@/app/router/RouteSuspense'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
-import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
-import { SoftwareRepositoriesPage } from '@/features/interface-library/pages/SoftwareRepositoriesPage'
-import { InterfaceLibraryPage } from '@/features/interface-library/pages/InterfaceLibraryPage'
 import type { AssetLibraryTab } from '@/app/layouts/navigation'
+
+const CaseLibraryPage = lazy(() => import('@/features/test-cases/pages/CaseLibraryPage').then(({ CaseLibraryPage }) => ({ default: CaseLibraryPage })))
+const SoftwareRepositoriesPage = lazy(() => import('@/features/interface-library/pages/SoftwareRepositoriesPage').then(({ SoftwareRepositoriesPage }) => ({ default: SoftwareRepositoriesPage })))
+const InterfaceLibraryPage = lazy(() => import('@/features/interface-library/pages/InterfaceLibraryPage').then(({ InterfaceLibraryPage }) => ({ default: InterfaceLibraryPage })))
 
 const ASSET_TAB_PAGES = [
   { key: 'cases', Page: CaseLibraryPage },
@@ -43,7 +45,9 @@ export function AssetLibraryPage() {
           return (
             <div key={key} className="asset-library-tab-pane flex min-h-0 min-w-0 flex-1 flex-col [&[hidden]]:hidden [&>.workbench-page]:min-h-0 [&>.workbench-page]:flex-auto [&>.workbench-page]:p-0" id={`asset-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
-                <Page />
+                <RouteSuspense>
+                  <Page />
+                </RouteSuspense>
               </PaneActivityProvider>
             </div>
           )

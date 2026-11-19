@@ -49,8 +49,9 @@ function expectPaneState(tab: string, options: { visible: boolean; text: string 
 }
 
 describe('Testing workspace navigation', () => {
-  it('defaults to orders and keeps the page free of a duplicate tab bar', () => {
+  it('defaults to orders and keeps the page free of a duplicate tab bar', async () => {
     setup('/testing?requirementId=42&sprintId=7')
+    await screen.findByText('测试单内容')
     expectPaneState('orders', { visible: true, text: '测试单内容' })
     expect(document.getElementById('testing-panel-api')).toBeNull()
     expect(document.getElementById('testing-panel-ui')).toBeNull()
@@ -58,14 +59,17 @@ describe('Testing workspace navigation', () => {
     expect(screen.queryByRole('tab', { name: '测试单' })).not.toBeInTheDocument()
   })
 
-  it('switches panes from the URL, preserves scope and keeps visited panes mounted', () => {
+  it('switches panes from the URL, preserves scope and keeps visited panes mounted', async () => {
     setup('/testing?requirementId=42&sprintId=7')
+    await screen.findByText('测试单内容')
     fireEvent.click(screen.getByRole('button', { name: '去API' }))
+    await screen.findByText('API内容')
     expectPaneState('api', { visible: true, text: 'API内容' })
     expectPaneState('orders', { visible: false, text: '测试单内容' })
     expect(screen.getByRole('status')).toHaveTextContent('?requirementId=42&sprintId=7&tab=api')
 
     fireEvent.click(screen.getByRole('button', { name: '去UI' }))
+    await screen.findByText('UI内容')
     expectPaneState('ui', { visible: true, text: 'UI内容' })
     expectPaneState('api', { visible: false, text: 'API内容' })
 
@@ -75,16 +79,16 @@ describe('Testing workspace navigation', () => {
     expectPaneState('orders', { visible: false, text: '测试单内容' })
   })
 
-  it('redirects legacy library tabs to the asset library', () => {
+  it('redirects legacy library tabs to the asset library', async () => {
     setupWithAssetRoute('/testing?tab=functional')
-    expect(screen.getByText('资产库内容')).toBeInTheDocument()
+    expect(await screen.findByText('资产库内容')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('?tab=cases')
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
-  it('keeps the Bug route independent without exposing testing tabs', () => {
+  it('keeps the Bug route independent without exposing testing tabs', async () => {
     setup('/testing?tab=bugs')
-    expect(screen.getByText('Bug内容')).toBeVisible()
+    expect(await screen.findByText('Bug内容')).toBeVisible()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '测试' })).not.toBeInTheDocument()
   })

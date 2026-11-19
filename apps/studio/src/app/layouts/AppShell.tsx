@@ -1,33 +1,13 @@
-import { useEffect, useState } from 'react'
-import { AssetLibraryPage } from '../pages/AssetLibraryPage'
-import { RequirementDetailPage } from '../pages/RequirementDetailPage'
+import { lazy, useEffect, useState } from 'react'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Layout, Menu, Popover, Select, Spin, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useLogout } from '@/features/auth/hooks/useLogout'
-import { ChangePasswordPage } from '@/features/auth/pages/ChangePasswordPage'
-import { LdapSettingsPage } from '@/features/admin/pages/LdapSettingsPage'
-import { AccountManagementPage } from '@/features/admin/pages/AccountManagementPage'
-import { ProfilePage } from '@/features/profile/pages/ProfilePage'
-import { ProjectsPage } from '@/features/projects/pages/ProjectsPage'
-import { SprintDetailPage } from '@/features/projects/pages/SprintDetailPage'
 import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
-import { AiSkillLibraryPage } from '@/features/ai-testing/pages/AiSkillLibraryPage'
-import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
-import { TestingPage } from '@/app/pages/TestingPage'
-import { InterfaceDetailPage } from '@/features/interface-library/pages/InterfaceDetailPage'
-import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWorkspacePage'
-import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
-import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
-import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { PerformanceRunDetailPage } from '@/features/performance/pages/PerformanceRunDetailPage'
-import { PerformanceRunsPage } from '@/features/performance/pages/PerformanceRunsPage'
-import { PerformanceSuiteDetailPage } from '@/features/performance/pages/PerformanceSuiteDetailPage'
 import { AppNavigationBrand, AppSidebar } from './AppSidebar'
 import { navigationIndex } from './navigation'
 import { useNavigationTransition } from './useNavigationTransition'
@@ -40,6 +20,28 @@ import { normalizeProjectId } from '@/utils/format'
 import { isBugOnlyProject, useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { useBugScope } from '@/features/bugs/hooks/useBugScope'
 import { ProjectRouteGuard } from '../router/guards/ProjectRouteGuard'
+import { RouteSuspense } from '../router/RouteSuspense'
+
+const AssetLibraryPage = lazy(() => import('../pages/AssetLibraryPage').then(({ AssetLibraryPage }) => ({ default: AssetLibraryPage })))
+const RequirementDetailPage = lazy(() => import('../pages/RequirementDetailPage').then(({ RequirementDetailPage }) => ({ default: RequirementDetailPage })))
+const ApiCollectionDetailPage = lazy(() => import('@/features/api-automation/pages/ApiCollectionDetailPage').then(({ ApiCollectionDetailPage }) => ({ default: ApiCollectionDetailPage })))
+const ChangePasswordPage = lazy(() => import('@/features/auth/pages/ChangePasswordPage').then(({ ChangePasswordPage }) => ({ default: ChangePasswordPage })))
+const LdapSettingsPage = lazy(() => import('@/features/admin/pages/LdapSettingsPage').then(({ LdapSettingsPage }) => ({ default: LdapSettingsPage })))
+const AccountManagementPage = lazy(() => import('@/features/admin/pages/AccountManagementPage').then(({ AccountManagementPage }) => ({ default: AccountManagementPage })))
+const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage').then(({ ProfilePage }) => ({ default: ProfilePage })))
+const ProjectsPage = lazy(() => import('@/features/projects/pages/ProjectsPage').then(({ ProjectsPage }) => ({ default: ProjectsPage })))
+const SprintDetailPage = lazy(() => import('@/features/projects/pages/SprintDetailPage').then(({ SprintDetailPage }) => ({ default: SprintDetailPage })))
+const AiSkillLibraryPage = lazy(() => import('@/features/ai-testing/pages/AiSkillLibraryPage').then(({ AiSkillLibraryPage }) => ({ default: AiSkillLibraryPage })))
+const BaseServicesPage = lazy(() => import('@/features/base-services/pages/BaseServicesPage').then(({ BaseServicesPage }) => ({ default: BaseServicesPage })))
+const TestingPage = lazy(() => import('../pages/TestingPage').then(({ TestingPage }) => ({ default: TestingPage })))
+const InterfaceDetailPage = lazy(() => import('@/features/interface-library/pages/InterfaceDetailPage').then(({ InterfaceDetailPage }) => ({ default: InterfaceDetailPage })))
+const TestOrderWorkspacePage = lazy(() => import('@/features/test-orders/pages/TestOrderWorkspacePage').then(({ TestOrderWorkspacePage }) => ({ default: TestOrderWorkspacePage })))
+const BugDetailPage = lazy(() => import('@/features/bugs/pages/BugDetailPage').then(({ BugDetailPage }) => ({ default: BugDetailPage })))
+const BugSubmitPage = lazy(() => import('@/features/bugs/pages/BugSubmitPage').then(({ BugSubmitPage }) => ({ default: BugSubmitPage })))
+const UiTestSuiteCasePage = lazy(() => import('@/features/ui-automation/pages/UiTestSuiteCasePage').then(({ UiTestSuiteCasePage }) => ({ default: UiTestSuiteCasePage })))
+const PerformanceRunDetailPage = lazy(() => import('@/features/performance/pages/PerformanceRunDetailPage').then(({ PerformanceRunDetailPage }) => ({ default: PerformanceRunDetailPage })))
+const PerformanceRunsPage = lazy(() => import('@/features/performance/pages/PerformanceRunsPage').then(({ PerformanceRunsPage }) => ({ default: PerformanceRunsPage })))
+const PerformanceSuiteDetailPage = lazy(() => import('@/features/performance/pages/PerformanceSuiteDetailPage').then(({ PerformanceSuiteDetailPage }) => ({ default: PerformanceSuiteDetailPage })))
 
 const { Header, Content } = Layout
 
@@ -204,6 +206,7 @@ export function AppShell() {
         </Header>
         <Content ref={contentRef} className="app-content">
           {projectsQuery.isPending || (projects.length > 0 && !activeProjectId) ? <Spin aria-label="项目加载中" /> : <ProjectRouteGuard>
+          <RouteSuspense>
           <Routes>
             <Route path="/" element={<Navigate to="/projects" replace />} />
             <Route path="/projects" element={<ProjectsPage />} />
@@ -238,6 +241,7 @@ export function AppShell() {
             <Route path="/projects/board=sprints" element={<Navigate to="/projects?board=sprints" replace />} />
             <Route path="*" element={<Navigate to="/projects" replace />} />
           </Routes>
+          </RouteSuspense>
           </ProjectRouteGuard>}
         </Content>
       </Layout>

@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
+import { lazy, useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { ApiAutomationPage } from '@/features/api-automation/pages/ApiAutomationPage'
-import { BugListPage } from '@/features/bugs/pages/BugListPage'
-import { PerformancePage } from '@/features/performance/pages/PerformancePage'
-import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
 import {
   isLegacyLibraryTab,
   resolveTestingTab,
   type TestingTab,
 } from '@/app/layouts/testingTab'
-import { UiAutomationPage } from '@/features/ui-automation/pages/UiAutomationPage'
+import { RouteSuspense } from '@/app/router/RouteSuspense'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
+
+const ApiAutomationPage = lazy(() => import('@/features/api-automation/pages/ApiAutomationPage').then(({ ApiAutomationPage }) => ({ default: ApiAutomationPage })))
+const UiAutomationPage = lazy(() => import('@/features/ui-automation/pages/UiAutomationPage').then(({ UiAutomationPage }) => ({ default: UiAutomationPage })))
+const PerformancePage = lazy(() => import('@/features/performance/pages/PerformancePage').then(({ PerformancePage }) => ({ default: PerformancePage })))
+const TestOrderPage = lazy(() => import('@/features/test-orders/pages/TestOrderPage').then(({ TestOrderPage }) => ({ default: TestOrderPage })))
+const BugListPage = lazy(() => import('@/features/bugs/pages/BugListPage').then(({ BugListPage }) => ({ default: BugListPage })))
 
 const TESTING_TAB_PAGES = [
   { key: 'api', Page: ApiAutomationPage },
@@ -48,7 +50,9 @@ export function TestingPage() {
           return (
             <div key={key} className={`testing-tab-pane min-h-0 min-w-0 flex-1 flex-col [&>.workbench-page]:min-h-0 [&>.workbench-page]:flex-1 [&>.workbench-page]:p-0 [&>.api-automation-page]:h-full [&>.api-automation-page]:min-h-0 [&>.api-automation-page]:overflow-hidden ${activeTab === key ? 'flex' : 'hidden'}`} id={`testing-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
-                <Page />
+                <RouteSuspense>
+                  <Page />
+                </RouteSuspense>
               </PaneActivityProvider>
             </div>
           )
