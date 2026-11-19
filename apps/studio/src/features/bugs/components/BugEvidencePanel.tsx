@@ -1,3 +1,4 @@
+import { BugDetailPanel } from './BugDetailPanel'
 import { useState } from 'react'
 import { Button, Alert } from 'antd'
 import { DownloadOutlined, FileOutlined } from '@ant-design/icons'
@@ -14,7 +15,7 @@ export function BugEvidencePanel({ attachments, descriptionHtml = '', download }
   const [selectedId, setSelectedId] = useState<string>()
   const selected = media.find((item) => item.fileId === selectedId)
   const preview = useStoredFileUrls(selected ? [selected.fileId] : [])
-  return <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+  return <BugDetailPanel>
     <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">附件与多媒体凭据 <span className="bug-section-count text-xs font-normal text-[var(--srf-text-muted)]">{files.length} 个附件</span></h2>
     {!files.length ? <span className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]">暂无附件</span> : <div className={`bug-evidence-layout grid gap-4 ${selected ? 'has-preview grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] max-[720.01px]:grid-cols-1' : ''}`}>
       {selected && <div className="bug-evidence-preview min-w-0 rounded-[8px] border border-[var(--srf-card-border)] bg-[var(--srf-hover)] p-3 [&_img]:mt-3 [&_img]:block [&_img]:max-h-[360px] [&_img]:w-full [&_img]:object-contain [&_video]:mt-3 [&_video]:block [&_video]:max-h-[360px] [&_video]:w-full [&_video]:object-contain">
@@ -35,5 +36,5 @@ export function BugEvidencePanel({ attachments, descriptionHtml = '', download }
         <Button type="text" size="small" icon={<DownloadOutlined />} aria-label={`下载 ${item.filename}`} onClick={() => void download(item.fileId, item.filename)} />
       </li>)}</ul>
     </div>}
-  </section>
+  </BugDetailPanel>
 }

@@ -10,8 +10,12 @@ export type ListSurfaceProps = {
   className?: string
   bodyClassName?: string
   scrollClassName?: string
+  /** 页面兼容页脚类，叠加在共享 table-footer 之后。 */
+  footerClassName?: string
   scrollAriaBusy?: boolean
   ariaLabel?: string
+  /** 外部标题 id；与 ariaLabel 二选一。 */
+  ariaLabelledBy?: string
 }
 
 /**
@@ -26,18 +30,20 @@ export function ListSurface({
   className,
   bodyClassName,
   scrollClassName,
+  footerClassName,
   scrollAriaBusy,
   ariaLabel,
+  ariaLabelledBy,
 }: ListSurfaceProps) {
   return (
-    <section className={cx('tp-board tp-list-panel', className)} aria-label={ariaLabel}>
+    <section className={cx('tp-board tp-list-panel', className)} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>
       {toolbar}
       {notices}
       <div className={cx('tp-list-body', bodyClassName)}>
         <div className={cx('tp-list-scroll', scrollClassName)} aria-busy={scrollAriaBusy}>
           {children}
         </div>
-        {footer ? <div className={cx('table-footer', tableFooterClass)}>{footer}</div> : null}
+        {footer ? <div className={cx('table-footer', tableFooterClass, footerClassName)}>{footer}</div> : null}
       </div>
     </section>
   )

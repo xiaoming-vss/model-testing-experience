@@ -1,3 +1,4 @@
+import { BugDetailPanel } from '../components/BugDetailPanel'
 import { ArrowLeftOutlined, SendOutlined } from '@ant-design/icons'
 import { Alert, Button, Input } from 'antd'
 import { BugDescriptionView } from '../components/BugDescriptionView'
@@ -51,7 +52,7 @@ export function BugDetailPage() {
 
 
   const activityPanels = <>
-            <section className="bug-detail-panel bug-detail-history col-span-full mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+            <BugDetailPanel className="bug-detail-history col-span-full">
               <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">处理记录 <span className="bug-section-count text-xs font-normal text-[var(--srf-text-muted)]">{statusChanges.length}</span></h2>
               {activitiesQuery.error && <Alert type="error" showIcon title="处理记录加载失败" action={<Button onClick={() => activitiesQuery.refetch()}>重试</Button>} />}
               <BugActivityFeed
@@ -59,8 +60,8 @@ export function BugDetailPage() {
                 resolveUserName={resolveUserName}
                 emptyText="还没有流转记录"
               />
-            </section>
-            <section className="bug-detail-panel bug-detail-discussion col-span-full mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+            </BugDetailPanel>
+            <BugDetailPanel className="bug-detail-discussion col-span-full">
               <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">评论与动态</h2>
               <div className="bug-comment-composer mb-2.5">
                 <Input
@@ -84,7 +85,7 @@ export function BugDetailPage() {
                 />
               </div>
               <BugActivityFeed items={dynamics} resolveUserName={resolveUserName} emptyText="还没有评论与动态" />
-            </section>
+            </BugDetailPanel>
   </>
   if (editOpen && canWrite) return <div className={`workbench-page bugs-detail-page tp-surface ${styles.root}`}><div className="api-automation-content">
     <BugInlineEditor key={bug.bugId} bug={bug} projectName={projectQuery.data?.name} sprintNames={sprintNames}
@@ -102,11 +103,11 @@ export function BugDetailPage() {
 
         <div className="bug-detail-cols mt-5 grid w-full min-w-0 grid-cols-[minmax(0,2.15fr)_minmax(300px,1fr)] items-start gap-5 max-[1100.01px]:grid-cols-1">
           <div className="bug-detail-main min-w-0">
-            <section className="bug-detail-panel bug-detail-summary mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+            <BugDetailPanel className="bug-detail-summary">
               <div className="bug-detail-breadcrumb flex items-center gap-2.5 break-words font-mono text-[11px] text-[var(--srf-text-muted)]">{projectQuery.data?.name || bug.projectId} <span>/</span> {formatBugNo(bug.bugNo)}</div>
               <h1 className="mb-2.5 mt-3.5 break-words text-[22px] font-semibold leading-normal text-[var(--srf-text)] max-[720.01px]:text-[18px]">{bug.title}</h1>
               <div className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]"><UserDisplayName name={resolveUserName(bug.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(bug))}</div>
-            </section>
+            </BugDetailPanel>
             <BugDescriptionView html={bug.descriptionHtml} />
             {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} projectId={bug.projectId} canWrite={canWrite} />}
             <BugEvidencePanel key={`evidence:${bug.bugId}`} descriptionHtml={bug.descriptionHtml} attachments={bug.attachments ?? []} download={downloadAttachment} />

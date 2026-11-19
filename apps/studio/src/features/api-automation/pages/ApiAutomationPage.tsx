@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { tableFooterClass } from '@/shared/utils/surfaceClasses'
@@ -457,24 +458,15 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           <div className="api-test-card-body tp-list-body">
             <div className="flex min-h-0 flex-col p-4 api-test-card-scroll tp-list-scroll">
               {sprintsQuery.isLoading ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                </div>
+                <ListEmptyState description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : !activeProjectId ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty description="请先选择项目" />
-                </div>
+                <ListEmptyState description="请先选择项目" />
               ) : isRequirementLocked && !selectedRequirementId ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty description="当前需求不可用" />
-                </div>
+                <ListEmptyState description="当前需求不可用" />
               ) : collectionsQuery.isLoading ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty description="API测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                </div>
+                <ListEmptyState description="API测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : filteredCollections.length === 0 ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty
+                <ListEmptyState
                     description={
                       keyword.trim()
                         ? '没有符合搜索条件的API测试集'
@@ -490,8 +482,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                         新建API测试集
                       </ProjectActionButton>
                     )}
-                  </Empty>
-                </div>
+                  </ListEmptyState>
               ) : (
                 <div className={`entity-card-grid ${entityCardGridClass}`}>
                   {pagedCollections.map(renderCollectionCard)}

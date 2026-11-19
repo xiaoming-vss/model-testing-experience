@@ -1,3 +1,4 @@
+import { InterfaceFieldLabel } from './InterfaceFieldLabel'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Tooltip } from 'antd'
 import type { InterfaceRow } from '../types'
@@ -40,7 +41,7 @@ export function InterfaceHeadersPanel({ rows, readOnly, onChange }: Props) {
   return (
     <div className="if-param-group flex min-w-0 flex-col max-[760.01px]:overflow-x-auto">
       <div className="if-param-group-head mb-2 flex min-w-0 flex-wrap items-center gap-2">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">请求头</span>
+        <InterfaceFieldLabel>请求头</InterfaceFieldLabel>
         <span className="if-field-hint text-[11px] leading-[18px] text-[var(--srf-text-muted)]">请求头会随接口定义保存；导入时由文档字段覆盖。</span>
         {readOnly ? null : (
           <div className="if-quick-inject ms-auto inline-flex items-center gap-[5px] text-[11px] text-[var(--srf-text-muted)]">

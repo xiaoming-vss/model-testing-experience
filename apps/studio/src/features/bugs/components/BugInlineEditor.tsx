@@ -1,3 +1,4 @@
+import { BugDetailPanel } from './BugDetailPanel'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Form, Input, Select } from 'antd'
 import { RichTextEditor } from '@/shared/components/RichTextEditor'
@@ -65,25 +66,25 @@ export function BugInlineEditor({ bug, projectName, sprintNames, resolveUserName
       </>} />
     <div className="bug-detail-cols mt-5 grid w-full min-w-0 grid-cols-[minmax(0,2.15fr)_minmax(300px,1fr)] items-start gap-5 max-[1100.01px]:grid-cols-1">
       <div className="bug-detail-main min-w-0">
-        <section className="bug-detail-panel bug-detail-summary mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+        <BugDetailPanel className="bug-detail-summary">
           <div className="bug-detail-breadcrumb flex items-center gap-2.5 break-words font-mono text-[11px] text-[var(--srf-text-muted)]">{projectName || snapshot.projectId} / {formatBugNo(snapshot.bugNo)} · 编辑中</div>
           <Form.Item name="title" label="标题" rules={[{ required: true, whitespace: true, message: '请输入 Bug 标题' }]}>
             <Input maxLength={200} disabled={saveMutation.isPending} />
           </Form.Item>
           <div className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]"><UserDisplayName name={resolveUserName(snapshot.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(snapshot))}</div>
-        </section>
-        <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+        </BugDetailPanel>
+        <BugDetailPanel>
           <div className="bug-description-heading mb-1.5 flex flex-wrap items-center justify-between gap-2"><h2 className="bug-panel-title m-0 flex items-center gap-2 border-0 p-0 text-[14px] font-semibold text-[var(--srf-text)]">编辑问题描述</h2>
             <BugDescriptionTemplates value={descriptionHtml} onChange={(html) => { setDescriptionHtml(html); setRevision((value) => value + 1); setDirty(true) }} />
           </div>
           <RichTextEditor key={revision} value={descriptionHtml || snapshot.descriptionHtml} projectId={snapshot.projectId}
             disabled={saveMutation.isPending} onChange={(html) => { setDescriptionHtml(html); setDirty(true) }} ariaLabel="问题描述" />
-        </section>
-        <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5"><h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">附件</h2>
+        </BugDetailPanel>
+        <BugDetailPanel><h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">附件</h2>
           <BugAttachmentUploader existing={existing} items={attachments} disabled={saveMutation.isPending}
             onRemoveExisting={(fileId) => { model.setRemovedAttachmentFileIds((ids) => [...ids, fileId]); setDirty(true) }}
             onChange={(items) => { setAttachments(items); setDirty(true) }} />
-        </section>
+        </BugDetailPanel>
       </div>
       <BugDetailSidebar bug={snapshot} projectName={projectName} sprintNames={sprintNames} resolveUserName={resolveUserName}
         editors={{

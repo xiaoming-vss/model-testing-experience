@@ -111,7 +111,8 @@ Bug 列表。项目选择、顶部全局迭代选择与个人设置保留。Bug 
 - `tp-surface` 放在外框的祖先节点，提供主题 token 与样式作用域。`tp-list-body` 在需要中间包装层时使用，不增加第二层表面。
 - 内容滚动区四周内收 16px，表头、行背景及分隔线随内容内收；分页在滚动区外，位于同一外框底部。保留 `flex` / `min-height: 0` / `min-width: 0` 高度链。
 - 工具栏与内容之间不另加页面背景间隙。状态筛选条可放在同一外框内。Tab、标题和筛选的业务顺序由页面决定，窄屏允许换行，表格在内容区内部横向滚动。
-- 空态、加载、错误、只读权限都使用同一外框。分页只复用真实能力，不新增虚假分页。
+- 空态、加载、错误、只读权限都使用同一外框。分页只复用真实能力，不新增虚假分页。列表空态/加载态统一使用 `shared/components/ListEmptyState.tsx`（220px 居中占位，动作作为 children），不要在页面重复拼 `grid min-h-[220px] place-items-center`。
+- `ListSurface` 统一承接 `tp-board` / `tp-list-panel` / `tp-list-body` / `tp-list-scroll` / `table-footer`，页面只通过 `toolbar`、`notices`、`footer`、`children` 和兼容类接入；`aria-labelledby` 用于外部标题关联。
 - 需求详情：不显示页面级 Tab，需求标题与操作共用顶栏，下载原文件与编辑需求常驻；正文为生成全景与运行记录，需求文档、代码风险和生成设置从泳道入口以弹窗打开。运行列表内收 16px，文档弹窗保留自己的阅读布局。
 - 已接入：需求、迭代、测试单、API/UI 测试、Bug、代码风险分析、基础服务四类 Tab，以及资产库的用例库、接口库、软件仓库页签。需求详情已改为无 Tab 的生成全景布局，不套用本节的外置 Tab 规则。用例库和接口库的目录树、编辑器、图谱等复合布局按自身语义处理；未迁移页面不因公共样式更新自动改变布局。
 
@@ -146,7 +147,7 @@ Bug 列表。项目选择、顶部全局迭代选择与个人设置保留。Bug 
 - meta 两列：测试单为「所属迭代 / 被测版本」；API、UI 为「所属迭代 / 所属需求」；性能测试为「数据文件 / 用例版本」。最近更新保留在 footer。
 - 搜索、筛选、分页、空态、加载和错误态继续复用 `tp-list-*` 外框；空态在卡片滚动区内居中。窄屏由网格自动降为两列 / 单列，卡片高度随内容增长，不裁切正文或操作。
 
-验证：`shared/components/EntityCard.test.tsx`、`ListSurface.test.tsx`、`PageToolbar.test.tsx`、相关页面测试与浏览器浅色 / 深色检查；卡片悬停与键盘焦点不替代真实布局验收。
+验证：`shared/components/EntityCard.test.tsx`、`ListSurface.test.tsx`、`ListEmptyState.test.tsx`、`PageToolbar.test.tsx`、相关页面测试与浏览器浅色 / 深色检查；卡片悬停与键盘焦点不替代真实布局验收。
 
 ## 性能测试集工作台
 

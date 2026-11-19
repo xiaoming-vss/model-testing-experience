@@ -1,3 +1,4 @@
+import { ListSurface } from '@/shared/components/ListSurface'
 import {
   DeleteOutlined,
   EditOutlined,
@@ -151,65 +152,67 @@ export function SoftwareRepositoriesPage() {
 
   return (
     <div className={`workbench-page interface-library-page tp-surface tp-list-surface ${styles.pageRoot} ${interfacePageRootClass} ${interfaceScopes}`}>
-      <section className="tp-board tp-list-panel if-library-board">
-        <div className="if-library-toolbar tp-list-toolbar gap-y-2">
-          <div className="if-toolbar-filters flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="tp-list-title">软件仓库</h1>
-            <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
-            <DebouncedSearchInput
-              ariaLabel="搜索软件仓库"
-              placeholder="搜索软件仓库名称 / 仓库 / base path"
-              className="if-search-input w-[230px] max-[960.01px]:w-[190px]"
-              prefix={<SearchOutlined />}
-              resetKey={searchResetKey}
-              onCommit={setKeyword}
-            />
-          </div>
-          <div className="if-toolbar-actions ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-            <Tooltip title="刷新">
-              <Button
-                aria-label="刷新软件仓库列表"
-                icon={<ReloadOutlined />}
-                onClick={() => void repositoriesQuery.refetch()}
+      <ListSurface
+        className="if-library-board"
+        bodyClassName="if-apps-body"
+        scrollClassName="if-list-scroll"
+        toolbar={
+          <div className="if-library-toolbar tp-list-toolbar gap-y-2">
+            <div className="if-toolbar-filters flex min-w-0 flex-wrap items-center gap-2">
+              <h1 className="tp-list-title">软件仓库</h1>
+              <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
+              <DebouncedSearchInput
+                ariaLabel="搜索软件仓库"
+                placeholder="搜索软件仓库名称 / 仓库 / base path"
+                className="if-search-input w-[230px] max-[960.01px]:w-[190px]"
+                prefix={<SearchOutlined />}
+                resetKey={searchResetKey}
+                onCommit={setKeyword}
               />
-            </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              disabled={!canManage}
-              onClick={openCreate}
-            >
-              新建软件仓库
-            </Button>
+            </div>
+            <div className="if-toolbar-actions ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+              <Tooltip title="刷新">
+                <Button
+                  aria-label="刷新软件仓库列表"
+                  icon={<ReloadOutlined />}
+                  onClick={() => void repositoriesQuery.refetch()}
+                />
+              </Tooltip>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                disabled={!canManage}
+                onClick={openCreate}
+              >
+                新建软件仓库
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="if-apps-body tp-list-body flex min-h-0 flex-auto flex-col">
-          <div className="if-list-scroll tp-list-scroll min-h-0 flex-auto overflow-auto">
-            <Table
-              rowKey="softwareRepositoryId"
-              size="middle"
-              loading={repositoriesQuery.isLoading}
-              columns={columns}
-              dataSource={filteredRepositories}
-              pagination={false}
-              className="if-interface-table"
-              onRow={repository => ({
-                onClick: () => openRepositoryInterfaces(repository),
-              })}
-              locale={{
-                emptyText: repositoriesQuery.isLoading ? (
-                  <Spin />
-                ) : (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={keyword ? '没有匹配的软件仓库' : '还没有软件仓库'}
-                  />
-                ),
-              }}
-            />
-          </div>
-        </div>
-      </section>
+        }
+      >
+        <Table
+          rowKey="softwareRepositoryId"
+          size="middle"
+          loading={repositoriesQuery.isLoading}
+          columns={columns}
+          dataSource={filteredRepositories}
+          pagination={false}
+          className="if-interface-table tp-list-table"
+          onRow={repository => ({
+            onClick: () => openRepositoryInterfaces(repository),
+          })}
+          locale={{
+            emptyText: repositoriesQuery.isLoading ? (
+              <Spin />
+            ) : (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={keyword ? '没有匹配的软件仓库' : '还没有软件仓库'}
+              />
+            ),
+          }}
+        />
+      </ListSurface>
       <SoftwareRepositoryEditorDrawer
         open={editorOpen}
         projectId={projectId}

@@ -4,14 +4,6 @@
   "minFiles": 2,
   "duplicates": [
     {
-      "className": "grid min-h-[220px] place-items-center",
-      "count": 25
-    },
-    {
-      "className": "if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]",
-      "count": 10
-    },
-    {
       "className": "border-b border-[var(--srf-divider)] px-1.5 py-[5px] align-middle",
       "count": 9
     },
@@ -26,10 +18,6 @@
     {
       "className": "text-[11px] text-app-surface-text-muted",
       "count": 8
-    },
-    {
-      "className": "bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5",
-      "count": 7
     },
     {
       "className": "bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]",

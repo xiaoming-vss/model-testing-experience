@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -109,7 +110,7 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
     <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
       <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass, tableScrollClass)}>
         {connectionsQuery.isPending ? (
-          <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="监控接入加载中..." /></div>
+          <ListEmptyState image={Empty.PRESENTED_IMAGE_SIMPLE} description="监控接入加载中..." />
         ) : connections.length === 0 ? (
           <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
             <Empty

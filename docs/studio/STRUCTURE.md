@@ -149,7 +149,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 设计稿与既有约定冲突时以既有约定为准：设计稿的表格规格是表头 32px / 行高 36–40px，与 §7.5 锁定的列表指纹冲突，
 用例库 / 应用仍保持 42 / 48px；测试单 / API / UI 测试已改为卡片，不再有表头与行高。卡片共用
-`shared/components/EntityCard.tsx`（卡片表面 utility 内联）与 `shared/utils/surfaceClasses.ts` 的 `entityCardGridClass` / `entityCardDescClass`；列表板面与页头分别由 `ListSurface`、`PageToolbar` 收敛，页面样式只保留工具栏排布和主体特有内容。
+`shared/components/EntityCard.tsx`（卡片表面 utility 内联）与 `shared/utils/surfaceClasses.ts` 的 `entityCardGridClass` / `entityCardDescClass`；列表板面、页头与空态分别由 `ListSurface`、`PageToolbar`、`ListEmptyState` 收敛，页面样式只保留工具栏排布和主体特有内容。
 设计稿把测试集名称画成蓝色链接，这条只继续约束仍使用表格的列表——`app/styles/listNameConsistency.test.ts`
 现在断言功能测试集的共享名称样式；需求已改为卡片，卡片标题按 `EntityCard` 的 14.5px / 650 utility。
 设计稿中的旧布局以 [UI-GUIDELINES.md](UI-GUIDELINES.md) 为准：五页工具栏统一白色卡片；导航已移到侧栏，API 测试与测试单已去掉快速过滤整行。

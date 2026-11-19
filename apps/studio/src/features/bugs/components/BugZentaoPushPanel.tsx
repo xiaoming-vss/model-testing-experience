@@ -1,3 +1,4 @@
+import { BugDetailPanel } from './BugDetailPanel'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, InputNumber, Space, Typography } from 'antd'
@@ -102,7 +103,7 @@ export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: stri
   const canConfirm = canWrite && !busy && !fieldBusy && choicesValid
     && (existing ? !!current : data?.ready)
     && data?.ready
-  return <section className="bug-detail-panel mb-5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-5">
+  return <BugDetailPanel>
     <h2 className="bug-panel-title mb-4 flex items-center gap-2 border-b border-[var(--srf-divider)] pb-3 text-[14px] font-semibold text-[var(--srf-text)]">禅道同步</h2>
     {query.error && <Alert showIcon type="error" title={getErrorMessage(query.error)}
       action={<Button onClick={() => query.refetch()}>重新加载</Button>} />}
@@ -150,5 +151,5 @@ export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: stri
       <BugZentaoPullModal open={pullOpen} bugId={bugId} projectId={projectId}
         onClose={() => setPullOpen(false)} />
     )}
-  </section>
+  </BugDetailPanel>
 }

@@ -1,8 +1,9 @@
+import { ListSurface } from '@/shared/components/ListSurface'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Progress, Select, Space, Table, Tag, Typography } from 'antd'
+import { Alert, Button, Progress, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
@@ -10,7 +11,6 @@ import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessSc
 import { api, listItems, listTotal } from '@/services/api'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
-import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import type { PerfRunStatus, PerfSuiteRunSummary } from '../types'
 import {
   PERF_OUTCOME_LABELS,
@@ -121,64 +121,67 @@ export function PerformanceRunsPage() {
   return <ProjectAccessScope projectId={activeProjectId ?? ''}>
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
-          <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-              <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" onClick={() => navigate('/testing?tab=perf')} />
-              <h1 className="tp-list-title">运行记录</h1>
-              <Select
-                className="min-w-[190px]"
-                value={suiteFilter}
-                options={[
-                  { value: 'all', label: '全部测试集' },
-                  ...listItems(suitesQuery.data).map((suite) => ({ value: suite.suiteId, label: suite.name })),
-                ]}
-                onChange={setSuiteFilter}
-                loading={suitesQuery.isLoading}
-              />
-              <Select
-                className="min-w-[130px]"
-                value={statusFilter}
-                options={[
-                  { value: 'all', label: '全部状态' },
-                  ...Object.entries(PERF_STATUS_LABELS).map(([value, label]) => ({ value, label })),
-                ]}
-                onChange={setStatusFilter}
-              />
+        <ListSurface
+          className="workbench-panel workbench-panel-flat workbench-board-panel"
+          toolbar={
+            <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" onClick={() => navigate('/testing?tab=perf')} />
+                <h1 className="tp-list-title">运行记录</h1>
+                <Select
+                  className="min-w-[190px]"
+                  value={suiteFilter}
+                  options={[
+                    { value: 'all', label: '全部测试集' },
+                    ...listItems(suitesQuery.data).map((suite) => ({ value: suite.suiteId, label: suite.name })),
+                  ]}
+                  onChange={setSuiteFilter}
+                  loading={suitesQuery.isLoading}
+                />
+                <Select
+                  className="min-w-[130px]"
+                  value={statusFilter}
+                  options={[
+                    { value: 'all', label: '全部状态' },
+                    ...Object.entries(PERF_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+                  ]}
+                  onChange={setStatusFilter}
+                />
+              </div>
+              <Space size={8}>
+                <Text type="secondary">共 {total} 条运行 · 结果统一未判定</Text>
+                <Button icon={<ReloadOutlined />} loading={runsQuery.isFetching} onClick={() => runsQuery.refetch()}>
+                  刷新
+                </Button>
+              </Space>
             </div>
-            <Space size={8}>
-              <Text type="secondary">共 {total} 条运行 · 结果统一未判定</Text>
-              <Button icon={<ReloadOutlined />} loading={runsQuery.isFetching} onClick={() => runsQuery.refetch()}>
-                刷新
-              </Button>
-            </Space>
-          </div>
-          {runsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} className="m-4" /> : null}
-          <Card styles={{ body: { padding: 0 } }} className="m-4 overflow-hidden">
-            <Table<PerfSuiteRunSummary>
-              rowKey="suiteRunId"
-              size="middle"
-              columns={columns}
-              dataSource={runs}
-              loading={runsQuery.isLoading}
-              onRow={(run) => ({ onClick: () => navigate(`/performance/runs/${run.suiteRunId}`), className: 'cursor-pointer' })}
-              pagination={false}
-              locale={{ emptyText: <div className="py-12 text-center text-xs text-app-surface-text-muted">没有符合条件的运行记录。调整筛选条件或先运行一个测试集。</div> }}
+          }
+          notices={runsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} className="m-4" /> : null}
+          footer={
+            <ListPagination
+              loading={runsQuery.isFetching}
+              current={page}
+              pageSize={pageSize}
+              total={total}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage)
+                setPageSize(nextPageSize)
+              }}
             />
-            <div className={`table-footer ${tableFooterClass}`}>
-              <ListPagination
-                loading={runsQuery.isFetching}
-                current={page}
-                pageSize={pageSize}
-                total={total}
-                onChange={(nextPage, nextPageSize) => {
-                  setPage(nextPage)
-                  setPageSize(nextPageSize)
-                }}
-              />
-            </div>
-          </Card>
-        </section>
+          }
+        >
+          <Table<PerfSuiteRunSummary>
+            className="tp-list-table"
+            rowKey="suiteRunId"
+            size="middle"
+            columns={columns}
+            dataSource={runs}
+            loading={runsQuery.isLoading}
+            onRow={(run) => ({ onClick: () => navigate(`/performance/runs/${run.suiteRunId}`), className: 'cursor-pointer' })}
+            pagination={false}
+            locale={{ emptyText: <div className="py-12 text-center text-xs text-app-surface-text-muted">没有符合条件的运行记录。调整筛选条件或先运行一个测试集。</div> }}
+          />
+        </ListSurface>
       </div>
     </div>
   </ProjectAccessScope>

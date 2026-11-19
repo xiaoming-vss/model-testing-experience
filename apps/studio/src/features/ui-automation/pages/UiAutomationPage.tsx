@@ -1,4 +1,5 @@
-import { Alert, Empty } from 'antd'
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
+import { Alert } from 'antd'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -130,13 +131,9 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
 
           {!activeProjectId ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="请先选择项目" />
-            </div>
+            <ListEmptyState description="请先选择项目" />
           ) : !isRequirementLocked && !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="当前项目下暂无迭代" />
-            </div>
+            <ListEmptyState description="当前项目下暂无迭代" />
           ) : (
             <UiTestSuiteSection
               ref={uiTestSuiteSectionRef}

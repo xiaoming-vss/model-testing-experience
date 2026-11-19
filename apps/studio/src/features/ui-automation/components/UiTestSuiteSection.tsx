@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { EntityCard } from '@/shared/components/EntityCard'
@@ -322,12 +323,9 @@ export const UiTestSuiteSection = forwardRef<
       <div className="ui-suite-card-body tp-list-body">
         <div className="flex min-h-0 flex-col p-4 ui-suite-card-scroll tp-list-scroll">
           {suitesQuery.isLoading ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            </div>
+            <ListEmptyState description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : filteredSuites.length === 0 ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty
+            <ListEmptyState
                 image={<AppstoreOutlined />}
                 description={
                   <Space orientation="vertical" size={4}>
@@ -347,8 +345,7 @@ export const UiTestSuiteSection = forwardRef<
                     新建测试集
                   </ProjectActionButton>
                 )}
-              </Empty>
-            </div>
+              </ListEmptyState>
           ) : (
             <div className={`entity-card-grid ${entityCardGridClass}`}>
               {pagedSuites.map(renderSuiteCard)}

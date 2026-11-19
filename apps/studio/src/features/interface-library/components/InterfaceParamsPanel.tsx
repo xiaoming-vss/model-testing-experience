@@ -1,3 +1,4 @@
+import { InterfaceFieldLabel } from './InterfaceFieldLabel'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Select, Tooltip } from 'antd'
 import type { InterfaceRow } from '../types'
@@ -20,7 +21,7 @@ export function InterfaceParamsPanel({ title, hint, location, rows, readOnly, on
   return (
     <div className="if-param-group flex min-w-0 flex-col max-[760.01px]:overflow-x-auto">
       <div className="if-param-group-head mb-2 flex min-w-0 flex-wrap items-center gap-2">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">{title}</span>
+        <InterfaceFieldLabel>{title}</InterfaceFieldLabel>
         <span className="if-field-hint text-[11px] leading-[18px] text-[var(--srf-text-muted)]">{hint}</span>
       </div>
       <table className="if-kv-table w-full table-fixed overflow-hidden rounded-[var(--srf-radius-control)] border border-separate border-spacing-0 border-[var(--srf-card-border)] max-[760.01px]:min-w-[720px] [&_tbody_tr:last-child_td]:border-b-0">

@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { AppstoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -314,20 +315,13 @@ export function TestOrderPage() {
           ) : undefined}
         >
           {!activeProjectId ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="请先选择项目" />
-            </div>
+            <ListEmptyState description="请先选择项目" />
           ) : !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="当前项目下暂无迭代" />
-            </div>
+            <ListEmptyState description="当前项目下暂无迭代" />
           ) : ordersQuery.isLoading ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            </div>
+            <ListEmptyState description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : total === 0 ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty
+            <ListEmptyState
                 image={<AppstoreOutlined />}
                 description={
                   <Space orientation="vertical" size={4}>
@@ -364,8 +358,7 @@ export function TestOrderPage() {
                     新建测试单
                   </ProjectActionButton>
                 )}
-              </Empty>
-            </div>
+              </ListEmptyState>
           ) : (
             <div className={`entity-card-grid ${entityCardGridClass}`}>
               {pageOrders.map(renderOrderCard)}

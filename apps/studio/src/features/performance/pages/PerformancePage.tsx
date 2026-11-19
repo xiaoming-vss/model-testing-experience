@@ -1,3 +1,5 @@
+import { ListSurface } from '@/shared/components/ListSurface'
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { useEffect, useMemo, useState } from 'react'
 import '@/shared/styles/surface-tokens.css'
 import { Link, useNavigate } from 'react-router-dom'
@@ -6,7 +8,6 @@ import { AppstoreOutlined, SearchOutlined, SettingOutlined } from '@ant-design/i
 import { Alert, Button, Empty, Input, Popconfirm, Select, Space, Tag, Tooltip, Typography } from 'antd'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ListPagination } from '@/shared/components/ListPagination'
-import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { EnvironmentDrawer } from '@/domain/projects/components/EnvironmentDrawer'
@@ -199,99 +200,98 @@ export function PerformancePage() {
   return <ProjectAccessScope projectId={activeProjectId ?? ''}>
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
-          <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
-            <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
-              <div className="api-panel-head-main flex min-w-0 flex-wrap items-center gap-2 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5">
-                <h1 className="tp-list-title">性能测试</h1>
-                <div className="api-filter-group">
-                  <div className="api-filter-field">
-                    <span className="api-filter-field-label">环境</span>
-                    <Select
-                      className="api-filter-select business-filter-select"
-                      value={resolvedEnvironmentId}
-                      options={environmentOptions}
-                      loading={environmentsQuery.isLoading}
-                      placeholder="选择性能环境"
-                      onChange={setSelectedEnvironmentId}
-                      disabled={!activeProjectId || environments.length === 0}
+        <ListSurface
+          className="workbench-panel workbench-panel-flat workbench-board-panel"
+          toolbar={
+            <div className="panel-header api-panel-header api-test-header tp-list-toolbar flex flex-col items-stretch">
+              <div className="api-test-header-main flex flex-wrap items-center justify-between gap-2 p-0">
+                <div className="api-panel-head-main flex min-w-0 flex-wrap items-center gap-2 max-[900.01px]:w-full max-[900.01px]:flex-col max-[900.01px]:items-start max-[900.01px]:gap-2.5">
+                  <h1 className="tp-list-title">性能测试</h1>
+                  <div className="api-filter-group">
+                    <div className="api-filter-field">
+                      <span className="api-filter-field-label">环境</span>
+                      <Select
+                        className="api-filter-select business-filter-select"
+                        value={resolvedEnvironmentId}
+                        options={environmentOptions}
+                        loading={environmentsQuery.isLoading}
+                        placeholder="选择性能环境"
+                        onChange={setSelectedEnvironmentId}
+                        disabled={!activeProjectId || environments.length === 0}
+                      />
+                    </div>
+                  </div>
+                  <div className="api-test-search-field w-72 min-w-[240px] max-w-full">
+                    <Input
+                      className="api-filter-input api-test-search-input"
+                      allowClear
+                      prefix={<SearchOutlined />}
+                      placeholder="搜索测试集名称 / 描述"
+                      value={keyword}
+                      onChange={(event) => setKeyword(event.target.value)}
                     />
                   </div>
                 </div>
-                <div className="api-test-search-field w-72 min-w-[240px] max-w-full">
-                  <Input
-                    className="api-filter-input api-test-search-input"
-                    allowClear
-                    prefix={<SearchOutlined />}
-                    placeholder="搜索测试集名称 / 描述"
-                    value={keyword}
-                    onChange={(event) => setKeyword(event.target.value)}
-                  />
-                </div>
-              </div>
-              <Space size={8} className="api-test-header-actions flex-none items-center">
-                <Button icon={<SettingOutlined />} disabled={!activeProjectId} onClick={() => setEnvironmentDrawerOpen(true)}>
-                  环境管理
-                </Button>
-                <Button onClick={() => navigate('/performance/runs')}>运行记录</Button>
-                <ProjectActionButton
-                  action="write"
-                  projectId={activeProjectId}
-                  type="primary"
-                  className="action-btn-create"
-                  operation="create"
-                  disabled={!activeProjectId}
-                  onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}
-                >
-                  新建测试集
-                </ProjectActionButton>
-              </Space>
-            </div>
-          </div>
-
-          {environmentsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
-          {suitesQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
-
-          <div className="api-test-card-body tp-list-body">
-            <div className="flex min-h-0 flex-col p-4 api-test-card-scroll tp-list-scroll">
-              {suitesQuery.isPending ? (
-                <div className="grid min-h-[220px] place-items-center"><Empty description="性能测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
-              ) : filteredSuites.length === 0 ? (
-                <div className="grid min-h-[220px] place-items-center">
-                  <Empty
-                    image={<AppstoreOutlined />}
-                    description={<Space orientation="vertical" size={4}>
-                      <Text strong>{keyword.trim() ? '没有符合搜索条件的性能测试集' : '当前项目还没有性能测试集'}</Text>
-                      <Text type="secondary">
-                        {keyword.trim() ? '换个关键词，或者清空搜索看全部测试集。' : '先创建测试集，再在测试集内添加按顺序串行执行的性能用例。'}
-                      </Text>
-                    </Space>}
+                <Space size={8} className="api-test-header-actions flex-none items-center">
+                  <Button icon={<SettingOutlined />} disabled={!activeProjectId} onClick={() => setEnvironmentDrawerOpen(true)}>
+                    环境管理
+                  </Button>
+                  <Button onClick={() => navigate('/performance/runs')}>运行记录</Button>
+                  <ProjectActionButton
+                    action="write"
+                    projectId={activeProjectId}
+                    type="primary"
+                    className="action-btn-create"
+                    operation="create"
+                    disabled={!activeProjectId}
+                    onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}
                   >
-                    {keyword.trim()
-                      ? <Button onClick={() => setKeyword('')}>清空搜索</Button>
-                      : <ProjectActionButton action="write" projectId={activeProjectId} type="primary" className="action-btn-create" operation="create" onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}>
-                        新建测试集
-                      </ProjectActionButton>}
-                  </Empty>
-                </div>
-              ) : (
-                <div className={`entity-card-grid ${entityCardGridClass}`}>{pagedSuites.map(renderSuiteCard)}</div>
-              )}
+                    新建测试集
+                  </ProjectActionButton>
+                </Space>
+              </div>
             </div>
-            <div className={`table-footer api-test-footer ${tableFooterClass}`}>
-              <ListPagination
-                loading={suitesQuery.isFetching || suitesQuery.isError}
-                current={page}
-                pageSize={pageSize}
-                total={filteredSuites.length}
-                onChange={(nextPage, nextPageSize) => {
-                  setPage(nextPage)
-                  setPageSize(nextPageSize)
-                }}
-              />
-            </div>
-          </div>
-        </section>
+          }
+          notices={<>
+            {environmentsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
+            {suitesQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
+          </>}
+          footer={
+            <ListPagination
+              loading={suitesQuery.isFetching || suitesQuery.isError}
+              current={page}
+              pageSize={pageSize}
+              total={filteredSuites.length}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage)
+                setPageSize(nextPageSize)
+              }}
+            />
+          }
+          footerClassName="api-test-footer"
+        >
+          {suitesQuery.isPending ? (
+            <ListEmptyState description="性能测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : filteredSuites.length === 0 ? (
+            <ListEmptyState
+              image={<AppstoreOutlined />}
+              description={<Space orientation="vertical" size={4}>
+                <Text strong>{keyword.trim() ? '没有符合搜索条件的性能测试集' : '当前项目还没有性能测试集'}</Text>
+                <Text type="secondary">
+                  {keyword.trim() ? '换个关键词，或者清空搜索看全部测试集。' : '先创建测试集，再在测试集内添加按顺序串行执行的性能用例。'}
+                </Text>
+              </Space>}
+            >
+              {keyword.trim()
+                ? <Button onClick={() => setKeyword('')}>清空搜索</Button>
+                : <ProjectActionButton action="write" projectId={activeProjectId} type="primary" className="action-btn-create" operation="create" onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}>
+                  新建测试集
+                </ProjectActionButton>}
+            </ListEmptyState>
+          ) : (
+            <div className={`entity-card-grid ${entityCardGridClass}`}>{pagedSuites.map(renderSuiteCard)}</div>
+          )}
+        </ListSurface>
       </div>
 
       <PerfSuiteDrawer

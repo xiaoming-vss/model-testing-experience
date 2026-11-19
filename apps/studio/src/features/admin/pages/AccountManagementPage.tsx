@@ -1,10 +1,10 @@
+import { ListSurface } from '@/shared/components/ListSurface'
 import { Alert, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ListPagination } from '@/shared/components/ListPagination'
-import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { listItems, listTotal } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
@@ -152,68 +152,66 @@ export function AccountManagementPage() {
   return (
     <div className="workbench-page account-management-page tp-list-surface tp-surface">
       <div className="flex min-h-0 flex-1 flex-col px-[var(--app-page-gutter)] pt-3 pb-4">
-        <section className="tp-board tp-list-panel" aria-labelledby="account-management-title">
-          <div className="tp-list-toolbar flex-wrap">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="tp-list-title" id="account-management-title">账号管理</h1>
-              <Input.Search
-                className="w-[288px] max-w-full"
-                allowClear
-                aria-label="搜索用户名或邮箱"
-                placeholder="搜索用户名或邮箱"
-                onSearch={(value) => { setSearch(value.trim()); setPage(1) }}
-              />
-              <Select
-                className="w-[180px]"
-                aria-label="账号状态"
-                value={status}
-                onChange={(value) => { setStatus(value); setPage(1) }}
-                options={[
-                  { value: '', label: '全部状态' },
-                  { value: 'active', label: '正常' },
-                  { value: 'disabled', label: '已禁用' },
-                  { value: 'pending_ldap', label: '待 LDAP 关联' },
-                ]}
-              />
+        <ListSurface
+          ariaLabelledBy="account-management-title"
+          toolbar={
+            <div className="tp-list-toolbar flex-wrap">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h1 className="tp-list-title" id="account-management-title">账号管理</h1>
+                <Input.Search
+                  className="w-[288px] max-w-full"
+                  allowClear
+                  aria-label="搜索用户名或邮箱"
+                  placeholder="搜索用户名或邮箱"
+                  onSearch={(value) => { setSearch(value.trim()); setPage(1) }}
+                />
+                <Select
+                  className="w-[180px]"
+                  aria-label="账号状态"
+                  value={status}
+                  onChange={(value) => { setStatus(value); setPage(1) }}
+                  options={[
+                    { value: '', label: '全部状态' },
+                    { value: 'active', label: '正常' },
+                    { value: 'disabled', label: '已禁用' },
+                    { value: 'pending_ldap', label: '待 LDAP 关联' },
+                  ]}
+                />
+              </div>
+              <Space size={8} className="tp-refresh-actions">
+                <ActionButton
+                  operation="refresh"
+                  loading={usersQuery.isFetching}
+                  onClick={() => { void usersQuery.refetch() }}
+                />
+              </Space>
             </div>
-            <Space size={8} className="tp-refresh-actions">
-              <ActionButton
-                operation="refresh"
-                loading={usersQuery.isFetching}
-                onClick={() => { void usersQuery.refetch() }}
-              />
-            </Space>
-          </div>
-
-          {usersQuery.error ? (
+          }
+          notices={usersQuery.error ? (
             <Alert className="mx-4 mt-3" showIcon type="error" title={getErrorMessage(usersQuery.error)} action={<Button onClick={() => { void usersQuery.refetch() }}>重试</Button>} />
           ) : null}
-
-          <div className="tp-list-body">
-            <div className="tp-list-scroll">
-              <Table<AdminUser>
-                className="tp-list-table"
-                rowKey="userId"
-                dataSource={listItems(usersQuery.data)}
-                columns={columns}
-                loading={usersQuery.isLoading}
-                pagination={false}
-                tableLayout="fixed"
-                scroll={{ x: 1240 }}
-                locale={{ emptyText: <Empty description="暂无账号" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-              />
-            </div>
-            <div className={`table-footer ${tableFooterClass}`}>
-              <ListPagination
-                loading={usersQuery.isFetching || usersQuery.isError}
-                current={page}
-                pageSize={pageSize}
-                total={listTotal(usersQuery.data)}
-                onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }}
-              />
-            </div>
-          </div>
-        </section>
+          footer={
+            <ListPagination
+              loading={usersQuery.isFetching || usersQuery.isError}
+              current={page}
+              pageSize={pageSize}
+              total={listTotal(usersQuery.data)}
+              onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }}
+            />
+          }
+        >
+          <Table<AdminUser>
+            className="tp-list-table"
+            rowKey="userId"
+            dataSource={listItems(usersQuery.data)}
+            columns={columns}
+            loading={usersQuery.isLoading}
+            pagination={false}
+            tableLayout="fixed"
+            scroll={{ x: 1240 }}
+            locale={{ emptyText: <Empty description="暂无账号" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+          />
+        </ListSurface>
       </div>
 
       <Modal

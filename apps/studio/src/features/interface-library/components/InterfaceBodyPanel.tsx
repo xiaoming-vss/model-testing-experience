@@ -1,3 +1,4 @@
+import { InterfaceFieldLabel } from './InterfaceFieldLabel'
 import { FormatPainterOutlined } from '@ant-design/icons'
 import { Button, Empty } from 'antd'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
@@ -36,7 +37,7 @@ export function InterfaceBodyPanel({
   return (
     <div className="if-body-panel flex flex-col gap-3.5">
       <div className="if-body-type-row flex items-center gap-3">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">请求体类型</span>
+        <InterfaceFieldLabel>请求体类型</InterfaceFieldLabel>
         <div className="if-pill-group inline-flex rounded-full border border-[var(--srf-card-border)] bg-[var(--srf-hover)] p-0.5">
           {BODY_TYPES.map(type => (
             <button

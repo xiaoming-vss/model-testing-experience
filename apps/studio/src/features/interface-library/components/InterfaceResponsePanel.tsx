@@ -1,3 +1,4 @@
+import { InterfaceFieldLabel } from './InterfaceFieldLabel'
 import { FormatPainterOutlined } from '@ant-design/icons'
 import { Button, Input, InputNumber } from 'antd'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
@@ -37,7 +38,7 @@ export function InterfaceResponsePanel({
     <div className="if-response-panel flex flex-col gap-3.5">
       <div className="if-response-meta flex flex-wrap items-end gap-3">
         <label className="flex w-[130px] flex-col gap-[5px] max-[760.01px]:w-[110px]">
-          <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">状态码</span>
+          <InterfaceFieldLabel>状态码</InterfaceFieldLabel>
           <InputNumber
             className="w-full"
             min={100}
@@ -49,7 +50,7 @@ export function InterfaceResponsePanel({
           />
         </label>
         <label className="if-response-desc flex flex-[1_1_260px] w-auto flex-col gap-[5px]">
-          <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">响应说明</span>
+          <InterfaceFieldLabel>响应说明</InterfaceFieldLabel>
           <Input
             value={draft.responseDescription}
             disabled={readOnly}

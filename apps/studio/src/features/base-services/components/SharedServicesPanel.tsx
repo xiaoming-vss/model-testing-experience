@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { SharedServiceDialogs } from './SharedServiceDialogs'
@@ -144,7 +145,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     <div className={cx('base-services-connection-shell', serviceCardShellClass)}>
       <div className={cx('table-body-scroll base-services-card-scroll tp-list-scroll', serviceCardScrollClass, tableScrollClass)}>
         {query.isPending || (provider === 'mcp' && templates.isPending) ? (
-          <div className="grid min-h-[220px] place-items-center"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>
+          <ListEmptyState image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} />
         ) : services.length === 0 ? (
           <div className={cx('base-services-empty-card base-services-empty-card-list', serviceCardEmptyClass)}>
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={can('manage') ? provider === 'mcp' ? '暂无 MCP，先新增 MCP，再配置本人授权' : '暂无服务，先创建服务，再单独授权' : '暂无服务，请项目所有者创建'} />

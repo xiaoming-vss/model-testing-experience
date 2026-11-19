@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { cx } from '@/shared/utils/cx'
@@ -863,13 +864,9 @@ export function CaseLibraryPage() {
           ) : null}
 
           {!activeProjectId ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="请先选择项目" />
-            </div>
+            <ListEmptyState description="请先选择项目" />
           ) : sprintsQuery.error && sprints.length === 0 ? null : !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="当前项目下暂无迭代" />
-            </div>
+            <ListEmptyState description="当前项目下暂无迭代" />
           ) : (
             <div className="case-library-layout grid min-h-0 flex-1 grid-cols-[var(--app-sidebar-width)_minmax(0,1fr)] gap-4 overflow-hidden max-[1180.01px]:grid-cols-1">
               <aside className="api-case-sidebar case-library-tree flex min-h-0 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
@@ -913,17 +910,13 @@ export function CaseLibraryPage() {
                           onClick={() => suitesQuery.refetch()}>重试测试集</ProjectActionButton>} />
                     ) : null}
                     {suitesQuery.isLoading ? (
-                      <div className="grid min-h-[220px] place-items-center max-[1180.01px]:min-h-24">
-                        <Empty description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                      </div>
+                      <ListEmptyState className="max-[1180.01px]:min-h-24" description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                     ) : suitesQuery.error && suites.length === 0 ? null : visibleSuites.length === 0 ? (
-                      <div className="grid min-h-[220px] place-items-center max-[1180.01px]:min-h-24">
-                        <Empty description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
+                      <ListEmptyState className="max-[1180.01px]:min-h-24" description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
                           {suiteFilter.trim() ? (
                             <ProjectActionButton action="read" onClick={() => setSuiteFilter('')}>清除测试集搜索</ProjectActionButton>
                           ) : null}
-                        </Empty>
-                      </div>
+                        </ListEmptyState>
                     ) : (
                       visibleSuites.map((suite) => {
                         const id = normalizeFunctionTestSuiteId(suite)
@@ -1062,12 +1055,9 @@ export function CaseLibraryPage() {
                         onClick={() => casesQuery.refetch()}>重试用例</ProjectActionButton>} />
                   ) : null}
                   {casesQuery.isLoading ? (
-                    <div className="grid min-h-[220px] place-items-center">
-                      <Empty description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    </div>
+                    <ListEmptyState description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   ) : casesQuery.isError && cases.length === 0 ? null : cases.length === 0 ? (
-                    <div className="grid min-h-[220px] place-items-center">
-                      <Empty
+                    <ListEmptyState
                         image={<AppstoreOutlined />}
                         description={
                           <Space orientation="vertical" size={4}>
@@ -1100,8 +1090,7 @@ export function CaseLibraryPage() {
                             新建用例
                           </ProjectActionButton>
                         )}
-                      </Empty>
-                    </div>
+                      </ListEmptyState>
                   ) : (
                     <Table<FunctionCaseLibraryItem>
                       className="functional-suite-list-table tp-list-table"

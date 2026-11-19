@@ -1,3 +1,4 @@
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { RequirementCards } from '../components/RequirementCards'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
@@ -470,9 +471,7 @@ export function ProjectsPage() {
                   }}
                 />}>
                 {sprintsQuery.isLoading || requirementsQuery.isLoading ? (
-                  <div className="grid min-h-[220px] place-items-center">
-                    <Empty description="需求加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
+                  <ListEmptyState description="需求加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : null}
                 {!sprintsQuery.isLoading && !sprintsQuery.error && sprints.length === 0 ? (
                   <Empty description="请先创建迭代，再添加需求" />

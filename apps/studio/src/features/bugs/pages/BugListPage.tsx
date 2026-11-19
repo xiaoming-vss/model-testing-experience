@@ -1,5 +1,7 @@
+import { ListSurface } from '@/shared/components/ListSurface'
+import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { ListPagination } from '@/shared/components/ListPagination'
-import { tableFooterClass, tableScrollClass } from '@/shared/utils/surfaceClasses'
+import { tableScrollClass } from '@/shared/utils/surfaceClasses'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
 import styles from '../styles/bugs.module.css'
@@ -34,54 +36,44 @@ export function BugListPage() {
   return (
     <div className={`workbench-page api-automation-page functional-test-page tp-list-surface bugs-page tp-surface ${styles.root}`}>
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board tp-list-panel">
-          <BugListToolbar model={model} />
-
-          {bugsQuery.error ? (
+        <ListSurface
+          className="workbench-panel workbench-panel-flat workbench-board-panel"
+          toolbar={<BugListToolbar model={model} />}
+          notices={bugsQuery.error ? (
             <Alert showIcon type="error" title={getErrorMessage(bugsQuery.error)} action={<ProjectActionButton action="bug_read" onClick={() => bugsQuery.refetch()}>重试</ProjectActionButton>} />
           ) : null}
-
+          footer={activeProjectId ? (
+            <ListPagination loading={bugsQuery.isFetching || bugsQuery.isError} current={page} pageSize={pageSize} total={total}
+              onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }} />
+          ) : undefined}
+          footerClassName="bugs-footer"
+          scrollClassName={tableScrollClass}
+        >
           {!activeProjectId ? (
-            <div className="grid min-h-[220px] place-items-center">
-              <Empty description="请先选择项目" />
-            </div>
+            <ListEmptyState description="请先选择项目" />
+          ) : bugsQuery.isLoading ? (
+            <ListEmptyState description="Bug 列表加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : bugs.length === 0 ? (
+            <ListEmptyState description="当前筛选范围内还没有 Bug" />
           ) : (
-            <div className="bugs-table-card tp-list-body flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] shadow-[0_1px_2px_var(--srf-shadow-color)]">
-              <div className={`table-body-scroll bugs-table-scroll tp-list-scroll min-h-0 flex-1 overflow-auto ${tableScrollClass}`}>
-                {bugsQuery.isLoading ? (
-                  <div className="grid min-h-[220px] place-items-center">
-                    <Empty description="Bug 列表加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
-                ) : bugs.length === 0 ? (
-                  <div className="grid min-h-[220px] place-items-center">
-                    <Empty description="当前筛选范围内还没有 Bug" />
-                  </div>
-                ) : (
-                  <Table<Bug>
-                    className="functional-suite-list-table tp-list-table"
-                    columns={columns}
-                    dataSource={bugs}
-                    rowKey={(bug) => bug.bugId}
-                    pagination={false}
-                    tableLayout="fixed"
-                    scroll={{ x: 1560 }}
-                    onChange={handleTableChange}
-                    onRow={(bug) => ({
-                      onClick: (event) => {
-                        if ((event.target as HTMLElement).closest('.bug-row-actions')) return
-                        navigate(`/bugs/${bug.bugId}`)
-                      },
-                    })}
-                  />
-                )}
-              </div>
-              <div className={`table-footer bugs-footer ${tableFooterClass}`}>
-                <ListPagination loading={bugsQuery.isFetching || bugsQuery.isError} current={page} pageSize={pageSize} total={total}
-                  onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }} />
-              </div>
-            </div>
+            <Table<Bug>
+              className="functional-suite-list-table tp-list-table"
+              columns={columns}
+              dataSource={bugs}
+              rowKey={(bug) => bug.bugId}
+              pagination={false}
+              tableLayout="fixed"
+              scroll={{ x: 1560 }}
+              onChange={handleTableChange}
+              onRow={(bug) => ({
+                onClick: (event) => {
+                  if ((event.target as HTMLElement).closest('.bug-row-actions')) return
+                  navigate(`/bugs/${bug.bugId}`)
+                },
+              })}
+            />
           )}
-        </section>
+        </ListSurface>
       </div>
 
       <BugTransitionModal bug={transition?.bug ?? null} action={transition?.action ?? null}

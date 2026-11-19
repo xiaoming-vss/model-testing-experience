@@ -1,3 +1,4 @@
+import { InterfaceFieldLabel } from './InterfaceFieldLabel'
 import { Input, Select } from 'antd'
 import type { RequirementOption } from '@/features/requirements/types'
 import type { ApiInterface } from '../types'
@@ -44,7 +45,7 @@ export function InterfaceSettingsPanel({
   return (
     <div className="if-settings-panel flex max-w-[760px] flex-col gap-3.5">
       <label className="if-settings-field flex flex-col gap-1.5">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">接口描述</span>
+        <InterfaceFieldLabel>接口描述</InterfaceFieldLabel>
         <Input.TextArea
           value={draft.description}
           rows={3}
@@ -56,7 +57,7 @@ export function InterfaceSettingsPanel({
         />
       </label>
       <label className="if-settings-field flex flex-col gap-1.5">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">标签</span>
+        <InterfaceFieldLabel>标签</InterfaceFieldLabel>
         <Input
           value={tagsText}
           disabled={readOnly}
@@ -74,7 +75,7 @@ export function InterfaceSettingsPanel({
         />
       </label>
       <div className="if-settings-field flex flex-col gap-1.5">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">关联需求</span>
+        <InterfaceFieldLabel>关联需求</InterfaceFieldLabel>
         <Select
           mode="multiple"
           allowClear
@@ -106,7 +107,7 @@ export function InterfaceSettingsPanel({
         <span className="if-field-hint text-[11px] leading-[18px] text-[var(--srf-text-muted)]">只关联需求；迭代通过需求归属自动推导。</span>
       </div>
       <div className="if-settings-field flex flex-col gap-1.5">
-        <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">来源信息</span>
+        <InterfaceFieldLabel>来源信息</InterfaceFieldLabel>
         <dl>
           <div><dt>来源</dt><dd>{SOURCE_LABELS[source.type] ?? source.type ?? '手工创建'}</dd></div>
           {source.name ? <div><dt>文档</dt><dd>{source.name}</dd></div> : null}
@@ -118,7 +119,7 @@ export function InterfaceSettingsPanel({
       </div>
       {draft.security || draft.securitySchemes ? (
         <div className="if-settings-field flex flex-col gap-1.5">
-          <span className="if-field-label text-[12px] font-[650] leading-5 text-[var(--srf-text)]">认证要求</span>
+          <InterfaceFieldLabel>认证要求</InterfaceFieldLabel>
           <pre className="if-security-json m-0 max-h-[220px] overflow-auto whitespace-pre-wrap rounded-[8px] border border-[var(--srf-card-border)] bg-[var(--srf-chip)] px-3 py-2.5 text-[12px] leading-[1.5] text-[var(--srf-text-secondary)] [overflow-wrap:anywhere]">
             {JSON.stringify(
               { security: draft.security, securitySchemes: draft.securitySchemes },
