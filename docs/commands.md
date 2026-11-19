@@ -33,6 +33,8 @@
 | 本地启动单个服务 | `python3 scripts/manage.py run <control-plane\|ai-worker\|api-ui-worker\|integration-worker\|perf-worker\|studio>` | 已安装对应项目依赖 |
 | 数据库迁移 | `python3 scripts/manage.py migrate` | 数据库可达；迁移基线只支持空库初始化 |
 | K8s chart 静态检查 | `for chart in deploy/helm/charts/*; do helm lint "$chart"; done` | 已安装 Helm；K8s 不是本地默认部署方式 |
+| 文档一致性检查 | `python3 scripts/check_docs.py` | 默认不访问外部网络；`--check-urls` 可选检查外部链接 |
+| 文档检查脚本测试 | `python3 -m unittest tests.test_documents -v` | — |
 
 根编排变更至少执行“根编排测试”和“Compose 配置校验”。`init` 与 `configure` 的具体配置项见[统一配置、部署与本地开发](deployment.md)。
 
@@ -56,7 +58,7 @@
 
 - `CONTROL_PLANE_TEST_DATABASE_URL`：指向可丢弃的 MySQL 测试库后运行对应专项。
 - `CONTROL_PLANE_STORAGE_LIVE`：启用真实对象存储验收后运行对应专项。
-- 这两类用例共享一次性数据库或存储，`scripts/check.py` 会自动退回单进程。
+- 这两类用例共享一次性数据库或存储，`apps/control-plane/scripts/check.py` 会自动退回单进程。
 
 ## ai-worker
 
@@ -142,13 +144,13 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | 变更范围 | 最小入口 |
 | --- | --- |
 | 根编排、Compose、部署脚本 | 根编排测试 + Compose 配置校验 |
-| control-plane | `scripts/check.py`，再按[控制面开发规则](control-plane/development-rules.md#验证与交付)追加专项 |
+| control-plane | `apps/control-plane/scripts/check.py`，再按[控制面开发规则](control-plane/development-rules.md#验证与交付)追加专项 |
 | ai-worker | unittest 全量，再按[AI Worker 开发规则](ai-worker/development-rules.md#验证入口)追加专项 |
 | api-ui-worker | pytest 全量，再按[API/UI Worker 开发规则](api-ui-worker/development-rules.md#验证入口)追加专项 |
 | integration-worker | pytest 全量，再按[集成 Worker 开发规则](integration-worker/development-rules.md#验证入口)追加专项 |
 | perf-worker | pytest 全量，再按[性能 Worker 开发规则](perf-worker/development-rules.md#验证入口)追加专项 |
 | studio | `npm run verify` + `npm test`，再按改动范围执行对应页面/样式检查 |
-| 纯文档 | 核对内容、链接和路径；09 完成后可运行 `python3 scripts/check_docs.py` |
+| 纯文档 | 运行 `python3 scripts/check_docs.py`；涉及新增文档时再运行 `python3 -m unittest tests.test_documents -v` |
 
 共享基础层、跨项目协议或权限/领取/回传/停止语义变更时扩大回归范围。实际执行少于本表要求时，必须在交付说明中写明原因和未验证范围。
 
