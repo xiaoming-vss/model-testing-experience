@@ -10,6 +10,7 @@
  */
 
 import type { UiTestCaseRun, UiTestCaseRunStepResult, UiTestSuiteRunSummary } from '@/services/api'
+import { compareByOrderNo } from '@/shared/utils/order'
 
 import { getExecutionStatusMeta, isUiRunPollingStatus } from './runHelpers'
 
@@ -151,7 +152,7 @@ export function buildUiStepSnapshots(stepResults: UiTestCaseRunStepResult[]): Ui
   const runStartedAt = startedTimes.length > 0 ? Math.min(...startedTimes) : null
 
   return [...stepResults]
-    .sort((left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER))
+    .sort(compareByOrderNo)
     .map((stepResult, index) => {
       const order = stepResult.orderNo ?? index + 1
       const meta = getExecutionStatusMeta(stepResult.status)
@@ -246,9 +247,7 @@ function getUiStepLogLevel(snapshot: UiStepSnapshot): UiRunLogLevel {
  * 所以每行都直接来自该步骤的结果字段，最后一行的汇总结论也按实际计数生成。
  */
 export function buildUiRunLogLines(run?: UiTestCaseRun | null): UiRunLogLine[] {
-  const orderedResults = [...(run?.stepResults ?? [])].sort(
-    (left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER),
-  )
+  const orderedResults = [...(run?.stepResults ?? [])].sort(compareByOrderNo)
   const snapshots = buildUiStepSnapshots(orderedResults)
   const lines: UiRunLogLine[] = snapshots.map((snapshot, index) => ({
     key: `log-${snapshot.key}`,

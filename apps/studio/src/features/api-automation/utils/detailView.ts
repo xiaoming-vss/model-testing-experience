@@ -5,13 +5,13 @@ import {
 } from '@/services/api'
 import { Typography } from 'antd'
 
+export { isYamlFileName, type CaseImportMode } from '@/shared/utils/caseImport'
+
 export const { Text } = Typography
 
 export type AssertRuleFormValues = CreateApiAssertRulePayload
 
 export type ExtractRuleFormValues = CreateApiExtractRulePayload
-
-export type CaseImportMode = 'upload' | 'editor'
 
 export const API_RUN_TERMINAL_STATUSES = ['success', 'failed', 'error', 'canceled'] as const
 
@@ -36,8 +36,4 @@ export function validateJsonText(value?: string) {
   } catch (error) {
     return Promise.reject(error instanceof Error ? error.message : 'JSON 格式不正确')
   }
-}
-
-export function isYamlFileName(fileName: string) {
-  return /\.(yaml|yml)$/i.test(fileName.trim())
 }

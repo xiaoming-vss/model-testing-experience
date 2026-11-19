@@ -8,6 +8,7 @@ import {
 import {
   type UiTestCaseRunStepResult
 } from '@/services/api'
+import { compareByOrderNo } from '@/shared/utils/order'
 import {
   formatTime
 } from '@/utils/format'
@@ -99,9 +100,7 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
 }
 
 export function renderUiRunStepResultList(stepResults: UiTestCaseRunStepResult[], emptyDescription: string) {
-  const orderedStepResults = [...stepResults].sort(
-    (left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER),
-  )
+  const orderedStepResults = [...stepResults].sort(compareByOrderNo)
 
   if (orderedStepResults.length === 0) {
     return <Empty description={emptyDescription} image={Empty.PRESENTED_IMAGE_SIMPLE} />

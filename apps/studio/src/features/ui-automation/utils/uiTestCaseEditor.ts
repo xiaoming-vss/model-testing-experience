@@ -1,5 +1,6 @@
 import type { CreateUiTestCasePayload, UiStepSaveRule, UiTestCase } from '@/services/api'
 import { moveArrayItem } from '@/shared/utils/array'
+import { compareByOrderNo } from '@/shared/utils/order'
 import { formatOptionalValue, prettyPrintValue } from '@/shared/utils/value'
 import { normalizeUiTestCaseId, pickCreatedAt } from '@/utils/format'
 import { requiresUiStepLocator, usesUiStepComparator, usesUiStepOperation } from '../config/stepConfig'
@@ -101,7 +102,7 @@ export function parseStepsJson(value?: UiTestCase['stepsJson']) {
 
     return parsed
       .map((item, index) => normalizeStepValue((item ?? {}) as Partial<UiTestStepFormValue>, index))
-      .sort((left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER))
+      .sort(compareByOrderNo)
   } catch {
     return []
   }
@@ -164,10 +165,6 @@ export function buildUiTestCaseFormValues(uiTestCase: UiTestCase): UiTestCaseFor
   }
 }
 
-function getUiTestCaseOrderNo(uiTestCase: UiTestCase) {
-  return uiTestCase.orderNo ?? Number.MAX_SAFE_INTEGER
-}
-
 function getUiTestCaseCreatedTime(uiTestCase: UiTestCase) {
   const createdAt = pickCreatedAt(uiTestCase)
   const timestamp = createdAt ? new Date(createdAt).getTime() : 0
@@ -177,7 +174,7 @@ function getUiTestCaseCreatedTime(uiTestCase: UiTestCase) {
 export function sortUiTestCases(uiTestCases: UiTestCase[]) {
   return [...uiTestCases].sort(
     (left, right) =>
-      getUiTestCaseOrderNo(left) - getUiTestCaseOrderNo(right) ||
+      compareByOrderNo(left, right) ||
       getUiTestCaseCreatedTime(left) - getUiTestCaseCreatedTime(right) ||
       normalizeUiTestCaseId(left).localeCompare(normalizeUiTestCaseId(right)),
   )

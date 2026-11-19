@@ -1,4 +1,5 @@
 import { parseDocument } from 'yaml'
+import { toRecord } from '@/shared/utils/value'
 import {
   perfLoadFormError,
   readPerfLoadFromYaml,
@@ -75,12 +76,6 @@ let idSequence = 0
 function formId(prefix: string) {
   idSequence += 1
   return `${prefix}-${idSequence}`
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null
 }
 
 function stringValue(value: unknown) {

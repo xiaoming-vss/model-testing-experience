@@ -8,6 +8,8 @@ import type {
   UpdateApiCasePayload,
 } from '@/services/api'
 import { moveArrayItem } from '@/shared/utils/array'
+import { compareByOrderNo, orderNoOrMax } from '@/shared/utils/order'
+import { normalizeText } from '@/shared/utils/payload'
 import { formatOptionalValue, parseMaybeJsonValue } from '@/shared/utils/value'
 import { pickCreatedAt } from '@/utils/format'
 
@@ -134,10 +136,6 @@ export function stringifyKeyValuePairs(items?: Array<{ enabled?: boolean; key?: 
   )
 }
 
-function normalizeText(value?: string) {
-  return value ?? ''
-}
-
 export function serializeCaseValues(values: ApiCaseFormValues): CreateApiCasePayload {
   return {
     name: values.name,
@@ -254,7 +252,7 @@ export function getCaseDisplayPath(urlTemplate: string) {
 }
 
 function getCaseOrderNo(apiCase: ApiCase) {
-  return apiCase.orderNo ?? apiCase.order_no ?? Number.MAX_SAFE_INTEGER
+  return orderNoOrMax(apiCase.orderNo ?? apiCase.order_no)
 }
 
 function getCaseCreatedTime(apiCase: ApiCase) {
@@ -276,9 +274,8 @@ export { formatOptionalValue, moveArrayItem, parseMaybeJsonValue }
 
 export function sortRulesByOrderNo<T extends { orderNo?: number; createdAt?: string; created_at?: string }>(rules: T[]) {
   return [...rules].sort((left, right) => {
-    const leftOrderNo = left.orderNo ?? Number.MAX_SAFE_INTEGER
-    const rightOrderNo = right.orderNo ?? Number.MAX_SAFE_INTEGER
-    if (leftOrderNo !== rightOrderNo) return leftOrderNo - rightOrderNo
+    const order = compareByOrderNo(left, right)
+    if (order !== 0) return order
 
     const leftCreatedTime = left.createdAt ?? left.created_at ?? ''
     const rightCreatedTime = right.createdAt ?? right.created_at ?? ''

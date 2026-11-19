@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
+import { formatCompactTime } from '@/utils/format'
 import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
 import { ApiDesignDiagramView } from './ApiDesignDiagramView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
@@ -54,18 +55,6 @@ const artifactScopes = [
   uiStageStyles.scope,
 ].join(' ')
 
-function formatTime(value?: string | null) {
-  if (!value) return ''
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 const stateCopy: Record<string, string> = {
   approved: '已通过',
   draft: '待审核',
@@ -99,7 +88,7 @@ function VersionHistory({ stage, versions, onPick, onDelete, activeVersion, late
         <span className="gc-version-chip flex-none rounded-[5px] bg-[var(--app-surface-chip)] px-[5px] font-mono text-[10px] text-[var(--app-accent)]">{version.label}</span>
         <span className="gc-history-copy flex min-w-0 flex-1 flex-col gap-px">
           <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]">{version.summary}</strong>
-          <small className="text-[10px] text-[var(--app-surface-text-muted)]">{formatTime(version.createdAt)}{version.reviewerUserId ? ` · ${version.reviewerUserId}` : ''}</small>
+          <small className="text-[10px] text-[var(--app-surface-text-muted)]">{formatCompactTime(version.createdAt)}{version.reviewerUserId ? ` · ${version.reviewerUserId}` : ''}</small>
         </span>
         {version.versionId === latestId ? <Tag color="success">最新</Tag> : null}
       </button>
@@ -332,7 +321,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {!embedded ? trace : null}
         {!stageRunning && workspace.editingDirty ? <div className="gc-modal-meta is-warn flex flex-wrap items-center gap-1.5 p-0 text-[11px] text-[var(--app-status-warning-text)]">修改尚未保存，保存后才能审核。</div> : null}
         {versionKey !== 'draft' && selectedVersion?.createdAt ? <div className="gc-modal-meta flex flex-wrap items-center gap-1.5 p-0 text-[11px] text-[var(--app-surface-text-muted)]">
-          <ClockCircleOutlined /> {selectedVersion.label} · {formatTime(selectedVersion.createdAt)} · {selectedVersion.reviewerUserId || '系统'}
+          <ClockCircleOutlined /> {selectedVersion.label} · {formatCompactTime(selectedVersion.createdAt)} · {selectedVersion.reviewerUserId || '系统'}
           {selectedVersion.imported ? ' · 已导入' : ''}
         </div> : null}
       </div>

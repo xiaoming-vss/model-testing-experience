@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatTime } from './format'
+import { formatCompactTime, formatTime } from './format'
 
 describe('formatTime', () => {
   it('treats a timezone-less API timestamp as UTC and displays Shanghai time', () => {
@@ -17,5 +17,24 @@ describe('formatTime', () => {
     }
     expect(formatTime('invalid date')).toBe('invalid date')
     expect(formatTime()).toBe('-')
+  })
+})
+
+describe('formatCompactTime', () => {
+  it('renders a compact month/day/hour/minute timestamp', () => {
+    expect(formatCompactTime('2026-08-06T01:46:53Z')).toBe(
+      new Date('2026-08-06T01:46:53Z').toLocaleString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    )
+  })
+
+  it('returns an empty string for missing or invalid values', () => {
+    expect(formatCompactTime()).toBe('')
+    expect(formatCompactTime(null)).toBe('')
+    expect(formatCompactTime('invalid date')).toBe('')
   })
 })

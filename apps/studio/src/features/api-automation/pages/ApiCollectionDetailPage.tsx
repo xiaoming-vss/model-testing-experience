@@ -1,8 +1,8 @@
 import { saveBlob } from '@/shared/utils/download'
 import { ApiAssertRuleEditor } from '@/features/api-automation/components/ApiAssertRuleEditor'
+import { CaseImportModal } from '@/domain/projects/components/CaseImportModal'
 import { ApiCaseEditor } from '@/features/api-automation/components/ApiCaseEditor'
 import { ApiCaseExplorer } from '@/features/api-automation/components/ApiCaseExplorer'
-import { ApiCaseImportModal } from '@/features/api-automation/components/ApiCaseImportModal'
 import { ApiCaseRunConsole } from '@/features/api-automation/components/ApiCaseRunConsole'
 import { ApiCollectionRunHistory } from '@/features/api-automation/components/ApiCollectionRunHistory'
 import { ApiCollectionRunReportModal } from '@/features/api-automation/components/ApiCollectionRunReport'
@@ -23,6 +23,7 @@ import {
 } from '@/services/api'
 import { type JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
+import { compareByOrderNo } from '@/shared/utils/order'
 import {
   formatTime,
   getErrorMessage,
@@ -790,9 +791,8 @@ export function ApiCollectionDetailPage() {
   const orderedCollectionRunItems = useMemo(
     () =>
       [...(collectionRunReport?.items ?? [])].sort((left, right) => {
-        const leftOrderNo = left.orderNo ?? Number.MAX_SAFE_INTEGER
-        const rightOrderNo = right.orderNo ?? Number.MAX_SAFE_INTEGER
-        if (leftOrderNo !== rightOrderNo) return leftOrderNo - rightOrderNo
+        const order = compareByOrderNo(left, right)
+        if (order !== 0) return order
         return (left.caseName ?? '').localeCompare(right.caseName ?? '')
       }),
     [collectionRunReport?.items],
@@ -1016,7 +1016,18 @@ export function ApiCollectionDetailPage() {
         </div>
       </div>
 
-      <ApiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importApiCasesMutation={importApiCasesMutation} handleImportApiCases={handleImportApiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
+      <CaseImportModal
+        open={caseImportModalOpen}
+        onClose={closeCaseImportModal}
+        onConfirm={handleImportApiCases}
+        confirmLoading={importApiCasesMutation.isPending}
+        importMode={caseImportMode}
+        onImportModeChange={setCaseImportMode}
+        onFileChange={setImportYamlFile}
+        yamlText={importYamlText}
+        onYamlTextChange={setImportYamlText}
+        targetLabel="Collection"
+      />
 
       <ApiCollectionRunHistory collectionRunHistoryOpen={collectionRunHistoryOpen} setCollectionRunHistoryOpen={setCollectionRunHistoryOpen} collectionRunHistoryQuery={collectionRunHistoryQuery} collectionRunHistory={collectionRunHistory} collectionRunHistoryTotal={collectionRunHistoryTotal} loadingCollectionRunHistoryId={loadingCollectionRunHistoryId} environments={environments} handleOpenCollectionRunHistoryItem={handleOpenCollectionRunHistoryItem} />
 

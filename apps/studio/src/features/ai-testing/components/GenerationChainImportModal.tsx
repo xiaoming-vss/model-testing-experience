@@ -1,20 +1,9 @@
 import { Alert, Button, Modal, Select, Spin, Tag } from 'antd'
 import { CheckCircleFilled, ImportOutlined, LinkOutlined } from '@ant-design/icons'
+import { formatCompactTime } from '@/utils/format'
 import type { GenerationChainWorkspace } from '../hooks/useRequirementGenerationChain'
 import type { GenerationChainImportRecord, GenerationChainImportTarget } from '../api/generationChain.api'
 import chainStyles from '../styles/generation-chain.module.css'
-
-function formatTime(value?: string | null) {
-  if (!value) return ''
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 function conflictName(conflict: Record<string, unknown>) {
   return String(conflict.normalizedName ?? conflict.name ?? '同名正式用例')
@@ -35,7 +24,7 @@ function SourceSummary({ target }: { target: GenerationChainImportTarget }) {
   }
   return <span className="gc-import-source inline-flex items-center gap-[5px] text-[11px] text-[var(--app-result-success-text)] [&_small]:text-[var(--app-surface-text-muted)]">
     <CheckCircleFilled /> 当前正式来源 {target.effectiveImport.versionLabel || '历史版本'}
-    <small>{formatTime(target.effectiveImport.importedAt)} · 变更 {target.effectiveImport.changedCaseCount} 条</small>
+    <small>{formatCompactTime(target.effectiveImport.importedAt)} · 变更 {target.effectiveImport.changedCaseCount} 条</small>
     {target.effectiveImport.mixedSource ? <Tag color="warning">混合来源</Tag> : null}
   </span>
 }
@@ -44,7 +33,7 @@ function RecordDetails({ record }: { record: GenerationChainImportRecord }) {
   return <div className="gc-import-record grid grid-cols-3 gap-1.5 border-t border-[var(--app-surface-divider)] pt-[7px] [&>.ant-alert]:col-span-full [&>div]:flex [&>div:not(.gc-import-case-ids)]:flex-col [&>div:not(.gc-import-case-ids)]:gap-px [&_b]:text-[11px] [&_b]:text-[var(--app-surface-text)] [&_span]:text-[10px] [&_span]:text-[var(--app-surface-text-muted)]">
     <div><span>来源版本</span><b>{record.versionLabel || record.versionId}</b></div>
     <div><span>变更用例</span><b>{record.changedCaseCount} / {record.targetCaseCount}</b></div>
-    <div><span>导入时间</span><b>{formatTime(record.importedAt) || '—'}</b></div>
+    <div><span>导入时间</span><b>{formatCompactTime(record.importedAt) || '—'}</b></div>
     {record.mixedSource ? <Alert showIcon type="warning" title="本次只覆盖部分用例，正式目标仍保留旧来源用例。" /> : null}
     {record.changedCaseIds.length ? <div className="gc-import-case-ids col-span-full flex flex-row flex-wrap items-center gap-1">
       <span>变更用例</span>

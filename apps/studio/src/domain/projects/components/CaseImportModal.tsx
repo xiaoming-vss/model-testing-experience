@@ -1,38 +1,48 @@
-import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
-import { isYamlFileName, type CaseImportMode } from '@/features/ui-automation/utils/detailView'
-import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
-import { message } from '@/shared/utils/feedback'
-import { cx } from '@/shared/utils/cx'
 import { UploadOutlined } from '@ant-design/icons'
 import { Segmented, Upload } from 'antd'
 
-import type { UiTestSuiteImportResult } from '@/features/ui-automation/types'
-import type { UseMutationResult } from '@tanstack/react-query'
+import { ProjectActionModal } from '@/domain/projects/components/ProjectActionModal'
+import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
+import { isYamlFileName, type CaseImportMode } from '@/shared/utils/caseImport'
+import { cx } from '@/shared/utils/cx'
+import { message } from '@/shared/utils/feedback'
 
 type Props = {
-  caseImportModalOpen: boolean
-  closeCaseImportModal: () => void
-  importUiCasesMutation: UseMutationResult<UiTestSuiteImportResult, Error, { file: Blob; filename: string }, unknown>
-  handleImportUiCases: () => void
-  caseImportMode: CaseImportMode
-  setCaseImportMode: React.Dispatch<React.SetStateAction<CaseImportMode>>
-  setImportYamlFile: React.Dispatch<React.SetStateAction<File | null>>
-  importYamlText: string
-  setImportYamlText: React.Dispatch<React.SetStateAction<string>>
+  open: boolean
+  onClose: () => void
+  onConfirm: () => void
+  confirmLoading: boolean
+  importMode: CaseImportMode
+  onImportModeChange: (mode: CaseImportMode) => void
+  onFileChange: (file: File | null) => void
+  yamlText: string
+  onYamlTextChange: (value: string) => void
+  targetLabel: string
 }
 
-export function UiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, importUiCasesMutation, handleImportUiCases, caseImportMode, setCaseImportMode, setImportYamlFile, importYamlText, setImportYamlText }: Props) {
+export function CaseImportModal({
+  open,
+  onClose,
+  onConfirm,
+  confirmLoading,
+  importMode,
+  onImportModeChange,
+  onFileChange,
+  yamlText,
+  onYamlTextChange,
+  targetLabel,
+}: Props) {
   return (
     <ProjectActionModal action="execute"
       mask={{ closable: false }}
-      open={caseImportModalOpen}
+      open={open}
       title="用例导入"
       width={860}
       okText="开始导入"
-      onCancel={closeCaseImportModal}
-      confirmLoading={importUiCasesMutation.isPending}
+      onCancel={onClose}
+      confirmLoading={confirmLoading}
       okButtonProps={{ className: 'action-btn-save' }}
-      onOk={handleImportUiCases}
+      onOk={onConfirm}
       rootClassName={cx('api-case-import-modal-root')}
       className="api-case-import-modal-shell"
       style={{ maxWidth: 'calc(100vw - 32px)' }}
@@ -45,14 +55,14 @@ export function UiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, i
       <div className="flex max-h-[calc(100vh-148px)] w-full min-w-0 flex-col gap-3">
         <Segmented
           className="w-full"
-          value={caseImportMode}
+          value={importMode}
           options={[
             { label: '上传 YAML', value: 'upload' },
             { label: '直接输入', value: 'editor' },
           ]}
-          onChange={(value) => setCaseImportMode(value as CaseImportMode)}
+          onChange={(value) => onImportModeChange(value as CaseImportMode)}
         />
-        {caseImportMode === 'upload' ? (
+        {importMode === 'upload' ? (
           <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
             <Upload.Dragger
               accept=".yaml,.yml"
@@ -62,11 +72,11 @@ export function UiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, i
                   message.error('仅支持 .yaml 或 .yml 文件')
                   return Upload.LIST_IGNORE
                 }
-                setImportYamlFile(file)
+                onFileChange(file)
                 return false
               }}
               onRemove={() => {
-                setImportYamlFile(null)
+                onFileChange(null)
                 return true
               }}
             >
@@ -74,14 +84,14 @@ export function UiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, i
                 <UploadOutlined />
               </p>
               <p className="ant-upload-text">点击或拖拽 YAML 文件到这里</p>
-              <p className="ant-upload-hint">仅支持 .yaml / .yml，导入时会自动绑定到当前 UI 测试集。</p>
+              <p className="ant-upload-hint">仅支持 .yaml / .yml，导入时会自动绑定到当前 {targetLabel}。</p>
             </Upload.Dragger>
             <div className="text-xs leading-[18px] text-[var(--tp-text-secondary)]">后端会直接解析 YAML，前端不做字段预解析。</div>
           </div>
         ) : (
           <div className="flex min-h-0 w-full max-w-full flex-1 flex-col gap-2.5">
             <div className="text-xs leading-[18px] text-[var(--tp-text-secondary)]">直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
-            <TextCodeEditor value={importYamlText} onChange={setImportYamlText} language="yaml" height="clamp(240px, 48vh, 420px)" />
+            <TextCodeEditor value={yamlText} onChange={onYamlTextChange} language="yaml" height="clamp(240px, 48vh, 420px)" />
           </div>
         )}
       </div>

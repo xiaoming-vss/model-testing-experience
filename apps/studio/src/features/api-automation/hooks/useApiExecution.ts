@@ -17,6 +17,7 @@ import {
   type ApiCollectionRunSummary
 } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { compareByOrderNo } from '@/shared/utils/order'
 import {
   getErrorMessage
 } from '@/utils/format'
@@ -224,9 +225,8 @@ export function useApiExecution({ collectionId }: Options) {
     initializedReportRef.current = selectedCollectionRunId
 
     const orderedItems = [...(report.items ?? [])].sort((left, right) => {
-      const leftOrderNo = left.orderNo ?? Number.MAX_SAFE_INTEGER
-      const rightOrderNo = right.orderNo ?? Number.MAX_SAFE_INTEGER
-      if (leftOrderNo !== rightOrderNo) return leftOrderNo - rightOrderNo
+      const order = compareByOrderNo(left, right)
+      if (order !== 0) return order
       return (left.caseName ?? '').localeCompare(right.caseName ?? '')
     })
     const firstExpandedIndex = orderedItems.findIndex(

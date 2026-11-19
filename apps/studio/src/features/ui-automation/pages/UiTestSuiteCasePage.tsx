@@ -1,5 +1,5 @@
 import { Text } from '@/features/ui-automation/utils/detailView'
-import { UiCaseImportModal } from '@/features/ui-automation/components/UiCaseImportModal'
+import { CaseImportModal } from '@/domain/projects/components/CaseImportModal'
 import { UiStepResultBadge } from '@/features/ui-automation/components/UiStepResultBadge'
 import { UiRunInspector } from '@/features/ui-automation/components/UiRunInspector'
 import { UiStepEditor } from '@/features/ui-automation/components/UiStepEditor'
@@ -31,6 +31,7 @@ import {
 import { listTotal } from '@/shared/api/request'
 import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
 import { message } from '@/shared/utils/feedback'
+import { compareByOrderNo } from '@/shared/utils/order'
 import {
   getErrorMessage,
   normalizeUiTestCaseId
@@ -755,7 +756,7 @@ export function UiTestSuiteCasePage() {
     () =>
       [...(suiteRunReport?.items ?? [])].sort(
         (left, right) =>
-          (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER) ||
+          compareByOrderNo(left, right) ||
           (left.caseName ?? '').localeCompare(right.caseName ?? ''),
       ),
     [suiteRunReport?.items],
@@ -1400,7 +1401,18 @@ export function UiTestSuiteCasePage() {
         </section>
       </div>
 
-      <UiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importUiCasesMutation={importUiCasesMutation} handleImportUiCases={handleImportUiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
+      <CaseImportModal
+        open={caseImportModalOpen}
+        onClose={closeCaseImportModal}
+        onConfirm={handleImportUiCases}
+        confirmLoading={importUiCasesMutation.isPending}
+        importMode={caseImportMode}
+        onImportModeChange={setCaseImportMode}
+        onFileChange={setImportYamlFile}
+        yamlText={importYamlText}
+        onYamlTextChange={setImportYamlText}
+        targetLabel="UI 测试集"
+      />
 
       <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} suiteRunHistoryTotal={suiteRunHistoryTotal} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
 

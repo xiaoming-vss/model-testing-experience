@@ -1,4 +1,5 @@
 import { parse } from 'yaml'
+import { compareByOrderNo } from '@/shared/utils/order'
 import { toRecord, toRecordArray } from '@/shared/utils/value'
 
 export type ApiConfigRule = {
@@ -171,7 +172,7 @@ export function normalizeApiConfigCases(content?: string): ApiConfigDiagramData 
         }
       })
       .filter((item): item is ApiConfigCaseView => Boolean(item))
-      .sort((left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER))
+      .sort(compareByOrderNo)
 
     if (cases.length === 0) return null
 

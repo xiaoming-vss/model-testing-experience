@@ -94,6 +94,18 @@ export function formatTime(value?: string) {
     : timeFormatter.format(date)
 }
 
+export function formatCompactTime(value?: string | null) {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '操作失败'
 }

@@ -1,4 +1,5 @@
 import { parseDocument } from 'yaml'
+import { toRecord } from '@/shared/utils/value'
 
 export type PerfLoadModel = 'vus' | 'arrival_rate' | 'request_rate' | 'staged_vus'
 export type PerfLoadTimeUnit = '1s' | '1m'
@@ -84,12 +85,6 @@ const DEFAULT_LOAD: PerfLoadFormValues = {
   profile: 'step',
   stages: cloneStages(PERF_STAGED_TEMPLATES.step.stages),
   finalDownSeconds: PERF_STAGED_TEMPLATES.step.finalDownSeconds,
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null
 }
 
 function positiveInt(value: unknown, fallback: number) {

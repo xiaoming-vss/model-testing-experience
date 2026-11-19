@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatStructuredContent, prettyPrintValue } from './value'
+import { formatStructuredContent, prettyPrintValue, toRecord } from './value'
 
 describe('structured task output formatting', () => {
   it.each([
@@ -25,5 +25,14 @@ describe('structured task output formatting', () => {
     const circular: { self?: unknown } = {}
     circular.self = circular
     expect(formatStructuredContent(circular)).toBe('[object Object]')
+  })
+})
+
+describe('toRecord', () => {
+  it('accepts plain objects and rejects arrays and primitives', () => {
+    expect(toRecord({ value: 1 })).toEqual({ value: 1 })
+    expect(toRecord([{ value: 1 }])).toBeNull()
+    expect(toRecord('value')).toBeNull()
+    expect(toRecord(null)).toBeNull()
   })
 })
