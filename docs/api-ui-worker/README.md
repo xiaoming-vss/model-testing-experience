@@ -6,9 +6,9 @@
 
 ## 运行时与依赖
 
-- Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`，另有 `requirements.txt`）
-- 依赖：`playwright`、`httpx`
-- 镜像基于 `mcr.microsoft.com/playwright/python:v1.60.0-noble`，Dockerfile 会断言 Playwright 版本恰为 1.60.0，升级 Playwright 需同步改镜像标签
+- Python 3.12（`.python-version`），包管理使用 uv（`pyproject.toml` + `uv.lock`）；`requirements.txt` 是兼容导出，不作为第二来源，根目录一致性测试会比较两者
+- 依赖：`playwright`、`httpx`、`redis`
+- 镜像基于 `mcr.microsoft.com/playwright/python:v1.60.0-noble`（Dockerfile 固定 digest），Dockerfile 会断言 Playwright 版本恰为 1.60.0，升级 Playwright 需同步改镜像标签和 digest
 - 开发依赖在 `[project.optional-dependencies] dev`，需要 `--extra dev` 才会装入
 - Compose 中为该服务设置 `shm_size: 1gb`，浏览器需要足够的共享内存
 

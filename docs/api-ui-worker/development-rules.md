@@ -11,7 +11,7 @@
 
 ## 模块与运行边界
 
-- 沿用本项目 Python 3.12、独立依赖、锁文件、Dockerfile 和启动入口，保留 `requirements.txt` 的项目用途。升级 Playwright 时同步验证镜像及浏览器版本约束。
+- 沿用本项目 Python 3.12、独立依赖、锁文件、Dockerfile 和启动入口，保留 `requirements.txt` 作为兼容导出。依赖以 `pyproject.toml` + `uv.lock` 为权威来源，修改时同步 `requirements.txt`，并由根目录 `tests.test_api_ui_dependencies` 校验一致。升级 Playwright 时同步验证镜像标签、digest 及浏览器版本约束。
 - `poller/` 管理领取、心跳与回传，`control_plane/` 封装控制面通信及文件授权，`api/` 执行请求、模板、提取与断言，`ui/` 管理浏览器、定位与步骤执行，`contracts/` 维护载荷和结果类型。
 - 保留每个 Worker 同时执行一个任务及 API/UI 队列交替优先的已确认语义。修改调度时必须验证两类任务的公平性、心跳和停止，不直接沿用 AI Worker 的并发数量。
 - 同步控制面调用和上传通过已有线程委托方式执行，不能阻塞异步 HTTP 或浏览器运行。业务数据仍由控制面通过协议管理。

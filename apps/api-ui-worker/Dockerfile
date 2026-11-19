@@ -1,5 +1,7 @@
 # Keep this version aligned with the playwright version locked in uv.lock.
-FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
+# Base images are pinned by digest for reproducible builds; refresh deliberately
+# with `docker buildx imagetools inspect <image:tag>`.
+FROM mcr.microsoft.com/playwright/python:v1.60.0-noble@sha256:8ff591d613b01c884cc488339ed4318b4513eaf0c57a164a878ba49e70e3f384
 
 ARG UV_VERSION=0.11.28
 

@@ -44,6 +44,18 @@
 
 根编排变更至少执行“根编排测试”和“Compose 配置校验”。`init` 与 `configure` 的具体配置项见[统一配置、部署与本地开发](deployment.md)。
 
+### 六镜像构建验证
+
+外部 CI 在仓库根目录逐个构建六个应用镜像；基础镜像已固定 digest，构建上下文为各自应用目录：
+
+```bash
+for app in control-plane ai-worker api-ui-worker integration-worker perf-worker studio; do
+  docker build -f "apps/$app/Dockerfile" -t "mtx/$app:ci" "apps/$app" || exit 1
+done
+```
+
+前置条件为 Docker Engine、BuildKit 和可访问镜像仓库。`studio` 默认不设置 `VITE_API_BASE_URL`，由 Nginx 同源代理；需要绝对 API 地址时通过 `--build-arg` 传入。
+
 ## control-plane
 
 工作目录：`apps/control-plane`。Python 3.12；依赖组 `dev`。

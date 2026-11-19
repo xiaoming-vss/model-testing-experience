@@ -1,7 +1,9 @@
 name: mtx
+# Base images are pinned by digest for reproducible deployments.
+# Refresh deliberately with `docker buildx imagetools inspect <image:tag>`.
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
     restart: unless-stopped
     ports:
       - "127.0.0.1:${REDIS_PORT:-16379}:6379"
@@ -12,7 +14,7 @@ services:
       retries: 12
 
   mysql:
-    image: mysql:8.4
+    image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
     command:
       - --slow-query-log=${MYSQL_SLOW_QUERY_LOG:-1}
       - --long-query-time=${MYSQL_LONG_QUERY_TIME:-0.5}
