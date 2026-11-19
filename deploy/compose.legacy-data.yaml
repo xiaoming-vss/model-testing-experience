@@ -3,6 +3,12 @@ volumes:
   ai-logs:
     external: true
     name: testing-agent_ai-logs
+  ai-pi-logs:
+    external: true
+    name: testing-agent_ai-pi-logs
+  ai-pi-runtime:
+    external: true
+    name: testing-agent_ai-pi-runtime
   ai-runtime:
     external: true
     name: testing-agent_ai-runtime

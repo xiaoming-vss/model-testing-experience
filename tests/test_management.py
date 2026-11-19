@@ -91,6 +91,40 @@ class ManagementTests(unittest.TestCase):
                 other = "pi" if backend == "nanobot" else "nanobot"
                 self.assertNotIn(other, config["agent"])
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose is required")
+    def test_pi_backend_with_legacy_overlay_reuses_old_pi_volumes(self):
+        self.data.setdefault("ai_worker", {})["agent"] = {"backend": "pi"}
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+        rendered = json.loads(
+            subprocess.check_output(
+                manage.compose_command(self.root)
+                + [
+                    "-f",
+                    str(self.root / "deploy/compose.legacy-data.yaml"),
+                    "config",
+                    "--format",
+                    "json",
+                ],
+                text=True,
+            )
+        )
+        for key, expected in (
+            ("ai-pi-runtime", "testing-agent_ai-pi-runtime"),
+            ("ai-pi-logs", "testing-agent_ai-pi-logs"),
+        ):
+            self.assertTrue(rendered["volumes"][key]["external"])
+            self.assertEqual(rendered["volumes"][key]["name"], expected)
+        worker = rendered["services"]["ai-worker"]
+        self.assertEqual(
+            next(v["source"] for v in worker["volumes"] if v["target"] == "/data/runtime"),
+            "ai-pi-runtime",
+        )
+        self.assertEqual(
+            next(v["source"] for v in worker["volumes"] if v["target"] == "/app/logs"),
+            "ai-pi-logs",
+        )
+
     def test_legacy_ai_selection_defaults_to_nanobot_and_rejects_typos(self):
         self.data["ai_worker"].pop("agent", None)
         self.assertEqual(manage.selected_agent_backend(self.data), "nanobot")
