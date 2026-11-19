@@ -1,5 +1,12 @@
 # API/UI Worker 开发规则
 
+- 状态：现行
+- 负责人：api-ui-worker maintainer
+- 最近复核：2026-11-19
+- 复核周期：每季度
+- 适用范围：`apps/api-ui-worker/`
+- 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
+
 开发和审查 `apps/api-ui-worker/` 前，必须阅读[通用后端规则](../agents/backend-development.md)和[项目说明](README.md)。本文件补充 API 与浏览器执行要求，源码和命令默认相对该应用目录。
 
 ## 模块与运行边界

@@ -24,6 +24,7 @@
 ## 公共开发规范
 
 - [领域文档](agents/domain.md)
+- [规范治理与变更检查清单](agents/domain.md#规范变更检查清单)
 - [问题跟踪](agents/issue-tracker.md)
 - [分诊标签](agents/triage-labels.md)
 

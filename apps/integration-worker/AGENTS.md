@@ -1,5 +1,9 @@
 # integration-worker 开发指引
 
+> 状态：现行｜负责人：integration-worker maintainer｜最近复核：2026-11-19｜复核周期：每季度
+>
+> 适用范围：`apps/integration-worker/`。变更/废弃：按[规范变更检查清单](../../docs/agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
+
 遵循根目录 [AGENTS.md](../../AGENTS.md)。先读 [领域上下文](../../docs/integration-worker/CONTEXT.md)及[执行决策](../../docs/control-plane/adr/0006-independent-integration-execution.md)；配置、协议、恢复及目录职责见[项目说明](../../docs/integration-worker/README.md)。
 
 开发或审查代码、写入协议及恢复流程前，阅读并遵循[通用后端规则](../../docs/agents/backend-development.md)和[集成 Worker 开发规则](../../docs/integration-worker/development-rules.md)，按变更类型选择验证入口。

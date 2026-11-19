@@ -1,6 +1,13 @@
 # 通用后端开发规则
 
-本规则适用于 `apps/control-plane/`、`apps/ai-worker/`、`apps/api-ui-worker/`、`apps/integration-worker/` 和 `apps/perf-worker/` 的新增功能、修改及代码审查。版本日期为 2026 年 10 月 7 日。前端 `studio` 按其自身项目规则开发。
+- 状态：现行
+- 负责人：backend maintainers
+- 最近复核：2026-11-19
+- 复核周期：每季度
+- 适用范围：`apps/control-plane/`、`apps/ai-worker/`、`apps/api-ui-worker/`、`apps/integration-worker/`、`apps/perf-worker/`
+- 变更/废弃：按[规范变更检查清单](domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
+
+本规则适用于 `apps/control-plane/`、`apps/ai-worker/`、`apps/api-ui-worker/`、`apps/integration-worker/` 和 `apps/perf-worker/` 的新增功能、修改及代码审查。前端 `studio` 按其自身项目规则开发。
 
 源码路径、工具配置、测试命令和专用协议以目标项目为准。通用规则规定执行标准，项目补充规则规定具体模块与验证入口；项目差异只有明确限定范围时才构成例外。
 

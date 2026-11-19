@@ -1,6 +1,13 @@
 # 控制面开发规则
 
-适用范围为 `apps/control-plane/`，以及修改控制面与 AI、API/UI、集成 Worker 接口时涉及的协作边界。本文补充本项目的 Web、数据库、权限和业务事务要求；开发与审查同时遵循[通用后端规则](../agents/backend-development.md)。版本日期为 2026 年 11 月 15 日。
+- 状态：现行
+- 负责人：control-plane maintainer
+- 最近复核：2026-11-19
+- 复核周期：每季度
+- 适用范围：`apps/control-plane/` 及控制面与各 Worker 的接口协作
+- 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
+
+适用范围为 `apps/control-plane/`，以及修改控制面与 AI、API/UI、集成 Worker 接口时涉及的协作边界。本文补充本项目的 Web、数据库、权限和业务事务要求；开发与审查同时遵循[通用后端规则](../agents/backend-development.md)。
 
 源码路径和应用内命令默认相对 `apps/control-plane/`；明确带有 `apps/`、`docs/`、`scripts/`、`.scratch/` 的路径相对仓库根目录。
 

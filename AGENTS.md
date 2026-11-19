@@ -1,5 +1,9 @@
 # Repository instructions
 
+> Status: active | Owner: repository maintainers | Last reviewed: 2026-11-19 | Review cadence: quarterly
+>
+> Change/deprecation: follow the [spec change checklist](docs/agents/domain.md#规范变更检查清单); record an ADR and notify consumers for cross-project contract changes.
+
 This monorepo contains six independently runnable projects under apps/: studio, control-plane, ai-worker, api-ui-worker, integration-worker and perf-worker. Preserve each project's dependency files, lockfile, Dockerfile and startup entry point. Read the target project's AGENTS.md, then use [CONTEXT-MAP.md](CONTEXT-MAP.md) to find its context and relevant ADRs before business-code changes. All substantive documentation lives under docs/<project>/; app READMEs are navigation and startup entry points.
 
 Deployment source of truth: config/platform.example.toml plus local ignored config/platform.toml. Generate runtime configuration through scripts/manage.py. Do not commit secrets, generated configuration, databases, worker runtime state or dependency directories.

@@ -1,5 +1,9 @@
 # ai-worker 开发指引
 
+> 状态：现行｜负责人：ai-worker maintainer｜最近复核：2026-11-19｜复核周期：每季度
+>
+> 适用范围：`apps/ai-worker/`。变更/废弃：按[规范变更检查清单](../../docs/agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
+
 本目录遵循根目录 [AGENTS.md](../../AGENTS.md)。文档统一维护于 [docs/ai-worker](../../docs/ai-worker/README.md)。
 
 - 业务上下文：[CONTEXT.md](../../docs/ai-worker/CONTEXT.md)。
