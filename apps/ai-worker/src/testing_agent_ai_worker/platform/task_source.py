@@ -14,7 +14,12 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 import httpx
+from pydantic import ValidationError
 
+from testing_agent_ai_worker.core.errors import (
+    safe_credential_error,
+    safe_validation_error,
+)
 from testing_agent_ai_worker.models.task import (
     ExistingTestCases,
     GitlabCredentials,
@@ -96,7 +101,12 @@ class HttpClaimTaskSource:
             if not claim_payload:
                 return None
 
-            claimed_task = PlatformClaimTask.model_validate(claim_payload)
+            try:
+                claimed_task = PlatformClaimTask.model_validate(claim_payload)
+            except ValidationError as exc:
+                raise TaskSourceError(
+                    safe_validation_error(exc, subject="任务领取响应校验失败")
+                ) from None
             if not claimed_task.attempt_id.strip():
                 raise TaskSourceError(
                     f"任务身份缺失(attemptId): task_id={claimed_task.task_id}; "
@@ -108,7 +118,12 @@ class HttpClaimTaskSource:
             if not snapshot_payload:
                 raise TaskSourceError(f"任务快照为空: task_id={claimed_task.task_id}")
 
-            snapshot_response = PlatformSnapshotResponse.model_validate(snapshot_payload)
+            try:
+                snapshot_response = PlatformSnapshotResponse.model_validate(snapshot_payload)
+            except ValidationError as exc:
+                raise TaskSourceError(
+                    safe_validation_error(exc, subject="任务快照校验失败")
+                ) from None
             task = self._to_domain_task(
                 claimed_task,
                 snapshot_response,
@@ -121,7 +136,9 @@ class HttpClaimTaskSource:
                     credentials = self._fetch_llm_credentials(task.task_id)
                     task.payload.llm_credentials = credentials
                 except Exception as exc:
-                    task.credential_error = str(exc)
+                    task.credential_error = (
+                        str(exc) if isinstance(exc, TaskSourceError) else safe_credential_error(exc)
+                    )
 
             return task
         except httpx.TimeoutException as exc:  # pragma: no cover
@@ -131,7 +148,7 @@ class HttpClaimTaskSource:
         except Exception as exc:
             if isinstance(exc, TaskSourceError):
                 raise
-            raise TaskSourceError(f"领取任务失败: {exc}") from exc
+            raise TaskSourceError(f"领取任务失败: {type(exc).__name__}") from exc
 
     def _fetch_llm_credentials(self, task_id: str) -> LlmCredentials:
         """补拉模型凭证。
@@ -143,7 +160,12 @@ class HttpClaimTaskSource:
         payload = self.client.get_with_retry(path)
         if not payload:
             raise TaskSourceError(f"LLM 凭证响应为空: task_id={task_id}")
-        credentials = PlatformLlmCredentials.model_validate(payload)
+        try:
+            credentials = PlatformLlmCredentials.model_validate(payload)
+        except ValidationError as exc:
+            raise TaskSourceError(
+                safe_validation_error(exc, subject="LLM 凭证响应校验失败")
+            ) from None
         return LlmCredentials(
             model=credentials.model_id,
             api_key=credentials.api_key,

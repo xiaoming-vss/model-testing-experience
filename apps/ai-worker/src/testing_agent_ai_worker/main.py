@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import signal
+import sys
 from pathlib import Path
 from types import FrameType
 
@@ -20,6 +21,7 @@ from testing_agent_ai_worker.app.bootstrap import (
 )
 from testing_agent_ai_worker.app.health import HealthServer, health_port_from_env
 from testing_agent_ai_worker.config.loader import load_settings
+from testing_agent_ai_worker.core.errors import ConfigError
 from testing_agent_ai_worker.logging.setup import setup_logging
 
 __all__ = [
@@ -34,7 +36,12 @@ __all__ = [
 def main(config_path: str | Path | None = None) -> int:
     """CLI 入口。"""
 
-    settings = load_settings(config_path)
+    try:
+        settings = load_settings(config_path)
+    except ConfigError as exc:
+        # Logging is not configured yet; print only the safe config summary.
+        print(f"worker configuration error: {exc}", file=sys.stderr)
+        return 2
     verify_runtime(settings.agent.active)
     stopping = False
 

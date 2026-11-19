@@ -234,12 +234,36 @@ class WorkerRunnerTests(unittest.TestCase):
         result = runner.process_task(self._make_task())
 
         self.assertEqual(result.status, TaskStatus.ERROR)
-        self.assertEqual(result.error_message, "executor boom")
+        self.assertEqual(result.error_message, "RuntimeError: 任务执行失败，请查看 Worker 日志")
         self.assertEqual(result.intermediate_json_text, '{"enhancedText":"snapshot text"}')
         self.assertEqual(sink.result_calls[0].status, TaskStatus.ERROR)
         self.assertEqual(
             sink.result_calls[0].intermediate_json_text, '{"enhancedText":"snapshot text"}'
         )
+
+    def test_executor_error_log_and_result_omit_provider_message(self) -> None:
+        class SecretExecutor(TaskExecutor):
+            def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
+                raise RuntimeError("SECRET-MARKER prompt and token")
+
+        runner = WorkerRunner(
+            executor=SecretExecutor(),
+            result_service=ResultService(_RecordingSink()),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=60,
+                run_once=False,
+            ),
+        )
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="ERROR") as logs:
+            result = runner.process_task(self._make_task())
+
+        output = "\n".join(logs.output)
+        self.assertNotIn("SECRET-MARKER", output)
+        self.assertNotIn("SECRET-MARKER", result.error_message or "")
+        self.assertIn("RuntimeError", output)
+        self.assertIn("RuntimeError", result.error_message or "")
 
     def test_process_task_never_publishes_a_blank_error_message(self) -> None:
         runner = WorkerRunner(
@@ -255,7 +279,7 @@ class WorkerRunnerTests(unittest.TestCase):
         result = runner.process_task(self._make_task())
 
         self.assertEqual(result.status, TaskStatus.ERROR)
-        self.assertEqual(result.error_message, "TimeoutError（未返回错误信息）")
+        self.assertEqual(result.error_message, "TimeoutError: 任务执行失败，请查看 Worker 日志")
 
     def test_process_task_preserves_latest_progress_config_when_executor_errors_after_progress(
         self,
@@ -274,7 +298,7 @@ class WorkerRunnerTests(unittest.TestCase):
         result = runner.process_task(self._make_task())
 
         self.assertEqual(result.status, TaskStatus.ERROR)
-        self.assertEqual(result.error_message, "executor boom after progress")
+        self.assertEqual(result.error_message, "RuntimeError: 任务执行失败，请查看 Worker 日志")
         self.assertEqual(
             result.intermediate_json_text, '{"enhancedText":"progress text","caseNames":[]}'
         )

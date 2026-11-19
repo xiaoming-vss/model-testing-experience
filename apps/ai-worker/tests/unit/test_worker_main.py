@@ -6,7 +6,7 @@ import tempfile
 import threading
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -25,8 +25,9 @@ from testing_agent_ai_worker.config.models import (
     Settings,
     WorkerConfig,
 )
+from testing_agent_ai_worker.core.errors import ConfigError
 from testing_agent_ai_worker.logging.setup import setup_logging
-from testing_agent_ai_worker.main import build_task_runner, run_poll_once, run_worker
+from testing_agent_ai_worker.main import build_task_runner, main, run_poll_once, run_worker
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
@@ -60,7 +61,7 @@ class _FlakyPoller:
     def poll(self) -> Task | None:
         self.calls += 1
         if self.calls == 1:
-            raise TaskSourceError("领取任务失败: Server error '502 Bad Gateway'")
+            raise TaskSourceError("领取任务失败: SECRET-MARKER 502 Bad Gateway")
         return None
 
 
@@ -223,6 +224,43 @@ class WorkerMainTests(unittest.TestCase):
         self.assertEqual("https://platform.runtime.example", settings.platform.base_url)
         self.assertEqual("runtime-worker-token", settings.platform.worker_token)
         self.assertEqual("D:/runtime/pi", settings.agent.pi.runtime_root)
+
+    def test_config_errors_report_paths_without_secret_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            invalid_toml = Path(temp_dir) / "invalid.toml"
+            invalid_toml.write_text('[worker]\nworker_token = "SECRET-MARKER\n', encoding="utf-8")
+            with self.assertRaises(ConfigError) as malformed:
+                load_settings(invalid_toml)
+            self.assertIn("配置文件格式错误", str(malformed.exception))
+            self.assertNotIn("SECRET-MARKER", str(malformed.exception))
+
+            invalid_value = Path(temp_dir) / "invalid-value.toml"
+            invalid_value.write_text(
+                '[worker]\nworker_id = { secret = "SECRET-MARKER" }\n',
+                encoding="utf-8",
+            )
+            with self.assertRaises(ConfigError) as rejected:
+                load_settings(invalid_value)
+            self.assertIn("配置校验失败", str(rejected.exception))
+            self.assertIn("worker.worker_id", str(rejected.exception))
+            self.assertNotIn("SECRET-MARKER", str(rejected.exception))
+
+    def test_main_returns_config_error_without_printing_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            invalid_value = Path(temp_dir) / "invalid-value.toml"
+            invalid_value.write_text(
+                '[worker]\nworker_id = { secret = "SECRET-MARKER" }\n',
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                code = main(invalid_value)
+
+        self.assertEqual(code, 2)
+        output = stderr.getvalue()
+        self.assertIn("worker configuration error", output)
+        self.assertIn("worker.worker_id", output)
+        self.assertNotIn("SECRET-MARKER", output)
 
     def test_run_poll_once_prints_no_task_when_platform_returns_empty(self) -> None:
         poller = _FakePoller(task=None)
@@ -629,7 +667,8 @@ class WorkerMainTests(unittest.TestCase):
         self.assertEqual(sleep_calls, [3])
         self.assertIn("no task claimed", output.getvalue())
         self.assertIn("platform task polling unavailable", "\n".join(captured_logs.output))
-        self.assertIn("502 Bad Gateway", "\n".join(captured_logs.output))
+        self.assertIn("error_type=TaskSourceError", "\n".join(captured_logs.output))
+        self.assertNotIn("SECRET-MARKER", "\n".join(captured_logs.output))
 
     def test_build_task_runner_uses_dispatcher_executor(self) -> None:
         task_runner = build_task_runner(

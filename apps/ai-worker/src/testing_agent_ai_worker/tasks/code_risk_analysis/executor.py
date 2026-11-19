@@ -17,6 +17,7 @@ from testing_agent_ai_worker.config.models import (
     CodeRiskAnalysisConfig,
     PiConfig,
 )
+from testing_agent_ai_worker.core.errors import safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -224,17 +225,19 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
         except Exception as exc:
             if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError)):
                 LOGGER.warning(
-                    "code risk context failed: task_id=%s attempt_id=%s error=%s",
+                    "code risk context failed: task_id=%s attempt_id=%s error_type=%s",
                     task.task_id,
                     task.attempt_id,
-                    exc,
+                    type(exc).__name__,
                 )
             else:
-                # 不把提示词、凭据或仓库正文写入日志;堆栈仅用于未知异常定位。
-                LOGGER.exception(
-                    "code risk analysis failed: task_id=%s attempt_id=%s",
+                # 不把提示词、凭据或仓库正文写入日志;堆栈只含文件/行/源码帧。
+                LOGGER.error(
+                    "code risk analysis failed: task_id=%s attempt_id=%s error_type=%s\n%s",
                     task.task_id,
                     task.attempt_id,
+                    type(exc).__name__,
+                    safe_traceback(exc),
                 )
             # 保留工作区是诊断辅助;清理标记写入失败不能覆盖原始任务错误。
             try:

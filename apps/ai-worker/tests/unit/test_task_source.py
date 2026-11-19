@@ -70,7 +70,7 @@ class FakePlatformHttpClient:
         backoff_base: float = 1.0,
     ) -> Any:
         if self.raise_on_credentials:
-            raise RuntimeError("凭证接口不可用")
+            raise TaskSourceError("凭证接口不可用")
         self.credentials_called = True
         self.last_credentials_path = path
         return {
@@ -314,6 +314,44 @@ class TaskSourceTests(unittest.TestCase):
         self.assertIsNotNone(task.credential_error)
         self.assertIn("凭证接口不可用", task.credential_error)
         self.assertFalse(task.has_credentials)
+
+    def test_poll_task_does_not_expose_raw_credential_exception_text(self) -> None:
+        class SecretCredentialClient(FakePlatformHttpClient):
+            def get_with_retry(self, *args: Any, **kwargs: Any) -> Any:
+                raise RuntimeError("SECRET-MARKER prompt and token")
+
+        task_source = HttpClaimTaskSource(
+            client=SecretCredentialClient(),
+            claim_path="/internal/ai-worker/tasks/claim",
+            snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
+            llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
+            worker_id="worker-local",
+        )
+
+        task = task_source.poll_task()
+
+        assert task is not None
+        self.assertNotIn("SECRET-MARKER", task.credential_error or "")
+        self.assertIn("RuntimeError", task.credential_error or "")
+
+    def test_claim_validation_error_does_not_expose_input_values(self) -> None:
+        class InvalidClaimClient(FakePlatformHttpClient):
+            def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+                return {"taskId": {"SECRET-MARKER": "prompt text"}}
+
+        task_source = HttpClaimTaskSource(
+            client=InvalidClaimClient(),
+            claim_path="/internal/ai-worker/tasks/claim",
+            snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
+            llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
+            worker_id="worker-local",
+        )
+
+        with self.assertRaises(TaskSourceError) as raised:
+            task_source.poll_task()
+
+        self.assertNotIn("SECRET-MARKER", str(raised.exception))
+        self.assertIn("任务领取响应校验失败", str(raised.exception))
 
     def test_poll_task_keeps_non_api_task_type_without_failing(self) -> None:
         class FunctionalTaskClient(FakePlatformHttpClient):

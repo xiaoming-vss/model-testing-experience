@@ -16,6 +16,7 @@ from testing_agent_ai_worker.config.models import (
     PiConfig,
     RepositoryProfileConfig,
 )
+from testing_agent_ai_worker.core.errors import safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -232,16 +233,18 @@ class RepositoryProfileExecutor(TaskExecutor):
         except Exception as exc:
             if isinstance(exc, (ProfileWorkspaceError, ProfileContractError)):
                 LOGGER.warning(
-                    "repository profile failed: task_id=%s attempt_id=%s error=%s",
+                    "repository profile failed: task_id=%s attempt_id=%s error_type=%s",
                     task.task_id,
                     task.attempt_id,
-                    exc,
+                    type(exc).__name__,
                 )
             else:
-                LOGGER.exception(
-                    "repository profile failed: task_id=%s attempt_id=%s",
+                LOGGER.error(
+                    "repository profile failed: task_id=%s attempt_id=%s error_type=%s\n%s",
                     task.task_id,
                     task.attempt_id,
+                    type(exc).__name__,
+                    safe_traceback(exc),
                 )
             try:
                 if prepared is not None:

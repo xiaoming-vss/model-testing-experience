@@ -14,6 +14,7 @@ import time
 from typing import Callable
 
 from testing_agent_ai_worker.config.models import Settings
+from testing_agent_ai_worker.core.errors import safe_traceback
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.worker.poller import TaskPoller
 
@@ -38,7 +39,11 @@ def run_worker_loop(
             claimed = run_iteration()
         except TaskSourceError as exc:
             if logger is not None:
-                logger.warning("platform task polling unavailable: %s", exc)
+                logger.warning(
+                    "platform task polling unavailable: error_type=%s\n%s",
+                    type(exc).__name__,
+                    safe_traceback(exc),
+                )
             claimed = False
         iterations += 1
 

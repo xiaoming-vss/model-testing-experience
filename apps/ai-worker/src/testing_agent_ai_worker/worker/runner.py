@@ -16,6 +16,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 
+from testing_agent_ai_worker.core.errors import safe_execution_error, safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.services.result_service import ResultService
@@ -69,12 +70,13 @@ class WorkerRunner:
             latest_progress = progress
             try:
                 self.result_service.submit_progress(progress)
-            except Exception:
+            except Exception as exc:
                 LOGGER.warning(
-                    "progress submission failed: task_id=%s stage=%s",
+                    "progress submission failed: task_id=%s stage=%s error_type=%s\n%s",
                     progress.task_id,
                     progress.current_stage,
-                    exc_info=True,
+                    type(exc).__name__,
+                    safe_traceback(exc),
                 )
 
         # 凭证缺失属于执行前失败，直接回传 failed，不进入 started/heartbeat。
@@ -85,7 +87,7 @@ class WorkerRunner:
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 intermediate_json_text=task.config_json,
-                error_message=f"获取 LLM 凭证失败: {task.credential_error}",
+                error_message=task.credential_error,
                 started_at=started_at,
                 finished_at=started_at,
             )
@@ -107,7 +109,12 @@ class WorkerRunner:
                 submit_progress,
             )
         except Exception as exc:
-            LOGGER.exception("task execution failed: task_id=%s", task.task_id)
+            LOGGER.error(
+                "task execution failed: task_id=%s error_type=%s\n%s",
+                task.task_id,
+                type(exc).__name__,
+                safe_traceback(exc),
+            )
             intermediate_json_text = (
                 latest_progress.intermediate_json_text
                 if latest_progress is not None
@@ -123,8 +130,8 @@ class WorkerRunner:
                 result_summary_json=(
                     latest_progress.result_summary_json if latest_progress is not None else ""
                 ),
-                # Timeout and bare exceptions can have no message; never publish a blank reason.
-                error_message=str(exc) or f"{type(exc).__name__}（未返回错误信息）",
+                # Provider messages may contain prompts, source text or credentials.
+                error_message=safe_execution_error(exc),
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
