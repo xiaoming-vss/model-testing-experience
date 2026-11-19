@@ -24,7 +24,7 @@ python3 scripts/manage.py upgrade-config
 
 `shared` 统一定义服务地址、发布端口及认证密钥；`database.url` 指定已有数据库，留空时使用下方的内置数据库字段。`control_plane`、`ai_worker`、`api_ui_worker`、`integration_worker`、`perf_worker` 区块递归覆盖各项目示例配置中的同名字段。地址、令牌、监听端口和存储路径最终由管理脚本按运行模式统一设置。
 
-默认只允许本机访问。服务器部署时将 `shared.public_host` 改为浏览器能访问的服务器 IP/域名，将 `shared.bind_host` 改为 `0.0.0.0`。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
+默认只允许本机访问。服务器部署时将 `shared.bind_host` 改为 `0.0.0.0`，浏览器通过服务器 IP/域名和发布端口访问。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
 
 ## Kubernetes
 

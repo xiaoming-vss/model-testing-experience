@@ -1,7 +1,5 @@
 # python3 scripts/manage.py init 会生成本地 platform.toml 并随机填入密钥。
 [shared]
-# 浏览器可访问的主机名/IP；部署到服务器时修改此处，不包含协议或端口。
-public_host = "127.0.0.1"
 # Docker 发布端口的监听地址；需要远程访问时改为 0.0.0.0。
 bind_host = "127.0.0.1"
 # 本地开发时后端的主机；内置 MySQL 的本地访问也使用此地址。

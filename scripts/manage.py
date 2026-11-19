@@ -145,6 +145,8 @@ def upgrade_config(root=ROOT):
     original = copy.deepcopy(data)
     _migrate_agent_config(data)
     shared = data.setdefault("shared", {})
+    # Retired before any runtime consumer existed; older local files may still carry it.
+    shared.pop("public_host", None)
     for key in ("integration_worker_token", "perf_worker_token", "integration_runtime_generation"):
         if key not in shared or shared[key] == "GENERATE":
             value = secrets.token_hex(32)
@@ -273,7 +275,7 @@ def validate(data):
                 )
         if db["user"] == "root":
             raise ValueError("database.user must be a non-root application user")
-    for key in ("public_host", "local_host", "bind_host"):
+    for key in ("local_host", "bind_host"):
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", shared[key]):
             raise ValueError(
                 f"shared.{key} must be an IPv4 address or hostname without a port"

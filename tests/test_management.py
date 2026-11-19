@@ -176,6 +176,20 @@ class ManagementTests(unittest.TestCase):
         # 已有统一配置优先，不被旧 pi 配置覆盖。
         self.assertEqual(upgraded["ai_worker"]["worker"]["max_concurrent_tasks"], 2)
 
+    def test_upgrade_removes_retired_public_host(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old["shared"]["public_host"] = "testing.example.com"
+        manage.write(path, manage.toml_text(old), permissions=0o600)
+
+        manage.upgrade_config(self.root)
+
+        upgraded = manage.read(path)
+        self.assertNotIn("public_host", upgraded["shared"])
+        for mode in ("local", "docker"):
+            for config in manage.configurations(upgraded, mode, self.root).values():
+                self.assertNotIn("public_host", str(config))
+
     def test_asset_import_limits_are_generated_for_both_modes(self):
         self.data["control_plane"]["asset_import"]["max_items"] = 123
         for mode in ("local", "docker"):
@@ -368,7 +382,6 @@ class ManagementTests(unittest.TestCase):
 
     def test_routes_credentials_and_overrides(self):
         self.data["shared"]["control_plane_port"] = 19000
-        self.data["shared"]["public_host"] = "testing.example.com"
         self.data["ai_worker"]["worker"]["max_concurrent_tasks"] = 7
         for mode in ("local", "docker"):
             configs = manage.configurations(self.data, mode, self.root)
