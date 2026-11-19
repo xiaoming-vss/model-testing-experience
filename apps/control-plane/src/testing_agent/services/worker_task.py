@@ -46,7 +46,10 @@ from testing_agent.services.worker import (
     task_payload,
     update_task_claimed,
 )
-from testing_agent.services.worker_authorization import authorize_execution
+from testing_agent.services.worker_authorization import (
+    ExecutionAuthority,
+    authorize_execution,
+)
 from testing_agent.services.worker_domains import api as api_domain
 from testing_agent.services.worker_domains import perf as perf_domain
 from testing_agent.services.worker_domains import ui as ui_domain
@@ -64,6 +67,12 @@ class WorkerTaskService:
     ):
         self.repository = repository
         self.credential_cipher = credential_cipher
+
+    async def ui_artifact_authority(self, task_id: str, worker_id: str) -> ExecutionAuthority:
+        """Load the locked UI task and recheck the worker's current execution right."""
+        task = await find_task(self.repository.session, "ui", task_id)
+        ensure_worker_match(task, worker_id)
+        return await authorize_execution(self.repository.session, task)
 
     async def validate_ui_artifacts(self, task_id, body):
         import re

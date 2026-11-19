@@ -1,6 +1,14 @@
-"""Authorize long-lived test-run streams without holding a database session."""
+"""Authorize and transport long-lived test-run streams without holding a session."""
+
+import asyncio
+import time
+from collections.abc import AsyncIterator
+from contextlib import suppress
 
 from fastapi import HTTPException, Request
+from fastapi.responses import StreamingResponse
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from testing_agent.core.errors import ErrForbidden
 from testing_agent.db.session import AsyncSessionLocal
@@ -36,6 +44,66 @@ async def authorize_run_subscription(
             raise ErrForbidden()
     else:
         await ui_runs.get_suite_run(user_id, run_id)
+
+
+async def stream_run_events(
+    kind: str,
+    run_id: str,
+    request: Request,
+    user_id: str,
+    session,
+    api_cases: ApiCaseService,
+    api_collections: ApiCollectionRunService,
+    ui_runs: UiTestCaseRunService,
+) -> StreamingResponse:
+    """Authorize, release the request transaction and stream committed changes."""
+    await authorize_run_subscription(kind, run_id, user_id, api_cases, api_collections, ui_runs)
+
+    # Streaming responses can outlive a request by a minute; do not hold a DB
+    # connection or a transaction while waiting for Redis events.
+    await session.rollback()
+    url = request.app.state.settings.test_run_redis_url
+    if not url:
+        raise HTTPException(status_code=503, detail="Realtime notifications unavailable")
+    client = Redis.from_url(url, socket_connect_timeout=1, socket_timeout=12)
+    pubsub = client.pubsub()
+    domain = "api" if kind.startswith("api-") else "ui"
+    try:
+        await pubsub.subscribe(f"mtx:api-ui:run:{domain}:{run_id}")
+        ack = await pubsub.get_message(ignore_subscribe_messages=False, timeout=3)
+        if not ack or ack.get("type") != "subscribe":
+            raise TimeoutError("Redis subscription was not acknowledged")
+    except (RedisError, OSError, TimeoutError):
+        with suppress(RedisError, OSError, TimeoutError):
+            await pubsub.aclose()
+            await client.aclose()
+        raise HTTPException(status_code=503, detail="Realtime notifications unavailable") from None
+
+    async def events() -> AsyncIterator[str]:
+        # Reconnect regularly to recheck session and project permissions.
+        deadline = time.monotonic() + 60
+        try:
+            yield "event: ready\ndata: {}\n\n"
+            while time.monotonic() < deadline and not await request.is_disconnected():
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=10)
+                if message:
+                    yield "event: changed\ndata: {}\n\n"
+                else:
+                    yield ": heartbeat\n\n"
+                    await asyncio.sleep(0.05)
+        except (RedisError, OSError, TimeoutError):
+            # Ending the stream causes the client to reconnect and reload.
+            return
+        finally:
+            with suppress(RedisError, OSError, TimeoutError):
+                await pubsub.aclose()
+                await client.aclose()
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 async def reauthorize_debug_stream(

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from testing_agent.routers.test_debug_stream import _stream_ui_artifacts
+from testing_agent.services.live_debug_stream import stream_ui_artifacts as _stream_ui_artifacts
 from testing_agent.services.live_debug_transfer import CHUNK_BYTES
 
 
@@ -232,13 +232,13 @@ async def test_disconnect_reports_failure_and_closes_object(monkeypatch):
 @pytest.mark.asyncio
 async def test_stalled_client_releases_delivery_instead_of_holding_it_forever(monkeypatch):
     from testing_agent.core import object_storage
-    from testing_agent.routers import test_debug_stream
+    from testing_agent.services import live_debug_stream
 
     body = io.BytesIO(b"a" * (CHUNK_BYTES * 2))
     storage = SimpleNamespace(client=SimpleNamespace(get_object=lambda **kw: {"Body": body}))
     monkeypatch.setattr(object_storage, "ObjectStorage", lambda settings: storage)
-    monkeypatch.setattr(test_debug_stream, "HEARTBEAT_INTERVAL_SECONDS", 0.01)
-    monkeypatch.setattr(test_debug_stream, "CLIENT_STALL_SECONDS", 0.03)
+    monkeypatch.setattr(live_debug_stream, "HEARTBEAT_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(live_debug_stream, "CLIENT_STALL_SECONDS", 0.03)
     request = SimpleNamespace(
         app=SimpleNamespace(state=SimpleNamespace(settings=SimpleNamespace(s3={})))
     )

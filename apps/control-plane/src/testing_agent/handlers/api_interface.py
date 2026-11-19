@@ -170,7 +170,7 @@ async def commit_api_interface_import(
     service: ApiInterfaceImportService = Depends(get_api_interface_import_service),
 ):
     return success_payload(
-        await service.commit(
+        await service.commit_import(
             user_id,
             software_repository_id,
             file=file,

@@ -35,6 +35,9 @@ from testing_agent.schemas.generation_chain import (
     GenerationChainImportOptions,
     GenerationChainImportRequest,
     GenerationChainImportResponse,
+    GenerationChainOverview,
+    GenerationChainVersionDetail,
+    GenerationChainView,
 )
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.ai_task_access import GenerationImportContext
@@ -42,6 +45,11 @@ from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.function_generate_import import import_function_run
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.stage_storage.chain_view import build_chain_view
+from testing_agent.services.stage_storage.version_delete import delete_stage_version
+from testing_agent.services.stage_storage.version_views import (
+    version_detail as build_version_detail,
+)
 from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.ui_generate_import import import_ui_run
 from testing_agent.services.ui_generation_source import UiGenerationSourceService
@@ -112,6 +120,43 @@ class GenerationChainService:
                 raise ErrNotFound()
             await self.access.validate_task_scope(task)
         return task
+
+    async def overview(self, requirement_id: str, user_id: str) -> GenerationChainOverview:
+        """Return every configured chain for the requirement panorama."""
+        await self.scope(requirement_id, user_id)
+        chains = []
+        for item in CHAIN_KINDS:
+            kind = cast(DesignKind, item)
+            task = await self.repository.task(requirement_id, kind)
+            if task is not None:
+                if task.requirement_id != requirement_id:
+                    raise ErrNotFound()
+                await self.access.validate_task_scope(task)
+            chains.append(
+                await build_chain_view(self.tasks.session, requirement_id, kind, task, detail=False)
+            )
+        return GenerationChainOverview(chains=chains)
+
+    async def chain_view(
+        self, requirement_id: str, kind: DesignKind, user_id: str, *, detail: bool
+    ) -> GenerationChainView:
+        task = await self.optional_task(requirement_id, kind, user_id)
+        return await build_chain_view(self.tasks.session, requirement_id, kind, task, detail=detail)
+
+    async def version_detail(
+        self, requirement_id: str, kind: DesignKind, version_id: str, user_id: str
+    ) -> GenerationChainVersionDetail:
+        task = await self.task(requirement_id, kind, user_id)
+        return await build_version_detail(self.tasks.session, task, kind, version_id)
+
+    async def delete_version(
+        self, requirement_id: str, kind: DesignKind, version_id: str, user_id: str
+    ) -> int:
+        """Delete a version and invalidate dependent drafts in one transaction."""
+        task = await self.task(requirement_id, kind, user_id, action="write", lock=True)
+        invalidated = await delete_stage_version(self.tasks.session, task, version_id)
+        await self.tasks.commit()
+        return invalidated
 
     async def import_options(
         self,

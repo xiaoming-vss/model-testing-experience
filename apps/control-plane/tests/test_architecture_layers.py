@@ -544,6 +544,40 @@ def test_handlers_do_not_import_persistence_details():
             assert pattern not in source, f"{path.name} still imports {pattern}"
 
 
+def _session_or_transaction_attributes(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return [
+        f"{path.name}:{node.lineno}: .{node.attr}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and node.attr in {"session", "commit", "rollback"}
+    ]
+
+
+def test_http_layer_does_not_access_sessions_or_commit():
+    violations = []
+    for directory in ("handlers", "routers"):
+        for path in sorted((PROJECT_ROOT / "src" / "testing_agent" / directory).glob("*.py")):
+            violations.extend(_session_or_transaction_attributes(path))
+    assert not violations, (
+        "HTTP layer must delegate session and transaction handling to services: "
+        + ", ".join(violations)
+    )
+
+
+def test_http_layer_check_detects_injected_session_and_commit(tmp_path):
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        "async def bad(service):\n"
+        "    await service.session.commit()\n"
+        "    await service.session.rollback()\n",
+        encoding="utf-8",
+    )
+    violations = _session_or_transaction_attributes(sample)
+    assert any(item.endswith(".session") for item in violations)
+    assert any(item.endswith(".commit") for item in violations)
+    assert any(item.endswith(".rollback") for item in violations)
+
+
 def test_no_legacy_service_shims_remain():
     service_dir = PROJECT_ROOT / "src" / "testing_agent" / "services"
     assert not list(service_dir.glob("*_legacy.py"))

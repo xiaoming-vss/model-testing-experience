@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from testing_agent.api.deps import get_current_user_id, get_integration_connection_service
+from testing_agent.api.deps import get_current_user_id, get_shared_service
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.shared_service import (
@@ -12,16 +12,9 @@ from testing_agent.schemas.shared_service import (
     ServiceRename,
     SharedServiceResponse,
 )
-from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.shared_service import SharedServiceService
 
 router = APIRouter(prefix="/projects/{project_id}/services/{provider}")
-
-
-def service(
-    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
-):
-    return SharedServiceService(connections)
 
 
 @router.get("", response_model=ApiResponse[ListResponse[SharedServiceResponse]])
@@ -29,7 +22,7 @@ async def list_services(
     project_id: str,
     provider: Provider,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(await services.list(user_id, project_id, provider))
 
@@ -39,7 +32,7 @@ async def list_templates(
     project_id: str,
     provider: Provider,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(await services.templates(user_id, project_id, provider))
 
@@ -50,7 +43,7 @@ async def create_service(
     provider: Provider,
     body: ServiceCreate,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(await services.create(user_id, project_id, provider, body))
 
@@ -62,7 +55,7 @@ async def rename_service(
     service_id: str,
     body: ServiceRename,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(
         await services.rename(
@@ -86,7 +79,7 @@ async def delete_service(
     provider: Provider,
     service_id: str,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(await services.delete(user_id, project_id, provider, service_id))
 
@@ -98,7 +91,7 @@ async def authorize_service(
     service_id: str,
     body: PersonalAuthorizationRequest,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(
         await services.authorize(user_id, project_id, provider, service_id, body)
@@ -111,7 +104,7 @@ async def revoke_authorization(
     provider: Provider,
     service_id: str,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(await services.revoke(user_id, project_id, provider, service_id))
 
@@ -123,7 +116,7 @@ async def reset_mcp_instance(
     service_id: str,
     body: McpInstanceReset,
     user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(service),
+    services: SharedServiceService = Depends(get_shared_service),
 ):
     return success_payload(
         await services.reset_instance(user_id, project_id, provider, service_id, body.instance_url)

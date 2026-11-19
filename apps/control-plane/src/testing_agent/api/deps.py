@@ -738,6 +738,23 @@ def get_file_service(
     return StoredFileService(session, settings.s3)
 
 
+def get_shared_service(
+    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
+):
+    from testing_agent.services.shared_service import SharedServiceService
+
+    return SharedServiceService(connections)
+
+
+def get_ui_worker_artifact_service(
+    tasks: WorkerTaskService = Depends(get_worker_task_service),
+    files=Depends(get_file_service),
+):
+    from testing_agent.services.ui_worker_artifacts import UiWorkerArtifactService
+
+    return UiWorkerArtifactService(tasks, files)
+
+
 def get_generation_stages(
     access: GenerationAccess = Depends(get_generation_access),
     files=Depends(get_file_service),

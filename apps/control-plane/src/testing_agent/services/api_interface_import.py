@@ -243,7 +243,7 @@ class ApiInterfaceImportService:
         )
         return response.model_dump(by_alias=True, mode="json")
 
-    async def commit(
+    async def commit_import(
         self,
         user_id: str,
         software_repository_id: str,

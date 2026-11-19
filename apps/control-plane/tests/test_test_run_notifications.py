@@ -156,7 +156,8 @@ def _async_value(value):
 
 @pytest.mark.asyncio
 async def test_stream_subscribes_before_ready_and_forwards_notifications(monkeypatch):
-    from testing_agent.routers import test_run_events as module
+    from testing_agent.routers import test_run_events as router_module
+    from testing_agent.services import test_run_stream as module
 
     calls = []
 
@@ -194,7 +195,7 @@ async def test_stream_subscribes_before_ready_and_forwards_notifications(monkeyp
         is_disconnected=_async_value(False),
     )
     monkeypatch.setattr(module.Redis, "from_url", lambda *args, **kwargs: Client())
-    response = await module.test_run_events(
+    response = await router_module.test_run_events(
         "api-collection", "run", request, "user", Session(), None, Collections(), None
     )
     stream = response.body_iterator
@@ -214,7 +215,7 @@ async def test_stream_subscribes_before_ready_and_forwards_notifications(monkeyp
 async def test_debug_stream_subscribes_before_submitting_fast_run(monkeypatch):
     import json
 
-    from testing_agent.routers import test_debug_stream as module
+    from testing_agent.services import live_debug_stream as module
     from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 
     calls = []
@@ -260,7 +261,7 @@ async def test_debug_stream_subscribes_before_submitting_fast_run(monkeypatch):
         is_disconnected=_async_value(False),
     )
     monkeypatch.setattr(module.Redis, "from_url", lambda *args, **kwargs: Client())
-    response = await module._start_stream(request, "api", "run", submit, Session())
+    response = await module.start_debug_stream(request, "api", "run", submit, Session())
     stream = response.body_iterator
     assert '"runId": "run"' in await anext(stream)
     assert '"status": "success"' in await anext(stream)
@@ -346,7 +347,7 @@ async def test_debug_stream_rechecks_access_before_delivering_sensitive_result(m
     import json
 
     from testing_agent.core.errors import ErrForbidden
-    from testing_agent.routers import test_debug_stream as module
+    from testing_agent.services import live_debug_stream as module
     from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 
     ciphertext = IntegrationCredentialCipher("safe-test-key").encrypt(
@@ -387,7 +388,9 @@ async def test_debug_stream_rechecks_access_before_delivering_sensitive_result(m
     )
     session = SimpleNamespace(rollback=_async_value(None))
     monkeypatch.setattr(module.Redis, "from_url", lambda *args, **kwargs: Client())
-    response = await module._start_stream(request, "api", "run", _async_value({}), session, denied)
+    response = await module.start_debug_stream(
+        request, "api", "run", _async_value({}), session, denied
+    )
     stream = response.body_iterator
     assert "event: started" in await anext(stream)
     with pytest.raises(StopAsyncIteration):

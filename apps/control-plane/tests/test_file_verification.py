@@ -166,11 +166,12 @@ async def test_failed_verification_garbage_is_removed_without_touching_published
 
 
 @pytest.mark.asyncio
-async def test_worker_attachment_rechecks_authority_after_verification(files, monkeypatch):
+async def test_worker_attachment_rechecks_authority_after_verification(files):
     from types import SimpleNamespace
 
     from testing_agent.core.errors import ErrForbidden
     from testing_agent.handlers import worker_files
+    from testing_agent.services.ui_worker_artifacts import UiWorkerArtifactService
 
     row, _ = await upload(files, b"\x89PNG\r\n\x1a\n", "image.png", "ui_artifact")
     row.resource_type, row.resource_id = "ui_worker_task", "task"
@@ -185,14 +186,13 @@ async def test_worker_attachment_rechecks_authority_after_verification(files, mo
             raise ErrForbidden()
         return SimpleNamespace(actor="owner", project_id="p")
 
-    monkeypatch.setattr(worker_files, "authority", authority)
+    artifacts = UiWorkerArtifactService(SimpleNamespace(ui_artifact_authority=authority), files)
     with pytest.raises(AppError) as denied:
         await worker_files.complete_artifact(
             "task",
             file_id,
             worker_files.WorkerFileCompleteRequest(workerId="w"),
-            service=None,
-            files=files,
+            artifacts=artifacts,
         )
     assert denied.value.http_code == 403 and calls == 2
     assert (await files.get(file_id)).status == "ready"

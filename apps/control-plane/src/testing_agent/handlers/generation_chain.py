@@ -5,6 +5,7 @@ from fastapi import Depends
 from testing_agent.api.deps import get_current_user_id, get_generation_chain
 from testing_agent.core.errors import ErrBadRequest, dynamic_error, success_payload
 from testing_agent.schemas.generation_chain import (
+    GenerationChainDeleteVersionResponse,
     GenerationChainImportRequest,
     GenerationChainReviewRequest,
     GenerationChainRevisionRequest,
@@ -16,10 +17,7 @@ from testing_agent.schemas.generation_chain import (
 )
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.generation_chain import GenerationChainService
-from testing_agent.services.stage_storage.chain_view import build_chain_view
 from testing_agent.services.stage_storage.commands import DirectStageCommands
-from testing_agent.services.stage_storage.version_delete import delete_stage_version
-from testing_agent.services.stage_storage.version_views import version_detail
 
 
 async def get_generation_chains(
@@ -27,26 +25,7 @@ async def get_generation_chains(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    from typing import cast
-
-    from testing_agent.domain.generation_chain import CHAIN_KINDS
-    from testing_agent.schemas.generation_chain import GenerationChainOverview
-
-    await service.scope(requirement_id, user_id)
-    chains = []
-    for item in CHAIN_KINDS:
-        kind = cast(DesignKind, item)
-        task = await service.repository.task(requirement_id, kind)
-        if task is not None:
-            if task.requirement_id != requirement_id:
-                from testing_agent.core.errors import ErrNotFound
-
-                raise ErrNotFound()
-            await service.access.validate_task_scope(task)
-        chains.append(
-            await build_chain_view(service.tasks.session, requirement_id, kind, task, detail=False)
-        )
-    return success_payload(GenerationChainOverview(chains=chains))
+    return success_payload(await service.overview(requirement_id, user_id))
 
 
 async def get_generation_chain_view(
@@ -55,10 +34,7 @@ async def get_generation_chain_view(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    task = await service.optional_task(requirement_id, kind, user_id)
-    return success_payload(
-        await build_chain_view(service.tasks.session, requirement_id, kind, task, detail=True)
-    )
+    return success_payload(await service.chain_view(requirement_id, kind, user_id, detail=True))
 
 
 async def get_ui_generation_source_options(
@@ -107,8 +83,7 @@ async def get_generation_chain_version(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    task = await service.task(requirement_id, kind, user_id)
-    return success_payload(await version_detail(service.tasks.session, task, kind, version_id))
+    return success_payload(await service.version_detail(requirement_id, kind, version_id, user_id))
 
 
 async def get_generation_chain_import_options(
@@ -195,11 +170,7 @@ async def delete_generation_chain_version(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    from testing_agent.schemas.generation_chain import GenerationChainDeleteVersionResponse
-
-    task = await service.task(requirement_id, kind, user_id, action="write", lock=True)
-    invalidated = await delete_stage_version(service.tasks.session, task, version_id)
-    await service.tasks.session.commit()
+    invalidated = await service.delete_version(requirement_id, kind, version_id, user_id)
     return success_payload(
         GenerationChainDeleteVersionResponse(
             version_id=version_id, deleted=True, invalidated_draft_count=invalidated

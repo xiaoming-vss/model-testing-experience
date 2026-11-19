@@ -248,7 +248,7 @@ async def test_repair_legacy_names_preserves_bytes_id_and_old_object(files):
 
 
 @pytest.mark.asyncio
-async def test_worker_artifact_gateway_binds_only_authorized_execution(files, monkeypatch):
+async def test_worker_artifact_gateway_binds_only_authorized_execution(files):
     from types import SimpleNamespace
 
     from testing_agent.handlers import worker_files
@@ -257,6 +257,7 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files, mo
     from testing_agent.models.ui_test_suite import UiTestSuite
     from testing_agent.models.worker_task import WorkerTask
     from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services.ui_worker_artifacts import UiWorkerArtifactService
     from testing_agent.services.worker_task import WorkerTaskService
 
     files.session.add_all(
@@ -272,7 +273,7 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files, mo
     async def authority(*args):
         return SimpleNamespace(actor="owner", project_id="p")
 
-    monkeypatch.setattr(worker_files, "authority", authority)
+    artifacts = UiWorkerArtifactService(SimpleNamespace(ui_artifact_authority=authority), files)
     response = await worker_files.initiate_artifact(
         "task",
         worker_files.WorkerFileRequest(
@@ -281,8 +282,7 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files, mo
             size=8,
             sha256=hashlib.sha256(b"\x89PNG\r\n\x1a\n").hexdigest(),
         ),
-        service=None,
-        files=files,
+        artifacts=artifacts,
     )
     import json
 
@@ -293,12 +293,8 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files, mo
     )
     body = worker_files.WorkerFileCompleteRequest(workerId="w")
     with pytest.raises(AppError):
-        await worker_files.complete_artifact(
-            "foreign-task", row.file_id, body, service=None, files=files
-        )
-    result = await worker_files.complete_artifact(
-        "task", row.file_id, body, service=None, files=files
-    )
+        await worker_files.complete_artifact("foreign-task", row.file_id, body, artifacts=artifacts)
+    result = await worker_files.complete_artifact("task", row.file_id, body, artifacts=artifacts)
     assert result["path"] == f"/v1/files/{row.file_id}/download"
     assert (await files.download("viewer", row.file_id))["size"] == 8
     service = WorkerTaskService(SimpleNamespace(session=files.session))
