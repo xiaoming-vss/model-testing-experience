@@ -47,6 +47,7 @@ from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecut
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.loop import run_worker_loop
+from testing_agent_ai_worker.worker.outbox import ResultOutbox
 from testing_agent_ai_worker.worker.poller import TaskPoller
 from testing_agent_ai_worker.worker.runner import WorkerRunner
 
@@ -154,6 +155,7 @@ def build_task_runner(
             heartbeat_interval_seconds=settings.worker.heartbeat_interval_seconds,
             run_once=settings.worker.run_once,
         ),
+        outbox=ResultOutbox(Path(settings.logging.dir) / "result-outbox"),
     )
 
 
@@ -207,6 +209,9 @@ def run_worker(
     resolved_poller = poller or build_task_poller(resolved_settings)
     resolved_task_runner = task_runner or build_task_runner(resolved_settings)
     resolved_logger = logger or logging.getLogger("testing_agent_ai_worker")
+    recover_outbox = getattr(resolved_task_runner, "recover_outbox", None)
+    if callable(recover_outbox):
+        recover_outbox()
 
     max_concurrent_tasks = max(1, resolved_settings.worker.max_concurrent_tasks)
     free_slots = threading.Semaphore(max_concurrent_tasks)

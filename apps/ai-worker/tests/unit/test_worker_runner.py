@@ -1,5 +1,7 @@
 import sys
+import tempfile
 import threading
+import time
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +16,8 @@ from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.result_sink import ResultSink
 from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
-from testing_agent_ai_worker.worker.runner import TaskExecutor, WorkerRunner
+from testing_agent_ai_worker.worker.outbox import ResultOutbox
+from testing_agent_ai_worker.worker.runner import LeaseLostError, TaskExecutor, WorkerRunner
 
 
 class _RecordingSink(ResultSink):
@@ -47,6 +50,40 @@ class _FailingProgressSink(_RecordingSink):
 class _FailingResultSink(_RecordingSink):
     def submit_result(self, result: TaskResult) -> None:
         raise RuntimeError("result endpoint unavailable")
+
+
+class _FlakyResultSink(_RecordingSink):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fail_next = True
+
+    def submit_result(self, result: TaskResult) -> None:
+        if self.fail_next:
+            raise RuntimeError("SECRET-MARKER result endpoint unavailable")
+        super().submit_result(result)
+
+
+class _FailingHeartbeatSink(_RecordingSink):
+    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+        raise RuntimeError("SECRET-MARKER heartbeat endpoint unavailable")
+
+
+class _FailingProgressAndHeartbeatSink(_FailingHeartbeatSink):
+    def submit_progress(self, progress: TaskProgress) -> None:
+        raise RuntimeError("progress endpoint unavailable")
+
+
+class _FlakyHeartbeatSink(_RecordingSink):
+    def __init__(self, *, failures_before_success: int) -> None:
+        super().__init__()
+        self.failures_before_success = failures_before_success
+        self.attempts = 0
+
+    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+        self.attempts += 1
+        if self.attempts <= self.failures_before_success:
+            raise RuntimeError("heartbeat endpoint unavailable")
+        super().send_heartbeat(task_id, attempt_id, heartbeat_at_iso)
 
 
 class _SuccessfulExecutor(TaskExecutor):
@@ -130,6 +167,53 @@ class _CheckpointPauseExecutor(TaskExecutor):
             )
         )
         return None
+
+
+class _LeaseCheckExecutor(TaskExecutor):
+    """Keep producing progress until the runner reports lease loss."""
+
+    def __init__(self, *, timeout_seconds: float = 2.0) -> None:
+        self.timeout_seconds = timeout_seconds
+
+    def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult | None:
+        deadline = time.monotonic() + self.timeout_seconds
+        while time.monotonic() < deadline:
+            try:
+                progress_callback(
+                    TaskProgress(
+                        task_id=task.task_id,
+                        attempt_id=task.attempt_id,
+                        current_stage="analyzing",
+                        stage_status="running",
+                    )
+                )
+            except LeaseLostError:
+                return None
+            time.sleep(0.005)
+        return TaskResult(
+            task_id=task.task_id,
+            attempt_id=task.attempt_id,
+            generate_task_id=task.generate_task_id,
+            status=TaskStatus.SUCCESS,
+            started_at=started_at,
+            finished_at=datetime.now().astimezone(),
+        )
+
+
+class _SleepingExecutor(TaskExecutor):
+    def __init__(self, seconds: float) -> None:
+        self.seconds = seconds
+
+    def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
+        time.sleep(self.seconds)
+        return TaskResult(
+            task_id=task.task_id,
+            attempt_id=task.attempt_id,
+            generate_task_id=task.generate_task_id,
+            status=TaskStatus.SUCCESS,
+            started_at=started_at,
+            finished_at=datetime.now().astimezone(),
+        )
 
 
 class WorkerRunnerTests(unittest.TestCase):
@@ -345,6 +429,109 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(len(sink.progress_calls), 1)
         self.assertEqual(sink.progress_calls[0].stage_status, "waiting_review")
         self.assertEqual(sink.result_calls, [])
+
+    def test_heartbeat_failures_are_logged_and_stop_execution(self) -> None:
+        sink = _FailingProgressAndHeartbeatSink()
+        runner = WorkerRunner(
+            executor=_LeaseCheckExecutor(),
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=0.01,
+                run_once=False,
+            ),
+            heartbeat_max_failures=3,
+        )
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        output = "\n".join(logs.output)
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("failures=1", output)
+        self.assertIn("failures=3", output)
+        self.assertIn("task lease lost", output)
+        self.assertNotIn("SECRET-MARKER", output)
+
+    def test_lease_deadline_stops_execution_even_below_failure_threshold(self) -> None:
+        sink = _FailingProgressAndHeartbeatSink()
+        runner = WorkerRunner(
+            executor=_LeaseCheckExecutor(),
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=0.05,
+                run_once=False,
+            ),
+            heartbeat_max_failures=100,
+        )
+
+        started = time.monotonic()
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        elapsed = time.monotonic() - started
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertGreaterEqual(elapsed, 0.9)
+        self.assertIn("task lease lost", "\n".join(logs.output))
+
+    def test_heartbeat_success_resets_failure_count(self) -> None:
+        sink = _FlakyHeartbeatSink(failures_before_success=2)
+        runner = WorkerRunner(
+            executor=_SleepingExecutor(0.15),
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=0.01,
+                run_once=False,
+            ),
+            heartbeat_max_failures=3,
+        )
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertIsNotNone(result)
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertGreaterEqual(sink.attempts, 3)
+        self.assertEqual(1, len(sink.result_calls))
+        self.assertNotIn("task lease lost", "\n".join(logs.output))
+
+    def test_result_submission_failure_is_preserved_and_recovered(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sink = _FlakyResultSink()
+            outbox = ResultOutbox(temp_dir)
+            runner = WorkerRunner(
+                executor=_SuccessfulExecutor(),
+                result_service=ResultService(sink),
+                lifecycle=WorkerLifecycle(
+                    poll_interval_seconds=10,
+                    heartbeat_interval_seconds=60,
+                    run_once=False,
+                ),
+                outbox=outbox,
+            )
+
+            with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+                result = runner.process_task(self._make_task())
+
+            self.assertIsNotNone(result)
+            self.assertEqual([], sink.result_calls)
+            entries = list(Path(temp_dir).glob("*.json"))
+            self.assertEqual(1, len(entries))
+            output = "\n".join(logs.output)
+            self.assertIn("task result saved to outbox", output)
+            self.assertNotIn("SECRET-MARKER", output)
+
+            sink.fail_next = False
+            outcome = runner.recover_outbox()
+
+            self.assertIsNotNone(outcome)
+            self.assertEqual(1, outcome.delivered)
+            self.assertEqual([result], sink.result_calls)
+            self.assertEqual([], list(Path(temp_dir).glob("*.json")))
 
 
 if __name__ == "__main__":

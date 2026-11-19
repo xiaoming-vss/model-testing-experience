@@ -8,7 +8,7 @@
 - [默认技能](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/SKILL.md) 包含规范及机器 Schema；Worker 校验下载的 Schema 与自身打包版本一致。实际使用的技能文件摘要与模型标识由运行代码记录，不要求模型输出。
 - [Schema](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/output.schema.json) 和 [contract.py](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/contract.py) 为唯一维护源。控制面和 Worker 拥有独立打包副本；从仓库根目录运行 `python3 scripts/sync_case_visualization_contract.py --check` 检查漂移，去掉 `--check` 更新副本及 Studio 测试样例。
 - 四种业务图块为 `options/interval/state/quantity`。确定性步骤流程由 Studio 读取快照生成。全部图解文字按普通文本显示；数值范围、条件、否定、数量、归属和引用通过受限字段表达。
-- 格式错误、非法引用或不完整模型输出均失败，不自动语义重试；合法 `unsupported` 是任务成功完成，但不会成为可用图解。回传失败按现有 Worker 结果上报语义记录错误，不重跑模型；瞬时回传失败需重新生成。
+- 格式错误、非法引用或不完整模型输出均失败，不自动语义重试；合法 `unsupported` 是任务成功完成，但不会成为可用图解。回传失败按现有 Worker 结果上报语义记录错误，不重跑模型；瞬时回传失败先进入本地 outbox 并在租约内重试，租约失效后才需要重新生成。
 
 ## 无工具执行
 

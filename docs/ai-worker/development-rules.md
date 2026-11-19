@@ -27,13 +27,15 @@
 
 异常日志与最终失败回传统一使用 `core/errors.py` 的安全摘要：只保留异常类型、文件/行号/函数名和任务标识。可能携带提示词、输入材料、模型输出或凭据的异常，不得使用 `LOGGER.exception`、`exc_info=True` 或直接拼接 `str(exc)`。Pydantic 校验摘要必须关闭输入值（`include_input=False`），只输出字段路径和校验消息；配置加载失败只输出配置路径、字段路径和修复提示，不输出配置值。回归测试使用秘密标记断言日志和回传均不含该标记。
 
+心跳失败必须记录安全 warning 和连续失败次数；连续失败达到阈值或租约到期后，执行器只能在进度检查点停止，且不得再回传结果。AI 队列没有停止信号，Worker 不产生 `canceled`；`TaskStatus.CANCELED` 仅为协议兼容保留。完成回传失败时，最终结果写入本地 outbox 并在租约内重试，不重新调用模型；租约过期条目只保留诊断，不再投递。该路径由 `test_worker_runner.py`、`test_worker_outbox.py` 和 `test_worker_main.py` 覆盖。
+
 ## 验证入口
 
 本项目使用 unittest 和 `dev` 依赖组，当前未配置 mypy；公共接口类型按通用规则通过审查和现有契约验证。安装、全量测试、Ruff 和格式检查命令统一见[验证命令矩阵](../commands.md#ai-worker)。
 
 | 变更 | 必须检查的入口 |
 | --- | --- |
-| 领取、分派、运行及回传 | `tests/unit/test_task_source.py`、`test_worker_dispatcher.py`、`test_worker_runner.py`、`test_result_sink.py` 及 `test_worker_main.py` |
+| 领取、分派、运行及回传 | `tests/unit/test_task_source.py`、`test_worker_dispatcher.py`、`test_worker_runner.py`、`test_worker_outbox.py`、`test_result_sink.py` 及 `test_worker_main.py` |
 | 控制面通信与凭据 | `tests/unit/test_http_client.py`，加控制面 `test_worker_contract.py` 和相应任务协议验证 |
 | 需求分析 | `tests/unit/tasks/requirement_analysis/test_executor.py`、`test_material_stage.py`、`test_review_stage.py`，加控制面的需求分析专项 |
 | 功能用例校验与编号 | `tests/unit/tasks/functional_case_generate/test_validation.py`、`test_case_ids.py`、`test_revision.py` |

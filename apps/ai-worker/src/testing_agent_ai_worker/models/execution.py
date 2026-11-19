@@ -12,6 +12,8 @@ class TaskStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
     ERROR = "error"
+    # Reserved for protocol compatibility. AI tasks have no stop signal and
+    # this worker never publishes canceled itself.
     CANCELED = "canceled"
 
 

@@ -73,6 +73,15 @@ class _FakeTaskRunner:
         self.tasks.append(task)
 
 
+class _RecoveringTaskRunner(_FakeTaskRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.recoveries = 0
+
+    def recover_outbox(self) -> None:
+        self.recoveries += 1
+
+
 class _SequenceThenIdlePoller:
     """按序返回任务,耗尽后一直返回 None。"""
 
@@ -401,6 +410,28 @@ class WorkerMainTests(unittest.TestCase):
         self.assertEqual(poller.calls, 1)
         self.assertEqual(len(task_runner.tasks), 1)
         self.assertEqual(sleep_calls, [])
+
+    def test_run_worker_recovers_outbox_before_polling(self) -> None:
+        poller = _FakePoller(task=None)
+        task_runner = _RecoveringTaskRunner()
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            exit_code = run_worker(
+                settings=Settings(
+                    worker=WorkerConfig(poll_interval_seconds=3, run_once=True),
+                    platform=PlatformConfig(base_url="https://platform.example.com"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    logging=LoggingConfig(),
+                ),
+                poller=poller,
+                task_runner=task_runner,
+                sleep=lambda _seconds: None,
+                max_iterations=1,
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(1, task_runner.recoveries)
 
     def _make_simple_task(self, task_id: str) -> Task:
         return Task(
