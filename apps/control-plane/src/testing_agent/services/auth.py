@@ -118,9 +118,15 @@ class AuthService:
             raise ErrForbidden()
         if getattr(user, "auth_source", "local") == "ldap":
             raise ErrLdapReadOnly()
-        if body.name is not None and body.name.strip() != user.nickname:
-            raise ErrUsernameImmutable()
-        if body.email is not None:
+        fields = body.model_fields_set
+        if "name" in fields:
+            if body.name is None:
+                raise ErrBadRequest()
+            if body.name.strip() != user.nickname:
+                raise ErrUsernameImmutable()
+        if "email" in fields:
+            if body.email is None:
+                raise ErrBadRequest()
             new_email = normalize_email(body.email)
             if not new_email:
                 raise ErrEmailRequired()

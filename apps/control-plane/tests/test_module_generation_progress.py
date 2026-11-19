@@ -153,7 +153,7 @@ async def test_worker_string_summary_reaches_stage_projection(db):
         {
             "workerId": "node",
             "taskId": queue.task_id,
-            "attemptId": attempt.id,
+            "runId": attempt.id,
             "currentStage": "detailed_cases",
             "stageStatus": "running",
             "configJson": "",

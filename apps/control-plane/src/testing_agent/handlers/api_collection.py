@@ -53,7 +53,7 @@ async def update_api_collection(
         await service.update(
             user_id,
             collection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
         )
     )
 

@@ -8,8 +8,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class ApiEnvironmentRequest(BaseModel):
+
+class ApiEnvironmentRequest(StrictRequest):
     name: str
     kind: Literal["api", "ui", "perf"] = Field(default="api")
     base_url: str = Field(default="")
@@ -18,7 +20,7 @@ class ApiEnvironmentRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ApiEnvironmentUpdateRequest(BaseModel):
+class ApiEnvironmentUpdateRequest(StrictRequest):
     name: str | None = None
     base_url: str | None = Field(default=None)
     description: str | None = None

@@ -8,8 +8,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class ApiAssertRuleRequest(BaseModel):
+
+class ApiAssertRuleRequest(StrictRequest):
     name: str
     enabled: bool = True
     order_no: int = Field(default=0)
@@ -20,7 +22,7 @@ class ApiAssertRuleRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ApiAssertRuleUpdateRequest(BaseModel):
+class ApiAssertRuleUpdateRequest(StrictRequest):
     name: str | None = None
     enabled: bool | None = None
     order_no: int | None = Field(default=None)

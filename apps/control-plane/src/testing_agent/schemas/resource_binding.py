@@ -6,8 +6,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class ResourceBindingRequest(BaseModel):
+
+class ResourceBindingRequest(StrictRequest):
     instance_url: str = ""
     provider: Literal["zentao", "gitlab"]
     # Choose a personal connection; instanceUrl can select an unambiguous personal connection.
@@ -22,7 +24,7 @@ class ResourceBindingRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateResourceBindingRequest(BaseModel):
+class UpdateResourceBindingRequest(StrictRequest):
     remote_resource_id: str | None = None
     confirm_instance_switch: bool = False
     """所有者使用本人同实例连接重新验证关联，不共享或转移凭据。"""
@@ -33,7 +35,7 @@ class UpdateResourceBindingRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateRequirementBindingRequest(BaseModel):
+class UpdateRequirementBindingRequest(StrictRequest):
     remote_resource_id: str | None = None
     """需求级 GitLab 仓库绑定更新:未传字段保持不变;基线分支不可清空。"""
 

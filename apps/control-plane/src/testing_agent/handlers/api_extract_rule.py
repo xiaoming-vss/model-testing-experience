@@ -46,7 +46,7 @@ async def update_api_extract_rule(
         await service.update(
             user_id,
             extract_rule_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
         )
     )
 

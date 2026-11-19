@@ -66,7 +66,7 @@ Ruff 配置以应用 `pyproject.toml` 为准，当前行宽为 100，检查规�
 
 - Python 内部字段通常使用 `snake_case`，对外 JSON 使用已有的 camelCase alias。通过模型序列化处理别名，不在不同 handler 中维护不同转换规则。
 - 新增接口明确 `response_model`。新增字段、修改可空性、错误码或分页行为时，同步检查 Studio 与相应 Worker 的消费方式。
-- PATCH 按字段是否提交及其定义处理，区分缺省、空字符串和 `null`；仅允许修改明确列出的字段，不把请求字典整体写入 ORM 对象。
+- PATCH 按字段是否提交及其定义处理，区分缺省、空字符串和 `null`；仅允许修改明确列出的字段，不把请求字典整体写入 ORM 对象。更新 handler 使用 `exclude_unset=True`，service 使用 `model_fields_set`；请求模型默认 `extra="forbid"`。字段语义和例外清单见[请求契约](request-contracts.md)。
 - 业务错误复用 `core/errors.py`。抛出命名错误使用 `raise ErrNotFound()` 这样的调用形式，创建请求自己的异常实例；需要动态消息时使用现有错误构造方式。
 - HTTP 状态与业务错误码同时遵循既有契约。保留内部 Worker 未授权等已有响应例外；不能为了“统一”而破坏客户端已依赖的行为。
 - 列表沿用 `items`、`total` 等现有字段，`total` 表示符合筛选的全部条数，不是本页条数。已有分页接口保留边界校验和稳定排序；相同时间使用 ID 作为排序补充。

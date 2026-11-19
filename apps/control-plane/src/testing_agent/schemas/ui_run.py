@@ -7,8 +7,10 @@ from typing import Any
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class DebugRunUiCaseRequest(BaseModel):
+
+class DebugRunUiCaseRequest(StrictRequest):
     environment_id: str = Field()
     live_debug: bool = False
     headless: bool | None = None

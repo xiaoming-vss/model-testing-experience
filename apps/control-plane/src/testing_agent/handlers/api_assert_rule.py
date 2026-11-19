@@ -43,7 +43,7 @@ async def update_api_assert_rule(
         await service.update(
             user_id,
             assert_rule_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
         )
     )
 

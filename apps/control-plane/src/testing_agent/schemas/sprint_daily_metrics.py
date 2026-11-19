@@ -5,6 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
+
 
 class TestMetricGroup(BaseModel):
     total: int = 0
@@ -60,7 +62,7 @@ class BugDetailContext(BaseModel):
     description: str = ""
 
 
-class SprintDailyMetricRequest(BaseModel):
+class SprintDailyMetricRequest(StrictRequest):
     """触发快照重算的可选触发来源；指标值一律由服务端按本地数据重算。"""
 
     connection_id: str | None = None

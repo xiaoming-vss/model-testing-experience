@@ -120,7 +120,7 @@ async def update_function_case(
     service: FunctionTestCaseService = Depends(get_function_test_case_service),
 ):
     return success_payload(
-        await service.update(user_id, case_id, body.model_dump(by_alias=True, exclude_none=True))
+        await service.update(user_id, case_id, body.model_dump(by_alias=True, exclude_unset=True))
     )
 
 

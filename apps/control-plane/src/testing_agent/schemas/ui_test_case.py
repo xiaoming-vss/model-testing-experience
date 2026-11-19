@@ -8,6 +8,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
+
 
 def parse_steps_json(value: Any) -> list[Any]:
     if isinstance(value, str):
@@ -20,7 +22,7 @@ def parse_steps_json(value: Any) -> list[Any]:
     return value
 
 
-class UiCaseRequest(BaseModel):
+class UiCaseRequest(StrictRequest):
     name: str
     enabled: bool = True
     order_no: int = Field(default=0)
@@ -33,7 +35,7 @@ class UiCaseRequest(BaseModel):
         return parse_steps_json(value)
 
 
-class UiCaseUpdateRequest(BaseModel):
+class UiCaseUpdateRequest(StrictRequest):
     name: str | None = None
     enabled: bool | None = None
     order_no: int | None = Field(default=None)

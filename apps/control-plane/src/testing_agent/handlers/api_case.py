@@ -45,7 +45,7 @@ async def update_api_case(
     service: ApiCaseService = Depends(get_api_case_service),
 ):
     return success_payload(
-        await service.update(user_id, case_id, body.model_dump(by_alias=True, exclude_none=True))
+        await service.update(user_id, case_id, body.model_dump(by_alias=True, exclude_unset=True))
     )
 
 

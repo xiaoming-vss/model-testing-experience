@@ -54,7 +54,7 @@ async def update_project_gitlab_connection(
         await service.update(
             "gitlab",
             connection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
             project_id,
         )
@@ -68,7 +68,7 @@ async def reauth_project_gitlab_connection(
     user_id: str = Depends(get_current_user_id),
     service: IntegrationConnectionService = Depends(get_integration_connection_service),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_unset=True) if body else None
     return success_payload(await service.reauth_gitlab(connection_id, payload, user_id, project_id))
 
 
@@ -202,7 +202,7 @@ async def update_zentao_connection(
         await service.update(
             "zentao",
             connection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
             project_id,
         )
@@ -220,7 +220,7 @@ async def update_project_zentao_connection(
         await service.update(
             "zentao",
             connection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
             project_id,
         )
@@ -234,7 +234,7 @@ async def reauth_zentao_connection(
     user_id: str = Depends(get_current_user_id),
     service: IntegrationConnectionService = Depends(get_integration_connection_service),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_unset=True) if body else None
     return success_payload(await service.reauth_zentao(connection_id, payload, user_id, project_id))
 
 
@@ -245,7 +245,7 @@ async def reauth_project_zentao_connection(
     user_id: str = Depends(get_current_user_id),
     service: IntegrationConnectionService = Depends(get_integration_connection_service),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_unset=True) if body else None
     return success_payload(await service.reauth_zentao(connection_id, payload, user_id, project_id))
 
 
@@ -331,7 +331,7 @@ async def update_llm_connection(
         await service.update(
             "llm",
             connection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
             project_id,
         )
@@ -349,7 +349,7 @@ async def update_project_llm_connection(
         await service.update(
             "llm",
             connection_id,
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
             project_id,
         )

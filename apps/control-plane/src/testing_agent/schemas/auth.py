@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class RegisterRequest(BaseModel):
+
+class RegisterRequest(StrictRequest):
     name: str
     password: str
     email: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(StrictRequest):
     name: str
     auth_method: Literal["local", "ldap"] = "local"
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -37,13 +39,20 @@ class LoginResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateProfileRequest(BaseModel):
+class UpdateProfileRequest(StrictRequest):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     name: str | None = None
     email: str | None = None
 
+    @field_validator("name", "email")
+    @classmethod
+    def reject_null(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("字段不能为 null；省略表示保持原值")
+        return value
 
-class ChangePasswordRequest(BaseModel):
+
+class ChangePasswordRequest(StrictRequest):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     old_password: str
     new_password: str

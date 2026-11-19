@@ -4,7 +4,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 from testing_agent.core.enums import SprintStatus
-from testing_agent.core.errors import ErrNotFound, ErrSprintNameAlreadyUse, ErrSprintScheduleInvalid
+from testing_agent.core.errors import (
+    ErrBadRequest,
+    ErrNotFound,
+    ErrSprintNameAlreadyUse,
+    ErrSprintScheduleInvalid,
+)
 from testing_agent.core.sid import new_id
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.sprint import SprintRepository
@@ -110,17 +115,28 @@ class SprintService:
 
     async def update(self, user_id: str, sprint_id: str, body: UpdateSprintRequest) -> dict:
         sprint = await self.get_accessible_entity(user_id, sprint_id, action="write")
-        start_time = body.start_time if body.start_time is not None else sprint.start_time
-        end_time = body.end_time if body.end_time is not None else sprint.end_time
+        fields = body.model_fields_set
+        start_time = sprint.start_time
+        end_time = sprint.end_time
+        if "start_time" in fields:
+            if body.start_time is None:
+                raise ErrBadRequest()
+            start_time = body.start_time
+        if "end_time" in fields:
+            if body.end_time is None:
+                raise ErrBadRequest()
+            end_time = body.end_time
         validate_schedule(start_time, end_time)
-        if body.name is not None:
+        if "name" in fields:
+            if body.name is None:
+                raise ErrBadRequest()
             sprint.name = body.name
-        if body.description is not None:
+        if "description" in fields:
+            if body.description is None:
+                raise ErrBadRequest()
             sprint.description = body.description
-        if body.start_time is not None:
-            sprint.start_time = body.start_time
-        if body.end_time is not None:
-            sprint.end_time = body.end_time
+        sprint.start_time = start_time
+        sprint.end_time = end_time
         await self.sprints.commit()
         await self.sprints.refresh(sprint)
         return dump_sprint(sprint)

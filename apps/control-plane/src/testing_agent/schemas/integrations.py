@@ -6,8 +6,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class CreateZentaoIntegrationConnectionRequest(BaseModel):
+
+class CreateZentaoIntegrationConnectionRequest(StrictRequest):
     project_id: str = Field(default="")
     name: str
     base_url: str = Field()
@@ -19,7 +21,7 @@ class CreateZentaoIntegrationConnectionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateZentaoIntegrationConnectionRequest(BaseModel):
+class UpdateZentaoIntegrationConnectionRequest(StrictRequest):
     name: str | None = None
     base_url: str | None = Field(default=None)
     allow_http: bool | None = None
@@ -30,7 +32,7 @@ class UpdateZentaoIntegrationConnectionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class CreateGitLabIntegrationConnectionRequest(BaseModel):
+class CreateGitLabIntegrationConnectionRequest(StrictRequest):
     name: str
     base_url: str = Field()
     allow_http: bool = False
@@ -40,7 +42,7 @@ class CreateGitLabIntegrationConnectionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateGitLabIntegrationConnectionRequest(BaseModel):
+class UpdateGitLabIntegrationConnectionRequest(StrictRequest):
     name: str | None = None
     base_url: str | None = Field(default=None)
     allow_http: bool | None = None
@@ -50,7 +52,7 @@ class UpdateGitLabIntegrationConnectionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class CreateLLMIntegrationConnectionRequest(BaseModel):
+class CreateLLMIntegrationConnectionRequest(StrictRequest):
     project_id: str = Field(default="")
     name: str
     base_url: str = Field()
@@ -60,7 +62,7 @@ class CreateLLMIntegrationConnectionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateLLMIntegrationConnectionRequest(BaseModel):
+class UpdateLLMIntegrationConnectionRequest(StrictRequest):
     name: str | None = None
     base_url: str | None = Field(default=None)
     model_id: str | None = Field(default=None)

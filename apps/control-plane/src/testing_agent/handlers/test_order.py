@@ -74,7 +74,7 @@ async def update_test_order(
     service: TestOrderService = Depends(get_test_order_service),
 ):
     return success_payload(
-        await service.update(user_id, order_id, body.model_dump(by_alias=True, exclude_none=True))
+        await service.update(user_id, order_id, body.model_dump(by_alias=True, exclude_unset=True))
     )
 
 
@@ -153,7 +153,7 @@ async def update_test_order_entry(
 ):
     return success_payload(
         await service.update(
-            user_id, order_id, entry_id, body.model_dump(by_alias=False, exclude_none=True)
+            user_id, order_id, entry_id, body.model_dump(by_alias=False, exclude_unset=True)
         )
     )
 

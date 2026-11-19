@@ -39,6 +39,13 @@ class UpdateSprintRequest(BaseModel):
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
+    @field_validator("name", "description")
+    @classmethod
+    def reject_null_text(cls, value):
+        if value is None:
+            raise ValueError("字段不能为 null；省略表示保持原值")
+        return value
+
     @field_validator("start_time", "end_time", mode="before")
     @classmethod
     def require_non_null_time(cls, value: Any) -> Any:

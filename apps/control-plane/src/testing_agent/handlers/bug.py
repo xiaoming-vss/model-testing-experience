@@ -85,7 +85,7 @@ async def update_bug(
     service: BugService = Depends(get_bug_service),
 ):
     return success_payload(
-        await service.update(user_id, bug_id, body.model_dump(by_alias=False, exclude_none=True))
+        await service.update(user_id, bug_id, body.model_dump(by_alias=False, exclude_unset=True))
     )
 
 

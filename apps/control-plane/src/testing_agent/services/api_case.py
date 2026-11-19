@@ -71,6 +71,8 @@ def apply_api_case_patch(case: ApiCase, body: dict[str, Any]) -> None:
         ).lstrip("_")
         if snake_key not in allowed:
             continue
+        if value is None:
+            raise ErrBadRequest()
         if snake_key in json_keys:
             value = normalize_json_value(value)
         setattr(case, snake_key, value)

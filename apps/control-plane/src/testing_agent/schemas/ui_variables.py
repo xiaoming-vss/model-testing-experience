@@ -3,8 +3,10 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class ResolveUiRunVariablesRequest(BaseModel):
+
+class ResolveUiRunVariablesRequest(StrictRequest):
     task_id: str = Field()
     worker_id: str = Field()
     names: list[str] = Field(default_factory=list)
@@ -25,7 +27,7 @@ class WriteUiRunVariableItem(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class WriteUiRunVariablesRequest(BaseModel):
+class WriteUiRunVariablesRequest(StrictRequest):
     task_id: str = Field()
     worker_id: str = Field()
     items: list[WriteUiRunVariableItem] = Field(default_factory=list)

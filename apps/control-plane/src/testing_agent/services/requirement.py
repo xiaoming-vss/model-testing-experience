@@ -156,13 +156,18 @@ class RequirementService:
         body: UpdateRequirementRequest,
     ) -> dict:
         requirement = await self.get_accessible_entity(user_id, requirement_id, action="write")
-        if body.name is not None:
+        fields = body.model_fields_set
+        if "name" in fields:
+            if body.name is None:
+                raise ErrBadRequest()
             requirement.name = body.name
-        if body.document_type is not None:
+        if "document_type" in fields:
+            if body.document_type is None:
+                raise ErrBadRequest()
             requirement.document_type = normalize_document_type(body.document_type)
-        if body.document_file_id:
+        if "document_file_id" in fields and body.document_file_id:
             await self._attach_file(user_id, requirement, body.document_file_id)
-        elif body.document_content is not None:
+        elif "document_content" in fields and body.document_content is not None:
             from testing_agent.domain.requirement_artifacts import requirement_content
 
             try:

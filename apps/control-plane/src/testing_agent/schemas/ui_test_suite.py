@@ -8,10 +8,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
+
 UiScreenshotPolicy = Literal["on_failure", "after_each_step", "never"]
 
 
-class UiSuiteRequest(BaseModel):
+class UiSuiteRequest(StrictRequest):
     name: str
     description: str = ""
     headless: bool | None = None
@@ -23,7 +25,7 @@ class UiSuiteRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UiSuiteUpdateRequest(BaseModel):
+class UiSuiteUpdateRequest(StrictRequest):
     name: str | None = None
     description: str | None = None
     headless: bool | None = None

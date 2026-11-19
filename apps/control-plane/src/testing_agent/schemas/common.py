@@ -8,6 +8,12 @@ from pydantic.alias_generators import to_camel
 DataT = TypeVar("DataT")
 
 
+class StrictRequest(BaseModel):
+    """Base for incoming request models: undeclared fields are rejected."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ApiResponse[DataT](BaseModel):
     code: int = 0
     message: str = "ok"

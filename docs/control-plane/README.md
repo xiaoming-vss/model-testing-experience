@@ -6,7 +6,7 @@
 
 这是 Go 控制面的 Python 重写版本，保留原 `/v1` 与 `/internal/*` 契约。领域术语见 [CONTEXT](CONTEXT.md)。
 
-[通用后端规则](../agents/backend-development.md)适用于四个后端项目；[控制面开发规则](development-rules.md)补充本项目的 Web、权限、数据库和事务验证入口。新增开发和相关修改同时按两份规则执行。Service 直接 SQL 的允许清单和纯读迁移状态见 [Service SQL 边界](service-sql-boundaries.md)。
+[通用后端规则](../agents/backend-development.md)适用于四个后端项目；[控制面开发规则](development-rules.md)补充本项目的 Web、权限、数据库和事务验证入口。新增开发和相关修改同时按两份规则执行。Service 直接 SQL 的允许清单和纯读迁移状态见 [Service SQL 边界](service-sql-boundaries.md)；请求模型的未知字段与更新三态约定见 [请求契约](request-contracts.md)。
 
 集成远端写入由独立 integration-worker 执行，控制面保留授权、写入意图、账本与结果事务。
 未启用的范围不能回退到旧同步写入口；未知写入不能自动重发。约束以

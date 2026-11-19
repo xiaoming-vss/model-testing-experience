@@ -8,6 +8,8 @@ from typing import Any
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serializer
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
+
 
 def json_text(value: Any, default: str = "{}") -> str:
     if value is None:
@@ -17,7 +19,7 @@ def json_text(value: Any, default: str = "{}") -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
-class RunApiCaseRequest(BaseModel):
+class RunApiCaseRequest(StrictRequest):
     environment_id: str = Field()
     live_debug: bool = False
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

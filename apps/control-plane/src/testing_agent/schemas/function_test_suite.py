@@ -8,14 +8,16 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 
-class FunctionSuiteRequest(BaseModel):
+
+class FunctionSuiteRequest(StrictRequest):
     name: str
     description: str = ""
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class FunctionSuiteUpdateRequest(BaseModel):
+class FunctionSuiteUpdateRequest(StrictRequest):
     name: str | None = None
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     description: str | None = None

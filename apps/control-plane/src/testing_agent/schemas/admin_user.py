@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from testing_agent.core.enums import AccountStatus, AuthSource
+from testing_agent.schemas.common import StrictRequest
 
 
 class AdminUserResponse(BaseModel):
@@ -23,16 +24,16 @@ class AdminUserResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class DisableUserRequest(BaseModel):
+class DisableUserRequest(StrictRequest):
     reason: str = ""
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ResetPasswordRequest(BaseModel):
+class ResetPasswordRequest(StrictRequest):
     new_password: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class UpdateUserEmailRequest(BaseModel):
+class UpdateUserEmailRequest(StrictRequest):
     email: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

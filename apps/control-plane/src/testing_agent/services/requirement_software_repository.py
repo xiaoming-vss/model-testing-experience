@@ -130,12 +130,17 @@ class RequirementSoftwareRepositoryService:
         if association is None:
             raise ErrNotFound()
         repository = await self._software_repository(project_id, software_repository_id)
-        branch = body.branch if body.branch is not None else association.branch
-        baseline_branch = (
-            body.baseline_branch
-            if body.baseline_branch is not None
-            else association.baseline_branch
-        )
+        fields = body.model_fields_set
+        branch = association.branch
+        baseline_branch = association.baseline_branch
+        if "branch" in fields:
+            if body.branch is None:
+                raise ErrBadRequest()
+            branch = body.branch
+        if "baseline_branch" in fields:
+            if body.baseline_branch is None:
+                raise ErrBadRequest()
+            baseline_branch = body.baseline_branch
         # 换绑会清空分支，允许一次补一个分支，避免两个空值互相等待；提供值仍按仓库校验。
         await self._validate_branches(
             user_id,

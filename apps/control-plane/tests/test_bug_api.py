@@ -241,9 +241,15 @@ def test_edit_records_field_history_without_status_change(api):
     assert data["requirementId"] == requirement_id
     assert data["requirementName"] == "req"
 
-    # 空串表示取消关联
+    # 空串表示取消关联；可清空字段也接受显式 null。
     cleared = api.patch(f"/v1/bugs/{bug_id}", headers=owner, json={"requirementId": ""})
     assert cleared.json()["data"]["requirementId"] == ""
+    cleared_sprint = api.patch(
+        f"/v1/bugs/{bug_id}", headers=owner, json={"plannedFixSprintId": None}
+    )
+    assert cleared_sprint.status_code == 200, cleared_sprint.text
+    assert cleared_sprint.json()["data"]["plannedFixSprintId"] == ""
+    assert api.patch(f"/v1/bugs/{bug_id}", headers=owner, json={"title": None}).status_code == 400
 
     edits = [item for item in activities_of(api, owner, bug_id)["items"] if item["kind"] == "edit"]
     assert edits, "编辑应记录动态"

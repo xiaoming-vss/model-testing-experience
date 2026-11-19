@@ -5,6 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
+
 
 def _strip_title(value: str) -> str:
     value = value.strip()
@@ -13,7 +15,7 @@ def _strip_title(value: str) -> str:
     return value
 
 
-class BugCreateRequest(BaseModel):
+class BugCreateRequest(StrictRequest):
     """创建 Bug：责任人、严重程度、优先级、发现迭代为必填项。"""
 
     title: str
@@ -41,8 +43,12 @@ class BugCreateRequest(BaseModel):
         return list(dict.fromkeys(value for value in values if value.strip()))
 
 
-class BugUpdateRequest(BaseModel):
-    """编辑基本信息与描述；字段值为空串表示清空（计划修复迭代/所属需求）。"""
+class BugUpdateRequest(StrictRequest):
+    """编辑基本信息与描述。
+
+    缺省表示保持原值；计划修复迭代/所属需求可用 null 或空串清空；
+    其他字段显式 null 会被拒绝。
+    """
 
     title: str | None = None
     description_html: str | None = None
@@ -56,11 +62,20 @@ class BugUpdateRequest(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def validate_title(cls, value: str | None) -> str | None:
-        return None if value is None else _strip_title(value)
+    def validate_title(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("title 不能为 null；省略表示保持原值")
+        return _strip_title(value)
+
+    @field_validator("description_html", "severity", "priority", "attachment_file_ids")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("字段不能为 null；省略表示保持原值")
+        return value
 
 
-class BugTransitionRequest(BaseModel):
+class BugTransitionRequest(StrictRequest):
     """确认、解决、关闭、激活；旧 rejectReason 仅用于兼容旧动作。"""
 
     action: str
@@ -72,14 +87,14 @@ class BugTransitionRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class BugTransferRequest(BaseModel):
+class BugTransferRequest(StrictRequest):
     """独立转派操作：只更换责任人，不改变状态。"""
 
     assignee_user_id: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class BugCommentRequest(BaseModel):
+class BugCommentRequest(StrictRequest):
     content: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

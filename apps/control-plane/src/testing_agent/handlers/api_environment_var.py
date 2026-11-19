@@ -43,7 +43,9 @@ async def update_api_environment_var(
     service: ApiEnvironmentVarService = Depends(get_api_environment_var_service),
 ):
     return success_payload(
-        await service.update(user_id, env_var_id, body.model_dump(by_alias=True, exclude_none=True))
+        await service.update(
+            user_id, env_var_id, body.model_dump(by_alias=True, exclude_unset=True)
+        )
     )
 
 

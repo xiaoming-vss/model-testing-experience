@@ -260,6 +260,10 @@ class IntegrationConnectionService:
     ) -> dict:
         await self.ensure_project_access(user_id, project_id)
         connection = await self.get_owned(user_id, provider, connection_id, project_id)
+        if any(value is None for value in body.values()):
+            # Explicit null is not a supported clear signal for connections;
+            # callers must omit a field to keep it unchanged.
+            raise ErrBadRequest()
         from sqlalchemy import select
 
         from testing_agent.models.shared_service import ServiceAuthorization

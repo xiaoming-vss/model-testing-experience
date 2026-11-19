@@ -114,7 +114,7 @@ async def update_requirement_binding(
             requirement_id,
             binding_id,
             # 未传字段不出现在 payload 中,避免把显式省略误判为清空。
-            body.model_dump(by_alias=True, exclude_none=True),
+            body.model_dump(by_alias=True, exclude_unset=True),
             user_id,
         )
     )

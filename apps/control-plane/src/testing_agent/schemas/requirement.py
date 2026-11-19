@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
 
 # 需求文档只支持富文本与 Word/DOCX；历史 TXT 已通过迁移转换为富文本。
@@ -19,7 +20,7 @@ def normalize_document_type(value: str) -> str:
     return normalized
 
 
-class CreateRequirementRequest(BaseModel):
+class CreateRequirementRequest(StrictRequest):
     name: str
     document_type: str = Field(default="richtext")
     document_file_id: str = Field(default="", max_length=64)
@@ -33,7 +34,7 @@ class CreateRequirementRequest(BaseModel):
         return normalize_document_type(value)
 
 
-class UpdateRequirementRequest(BaseModel):
+class UpdateRequirementRequest(StrictRequest):
     name: str | None = None
     document_type: str | None = Field(default=None)
     document_file_id: str | None = Field(default=None, max_length=64)
@@ -41,11 +42,18 @@ class UpdateRequirementRequest(BaseModel):
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
+    @field_validator("name", "document_file_id", "document_content")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("字段不能为 null；省略表示保持原值")
+        return value
+
     @field_validator("document_type")
     @classmethod
-    def validate_document_type(cls, value: str | None) -> str | None:
+    def validate_document_type(cls, value: str | None) -> str:
         if value is None:
-            return None
+            raise ValueError("documentType 不能为 null；省略表示保持原值")
         return normalize_document_type(value)
 
 

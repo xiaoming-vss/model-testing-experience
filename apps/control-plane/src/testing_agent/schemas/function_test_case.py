@@ -10,9 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from testing_agent.domain.function_case_content import CaseContent
+from testing_agent.schemas.common import StrictRequest
 
 
-class FunctionCaseRequest(BaseModel):
+class FunctionCaseRequest(StrictRequest):
     content: CaseContent | None = None
     module: str = ""
     title: str
@@ -25,7 +26,7 @@ class FunctionCaseRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class FunctionCaseUpdateRequest(BaseModel):
+class FunctionCaseUpdateRequest(StrictRequest):
     content: CaseContent | None = None
     module: str | None = None
     title: str | None = None
@@ -61,7 +62,7 @@ class FunctionCaseImportResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class CasePushOptions(BaseModel):
+class CasePushOptions(StrictRequest):
     restore_confirmed: bool = False
     request_id: str = Field(default_factory=lambda: uuid4().hex, min_length=1, max_length=64)
     # Missing means unresolved; 0 explicitly creates; positive explicitly binds a remote ID.
@@ -148,7 +149,7 @@ class FunctionSuitesZentaoImportResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class FunctionCasesBatchDeleteRequest(BaseModel):
+class FunctionCasesBatchDeleteRequest(StrictRequest):
     case_ids: list[str] = Field(min_length=1, max_length=500)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

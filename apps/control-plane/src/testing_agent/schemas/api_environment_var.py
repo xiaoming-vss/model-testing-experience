@@ -9,9 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from pydantic.alias_generators import to_camel
 
 from testing_agent.domain.variable_names import validate_variable_name
+from testing_agent.schemas.common import StrictRequest
 
 
-class ApiEnvironmentVarRequest(BaseModel):
+class ApiEnvironmentVarRequest(StrictRequest):
     var_key: str = Field()
     value: str = ""
     description: str = ""
@@ -24,7 +25,7 @@ class ApiEnvironmentVarRequest(BaseModel):
         return validate_variable_name(value)
 
 
-class ApiEnvironmentVarUpdateRequest(BaseModel):
+class ApiEnvironmentVarUpdateRequest(StrictRequest):
     var_key: str | None = Field(default=None)
     value: str | None = None
     description: str | None = None

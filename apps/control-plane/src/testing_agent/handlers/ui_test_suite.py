@@ -47,7 +47,7 @@ async def update_ui_suite(
     service: UiTestSuiteService = Depends(get_ui_test_suite_service),
 ):
     return success_payload(
-        await service.update(user_id, suite_id, body.model_dump(by_alias=False, exclude_none=True))
+        await service.update(user_id, suite_id, body.model_dump(by_alias=False, exclude_unset=True))
     )
 
 

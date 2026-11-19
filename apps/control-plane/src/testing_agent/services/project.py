@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from testing_agent.core.errors import (
     AppError,
     ErrAccountDisabled,
+    ErrBadRequest,
     ErrNotFound,
     ErrProjectNameAlreadyUse,
 )
@@ -107,12 +108,18 @@ class ProjectService:
 
     async def update(self, user_id: str, project_id: str, body: UpdateProjectRequest) -> dict:
         project = await self.get_accessible_entity(user_id, project_id, action="manage")
-        if body.name is not None and body.name != project.name:
-            exists = await self.projects.get_active_by_user_and_name(project.user_id, body.name)
-            if exists is not None:
-                raise ErrProjectNameAlreadyUse()
-            project.name = body.name
-        if body.description is not None:
+        fields = body.model_fields_set
+        if "name" in fields:
+            if body.name is None:
+                raise ErrBadRequest()
+            if body.name != project.name:
+                exists = await self.projects.get_active_by_user_and_name(project.user_id, body.name)
+                if exists is not None:
+                    raise ErrProjectNameAlreadyUse()
+                project.name = body.name
+        if "description" in fields:
+            if body.description is None:
+                raise ErrBadRequest()
             project.description = body.description
         await self.projects.commit()
         await self.projects.refresh(project)

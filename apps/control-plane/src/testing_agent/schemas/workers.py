@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.common import StrictRequest
 from testing_agent.schemas.project_skill_space import ProjectSkillSpaceResponse
 
 
@@ -32,7 +33,7 @@ def accept_worker_json_text(value: Any) -> Any:
     return value
 
 
-class WorkerClaimRequest(BaseModel):
+class WorkerClaimRequest(StrictRequest):
     worker_id: str = Field()
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -124,7 +125,7 @@ class WorkerGitlabCredentialsResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class WorkerProgressRequest(BaseModel):
+class WorkerProgressRequest(StrictRequest):
     worker_id: str = Field()
     task_id: str | None = Field(default=None)
     run_id: str | None = Field(default=None)
@@ -144,7 +145,7 @@ class WorkerProgressRequest(BaseModel):
     )
 
 
-class WorkerTaskEventRequest(BaseModel):
+class WorkerTaskEventRequest(StrictRequest):
     trace_path: str | None = None
     worker_id: str = Field()
     task_id: str | None = Field(default=None)
@@ -183,7 +184,7 @@ class WorkerTaskEventRequest(BaseModel):
     )
 
 
-class AiWorkerProgressRequest(BaseModel):
+class AiWorkerProgressRequest(StrictRequest):
     """Progress reported by the AI worker for one dispatched attempt."""
 
     worker_id: str = Field()
@@ -192,7 +193,10 @@ class AiWorkerProgressRequest(BaseModel):
     current_stage: str | None = Field(default=None)
     stage_status: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
+    result_yaml: str | None = Field(default=None)
+    output_yaml: str | None = Field(default=None)
     result_summary_json: Any | None = Field(default=None)
+    error_message: str | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -202,7 +206,7 @@ class AiWorkerProgressRequest(BaseModel):
     )
 
 
-class AiWorkerTaskEventRequest(BaseModel):
+class AiWorkerTaskEventRequest(StrictRequest):
     """Lifecycle event reported by the AI worker for one dispatched attempt."""
 
     trace_path: str | None = None
