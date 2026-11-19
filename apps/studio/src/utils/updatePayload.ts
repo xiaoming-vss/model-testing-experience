@@ -14,9 +14,8 @@ import type {
   UiTestCase,
   UiTestSuite,
 } from '../services/api'
-import type { CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
 import type { SprintFormValues } from '@/domain/projects/types'
-import type { UiTestSuiteFormValues } from '@/features/ui-automation/components/UiTestSuiteDrawer'
+import type { CollectionFormValues, UiTestSuiteFormValues } from '@/shared/types/forms'
 import {
   normalizeText,
   setBooleanIfChanged,

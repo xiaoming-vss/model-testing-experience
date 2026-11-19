@@ -1,8 +1,10 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { configureRequestAuth, resetRequestAuth } from './authBridge'
 import { request, type ListResponse } from './request'
 
 afterEach(() => {
+  resetRequestAuth()
   vi.restoreAllMocks()
 })
 
@@ -34,8 +36,7 @@ describe('列表响应规范化', () => {
 
 it('renews the raw requirement ticket after expiry and keeps bearer tokens on the platform', async () => {
   const { requestBlob } = await import('./request')
-  const { useAuthStore } = await import('@/features/auth/store/auth.store')
-  useAuthStore.setState({ token: 'platform-token' })
+  configureRequestAuth({ getToken: () => 'platform-token', onUnauthorized: vi.fn() })
   const fetcher = vi.spyOn(globalThis, 'fetch')
     .mockResolvedValueOnce(new Response(JSON.stringify({ url: 'https://s3.test/expired', filename: '需求.docx' }), { headers: { 'Content-Type': 'application/json' } }))
     .mockResolvedValueOnce(new Response('<Code>RequestExpired</Code>', { status: 403 }))
@@ -50,7 +51,17 @@ it('renews the raw requirement ticket after expiry and keeps bearer tokens on th
   for (const index of [1, 3]) {
     expect(fetcher.mock.calls[index][1]).toEqual({ credentials: 'omit' })
   }
-  useAuthStore.setState({ token: null })
+})
+
+it('notifies the auth bridge when the platform rejects the token', async () => {
+  const onUnauthorized = vi.fn()
+  configureRequestAuth({ getToken: () => 'expired-token', onUnauthorized })
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ code: 1001, message: '登录已过期', data: {} }), { status: 401 }),
+  )
+
+  await expect(request('/v1/user')).rejects.toThrow('登录已过期')
+  expect(onUnauthorized).toHaveBeenCalledOnce()
 })
 
 

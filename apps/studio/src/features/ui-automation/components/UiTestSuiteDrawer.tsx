@@ -2,22 +2,11 @@ import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, InputNumber, Select } from 'antd'
 import type { FormInstance } from 'antd'
+import type { UiTestSuiteFormValues } from '@/shared/types/forms'
 import { getErrorMessage } from '@/utils/format'
 import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG, UI_SCREENSHOT_POLICY_OPTIONS } from '../constants/defaultRunConfig'
-import type { UiScreenshotPolicy } from '../types'
 
-export type UiTestSuiteFormValues = {
-  sprintId?: string
-  requirementId?: string
-  name: string
-  description?: string
-  headless?: boolean
-  slowMoMs?: number
-  viewportWidth?: number
-  viewportHeight?: number
-  defaultStepTimeoutMs?: number
-  screenshotPolicy?: UiScreenshotPolicy
-}
+export type { UiTestSuiteFormValues }
 
 export function UiTestSuiteDrawer({
   title,

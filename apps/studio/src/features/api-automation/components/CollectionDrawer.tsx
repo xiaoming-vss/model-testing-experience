@@ -1,14 +1,10 @@
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, Select } from 'antd'
 import type { FormInstance } from 'antd'
+import type { CollectionFormValues } from '@/shared/types/forms'
 import { getErrorMessage } from '@/utils/format'
 
-export type CollectionFormValues = {
-  sprintId?: string
-  requirementId?: string
-  name: string
-  summary?: string
-}
+export type { CollectionFormValues }
 
 export function CollectionDrawer({
   title,

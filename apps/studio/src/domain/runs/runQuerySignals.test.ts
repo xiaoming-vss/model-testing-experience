@@ -1,6 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { apiAutomationApi } from '@/features/api-automation/api/apiAutomation.api'
-import { uiAutomationApi } from '@/features/ui-automation/api/uiAutomation.api'
+import { api } from '@/services/api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -10,12 +9,12 @@ it('passes cancellation to each API and UI execution snapshot request', async ()
   vi.stubGlobal('fetch', fetchMock)
   const controller = new AbortController()
   await Promise.all([
-    apiAutomationApi.getApiCaseRun('run', controller.signal),
-    apiAutomationApi.getApiCollectionRun('run', controller.signal),
-    apiAutomationApi.getApiCollectionRunReport('run', controller.signal),
-    uiAutomationApi.getUiTestCaseRun('run', controller.signal),
-    uiAutomationApi.getUiTestSuiteRun('run', controller.signal),
-    uiAutomationApi.getUiTestSuiteRunReport('run', controller.signal),
+    api.getApiCaseRun('run', controller.signal),
+    api.getApiCollectionRun('run', controller.signal),
+    api.getApiCollectionRunReport('run', controller.signal),
+    api.getUiTestCaseRun('run', controller.signal),
+    api.getUiTestSuiteRun('run', controller.signal),
+    api.getUiTestSuiteRunReport('run', controller.signal),
   ])
   expect(fetchMock).toHaveBeenCalledTimes(6)
   for (const [, options] of fetchMock.mock.calls) {

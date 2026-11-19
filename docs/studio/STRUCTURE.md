@@ -25,7 +25,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查、S16 的 CSS 结构与 TSX className 门禁，以及首屏 bundle gzip 预算已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
+> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查、S16 的 CSS 结构与 TSX className 门禁，以及首屏 bundle gzip 预算已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify`（含 `npm test`）依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -59,7 +59,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S1 | `shared/`、`src/utils/`、`src/services/`、`src/domain/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts:1` import `features/auth/store/auth.store`；`src/utils/updatePayload.ts` import 2 个 feature 的表单类型 | ESLint `no-restricted-imports`（**待强制**） |
+| S1 | `shared/`、`src/utils/`、`src/services/`、`src/domain/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts` 的 auth store 反向依赖已改为 `shared/api/authBridge` 注入；`utils/updatePayload.ts` 的 feature 表单类型已下沉到 `shared/types/forms.ts`。`src/services/api.ts` 仍是显式聚合出口，只允许 re-export 各 feature 的 `api/` 与 `types` | ESLint `no-restricted-imports`（**待强制**） |
 | S2 | `app/` 可以 import `features/`、`domain/` 与 `shared/`；`features/` 可以 import `domain/` 与 `shared/`，`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint + `npm run check:boundaries`（**已实现**，与 S3 使用同一规则块） |
 
 ## 二、feature 边界
@@ -419,7 +419,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S11 | feature 目录固定为 `api/`、`components/`、`hooks/`、`pages/`、`styles/`、`utils/`，加一个 `types.ts`。新增目录名需走 ADR（`docs/studio/adr/`） | 实际另有 `store/`×1（auth）、`config/`×2（api-automation、ui-automation）、`constants/`×1、`__fixtures__/`×1 | 扫描脚本白名单（**待强制**） |
+| S11 | feature 目录固定为 `api/`、`components/`、`hooks/`、`pages/`、`styles/`、`utils/`，加一个 `types.ts`。新增目录名需走 ADR（`docs/studio/adr/`） | 现有例外为 `ai-testing/workers`、`api-automation/config`、`ui-automation/config`、`ui-automation/constants`、`auth/store`、`test-orders/fixtures`，用途和约束见 [ADR 0005](adr/0005-feature-directory-exceptions.md)；无引用的 `ai-testing/__fixtures__` 已删除 | 扫描脚本白名单（**待强制**）；新例外必须更新 ADR 并在此登记 |
 | S12 | 组件目录与散文件的取舍：有子文件（样式、测试、index）的组件用目录，单文件组件用散文件。同类依赖不得散落 | `shared/components/` 中 `ActionButton/`、`JsonEditor/`、`MtxLogo/`、`TextCodeEditor/` 是目录，而 `codeEditorTheme.ts` 是散文件——它实际是 `JsonEditor`(`JsonEditor.tsx:18`) 与 `TextCodeEditor`(`TextCodeEditor.tsx:16`) 两个组件的共享依赖，却与四个组件目录并列成同级散文件 | 评审（**待强制**） |
 | S13 | 死代码零容忍：无人引用的 CSS、失效的 lint 覆盖块、空目录，发现即删 | `app/styles/shell.css` 拆分前保留 `.project-requirement-list-*`、`.workbench-project-toolbar`、`.sprint-card-title/value/description` 等零引用选择器（需求列表已改为卡片），2026-11-17 阶段 4 已随 `workbench.css` 拆分删除；`eslint.config.js:25-30` 针对已不存在的 `src/components/**`、`src/pages/**` 关闭规则，该放行从未生效。2026-09-23 按这条规则扫了一轮：删掉 82 条无人引用的规则、瘦身 42 条选择器列表，6 个文件共减约 1500 行（`testing/styles/index.css` 2579 → 1844、`test-cases/styles/index.css` 378 → 268、`ui-automation/styles/index.css` 934 → 755、`src/index.css` 159 → 92、`shared/styles/page-frame.css` 1444 → 1135、`test-orders/styles/workspace-v2.css` 579 → 508）。删完在四个列表页做了逐元素计算样式比对，零差异（判据见 README 的那一段） | 扫描脚本孤儿检查（**待强制**）；**扫描器不能自动决定删什么**：`segment-${key}`、`tone-${tone}` 这类拼接会被误判成死类（实测把 `.segment-passed`、`.tone-orange` 判死过），`.ant-*` / `.cm-*` / `.react-flow*` / `.recharts*` 是三方类名同样会被判死；必须逐个类名回到 TS 里确认零引用、且不是 `前缀-${...}` 的动态分支，再按显式白名单删 |
 

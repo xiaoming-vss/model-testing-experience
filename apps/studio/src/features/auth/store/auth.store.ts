@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { configureRequestAuth } from '@/shared/api/authBridge'
 import type { User } from '@/services/api'
 
 // Keep the legacy storage key so existing MTX users retain their saved state.
@@ -29,3 +30,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ token: null, user: null })
   },
 }))
+
+// shared/api must not import a feature store; the auth feature registers the
+// request-layer bridge once when this module is loaded.
+configureRequestAuth({
+  getToken: () => useAuthStore.getState().token,
+  onUnauthorized: () => useAuthStore.getState().logout(),
+})

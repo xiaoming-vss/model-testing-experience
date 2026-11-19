@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/features/auth/store/auth.store'
+import { getRequestToken, notifyRequestUnauthorized } from './authBridge'
 import { fetchSignedFile, fileAuthorization, retryFileTransfer } from './fileTransfer'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -84,7 +84,7 @@ export class ApiError extends Error {
 }
 
 export async function request<T>(path: string, options: RequestInit = {}, config: RequestConfig = {}): Promise<T> {
-  const token = useAuthStore.getState().token
+  const token = getRequestToken()
   const headers = new Headers(options.headers)
   const isFormDataBody = typeof FormData !== 'undefined' && options.body instanceof FormData
 
@@ -109,7 +109,7 @@ export async function request<T>(path: string, options: RequestInit = {}, config
     if (payload.code === 1003) {
       window.dispatchEvent(new Event('password-change-required'))
     } else if (payload.code === 1001 || response.status === 401) {
-      useAuthStore.getState().logout()
+      notifyRequestUnauthorized()
     }
     if (response.status === 403 && payload.code !== 1003 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
       window.dispatchEvent(new Event('project-permission-denied'))
@@ -133,7 +133,7 @@ function getFilenameFromContentDisposition(contentDisposition: string | null) {
 }
 
 export async function requestBlob(path: string, options: RequestInit = {}, requireSignedFile = false): Promise<BlobResponse> {
-  const token = useAuthStore.getState().token
+  const token = getRequestToken()
   const headers = new Headers(options.headers)
 
   if (token) {
@@ -156,7 +156,7 @@ export async function requestBlob(path: string, options: RequestInit = {}, requi
       if (payload.code === 1003) {
         window.dispatchEvent(new Event('password-change-required'))
       } else if (payload.code === 1001 || response.status === 401) {
-        useAuthStore.getState().logout()
+        notifyRequestUnauthorized()
       }
       if (response.status === 403 && payload.code !== 1003 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
         window.dispatchEvent(new Event('project-permission-denied'))
@@ -188,7 +188,7 @@ export async function requestBlob(path: string, options: RequestInit = {}, requi
 
 /** Open an authenticated event stream without putting the access token in the URL. */
 export async function openEventStream(path: string, signal: AbortSignal, options: RequestInit = {}): Promise<Response> {
-  const token = useAuthStore.getState().token
+  const token = getRequestToken()
   const headers = new Headers(options.headers)
   headers.set('Accept', 'text/event-stream')
   if (token) headers.set('Authorization', `Bearer ${token}`)

@@ -1,8 +1,0 @@
-{
-  "schemaVersion": "1.0",
-  "artifactType": "test_scope_impact_risk",
-  "testObjects": [{"id":"TO01","name":"数据导出","type":"功能","description":"导出业务数据","sourceBlockIds":["b1"],"basisStatus":"confirmed"}],
-  "impactAreas": [{"id":"IA01","testObjectIds":["TO01"],"area":"导出结果","impact":"设置影响导出结果","sourceBlockIds":["b1"],"basisStatus":"confirmed"}],
-  "risks": [{"id":"R01","testObjectIds":["TO01"],"impactAreaIds":["IA01"],"description":"导出结果可能与设置不一致","sourceBlockIds":["b1"],"basisStatus":"inferred"}],
-  "openQuestions": [{"id":"Q01","question":"失败后如何恢复？","testObjectIds":["TO01"],"impactAreaIds":["IA01"],"riskIds":["R01"],"sourceBlockIds":["b1"],"sourceQuestionIds":[]}]
-}
