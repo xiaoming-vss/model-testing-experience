@@ -131,3 +131,70 @@ async def test_download_data_file_rejects_hash_mismatch(tmp_path: Path):
             )
     finally:
         await client.close()
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+@pytest.mark.asyncio
+async def test_download_data_file_retries_retryable_status(tmp_path: Path, status: int):
+    content = b"username,password\nu1,p1\n"
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(status)
+        return httpx.Response(200, content=content)
+
+    client = ControlPlaneClient(_settings(tmp_path), transport=httpx.MockTransport(handler))
+    destination = tmp_path / "inputs" / "users.csv"
+    try:
+        await client.download_data_file(
+            "task-1",
+            DataFileRef(
+                file_id="file-1",
+                filename="users.csv",
+                size=len(content),
+                sha256=hashlib.sha256(content).hexdigest(),
+            ),
+            "worker-1",
+            destination,
+            max_bytes=1024,
+        )
+    finally:
+        await client.close()
+
+    assert calls == 2
+    assert destination.read_bytes() == content
+
+
+@pytest.mark.parametrize("status", [400, 403, 404, 409, 422])
+@pytest.mark.asyncio
+async def test_download_data_file_fails_fast_on_client_error(tmp_path: Path, status: int):
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(status, text="private-body")
+
+    client = ControlPlaneClient(_settings(tmp_path), transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(LeaseLostError) as exc:
+            await client.download_data_file(
+                "task-1",
+                DataFileRef(
+                    file_id="file-1",
+                    filename="users.csv",
+                    size=6,
+                    sha256="a" * 64,
+                ),
+                "worker-1",
+                tmp_path / "users.csv",
+                max_bytes=1024,
+            )
+    finally:
+        await client.close()
+
+    assert calls == 1
+    assert "private-body" not in str(exc.value)

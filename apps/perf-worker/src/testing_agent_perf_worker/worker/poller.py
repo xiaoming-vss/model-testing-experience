@@ -133,7 +133,7 @@ class PerfPoller:
                 claim,
                 _special_result(
                     claim.run_id,
-                    RunStatus.CANCELED,
+                    RunStatus.STOPPED,
                     RunOutcome.STOPPED,
                     datetime.now(UTC).isoformat(),
                     "Worker 正在关闭，执行未启动",
@@ -194,13 +194,7 @@ class PerfPoller:
             if self.stop_event.is_set():
                 await self._report(
                     claim,
-                    _special_result(
-                        claim.run_id,
-                        RunStatus.CANCELED,
-                        RunOutcome.STOPPED,
-                        started_iso,
-                        "用户已停止运行",
-                    ),
+                    self._preflight_stop_result(claim, started_iso),
                     None,
                     window,
                 )
@@ -379,6 +373,32 @@ class PerfPoller:
         if self.stop_reason is None or force:
             self.stop_reason = reason
         self.stop_event.set()
+
+    def _preflight_stop_result(self, claim: ClaimResponse, started_at: str) -> RunResult:
+        """Classify a stop that arrived before k6 started."""
+        if self.stop_reason == StopReason.USER:
+            return _special_result(
+                claim.run_id,
+                RunStatus.CANCELED,
+                RunOutcome.STOPPED,
+                started_at,
+                "用户已停止运行",
+            )
+        if self.stop_reason == StopReason.LEASE_LOST:
+            return _special_result(
+                claim.run_id,
+                RunStatus.STOPPED,
+                RunOutcome.STOPPED,
+                started_at,
+                "控制面执行租约已失效，执行已停止",
+            )
+        return _special_result(
+            claim.run_id,
+            RunStatus.STOPPED,
+            RunOutcome.STOPPED,
+            started_at,
+            "Worker 正在关闭，执行未启动",
+        )
 
     def _apply_stop_reason(self, result: RunResult, execution: K6Execution) -> RunResult:
         if not execution.stopped:

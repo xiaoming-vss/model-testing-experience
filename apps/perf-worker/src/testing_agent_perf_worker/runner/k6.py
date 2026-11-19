@@ -8,6 +8,7 @@ import re
 import shutil
 import signal
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -155,6 +156,21 @@ class K6Runner:
             finally:
                 if stop_task is not None:
                     stop_task.cancel()
+                # Cancellation (Ctrl+C / asyncio.run shutdown) must not leave
+                # the k6 process group behind. Terminate before closing pipes so
+                # the process can flush and exit.
+                if process.returncode is None:
+                    try:
+                        await self._terminate(
+                            process,
+                            wait_task,
+                            compiled.stop_grace_seconds,
+                        )
+                    except asyncio.CancelledError:
+                        _signal_group(process, signal.SIGKILL)
+                        with suppress(asyncio.CancelledError):
+                            await wait_task
+                        raise
                 for reader in readers:
                     reader.cancel()
                 await asyncio.gather(*readers, return_exceptions=True)

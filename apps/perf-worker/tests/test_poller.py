@@ -361,3 +361,64 @@ async def test_completion_stops_at_lease_deadline_and_keeps_result(tmp_path: Pat
     assert client.attempts < 5
     saved = json.loads(workspace.result_path.read_text(encoding="utf-8"))
     assert saved["status"] == "stopped"
+
+
+@pytest.mark.asyncio
+async def test_shutdown_before_execution_reports_stopped(tmp_path: Path):
+    client = FakeClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+    poller.request_shutdown()
+
+    await poller._execute(_CLAIM)
+
+    assert client.started_calls == []
+    assert client.completions[0]["status"] == "stopped"
+    assert "关闭" in client.completions[0]["errorMessage"]
+
+
+@pytest.mark.asyncio
+async def test_shutdown_during_preflight_reports_stopped(tmp_path: Path):
+    holder: dict[str, PerfPoller] = {}
+
+    class ShutdownOnControlClient(FakeClient):
+        async def control(self, task_id: str, worker_id: str) -> ControlResponse:
+            holder["poller"].request_shutdown()
+            return ControlResponse(stop_requested=False)
+
+    client = ShutdownOnControlClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+    holder["poller"] = poller
+
+    await poller._execute(_CLAIM)
+
+    assert client.started_calls == []
+    assert client.completions[0]["status"] == "stopped"
+    assert "关闭" in client.completions[0]["errorMessage"]
+
+
+@pytest.mark.asyncio
+async def test_shutdown_during_k6_run_reports_stopped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    started = asyncio.Event()
+
+    class WaitingRunner:
+        def __init__(self, settings: Any) -> None:
+            self.settings = settings
+
+        async def run(self, compiled: Any, workspace: Any, stop_event: Any = None):
+            started.set()
+            await stop_event.wait()
+            return _execution(stopped=True)
+
+    monkeypatch.setattr(poller_module, "K6Runner", WaitingRunner)
+    client = FakeClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    execution = asyncio.create_task(poller._execute(_CLAIM))
+    await started.wait()
+    poller.request_shutdown()
+    await execution
+
+    assert client.completions[0]["status"] == "stopped"
+    assert "关闭" in client.completions[0]["errorMessage"]

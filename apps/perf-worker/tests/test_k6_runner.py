@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import time
 from pathlib import Path
 
 import pytest
@@ -175,3 +177,42 @@ async def test_runner_rejects_preset_stop(tmp_path: Path) -> None:
 
     with pytest.raises(ExecutionError, match="启动前已停止"):
         await K6Runner(settings).run(make_compiled_plan(workspace), workspace, stop_event)
+
+
+async def test_cancelling_runner_terminates_process_group(tmp_path: Path) -> None:
+    process_body = """
+import subprocess
+Path("parent.pid").write_text(str(os.getpid()))
+child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+Path("child.pid").write_text(str(child.pid))
+time.sleep(30)
+"""
+    fake = write_fake_k6(tmp_path, "fake-cancel.py", process_body)
+    settings = make_settings(tmp_path, fake)
+    workspace = _workspace(tmp_path)
+    task = asyncio.create_task(K6Runner(settings).run(make_compiled_plan(workspace), workspace))
+
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if (workspace.root / "parent.pid").is_file() and (workspace.root / "child.pid").is_file():
+            break
+        await asyncio.sleep(0.05)
+    else:
+        pytest.fail("fake k6 process did not start")
+
+    parent_pid = int((workspace.root / "parent.pid").read_text())
+    child_pid = int((workspace.root / "child.pid").read_text())
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    for pid in (parent_pid, child_pid):
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            await asyncio.sleep(0.05)
+        else:
+            pytest.fail(f"k6 process {pid} survived cancellation")

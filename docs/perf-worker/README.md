@@ -81,8 +81,8 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 
 - 一次只领取一个任务；空队列等待 `poll_interval_seconds`，处理 SIGTERM/SIGINT 时不领取新任务。
 - 本地租约窗口基于 `time.monotonic`，迟到的心跳不能复活已经过期的租约；租约失效立即停止 k6。
-- 心跳返回 `stopRequested` 后停止 k6：用户停止回传 `canceled`，Worker 关闭回传 `stopped`，租约丢失回传 `stopped`。
-- 数据文件在写入前校验大小和 SHA-256，文件名拒绝路径分隔符；文件落在运行目录 `inputs/`（0700），文件权限 0600。
+- 心跳返回 `stopRequested` 后停止 k6：用户停止回传 `canceled`，Worker 关闭回传 `stopped`，租约丢失回传 `stopped`。`once` 模式收到取消或 `KeyboardInterrupt` 时同样终止整个 k6 进程组并等待退出。
+- 数据文件在写入前校验大小和 SHA-256，文件名拒绝路径分隔符；文件落在运行目录 `inputs/`（0700），文件权限 0600。下载遇到 429/5xx 按 `retry_attempts` 退避重试，其他 4xx 立即失败。
 - 完成结果先写 `result.json` 再上传；上报失败在同一租约窗口内按 0.5s 起指数退避（上限 5s）重试，租约到期后停止并保留 `result.json`，不重新运行 k6。控制面明确拒绝租约（`LeaseLostError`）时立即停止重试。控制面对终态完成事件幂等，重复上报携带同一结果，不产生第二次运行。
 
 完整的领取、租约、停止和幂等语义见 [ADR 0002](adr/0002-control-plane-poll-mode.md)。

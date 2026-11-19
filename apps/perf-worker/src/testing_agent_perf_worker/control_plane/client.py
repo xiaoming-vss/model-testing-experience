@@ -29,6 +29,7 @@ from ..core.errors import (
 )
 
 _LEASE_REJECTION_STATUSES = {400, 401, 403, 404, 409, 422}
+_RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
 
 class ControlPlaneClient:
@@ -132,7 +133,11 @@ class ControlPlaneClient:
                     part.unlink(missing_ok=True)
                 except OSError:
                     pass
-                if isinstance(exc, ControlPlaneError) and exc.status_code:
+                if (
+                    isinstance(exc, ControlPlaneError)
+                    and exc.status_code
+                    and exc.status_code not in _RETRYABLE_STATUSES
+                ):
                     raise
                 if attempt + 1 < self._attempts:
                     await asyncio.sleep(0.1 * (2**attempt))
@@ -181,7 +186,7 @@ class ControlPlaneClient:
                     await asyncio.sleep(0.1 * (2**attempt))
                     continue
                 raise ControlPlaneError("控制面请求失败") from None
-            if response.status_code in {429, 500, 502, 503, 504}:
+            if response.status_code in _RETRYABLE_STATUSES:
                 last_error = ControlPlaneError("控制面暂时不可用", response.status_code)
                 if attempt + 1 < self._attempts:
                     await asyncio.sleep(0.1 * (2**attempt))
