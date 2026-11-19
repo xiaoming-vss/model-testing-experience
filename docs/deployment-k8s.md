@@ -36,9 +36,65 @@ deploy/helm/charts/
   integration-worker/
 ```
 
-每个 chart 的 `values.yaml` 就是该服务唯一的部署 values。不存在全局 values 文件；需要多服务共享的配置（例如镜像仓库、Worker token、DB 地址）要在各自的 values 或生成的 TOML 中保持一致。
+每个 chart 的 `values.yaml` 就是该服务唯一的部署 values。不存在全局 values 文件；多个服务共享的关键配置必须与 `config/platform.toml` 保持一致，字段清单、校验规则和允许差异见[配置事实源与一致性策略](#配置事实源与一致性策略)。
 
 原 umbrella 的 `values.yaml` 不能直接给单个 chart 使用：单个 chart 只认自己顶层的 key。迁移时把原 `control-plane:`、`studio:` 等 section 的内容分别拆成对应 chart 的 values 文件；所有服务的 `configToml` 都已改成结构化 `config`，studio 的 `apiUpstream` 改成 `config.apiUpstream`。
+
+## 配置事实源与一致性策略
+
+决策日期：2026-11-19；状态：已接受。
+
+`config/platform.example.toml` 与本地 `config/platform.toml` 是平台配置的唯一事实源；Helm values 是同一配置在具体集群上的投影。两者不生成同一份文件，但关键字段必须一致，并由脚本校验。
+
+### 候选方案
+
+| 方案 | 做法 | 优点 | 缺点 |
+| --- | --- | --- | --- |
+| A 生成 | `manage.py` 从 `platform.toml` 生成完整 values | 单一事实源最彻底 | 需覆盖 Helm 合并语义、Secret、镜像和存储等集群字段；chart 独立 values 退化；成本最高 |
+| B 校验（选定） | 脚本读取 `platform.toml` 与各 chart values，比较关键字段 | 直接阻止会导致启动失败、认证失败或数据不可达的漂移；保留独立安装升级；成本低 | 非关键字段仍可不同，需要维护字段清单 |
+| C 例外清单 | 文档列出字段，人工核对 | 最轻 | 不可验证，无法发现漂移 |
+
+### 判断标准与结论
+
+按“漂移是否会造成启动失败、认证失败或数据不可达”划分，而不是要求所有字段相同。chart 的副本数、资源、镜像 tag、存储大小、Service/NodePort 属于集群自身的发布参数，不属于平台共享配置。
+
+选定 B：`platform.toml` 是共享语义的唯一事实源；K8s values 可以覆盖与集群绑定、且不影响共享语义的字段。检查命令为 `python3 scripts/check_k8s_config.py`，实现、测试与命令矩阵登记见工单 17。
+
+### 必须一致的关键字段
+
+| 语义 | `config/platform.toml` | Helm values |
+| --- | --- | --- |
+| Worker 令牌 | `shared.worker_token` | control-plane `config.security.worker.key`；ai-worker `config.platform.worker_token`；api-ui-worker `config.control_plane.worker_token` |
+| 集成 Worker 令牌 | `shared.integration_worker_token` | control-plane `config.security.integration_worker.key`；integration-worker `config.control_plane.worker_token` |
+| JWT 密钥 | `shared.jwt_key` | control-plane `config.security.jwt.key` |
+| 集成接口密钥 | `shared.integration_key` | control-plane `config.security.integration.key` |
+| 超级管理员 | `control_plane.security.super_admin.username` / `email` | control-plane `config.security.super_admin.username` / `email` |
+| 集成运行代次 | `shared.integration_runtime_generation`（启用时） | control-plane `config.integration_execution.runtime_generation`（启用时） |
+| 数据库 | `database.url`（非空时） | control-plane `config.data.db.user.dsn` |
+| Redis | `redis.url`（非空时） | control-plane `config.test_run_notifications.redis_url`；api-ui-worker `config.notifications.redis_url` |
+| S3 | `control_plane.storage.s3.*` | control-plane `config.storage.s3.*`（`enabled` / `endpoint` / `region` / `bucket` / `access_key` / `secret_key` / `prefix`） |
+| AI 执行底座 | `ai_worker.agent.backend` | ai-worker `config.agent.backend` |
+
+校验规则：
+
+- 密钥、令牌只比较相等性，不输出原值；空值和 `GENERATE`、`change-me` 等占位值按未配置处理并报告，不视为一致。
+- `database.url` 或 `redis.url` 为空表示 Compose 使用内置服务。此时 K8s 必须显式填写外部数据库地址，Redis 可以留空降级；不拿 Compose 内置地址与 K8s 地址比较。
+- 超级管理员的 `initial_password` 只检查非占位；它仅在首次启动 seed 时使用，允许每个集群独立设置。
+- `agent.backend` 必须一致；chart 默认值与平台示例的差异在工单 17 修正，不作为例外保留。
+
+### 明确例外（允许不同）
+
+| 字段 | 原因 |
+| --- | --- |
+| 镜像仓库/tag/pullPolicy、`replicaCount`、`resources`、调度字段、`terminationGracePeriodSeconds` | 集群发布参数 |
+| Service type/port/nodePort、`healthPort`、PVC 容量/StorageClass、emptyDir 上限 | 集群资源与暴露方式 |
+| `config.apiUpstream`、各 Worker 的 `base_url` | K8s 内使用 Service DNS（`http://control-plane:9000`），不是浏览器或 Compose 地址 |
+| `/data/runtime`、`/app/logs`、`/app/artifacts`、`/app/runtime` 等容器路径 | chart 挂载约定 |
+| control-plane `config.http.host` | K8s 固定为 `0.0.0.0` |
+| 性能 Worker 的 `shared.perf_worker_token` | 暂无 Helm chart |
+| 非安全、非连通性的调优字段（连接池、超时、保留天数、导入预算等） | 允许按集群容量覆盖 |
+
+性能 Worker 没有 chart，检查脚本不要求其 values；后续新增 chart 时把对应关键字段补入清单。
 
 ## Values 的 key
 
@@ -297,7 +353,7 @@ helm rollback control-plane <revision> -n mtx-dev
 - 无 Ingress/TLS；Studio 通过 NodePort 暴露。
 - 无 Prometheus/Loki 接入；日志走 stdout，ai-worker 本地日志在 PVC。
 - S3 endpoint 必须浏览器可达，否则预签名上传/下载失败。
-- 各 chart 的 values 由用户分别维护，与 `config/platform.toml` 的一致性由用户保证；后续可加生成器。
+- 各 chart 的 values 由用户分别维护；关键字段必须与 `config/platform.toml` 一致，清单和例外见[配置事实源与一致性策略](#配置事实源与一致性策略)。当前由人工核对，自动校验脚本在工单 17 落地。
 
 ## 排障
 
