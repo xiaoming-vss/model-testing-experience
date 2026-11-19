@@ -32,7 +32,9 @@ def context_options_from_suite(suite: UiSuiteSnapshot | None) -> dict[str, Any]:
     return options
 
 
-def default_step_timeout_from_suite(suite: UiSuiteSnapshot | None, fallback_ms: int = 5000) -> int:
+def default_step_timeout_from_suite(
+    suite: UiSuiteSnapshot | None, fallback_ms: int = 5000
+) -> int:
     """Resolve default step timeout from server-provided suite settings."""
     if suite and suite.default_step_timeout_ms:
         return suite.default_step_timeout_ms

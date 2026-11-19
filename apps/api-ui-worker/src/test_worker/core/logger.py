@@ -34,6 +34,7 @@ def _serialize_meta(meta: dict) -> str:
         JSON 字符串
     """
     import json
+
     return json.dumps(meta, ensure_ascii=False)
 
 

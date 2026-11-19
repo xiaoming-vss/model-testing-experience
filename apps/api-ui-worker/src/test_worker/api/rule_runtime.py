@@ -15,13 +15,17 @@ def run_extract_rules(
     runtime_vars: dict[str, str],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-    for rule in sorted((r for r in rules if r.get("enabled", True)), key=lambda r: r.get("orderNo", 0)):
+    for rule in sorted(
+        (r for r in rules if r.get("enabled", True)), key=lambda r: r.get("orderNo", 0)
+    ):
         value = ""
         error_message = ""
         used_default = False
         success = True
         try:
-            extracted = _read_source(response, rule.get("source", ""), rule.get("sourceExpr", ""))
+            extracted = _read_source(
+                response, rule.get("source", ""), rule.get("sourceExpr", "")
+            )
             if extracted is None or extracted == "":
                 default_value = rule.get("defaultValue", "")
                 if default_value:
@@ -35,15 +39,17 @@ def run_extract_rules(
             success = False
             error_message = str(exc)
 
-        results.append({
-            "extractRuleId": rule.get("extractRuleId", ""),
-            "name": rule.get("name", ""),
-            "varKey": rule.get("varKey", ""),
-            "success": success,
-            "usedDefault": used_default,
-            "value": value,
-            "errorMessage": error_message,
-        })
+        results.append(
+            {
+                "extractRuleId": rule.get("extractRuleId", ""),
+                "name": rule.get("name", ""),
+                "varKey": rule.get("varKey", ""),
+                "success": success,
+                "usedDefault": used_default,
+                "value": value,
+                "errorMessage": error_message,
+            }
+        )
     return results
 
 
@@ -53,13 +59,17 @@ def run_assert_rules(
     runtime_vars: dict[str, str],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-    for rule in sorted((r for r in rules if r.get("enabled", True)), key=lambda r: r.get("orderNo", 0)):
+    for rule in sorted(
+        (r for r in rules if r.get("enabled", True)), key=lambda r: r.get("orderNo", 0)
+    ):
         expected = render_template(rule.get("expectedValue", ""), runtime_vars)
         actual = ""
         success = False
         error_message = ""
         try:
-            actual_value = _read_source(response, rule.get("assertSource", ""), rule.get("targetExpr", ""))
+            actual_value = _read_source(
+                response, rule.get("assertSource", ""), rule.get("targetExpr", "")
+            )
             actual = _stringify(actual_value)
             success = _compare(actual, expected, rule.get("comparator", "eq"))
             if not success:
@@ -67,17 +77,19 @@ def run_assert_rules(
         except Exception as exc:
             error_message = str(exc)
 
-        results.append({
-            "assertRuleId": rule.get("assertRuleId", ""),
-            "name": rule.get("name", ""),
-            "success": success,
-            "assertSource": rule.get("assertSource", ""),
-            "targetExpr": rule.get("targetExpr", ""),
-            "comparator": rule.get("comparator", ""),
-            "expectedValue": expected,
-            "actualValue": actual,
-            "errorMessage": error_message,
-        })
+        results.append(
+            {
+                "assertRuleId": rule.get("assertRuleId", ""),
+                "name": rule.get("name", ""),
+                "success": success,
+                "assertSource": rule.get("assertSource", ""),
+                "targetExpr": rule.get("targetExpr", ""),
+                "comparator": rule.get("comparator", ""),
+                "expectedValue": expected,
+                "actualValue": actual,
+                "errorMessage": error_message,
+            }
+        )
     return results
 
 

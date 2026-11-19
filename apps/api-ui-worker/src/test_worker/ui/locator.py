@@ -6,10 +6,20 @@
 from __future__ import annotations
 
 import json
+from typing import cast, get_args
 
+from playwright._impl._api_structures import AriaRole
 from playwright.async_api import Locator, Page
 
 from ..contracts.types import UiStepDefinition
+
+_ARIA_ROLES = frozenset(get_args(AriaRole))
+
+
+def _aria_role(value: object) -> AriaRole:
+    if not isinstance(value, str) or value not in _ARIA_ROLES:
+        raise ValueError(f"不支持的 role: {value}")
+    return cast(AriaRole, value)
 
 
 def resolve_locator(page: Page, step: UiStepDefinition) -> Locator:
@@ -65,15 +75,15 @@ def _resolve_role_locator(page: Page, locator_value: str) -> Locator:
     if locator_value.startswith("{"):
         # JSON 格式: {"role": "button", "name": "确定"}
         parsed = json.loads(locator_value)
-        role = parsed.get("role")
+        role = _aria_role(parsed.get("role"))
         name = parsed.get("name")
         if name:
-            return page.get_by_role(role, name=name)
+            return page.get_by_role(role, name=str(name))
         return page.get_by_role(role)
 
     # role::name 格式: button::确定
     parts = locator_value.split("::", 1)
-    role = parts[0]
+    role = _aria_role(parts[0])
     if len(parts) > 1 and parts[1]:
         name = parts[1]
         return page.get_by_role(role, name=name)

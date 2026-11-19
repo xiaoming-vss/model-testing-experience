@@ -25,7 +25,9 @@ def _config_value(config: TomlConfig, section: str, key: str, default: Any) -> A
     return default if value is None else value
 
 
-def _config_string(config: TomlConfig, section: str, key: str, default: str = "") -> str:
+def _config_string(
+    config: TomlConfig, section: str, key: str, default: str = ""
+) -> str:
     return str(_config_value(config, section, key, default)).strip()
 
 
@@ -72,13 +74,19 @@ def load_config() -> WorkerConfig:
         control_plane_base_url=_config_string(toml_config, "control_plane", "base_url"),
         worker_token=_config_string(toml_config, "control_plane", "worker_token"),
         poll_interval_ms=_config_int(toml_config, "worker", "poll_interval_ms", 3000),
-        request_timeout_ms=_config_int(toml_config, "worker", "request_timeout_ms", 15000),
-        heartbeat_interval_ms=_config_int(toml_config, "worker", "heartbeat_interval_ms", 10000),
+        request_timeout_ms=_config_int(
+            toml_config, "worker", "request_timeout_ms", 15000
+        ),
+        heartbeat_interval_ms=_config_int(
+            toml_config, "worker", "heartbeat_interval_ms", 10000
+        ),
         artifacts_root_dir=artifacts_root_dir,
         default_headless=_config_bool(toml_config, "ui", "headless", True),
         default_slow_mo_ms=_config_int(toml_config, "ui", "slow_mo_ms", 0),
         trace_enabled=_config_bool(toml_config, "ui", "trace_enabled", True),
-        screenshot_on_failure=_config_bool(toml_config, "ui", "screenshot_on_failure", True),
+        screenshot_on_failure=_config_bool(
+            toml_config, "ui", "screenshot_on_failure", True
+        ),
         snapshot_file=_config_string(toml_config, "once", "snapshot_file"),
         redis_url=_config_string(toml_config, "notifications", "redis_url"),
     )

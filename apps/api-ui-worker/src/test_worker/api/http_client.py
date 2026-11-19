@@ -8,7 +8,9 @@ import httpx
 
 
 async def execute_request(request: dict[str, Any], timeout_ms: int) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=timeout_ms / 1000 if timeout_ms > 0 else 30) as client:
+    async with httpx.AsyncClient(
+        timeout=timeout_ms / 1000 if timeout_ms > 0 else 30
+    ) as client:
         response = await client.request(
             request["method"],
             request["url"],

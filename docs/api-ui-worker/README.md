@@ -23,7 +23,8 @@
 | `api/` | API 执行：`case_runner.py`、`collection_runner.py`、`http_client.py`、`rule_runtime.py`、`template_runtime.py` |
 | `control_plane/client.py`、`control_plane/artifacts.py` | 控制面客户端及 S3 产物上传 |
 | `poller/task_poller.py` | 任务轮询 |
-| `contracts/types.py` | 任务与结果类型 |
+| `contracts/types.py` | 任务、快照与结果类型 |
+| `contracts/parsing.py` | 控制面任务/快照的单一解析入口；只读取声明字段，未知字段忽略 |
 | `core/` | `config.py`、`logger.py` |
 
 `src/` 下残留 `mtx_api_ui_worker.egg-info/` 与 `testing_agent_api_ui_worker.egg-info/` 两个历史打包目录。
@@ -70,6 +71,8 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 领取后按控制面返回的 `leaseSeconds` 建立本地 `time.monotonic` 租约窗口。心跳成功续租；心跳被拒绝或窗口到期时取消在途执行，不再产生新的 API/UI 外部副作用，也不合成执行结果，由控制面租约机制结束尝试。收到 SIGTERM/SIGINT 时回传 `canceled`；控制面没有 `stopped` 完成状态，关闭不会被报成 `error`。
 
 领取、快照、心跳、完成回传及集合/套件条目回传均在线程中执行同步控制面请求，避免阻塞异步浏览器与 HTTP 执行。日志仅记录任务标识、状态与必要的运行选项；不输出完整快照、步骤输入、运行变量或浏览器上下文配置中的凭据。控制面请求失败时只记录方法、路由、状态码和安全错误码，不记录响应正文。
+
+控制面响应采用“允许扩展”策略：任务和快照统一经 `contracts/parsing.py` 解析，只读取协议声明的字段，新增未知字段被忽略，不阻断滚动升级；声明字段的缺省值也由该模块集中处理。请求体和 Worker 回传仍按固定字段构造，未知字段策略不向请求方向扩散。`tests/test_control_plane_client.py` 覆盖任务、快照和嵌套步骤中的未知字段。
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 

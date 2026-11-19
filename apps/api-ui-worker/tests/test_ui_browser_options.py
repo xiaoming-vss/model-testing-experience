@@ -25,7 +25,10 @@ def test_launch_options_use_server_suite_settings() -> None:
 
 def test_launch_options_do_not_invent_local_defaults() -> None:
     assert launch_options_from_suite(None) == {}
-    assert launch_options_from_suite(UiSuiteSnapshot(suite_id="suite-1", name="suite")) == {}
+    assert (
+        launch_options_from_suite(UiSuiteSnapshot(suite_id="suite-1", name="suite"))
+        == {}
+    )
 
 
 def test_context_options_use_server_suite_viewport() -> None:
@@ -56,10 +59,18 @@ def test_default_step_timeout_uses_server_suite_setting() -> None:
 
 
 def test_screenshot_policy_uses_server_suite_setting() -> None:
-    assert screenshot_policy_from_suite(
-        UiSuiteSnapshot(suite_id="suite-1", name="suite", screenshot_policy="after_each_step")
-    ) == "after_each_step"
-    assert screenshot_policy_from_suite(
-        UiSuiteSnapshot(suite_id="suite-1", name="suite", screenshot_policy="never")
-    ) == "never"
+    assert (
+        screenshot_policy_from_suite(
+            UiSuiteSnapshot(
+                suite_id="suite-1", name="suite", screenshot_policy="after_each_step"
+            )
+        )
+        == "after_each_step"
+    )
+    assert (
+        screenshot_policy_from_suite(
+            UiSuiteSnapshot(suite_id="suite-1", name="suite", screenshot_policy="never")
+        )
+        == "never"
+    )
     assert screenshot_policy_from_suite(None) == "on_failure"

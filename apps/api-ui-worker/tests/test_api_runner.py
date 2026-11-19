@@ -34,25 +34,29 @@ def test_api_case_runner_extracts_and_asserts(monkeypatch):
             "bodyType": "none",
             "body": "",
         },
-        "extractRules": [{
-            "extractRuleId": "extract-1",
-            "name": "token",
-            "enabled": True,
-            "orderNo": 1,
-            "source": "body_jsonpath",
-            "sourceExpr": "$.data.token",
-            "varKey": "sessionToken",
-        }],
-        "assertRules": [{
-            "assertRuleId": "assert-1",
-            "name": "tenant",
-            "enabled": True,
-            "orderNo": 1,
-            "assertSource": "body_jsonpath",
-            "targetExpr": "$.data.name",
-            "comparator": "eq",
-            "expectedValue": "{{tenant}}",
-        }],
+        "extractRules": [
+            {
+                "extractRuleId": "extract-1",
+                "name": "token",
+                "enabled": True,
+                "orderNo": 1,
+                "source": "body_jsonpath",
+                "sourceExpr": "$.data.token",
+                "varKey": "sessionToken",
+            }
+        ],
+        "assertRules": [
+            {
+                "assertRuleId": "assert-1",
+                "name": "tenant",
+                "enabled": True,
+                "orderNo": 1,
+                "assertSource": "body_jsonpath",
+                "targetExpr": "$.data.name",
+                "comparator": "eq",
+                "expectedValue": "{{tenant}}",
+            }
+        ],
     }
 
     result = asyncio.run(ApiCaseRunner().run(snapshot))
@@ -95,15 +99,22 @@ def test_api_collection_runner_reuses_extracted_runtime_vars(monkeypatch):
                 "itemId": "item-1",
                 "enabled": True,
                 "continueOnFailure": False,
-                "caseRun": _case_snapshot("case-1", "http://example.test/login", "{}", [{
-                    "extractRuleId": "extract-1",
-                    "name": "token",
-                    "enabled": True,
-                    "orderNo": 1,
-                    "source": "body_jsonpath",
-                    "sourceExpr": "$.data.token",
-                    "varKey": "sessionToken",
-                }]),
+                "caseRun": _case_snapshot(
+                    "case-1",
+                    "http://example.test/login",
+                    "{}",
+                    [
+                        {
+                            "extractRuleId": "extract-1",
+                            "name": "token",
+                            "enabled": True,
+                            "orderNo": 1,
+                            "source": "body_jsonpath",
+                            "sourceExpr": "$.data.token",
+                            "varKey": "sessionToken",
+                        }
+                    ],
+                ),
             },
             {
                 "itemId": "item-2",

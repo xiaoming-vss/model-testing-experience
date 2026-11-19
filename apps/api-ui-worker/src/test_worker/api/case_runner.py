@@ -9,7 +9,13 @@ from typing import Any
 
 from .http_client import execute_request
 from .rule_runtime import run_assert_rules, run_extract_rules
-from .template_runtime import dump_runtime_vars, load_runtime_vars, render_json_body, render_json_map, render_template
+from .template_runtime import (
+    dump_runtime_vars,
+    load_runtime_vars,
+    render_json_body,
+    render_json_map,
+    render_template,
+)
 
 
 def now_iso() -> str:
@@ -19,7 +25,9 @@ def now_iso() -> str:
 class ApiCaseRunner:
     """Runs a single API case snapshot and returns a worker completion payload."""
 
-    async def run(self, snapshot: dict[str, Any], runtime_vars: dict[str, str] | None = None) -> dict[str, Any]:
+    async def run(
+        self, snapshot: dict[str, Any], runtime_vars: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         started_at = now_iso()
         started_monotonic = time.monotonic()
         vars_map = load_runtime_vars(snapshot.get("runtimeVarsJson"))
@@ -27,17 +35,31 @@ class ApiCaseRunner:
             vars_map.update(runtime_vars)
 
         request_snapshot: dict[str, Any]
-        response_snapshot: dict[str, Any] = {"statusCode": 0, "headersJson": "{}", "body": ""}
+        response_snapshot: dict[str, Any] = {
+            "statusCode": 0,
+            "headersJson": "{}",
+            "body": "",
+        }
         extract_results: list[dict[str, Any]] = []
         assert_results: list[dict[str, Any]] = []
         error_message = ""
 
         try:
             request_snapshot, request = build_request(snapshot, vars_map)
-            response_snapshot = await execute_request(request, request.get("timeoutMs", 30000))
-            extract_results = run_extract_rules(snapshot.get("extractRules", []), response_snapshot, vars_map)
-            assert_results = run_assert_rules(snapshot.get("assertRules", []), response_snapshot, vars_map)
-            status = "failed" if _has_rule_failure(extract_results, assert_results) else "success"
+            response_snapshot = await execute_request(
+                request, request.get("timeoutMs", 30000)
+            )
+            extract_results = run_extract_rules(
+                snapshot.get("extractRules", []), response_snapshot, vars_map
+            )
+            assert_results = run_assert_rules(
+                snapshot.get("assertRules", []), response_snapshot, vars_map
+            )
+            status = (
+                "failed"
+                if _has_rule_failure(extract_results, assert_results)
+                else "success"
+            )
             success = status == "success"
         except Exception as exc:
             request_snapshot = snapshot.get("request", {}) or {}
@@ -67,15 +89,21 @@ class ApiCaseRunner:
         }
 
 
-def build_request(snapshot_request: dict[str, Any], runtime_vars: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def build_request(
+    snapshot_request: dict[str, Any], runtime_vars: dict[str, str]
+) -> tuple[dict[str, Any], dict[str, Any]]:
     request_template = snapshot_request.get("requestTemplate")
     if isinstance(request_template, dict):
         return build_request_from_template(request_template, runtime_vars)
 
-    return build_request_from_rendered_snapshot(snapshot_request.get("request", snapshot_request), runtime_vars)
+    return build_request_from_rendered_snapshot(
+        snapshot_request.get("request", snapshot_request), runtime_vars
+    )
 
 
-def build_request_from_template(template: dict[str, Any], runtime_vars: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def build_request_from_template(
+    template: dict[str, Any], runtime_vars: dict[str, str]
+) -> tuple[dict[str, Any], dict[str, Any]]:
     method = (template.get("method") or "GET").upper()
     base_url = render_template(template.get("baseUrl", ""), runtime_vars)
     url_template = render_template(template.get("urlTemplate", ""), runtime_vars)
@@ -93,7 +121,9 @@ def build_request_from_template(template: dict[str, Any], runtime_vars: dict[str
     }
 
     if body_type == "json" and template.get("bodyJson"):
-        json_body, rendered_body = render_json_body(template.get("bodyJson"), runtime_vars)
+        json_body, rendered_body = render_json_body(
+            template.get("bodyJson"), runtime_vars
+        )
         request["json"] = json_body
         body = rendered_body
     elif body_type == "form" and template.get("bodyJson"):
@@ -115,7 +145,9 @@ def build_request_from_template(template: dict[str, Any], runtime_vars: dict[str
     return request_snapshot, request
 
 
-def build_request_from_rendered_snapshot(snapshot_request: dict[str, Any], runtime_vars: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def build_request_from_rendered_snapshot(
+    snapshot_request: dict[str, Any], runtime_vars: dict[str, str]
+) -> tuple[dict[str, Any], dict[str, Any]]:
     method = (snapshot_request.get("method") or "GET").upper()
     url = render_template(snapshot_request.get("url", ""), runtime_vars)
     headers = render_json_map(snapshot_request.get("headersJson", "{}"), runtime_vars)
@@ -162,5 +194,9 @@ def join_base_url(base_url: str, path: str) -> str:
     return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
 
 
-def _has_rule_failure(extract_results: list[dict[str, Any]], assert_results: list[dict[str, Any]]) -> bool:
-    return any(not result.get("success", False) for result in extract_results + assert_results)
+def _has_rule_failure(
+    extract_results: list[dict[str, Any]], assert_results: list[dict[str, Any]]
+) -> bool:
+    return any(
+        not result.get("success", False) for result in extract_results + assert_results
+    )

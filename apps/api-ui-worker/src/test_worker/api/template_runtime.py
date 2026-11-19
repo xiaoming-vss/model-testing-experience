@@ -16,7 +16,9 @@ def load_runtime_vars(raw: str | None) -> dict[str, str]:
     parsed = json.loads(raw)
     if not isinstance(parsed, dict):
         return {}
-    return {str(key): "" if value is None else str(value) for key, value in parsed.items()}
+    return {
+        str(key): "" if value is None else str(value) for key, value in parsed.items()
+    }
 
 
 def dump_runtime_vars(vars_map: dict[str, str]) -> str:
@@ -41,7 +43,9 @@ def render_json_map(raw: str | None, vars_map: dict[str, str]) -> dict[str, str]
     parsed = json.loads(rendered_raw)
     if not isinstance(parsed, dict):
         return {}
-    return {str(key): "" if value is None else str(value) for key, value in parsed.items()}
+    return {
+        str(key): "" if value is None else str(value) for key, value in parsed.items()
+    }
 
 
 def render_json_body(raw: str | None, vars_map: dict[str, str]) -> tuple[Any, str]:

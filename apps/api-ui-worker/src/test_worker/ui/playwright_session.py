@@ -92,7 +92,8 @@ async def _abort_driver_start(
             {"taskId": task_id, "cancelled": cancelled},
         )
         raise _cleanup_error(
-            "无法确认浏览器驱动已退出，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+            "无法确认浏览器驱动已退出，请检查 Worker 状态",
+            cancelled=cancelled or _cancelling(),
         )
     try:
         await asyncio.wait_for(process.wait(), DRIVER_STOP_TIMEOUT_SECONDS)
@@ -103,7 +104,8 @@ async def _abort_driver_start(
             {"taskId": task_id, "cancelled": cancelled},
         )
         raise _cleanup_error(
-            "浏览器驱动未能退出，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+            "浏览器驱动未能退出，请检查 Worker 状态",
+            cancelled=cancelled or _cancelling(),
         ) from None
     try:
         await asyncio.wait_for(asyncio.shield(starting), DRIVER_STOP_TIMEOUT_SECONDS)
@@ -141,7 +143,9 @@ async def playwright_session(
         yield playwright
     finally:
         prior_error = sys.exc_info()[0] is not None
-        cancelled = isinstance(sys.exc_info()[1], asyncio.CancelledError) or _cancelling()
+        cancelled = (
+            isinstance(sys.exc_info()[1], asyncio.CancelledError) or _cancelling()
+        )
         stopping = asyncio.create_task(manager.__aexit__(None, None, None))
         failed = False
         try:
@@ -162,14 +166,16 @@ async def playwright_session(
             except TimeoutError:
                 stopping.add_done_callback(_consume_result)
                 raise _cleanup_error(
-                    "浏览器驱动未能退出，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+                    "浏览器驱动未能退出，请检查 Worker 状态",
+                    cancelled=cancelled or _cancelling(),
                 ) from None
             except asyncio.CancelledError:
                 stopping.add_done_callback(_consume_result)
                 raise
             except Exception:
                 raise _cleanup_error(
-                    "浏览器驱动退出失败，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+                    "浏览器驱动退出失败，请检查 Worker 状态",
+                    cancelled=cancelled or _cancelling(),
                 ) from None
         except asyncio.CancelledError:
             _kill_owned_driver(manager)
@@ -183,7 +189,8 @@ async def playwright_session(
             )
             if not _kill_owned_driver(manager):
                 raise _cleanup_error(
-                    "浏览器驱动退出失败，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+                    "浏览器驱动退出失败，请检查 Worker 状态",
+                    cancelled=cancelled or _cancelling(),
                 ) from None
             try:
                 await asyncio.wait_for(
@@ -191,7 +198,8 @@ async def playwright_session(
                 )
             except (Exception, asyncio.CancelledError):
                 raise _cleanup_error(
-                    "浏览器驱动未能退出，请检查 Worker 状态", cancelled=cancelled or _cancelling()
+                    "浏览器驱动未能退出，请检查 Worker 状态",
+                    cancelled=cancelled or _cancelling(),
                 ) from None
         if failed and not prior_error:
             raise _cleanup_error(

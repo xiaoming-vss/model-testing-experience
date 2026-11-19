@@ -17,12 +17,12 @@ from .api.collection_runner import ApiCollectionRunner
 from .core.config import load_config
 from .control_plane.client import ControlPlaneClient
 from .health import HealthServer, health_port_from_env
-from .contracts.types import (
-    UiCaseRunSnapshot,
-    UiTestSuiteRunSnapshot,
-    UiWorkerTaskSnapshotResponse,
-    WorkerConfig,
+from .contracts.parsing import (
+    parse_case_run_snapshot,
+    parse_snapshot_response,
+    parse_suite_run_snapshot,
 )
+from .contracts.types import WorkerConfig
 from .ui.case_runner import UiCaseRunner
 from .ui.suite_runner import UiSuiteRunner
 
@@ -53,13 +53,13 @@ async def _run_once(
     # 解析快照
     if "taskType" in parsed:
         if parsed.get("taskType") == "api_case_debug" and parsed.get("caseRun"):
-            result = await ApiCaseRunner().run(parsed["caseRun"])
+            api_case_result = await ApiCaseRunner().run(parsed["caseRun"])
             logger.info(
                 "once mode api case result",
                 {
-                    "taskId": result.get("taskId"),
-                    "status": result.get("status"),
-                    "success": result.get("success"),
+                    "taskId": api_case_result.get("taskId"),
+                    "status": api_case_result.get("status"),
+                    "success": api_case_result.get("success"),
                 },
             )
             return
@@ -67,49 +67,40 @@ async def _run_once(
         if parsed.get("taskType") == "api_collection_run" and parsed.get(
             "collectionRun"
         ):
-            result = await ApiCollectionRunner(_NoopControlPlaneClient()).run(
-                parsed["collectionRun"]
-            )
+            api_collection_result = await ApiCollectionRunner(
+                _NoopControlPlaneClient()
+            ).run(parsed["collectionRun"])
             logger.info(
                 "once mode api collection result",
                 {
-                    "taskId": result.get("taskId"),
-                    "status": result.get("status"),
-                    "success": result.get("success"),
+                    "taskId": api_collection_result.get("taskId"),
+                    "status": api_collection_result.get("status"),
+                    "success": api_collection_result.get("success"),
                 },
             )
             return
 
-        snapshot = UiWorkerTaskSnapshotResponse(
-            task_type=parsed.get("taskType", "case_debug"),
-            case_run=_parse_case_run_snapshot(parsed.get("caseRun"))
-            if "caseRun" in parsed
-            else None,
-            suite_run=_parse_suite_run_snapshot(parsed.get("suiteRun"))
-            if "suiteRun" in parsed
-            else None,
-        )
-
+        snapshot = parse_snapshot_response(parsed)
         if snapshot.task_type == "suite_run" and snapshot.suite_run:
-            result = await suite_runner.run(snapshot.suite_run)
+            suite_result = await suite_runner.run(snapshot.suite_run)
             logger.info(
                 "once mode suite result",
                 {
-                    "taskId": result.task_id,
-                    "status": result.status,
-                    "success": result.success,
+                    "taskId": suite_result.task_id,
+                    "status": suite_result.status,
+                    "success": suite_result.success,
                 },
             )
             return
 
         if snapshot.task_type == "case_debug" and snapshot.case_run:
-            result = await case_runner.run(snapshot.case_run)
+            case_result = await case_runner.run(snapshot.case_run)
             logger.info(
                 "once mode case result",
                 {
-                    "taskId": result.task_id,
-                    "status": result.status,
-                    "success": result.success,
+                    "taskId": case_result.task_id,
+                    "status": case_result.status,
+                    "success": case_result.success,
                 },
             )
             return
@@ -117,52 +108,58 @@ async def _run_once(
         raise ValueError("once 模式快照缺少可执行内容")
 
     if "collectionRunId" in parsed and "items" in parsed:
-        result = await ApiCollectionRunner(_NoopControlPlaneClient()).run(parsed)
+        api_collection_result = await ApiCollectionRunner(
+            _NoopControlPlaneClient()
+        ).run(parsed)
         logger.info(
             "once mode api collection result",
             {
-                "taskId": result.get("taskId"),
-                "status": result.get("status"),
-                "success": result.get("success"),
+                "taskId": api_collection_result.get("taskId"),
+                "status": api_collection_result.get("status"),
+                "success": api_collection_result.get("success"),
             },
         )
         return
 
     # 直接是测试集快照
     if "items" in parsed:
-        snapshot = _parse_suite_run_snapshot(parsed)
-        result = await suite_runner.run(snapshot)
+        suite_snapshot = parse_suite_run_snapshot(parsed)
+        if suite_snapshot is None:
+            raise ValueError("once 模式测试集快照为空")
+        suite_result = await suite_runner.run(suite_snapshot)
         logger.info(
             "once mode suite result",
             {
-                "taskId": result.task_id,
-                "status": result.status,
-                "success": result.success,
+                "taskId": suite_result.task_id,
+                "status": suite_result.status,
+                "success": suite_result.success,
             },
         )
         return
 
     if "request" in parsed and "caseId" in parsed:
-        result = await ApiCaseRunner().run(parsed)
+        api_case_result = await ApiCaseRunner().run(parsed)
         logger.info(
             "once mode api case result",
             {
-                "taskId": result.get("taskId"),
-                "status": result.get("status"),
-                "success": result.get("success"),
+                "taskId": api_case_result.get("taskId"),
+                "status": api_case_result.get("status"),
+                "success": api_case_result.get("success"),
             },
         )
         return
 
     # 直接是用例快照
-    snapshot = _parse_case_run_snapshot(parsed)
-    result = await case_runner.run(snapshot)
+    case_snapshot = parse_case_run_snapshot(parsed)
+    if case_snapshot is None:
+        raise ValueError("once 模式用例快照为空")
+    case_result = await case_runner.run(case_snapshot)
     logger.info(
         "once mode case result",
         {
-            "taskId": result.task_id,
-            "status": result.status,
-            "success": result.success,
+            "taskId": case_result.task_id,
+            "status": case_result.status,
+            "success": case_result.success,
         },
     )
 
@@ -290,203 +287,6 @@ class _NoopControlPlaneClient:
         self, task_id: str, item_id: str, payload: dict
     ) -> None:
         return None
-
-
-def _parse_case_run_snapshot(data: dict | None) -> UiCaseRunSnapshot | None:
-    """解析用例运行快照"""
-    if not data:
-        return None
-
-    from .contracts.types import (
-        UiBrowserOptionsSnapshot,
-        UiBrowserViewport,
-        UiCaseSnapshot,
-        UiRunOptionsSnapshot,
-        UiStepDefinition,
-        UiSuiteSnapshot,
-    )
-
-    case_data = data.get("case", {})
-    steps = None
-    if "steps" in case_data and case_data["steps"]:
-        steps = [
-            UiStepDefinition(
-                keyword=s.get("keyword", ""),
-                order_no=s.get("orderNo"),
-                step_name=s.get("stepName"),
-                locator_type=s.get("locatorType"),
-                locator_value=s.get("locatorValue"),
-                operation_value=s.get("operationValue"),
-                expect_value=s.get("expectValue"),
-                timeout_ms=s.get("timeoutMs"),
-                continue_on_failure=s.get("continueOnFailure"),
-                enabled=s.get("enabled"),
-                description=s.get("description"),
-                comparator=s.get("comparator"),
-                save_to=s.get("saveTo"),
-            )
-            for s in case_data["steps"]
-        ]
-
-    case = UiCaseSnapshot(
-        case_id=case_data.get("caseId", ""),
-        name=case_data.get("name", ""),
-        suite_id=case_data.get("suiteId"),
-        description=case_data.get("description"),
-        enabled=case_data.get("enabled"),
-        order_no=case_data.get("orderNo"),
-        steps_json=case_data.get("stepsJson"),
-        steps=steps,
-    )
-
-    suite = None
-    if "suite" in data and data["suite"]:
-        suite_data = data["suite"]
-        suite = UiSuiteSnapshot(
-            suite_id=suite_data.get("suiteId", ""),
-            name=suite_data.get("name", ""),
-            headless=suite_data.get("headless"),
-            slow_mo_ms=suite_data.get("slowMoMs"),
-            viewport_width=suite_data.get("viewportWidth"),
-            viewport_height=suite_data.get("viewportHeight"),
-            default_step_timeout_ms=suite_data.get("defaultStepTimeoutMs"),
-            screenshot_policy=suite_data.get("screenshotPolicy"),
-        )
-
-    browser = None
-    if "browser" in data and data["browser"]:
-        browser_data = data["browser"]
-        viewport = None
-        if "viewport" in browser_data and browser_data["viewport"]:
-            viewport = UiBrowserViewport(
-                width=browser_data["viewport"].get("width", 1280),
-                height=browser_data["viewport"].get("height", 720),
-            )
-        browser = UiBrowserOptionsSnapshot(
-            headless=browser_data.get("headless"),
-            slow_mo_ms=browser_data.get("slowMoMs"),
-            viewport=viewport,
-        )
-
-    options = None
-    if "options" in data and data["options"]:
-        options_data = data["options"]
-        options = UiRunOptionsSnapshot(
-            default_step_timeout_ms=options_data.get("defaultStepTimeoutMs"),
-        )
-
-    return UiCaseRunSnapshot(
-        task_id=data.get("taskId", ""),
-        run_id=data.get("runId", ""),
-        case=case,
-        suite=suite,
-        browser=browser,
-        options=options,
-    )
-
-
-def _parse_suite_run_snapshot(data: dict | None) -> UiTestSuiteRunSnapshot | None:
-    """解析测试集运行快照"""
-    if not data:
-        return None
-
-    from .contracts.types import (
-        UiBrowserOptionsSnapshot,
-        UiBrowserViewport,
-        UiCaseSnapshot,
-        UiRunOptionsSnapshot,
-        UiStepDefinition,
-        UiSuiteRunItemSnapshot,
-        UiSuiteSnapshot,
-    )
-
-    items = []
-    for item_data in data.get("items", []):
-        case_data = item_data.get("case", {})
-        steps = None
-        if "steps" in case_data and case_data["steps"]:
-            steps = [
-                UiStepDefinition(
-                    keyword=s.get("keyword", ""),
-                    order_no=s.get("orderNo"),
-                    step_name=s.get("stepName"),
-                    locator_type=s.get("locatorType"),
-                    locator_value=s.get("locatorValue"),
-                    operation_value=s.get("operationValue"),
-                    expect_value=s.get("expectValue"),
-                    timeout_ms=s.get("timeoutMs"),
-                    continue_on_failure=s.get("continueOnFailure"),
-                    enabled=s.get("enabled"),
-                    description=s.get("description"),
-                    comparator=s.get("comparator"),
-                    save_to=s.get("saveTo"),
-                )
-                for s in case_data["steps"]
-            ]
-
-        case = UiCaseSnapshot(
-            case_id=case_data.get("caseId", ""),
-            name=case_data.get("name", ""),
-            suite_id=case_data.get("suiteId"),
-            description=case_data.get("description"),
-            enabled=case_data.get("enabled"),
-            order_no=case_data.get("orderNo"),
-            steps_json=case_data.get("stepsJson"),
-            steps=steps,
-        )
-
-        items.append(
-            UiSuiteRunItemSnapshot(
-                item_id=item_data.get("itemId", ""),
-                continue_on_failure=item_data.get("continueOnFailure", False),
-                case=case,
-            )
-        )
-
-    suite = None
-    if "suite" in data and data["suite"]:
-        suite_data = data["suite"]
-        suite = UiSuiteSnapshot(
-            suite_id=suite_data.get("suiteId", ""),
-            name=suite_data.get("name", ""),
-            headless=suite_data.get("headless"),
-            slow_mo_ms=suite_data.get("slowMoMs"),
-            viewport_width=suite_data.get("viewportWidth"),
-            viewport_height=suite_data.get("viewportHeight"),
-            default_step_timeout_ms=suite_data.get("defaultStepTimeoutMs"),
-            screenshot_policy=suite_data.get("screenshotPolicy"),
-        )
-
-    browser = None
-    if "browser" in data and data["browser"]:
-        browser_data = data["browser"]
-        viewport = None
-        if "viewport" in browser_data and browser_data["viewport"]:
-            viewport = UiBrowserViewport(
-                width=browser_data["viewport"].get("width", 1280),
-                height=browser_data["viewport"].get("height", 720),
-            )
-        browser = UiBrowserOptionsSnapshot(
-            headless=browser_data.get("headless"),
-            slow_mo_ms=browser_data.get("slowMoMs"),
-            viewport=viewport,
-        )
-
-    options = None
-    if "options" in data and data["options"]:
-        options_data = data["options"]
-        options = UiRunOptionsSnapshot(
-            default_step_timeout_ms=options_data.get("defaultStepTimeoutMs"),
-        )
-
-    return UiTestSuiteRunSnapshot(
-        task_id=data.get("taskId", ""),
-        run_id=data.get("runId", ""),
-        items=items,
-        suite=suite,
-        browser=browser,
-        options=options,
-    )
 
 
 if __name__ == "__main__":
