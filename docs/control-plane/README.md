@@ -245,6 +245,8 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 - [用例推送到禅道 MCP](zentao-mcp-case-push.md)：推送规则、部分失败和连接器退出。
 
+- [禅道/GitLab 连接的传输安全](adr/0023-external-connection-transport-security.md)：HTTPS 默认校验证书，自部署 HTTP 需显式允许，跳过校验记录 WARNING。
+
 ## 文件存储验收与恢复
 
 - [联合备份、恢复与部署门槛](storage-operations.md)
