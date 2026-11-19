@@ -11,7 +11,7 @@ from test_worker.control_plane.client import (
     ExecutionLeaseLost,
 )
 from test_worker.poller import task_poller
-from test_worker.poller.task_poller import TaskPoller
+from test_worker.poller.task_poller import TaskLease, TaskPoller
 from test_worker.ui.step_progress import report_steps
 
 
@@ -124,7 +124,7 @@ def test_slow_heartbeat_http_does_not_block_async_browser_work():
             None,
             None,
         )
-        task = asyncio.create_task(poller._heartbeat_loop("fixture"))
+        task = asyncio.create_task(poller._heartbeat_loop("fixture", TaskLease(5)))
         try:
             assert await asyncio.wait_for(
                 asyncio.to_thread(started.wait, 1), timeout=1.5

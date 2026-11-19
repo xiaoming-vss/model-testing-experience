@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import random
+import time
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Callable, Literal
 from contextlib import suppress
 
 from ..api.case_runner import ApiCaseRunner
@@ -23,6 +24,7 @@ from ..contracts.types import (
 )
 from ..control_plane.client import (
     ControlPlaneClient,
+    ControlPlaneRequestError,
     ExecutionLeaseLost,
     is_execution_rejected,
 )
@@ -40,6 +42,38 @@ def _now_iso() -> str:
 def _fallback_wait_seconds(interval_ms: int) -> float:
     """Spread idle checks without delaying event-driven wakeups."""
     return interval_ms / 1000 * random.uniform(0.9, 1.1)
+
+
+DEFAULT_LEASE_SECONDS = 30.0
+
+
+class TaskLease:
+    """Local lease deadline; heartbeat success renews it, rejection ends it."""
+
+    def __init__(
+        self, lease_seconds: float, *, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        self.lease_seconds = max(0.01, float(lease_seconds))
+        self._clock = clock
+        self._deadline = clock() + self.lease_seconds
+        self.renewed = asyncio.Event()
+        self.lost = False
+
+    def renew(self) -> None:
+        if self.lost:
+            return
+        self._deadline = self._clock() + self.lease_seconds
+        self.renewed.set()
+
+    def expire(self) -> None:
+        self.lost = True
+        self.renewed.set()
+
+    def remaining_seconds(self) -> float:
+        return max(0.0, self._deadline - self._clock())
+
+    def is_expired(self) -> bool:
+        return self.lost or self.remaining_seconds() <= 0
 
 
 class UserStopped(Exception):
@@ -238,16 +272,35 @@ class TaskPoller:
                 with suppress(asyncio.CancelledError):
                     await listener
 
-    async def _run_until_stopped(self, domain: str, task_id: str, operation):
-        if not hasattr(self._control_plane_client, "task_stop_requested"):
+    async def _run_until_stopped(
+        self, domain: str, task_id: str, operation, lease: TaskLease | None = None
+    ):
+        if (
+            not hasattr(self._control_plane_client, "task_stop_requested")
+            and lease is None
+        ):
             return await operation
         running = asyncio.create_task(operation)
-        stopping = asyncio.create_task(self._wait_for_stop(domain, task_id))
+        stopping = (
+            asyncio.create_task(self._wait_for_stop(domain, task_id))
+            if hasattr(self._control_plane_client, "task_stop_requested")
+            else None
+        )
+        lease_loss = (
+            asyncio.create_task(self._wait_for_lease_loss(lease, task_id))
+            if lease is not None
+            else None
+        )
+        tasks = {running}
+        if stopping is not None:
+            tasks.add(stopping)
+        if lease_loss is not None:
+            tasks.add(lease_loss)
         try:
-            done, _ = await asyncio.wait(
-                {running, stopping}, return_when=asyncio.FIRST_COMPLETED
-            )
-            if stopping in done:
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            if lease_loss is not None and lease_loss in done:
+                await lease_loss
+            if stopping is not None and stopping in done:
                 await stopping
                 running.cancel()
                 with suppress(asyncio.CancelledError):
@@ -255,11 +308,33 @@ class TaskPoller:
                 raise UserStopped()
             return await running
         finally:
-            for task in (running, stopping):
-                if not task.done():
-                    task.cancel()
+            for task in tasks:
+                if task.done():
+                    # Consume a sibling's exception without masking the selected
+                    # outcome (stop, lease loss or normal execution).
+                    with suppress(asyncio.CancelledError):
+                        task.exception()
+                    continue
+                task.cancel()
                 with suppress(asyncio.CancelledError):
                     await task
+
+    async def _wait_for_lease_loss(self, lease: TaskLease, task_id: str) -> None:
+        while not lease.is_expired():
+            remaining = lease.remaining_seconds()
+            if remaining <= 0:
+                break
+            lease.renewed.clear()
+            if lease.is_expired():
+                break
+            try:
+                await asyncio.wait_for(lease.renewed.wait(), timeout=remaining)
+            except TimeoutError:
+                break
+        if not lease.lost:
+            logger.warn("task lease window expired", {"taskId": task_id})
+        lease.expire()
+        raise ExecutionLeaseLost("执行租约已失效")
 
     async def _report_completion(self, domain: str, task_id: str, result) -> None:
         self._finishing_tasks.add(task_id)
@@ -310,6 +385,9 @@ class TaskPoller:
             },
         )
 
+        lease = TaskLease(
+            task.lease_seconds if task.lease_seconds > 0 else DEFAULT_LEASE_SECONDS
+        )
         # 上报任务开始
         await asyncio.to_thread(
             self._control_plane_client.report_task_started,
@@ -319,9 +397,10 @@ class TaskPoller:
                 started_at=_now_iso(),
             ),
         )
+        lease.renew()
 
         # 启动心跳定时器
-        heartbeat_task = asyncio.create_task(self._heartbeat_loop(task.task_id))
+        heartbeat_task = asyncio.create_task(self._heartbeat_loop(task.task_id, lease))
 
         try:
             # 获取任务快照
@@ -341,13 +420,19 @@ class TaskPoller:
                 if not snapshot.case_run:
                     raise ValueError(f"task {task.task_id} 缺少 case_run 快照")
                 result = await self._run_until_stopped(
-                    "ui", task.task_id, self._case_runner.run(snapshot.case_run)
+                    "ui",
+                    task.task_id,
+                    self._case_runner.run(snapshot.case_run),
+                    lease=lease,
                 )
             elif task.task_type == "suite_run":
                 if not snapshot.suite_run:
                     raise ValueError(f"task {task.task_id} 缺少 suite_run 快照")
                 result = await self._run_until_stopped(
-                    "ui", task.task_id, self._suite_runner.run(snapshot.suite_run)
+                    "ui",
+                    task.task_id,
+                    self._suite_runner.run(snapshot.suite_run),
+                    lease=lease,
                 )
             else:
                 raise ValueError(f"未知任务类型: {task.task_type}")
@@ -382,7 +467,9 @@ class TaskPoller:
                     "taskType": task.task_type,
                 },
             )
-            await self._report_task_error(task, "worker shutting down")
+            await self._report_task_error(
+                task, "worker shutting down", status="canceled"
+            )
             raise
         except Exception as e:
             current = asyncio.current_task()
@@ -395,7 +482,9 @@ class TaskPoller:
                         "error": str(e),
                     },
                 )
-                await self._report_task_error(task, "worker shutting down")
+                await self._report_task_error(
+                    task, "worker shutting down", status="canceled"
+                )
                 raise asyncio.CancelledError() from e
             logger.error(
                 "task execution error",
@@ -417,12 +506,13 @@ class TaskPoller:
             except asyncio.CancelledError:
                 pass
 
-    async def _heartbeat_loop(self, task_id: str) -> None:
+    async def _heartbeat_loop(self, task_id: str, lease: TaskLease) -> None:
         """
         心跳循环
 
         Args:
             task_id: 任务 ID
+            lease: 本地租约窗口
         """
         while True:
             try:
@@ -437,6 +527,7 @@ class TaskPoller:
                         heartbeat_at=_now_iso(),
                     ),
                 )
+                lease.renew()
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -444,11 +535,22 @@ class TaskPoller:
                     e, "status_code", None
                 ) in {400, 404}:
                     break
+                if isinstance(e, ControlPlaneRequestError) and is_execution_rejected(e):
+                    lease.expire()
+                    logger.warn(
+                        "task lease rejected",
+                        {
+                            "taskId": task_id,
+                            "statusCode": e.status_code,
+                        },
+                    )
+                    break
                 logger.warn(
                     "heartbeat error",
                     {
                         "taskId": task_id,
-                        "error": str(e),
+                        "errorType": type(e).__name__,
+                        "statusCode": getattr(e, "status_code", None),
                     },
                 )
 
@@ -517,10 +619,12 @@ class TaskPoller:
         )
 
         started_at = _now_iso()
+        lease = TaskLease(task.get("leaseSeconds", 0) or DEFAULT_LEASE_SECONDS)
         await asyncio.to_thread(
             self._control_plane_client.report_api_task_started, task_id, started_at
         )
-        heartbeat_task = asyncio.create_task(self._api_heartbeat_loop(task_id))
+        lease.renew()
+        heartbeat_task = asyncio.create_task(self._api_heartbeat_loop(task_id, lease))
 
         try:
             snapshot = await asyncio.to_thread(
@@ -538,14 +642,20 @@ class TaskPoller:
                 if not case_run:
                     raise ValueError(f"api task {task_id} 缺少 caseRun 快照")
                 result = await self._run_until_stopped(
-                    "api", task_id, self._api_case_runner.run(case_run)
+                    "api",
+                    task_id,
+                    self._api_case_runner.run(case_run),
+                    lease=lease,
                 )
             elif task_type == "api_collection_run":
                 collection_run = snapshot.get("collectionRun")
                 if not collection_run:
                     raise ValueError(f"api task {task_id} 缺少 collectionRun 快照")
                 result = await self._run_until_stopped(
-                    "api", task_id, self._api_collection_runner.run(collection_run)
+                    "api",
+                    task_id,
+                    self._api_collection_runner.run(collection_run),
+                    lease=lease,
                 )
             else:
                 raise ValueError(f"未知 API 任务类型: {task_type}")
@@ -578,7 +688,9 @@ class TaskPoller:
                     "taskType": task_type,
                 },
             )
-            await self._report_api_task_error(task, "worker shutting down", started_at)
+            await self._report_api_task_error(
+                task, "worker shutting down", started_at, status="canceled"
+            )
             raise
         except Exception as e:
             current = asyncio.current_task()
@@ -592,7 +704,7 @@ class TaskPoller:
                     },
                 )
                 await self._report_api_task_error(
-                    task, "worker shutting down", started_at
+                    task, "worker shutting down", started_at, status="canceled"
                 )
                 raise asyncio.CancelledError() from e
             logger.error(
@@ -611,7 +723,7 @@ class TaskPoller:
             except asyncio.CancelledError:
                 pass
 
-    async def _api_heartbeat_loop(self, task_id: str) -> None:
+    async def _api_heartbeat_loop(self, task_id: str, lease: TaskLease) -> None:
         """API 任务心跳循环。"""
         while True:
             try:
@@ -623,6 +735,7 @@ class TaskPoller:
                     task_id,
                     _now_iso(),
                 )
+                lease.renew()
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -630,11 +743,22 @@ class TaskPoller:
                     e, "status_code", None
                 ) in {400, 404}:
                     break
+                if isinstance(e, ControlPlaneRequestError) and is_execution_rejected(e):
+                    lease.expire()
+                    logger.warn(
+                        "api task lease rejected",
+                        {
+                            "taskId": task_id,
+                            "statusCode": e.status_code,
+                        },
+                    )
+                    break
                 logger.warn(
                     "api heartbeat error",
                     {
                         "taskId": task_id,
-                        "error": str(e),
+                        "errorType": type(e).__name__,
+                        "statusCode": getattr(e, "status_code", None),
                     },
                 )
 

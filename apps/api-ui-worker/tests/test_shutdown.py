@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import signal
+from contextlib import suppress
 
 import pytest
 
@@ -13,7 +14,11 @@ from test_worker.contracts.types import (
     UiWorkerTaskSnapshotResponse,
     WorkerConfig,
 )
-from test_worker.poller.task_poller import TaskPoller
+from test_worker.control_plane.client import (
+    ControlPlaneRequestError,
+    ExecutionLeaseLost,
+)
+from test_worker.poller.task_poller import TaskLease, TaskPoller
 
 
 def test_shutdown_signal_cancels_worker_and_runs_cleanup(monkeypatch) -> None:
@@ -50,7 +55,7 @@ def test_shutdown_signal_cancels_worker_and_runs_cleanup(monkeypatch) -> None:
     assert cleanup_completed.is_set()
 
 
-def test_canceling_claimed_task_reports_shutdown_error() -> None:
+def test_canceling_claimed_task_reports_shutdown_canceled() -> None:
     class FakeControlPlaneClient:
         def __init__(self) -> None:
             self.completed = []
@@ -121,5 +126,78 @@ def test_canceling_claimed_task_reports_shutdown_error() -> None:
     assert runner.cleaned_up.is_set()
     assert len(client.completed) == 1
     _, result = client.completed[0]
-    assert result.status == "error"
+    assert result.status == "canceled"
     assert result.error_message == "worker shutting down"
+
+
+def test_control_plane_disconnect_stops_operation_after_lease_window() -> None:
+    class DisconnectedClient:
+        def report_task_heartbeat(self, *args):
+            raise ConnectionError("control plane unreachable")
+
+        def task_stop_requested(self, *args):
+            return False
+
+    async def run() -> tuple[list[str], TaskLease]:
+        poller = TaskPoller(
+            SimpleConfig(heartbeat_interval_ms=1),
+            DisconnectedClient(),
+            None,
+            None,
+        )
+        lease = TaskLease(0.1)
+        effects: list[str] = []
+
+        async def operation():
+            try:
+                await asyncio.sleep(0.5)
+                effects.append("side-effect")
+            finally:
+                effects.append("canceled")
+
+        heartbeat = asyncio.create_task(poller._heartbeat_loop("task-1", lease))
+        try:
+            with pytest.raises(ExecutionLeaseLost):
+                await asyncio.wait_for(
+                    poller._run_until_stopped(
+                        "api", "task-1", operation(), lease=lease
+                    ),
+                    timeout=1,
+                )
+        finally:
+            heartbeat.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat
+        return effects, lease
+
+    effects, lease = asyncio.run(run())
+
+    assert effects == ["canceled"]
+    assert lease.lost
+
+
+def test_heartbeat_rejection_expires_local_lease() -> None:
+    class RejectedClient:
+        def report_task_heartbeat(self, *args):
+            raise ControlPlaneRequestError("POST", "/heartbeat", 403)
+
+    async def run() -> TaskLease:
+        lease = TaskLease(5)
+        poller = TaskPoller(
+            SimpleConfig(heartbeat_interval_ms=1),
+            RejectedClient(),
+            None,
+            None,
+        )
+        await asyncio.wait_for(poller._heartbeat_loop("task-1", lease), timeout=1)
+        return lease
+
+    lease = asyncio.run(run())
+
+    assert lease.lost
+
+
+class SimpleConfig:
+    def __init__(self, *, heartbeat_interval_ms: int) -> None:
+        self.worker_id = "worker-1"
+        self.heartbeat_interval_ms = heartbeat_interval_ms

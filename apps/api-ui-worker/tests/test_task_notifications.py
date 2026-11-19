@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from test_worker.poller.task_poller import TaskPoller
+from test_worker.poller.task_poller import TaskLease, TaskPoller
 
 
 def test_idle_and_error_retry_windows_are_bounded(monkeypatch):
@@ -362,7 +362,7 @@ def test_completion_cleanup_does_not_log_expected_missing_heartbeat(monkeypatch)
             None,
         )
         poller._finishing_tasks.add("task")
-        await asyncio.wait_for(poller._heartbeat_loop("task"), 1)
+        await asyncio.wait_for(poller._heartbeat_loop("task", TaskLease(5)), 1)
 
     monkeypatch.setattr(task_poller.logger, "warn", lambda *args: warnings.append(args))
     asyncio.run(run())
