@@ -1,5 +1,11 @@
 # 富文本编辑器选 tiptap，图片经统一文件管线
 
+- 状态：已接受
+- 日期：2026-09-30
+- 取代：—
+- 被取代：—
+- 关联：—
+
 决定引入 **tiptap**（`@tiptap/react` + `@tiptap/starter-kit` + `@tiptap/extension-image`）作为唯一富文本实现，封装在 `shared/components/RichTextEditor`，全项目 `@tiptap/*` 的 import 只允许出现在这里（S5 清单已同步登记）。它满足 Bug 描述和需求正文所需的加粗、标题、列表、引用、代码块与粘贴截图能力，React 19 兼容、维护活跃，工具栏可按平台需要裁剪。
 
 **图片链路与后端消毒约定**：粘贴或选择图片时立即上传统一文件管线（`uploadStoredFile`

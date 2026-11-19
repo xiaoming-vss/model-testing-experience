@@ -1,7 +1,11 @@
 # ADR 0001：性能 Worker 独立成项目
 
-- 状态：已采纳
+- 状态：已接受
 - 日期：2026-11-16
+- 取代：—
+- 被取代：—
+- 关联：[ADR 0002](0002-control-plane-poll-mode.md)（控制面 poll 模式）
+
 - 后续：控制面接入、`poll` 模式和 Compose 由 [ADR 0002](0002-control-plane-poll-mode.md) 补充；本文第 6 条和“后果”中的阶段说明以 ADR 0002 为准。
 
 ## 背景

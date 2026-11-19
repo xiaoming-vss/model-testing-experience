@@ -1,5 +1,11 @@
 # 接口库作为项目级测试生成输入
 
+- 状态：已取代
+- 日期：2026-11-14
+- 取代：—
+- 被取代：[ADR 0013](0013-software-repository-and-interface-library-api-generation.md)（接口分组、启用状态、需求关联）、[ADR 0015](0015-software-repository-direct-gitlab-binding.md)（GitLab 群组绑定）、[ADR 0016](0016-interface-library-tag-groups.md)（导入标签归属）
+- 关联：[ADR 0013](0013-software-repository-and-interface-library-api-generation.md)、[ADR 0015](0015-software-repository-direct-gitlab-binding.md)、[ADR 0016](0016-interface-library-tag-groups.md)
+
 > 部分决策已由 [ADR 0013](0013-software-repository-and-interface-library-api-generation.md) 取代：接口分组实体改为软件仓库、移除启用状态、需求改为关联软件仓库，API 生成输入改为接口库选中的接口。
 >
 > 本决策中的「应用仓库与群组解绑」及项目级 GitLab 群组绑定条款已由 [ADR 0015](0015-software-repository-direct-gitlab-binding.md) 取代。

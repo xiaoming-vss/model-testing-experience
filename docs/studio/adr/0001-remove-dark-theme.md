@@ -1,5 +1,11 @@
 # 移除暗色主题
 
+- 状态：已取代
+- 日期：2026-09-24
+- 取代：—
+- 被取代：[ADR 0002](0002-token-based-github-dark.md)（GitHub Dark token 主题）
+- 关联：[ADR 0002](0002-token-based-github-dark.md)
+
 > 2026-09-24：仅保留浅色的决定已由 [0002](0002-token-based-github-dark.md) 取代；不恢复组件覆盖式暗色补丁的约束继续有效。
 
 前端此前有两套配色：`themes` 由 `<html>` 上的 `data-theme` 属性驱动，antd 走 `darkAlgorithm`，

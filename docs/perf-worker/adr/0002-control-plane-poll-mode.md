@@ -1,9 +1,12 @@
 # ADR 0002：性能任务接入控制面与 poll 模式
 
-> 2026-11-17：监控接入已收敛为 Prometheus Remote Write only，查询凭据与 Grafana 配置由控制面 [ADR 0020](../../control-plane/adr/0020-performance-remote-write-only.md) 移除；本文中相关的历史描述以该决策为准。
-
-- 状态：已采纳
+- 状态：已接受
 - 日期：2026-11-16
+- 取代：—
+- 被取代：—
+- 关联：[ADR 0001](0001-independent-perf-worker.md)（独立 perf-worker）
+
+> 2026-11-17：监控接入已收敛为 Prometheus Remote Write only，查询凭据与 Grafana 配置由控制面 [ADR 0020](../../control-plane/adr/0020-performance-remote-write-only.md) 移除；本文中相关的历史描述以该决策为准。
 
 ## 背景
 

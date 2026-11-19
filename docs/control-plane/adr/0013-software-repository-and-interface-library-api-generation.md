@@ -1,5 +1,11 @@
 # 软件仓库作为代码上下文，API 生成改用接口库
 
+- 状态：已取代
+- 日期：2026-11-15
+- 取代：[ADR 0012](0012-project-interface-library.md) 的接口应用分组、启用状态和需求直接绑定仓库部分
+- 被取代：[ADR 0015](0015-software-repository-direct-gitlab-binding.md)（GitLab 群组绑定）、[ADR 0017](0017-api-design-before-generation.md)（三阶段 API 工作流）
+- 关联：[ADR 0012](0012-project-interface-library.md)、[ADR 0015](0015-software-repository-direct-gitlab-binding.md)、[ADR 0017](0017-api-design-before-generation.md)
+
 2026-11-15。接口库原「应用」实体更名为软件仓库，需求不再直接绑定 GitLab 仓库；API 用例生成的输入从 OpenAPI/Swagger 文档改为接口库中选中的接口。本决策取代 [ADR 0012](0012-project-interface-library.md) 中「接口应用」分组、接口/应用启用状态和需求直接绑定仓库的部分。
 
 > 本决策中「项目级 GitLab 群组绑定保持不变」及「无 Git 仓库的项目需先完成 GitLab 群组绑定」已由 [ADR 0015](0015-software-repository-direct-gitlab-binding.md) 取代。
@@ -41,4 +47,4 @@
 - **保留 OpenAPI 上传兼容入口**：会继续制造接口库与生成入口两套来源，并保留历史文档正文。
 - **自动跳过已删除接口**：会静默改变用户选择范围，生成结果难以追溯。
 
-相关文档：[控制面上下文](../CONTEXT.md)、[数据库结构描述](../database-schema.md)、[生成链](generation-chain.md)、[需求生成配置](requirement-design.md)、[Studio 上下文](../../studio/CONTEXT.md)、[AI Worker 上下文](../../ai-worker/CONTEXT.md)。
+相关文档：[控制面上下文](../CONTEXT.md)、[数据库结构描述](../database-schema.md)、[生成链](../generation-chain.md)、[需求生成配置](../requirement-design.md)、[Studio 上下文](../../studio/CONTEXT.md)、[AI Worker 上下文](../../ai-worker/CONTEXT.md)。

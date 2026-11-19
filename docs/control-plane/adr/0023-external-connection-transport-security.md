@@ -1,7 +1,9 @@
 # ADR 0023：禅道/GitLab 连接的传输安全策略
 
-- 日期：2026-11-19
 - 状态：已接受
+- 日期：2026-11-19
+- 取代：—
+- 被取代：—
 - 关联：[ADR 0014](0014-pre-release-single-baseline.md)、[数据库结构](../database-schema.md)、[Studio 基础服务](../../studio/README.md)
 
 ## 背景

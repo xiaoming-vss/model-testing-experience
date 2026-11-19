@@ -1,7 +1,9 @@
 # ADR 0020：性能测试首期只保留 Remote Write 监控接入
 
-- 日期：2026-11-17
 - 状态：已接受
+- 日期：2026-11-17
+- 取代：[ADR 0019](0019-performance-monitoring-snapshot.md) 的 Grafana 看板入口、Grafana/默认筛选快照字段、查询地址与查询凭据
+- 被取代：—
 - 关联：[ADR 0019](0019-performance-monitoring-snapshot.md)、[ADR 0014](0014-pre-release-single-baseline.md)、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
 
 > 本决策取代 [ADR 0019](0019-performance-monitoring-snapshot.md) 中 Grafana 看板入口、Grafana/默认筛选快照字段，以及查询地址与查询凭据的相关决策。

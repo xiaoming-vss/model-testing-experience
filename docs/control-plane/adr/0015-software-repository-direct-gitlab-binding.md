@@ -1,5 +1,11 @@
 # 软件仓库直接绑定 GitLab 仓库
 
+- 状态：已接受
+- 日期：2026-11-15
+- 取代：[ADR 0012](0012-project-interface-library.md) 的「应用仓库与群组解绑」条款、[ADR 0013](0013-software-repository-and-interface-library-api-generation.md) 的项目级 GitLab 群组绑定表述
+- 被取代：—
+- 关联：[ADR 0012](0012-project-interface-library.md)、[ADR 0013](0013-software-repository-and-interface-library-api-generation.md)
+
 2026-11-15。移除项目级 GitLab 群组绑定；软件仓库在创建与换绑时直接选择 GitLab 连接、群组和代码仓库。本决策取代 [ADR 0012](0012-project-interface-library.md) 中的「应用仓库与群组解绑」条款，以及 [ADR 0013](0013-software-repository-and-interface-library-api-generation.md) 中「项目级 GitLab 群组绑定保持不变」及「无 Git 仓库的项目需先完成 GitLab 群组绑定」的表述。
 
 ## 决策

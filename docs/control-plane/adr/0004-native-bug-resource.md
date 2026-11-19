@@ -1,5 +1,11 @@
 # 平台内置 Bug 资源与禅道缺陷并存
 
+- 状态：已取代
+- 日期：2026-09-30
+- 取代：—
+- 被取代：[ADR 0005](0005-bug-zentao-lifecycle.md)（Bug 生命周期）
+- 关联：[ADR 0005](0005-bug-zentao-lifecycle.md)
+
 第一版 Bug 管理在平台内部独立建账（`bugs` / `bug_activities` 两张表，`/v1/projects/{projectId}/bugs`
 系列接口），**不改写 ADR 0001 的「禅道继续作为缺陷来源」**：`test_order_entries.zentao_bug_id`
 保留原语义，执行判定区在展示平台 Bug（按 `source_entry_id` 关联查询）的同时继续支持填写

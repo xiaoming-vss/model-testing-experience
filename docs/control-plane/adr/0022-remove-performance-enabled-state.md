@@ -1,7 +1,9 @@
 # ADR 0022：移除性能测试集与用例的启用状态
 
-- 日期：2026-11-18
 - 状态：已接受
+- 日期：2026-11-18
+- 取代：[ADR 0021](0021-performance-suite-serial-execution.md) 中“启用用例”的表述
+- 被取代：—
 - 关联：[ADR 0021](0021-performance-suite-serial-execution.md)、[ADR 0014](0014-pre-release-single-baseline.md)、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
 
 ## 背景

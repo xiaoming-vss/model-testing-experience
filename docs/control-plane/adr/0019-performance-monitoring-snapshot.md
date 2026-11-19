@@ -1,10 +1,12 @@
 # ADR 0019：性能运行冻结监控接入快照，首期只提供 Grafana 入口
 
-> 本决策中的 Grafana 看板入口、Grafana/默认筛选快照字段，以及查询地址与查询凭据的相关决策已由 [ADR 0020](0020-performance-remote-write-only.md) 取代。
-
+- 状态：已取代
 - 日期：2026-11-17
-- 状态：已接受
-- 关联：性能测试模块需求（仓库外需求文档）、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
+- 取代：—
+- 被取代：[ADR 0020](0020-performance-remote-write-only.md)（Grafana 看板入口、Grafana/默认筛选快照字段、查询地址与查询凭据）
+- 关联：[ADR 0020](0020-performance-remote-write-only.md)（Grafana 相关决策）、性能测试模块需求（仓库外需求文档）、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
+
+> 本决策中的 Grafana 看板入口、Grafana/默认筛选快照字段，以及查询地址与查询凭据的相关决策已由 [ADR 0020](0020-performance-remote-write-only.md) 取代。
 
 ## 背景
 

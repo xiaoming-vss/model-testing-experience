@@ -70,7 +70,7 @@ shared/    无业务语义的请求封装、通用组件、工具和主题能力
 
 ## 视觉与交互
 
-视觉与交互遵循 [UI-GUIDELINES.md](UI-GUIDELINES.md)：浅色主题使用清爽蓝主色，页面画布、侧栏和内容面使用统一语义 token；需求与迭代页共用顶部卡片、板面渐变、全宽网格和固定分页。深色主题映射为对应的深色 token，保留 GitHub Dark 配色。具体尺寸、间距和断点不在本文重复。
+视觉与交互遵循 [UI-GUIDELINES.md](UI-GUIDELINES.md)：浅色主题使用清爽蓝主色，页面画布、侧栏和内容面使用统一语义 token；需求与迭代页共用顶部卡片、板面渐变、全宽网格和固定分页。深色主题映射为对应的深色 token，保留 GitHub Dark 配色（见 [ADR 0002](adr/0002-token-based-github-dark.md)）。具体尺寸、间距和断点不在本文重复。
 
 - 页面统一使用公共 token、按钮层、列表表面层和 `ListPagination`；feature 不复制一套颜色、分页或按钮外观。
 - CSS 放在 `app/styles/`、`shared/styles/` 或 `features/<feature>/styles/`；页面和组件目录不新增 CSS 文件。新增或改版页面按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 使用 Tailwind utility 或 CSS Modules，不新增非 `*.module.css` 的页面级全局 CSS。

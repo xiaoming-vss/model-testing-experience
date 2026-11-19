@@ -1,7 +1,9 @@
 # ADR 0018：需求评审作为提示性首阶段
 
-- 日期：2026-11-16
 - 状态：已接受
+- 日期：2026-11-16
+- 取代：—
+- 被取代：—
 - 关联：[需求生成链](../generation-chain.md)、[需求分析审核规则](../requirement-analysis-review.md)、[需求分析两阶段设计](../../ai-worker/requirement-analysis-two-stage-design.md)
 
 ## 背景

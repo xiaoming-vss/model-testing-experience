@@ -1,8 +1,10 @@
 # ADR 0021：性能测试集按顺序串行执行用例
 
+- 状态：已取代
 - 日期：2026-11-17
-- 状态：已接受
-- 关联：[ADR 0014](0014-pre-release-single-baseline.md)、[ADR 0020](0020-performance-remote-write-only.md)、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
+- 取代：—
+- 被取代：[ADR 0022](0022-remove-performance-enabled-state.md)（“启用用例”表述）
+- 关联：[ADR 0022](0022-remove-performance-enabled-state.md)（启用状态）、[ADR 0014](0014-pre-release-single-baseline.md)、[ADR 0020](0020-performance-remote-write-only.md)、[数据库结构](../database-schema.md)、[Studio 性能测试](../../studio/performance-testing.md)
 
 > 本决策中关于“启用用例”的表述已由 [ADR 0022](0022-remove-performance-enabled-state.md) 取代：测试集和用例不再保存启用状态，运行时执行测试集内的全部用例。
 

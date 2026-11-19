@@ -1,5 +1,11 @@
 # 统一 AI 执行模型
 
+- 状态：已取代
+- 日期：2026-11-04
+- 取代：[ADR 0003](0003-candidate-run-deletion.md) 中测试报告和测试单图谱的删除规则
+- 被取代：[ADR 0014](0014-pre-release-single-baseline.md)（预发布单一基线）
+- 关联：[ADR 0003](0003-candidate-run-deletion.md)、[ADR 0009](0009-auxiliary-ai-history-deletion.md)、[ADR 0014](0014-pre-release-single-baseline.md)
+
 2026-11-03。需求生成链、代码风险、测试报告、测试单图谱及独立功能/API 任务共用一套执行身份和阶段尝试模型。旧运行账本及其切换迁移已退出代码库；v1 只有当前模型和唯一基线。
 
 ## 决策

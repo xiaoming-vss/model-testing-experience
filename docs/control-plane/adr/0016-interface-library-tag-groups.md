@@ -1,5 +1,11 @@
 # 接口库标签分组与导入标签归属
 
+- 状态：已接受
+- 日期：2026-11-15
+- 取代：[ADR 0012](0012-project-interface-library.md) 中导入时标签归属的规则
+- 被取代：—
+- 关联：[ADR 0012](0012-project-interface-library.md)、[ADR 0013](0013-software-repository-and-interface-library-api-generation.md)
+
 2026-11-15。接口库需要支持分组的创建、折叠、重命名、移除和接口移动，并明确重新导入时标签（分组）的归属。分组主要由接口首个 OpenAPI 标签在 Studio 派生；手工创建的空分组保存在软件仓库上。本决策不新增独立分组表，补充批量操作、空分组持久化与导入规则；[ADR 0012](0012-project-interface-library.md) 中「文档字段覆盖同名接口」的标签部分由本决策修订。
 
 ## 决策

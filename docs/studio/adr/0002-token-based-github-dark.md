@@ -1,5 +1,11 @@
 # 通过 token 支持 GitHub Dark
 
+- 状态：已接受
+- 日期：2026-09-24
+- 取代：[ADR 0001](0001-remove-dark-theme.md) 中仅保留浅色的决定
+- 被取代：—
+- 关联：[ADR 0001](0001-remove-dark-theme.md)
+
 2026-09-24。取代 [0001](0001-remove-dark-theme.md) 中仅保留浅色的决定。
 
 用户确认恢复主题切换，并选择 GitHub 暗色风格。此前暗色的维护问题来自按组件重复覆盖样式；现在已有基础、表面、编辑器和图表的语义颜色 token，因此决定只切换 token 取值，以 GitHub Primer Dark 的深灰背景、蓝色链接、绿色主按钮及状态色作为暗色色盘。Ant Design 使用 darkAlgorithm 与具体颜色配置，避免将 CSS 变量传入颜色算法。
