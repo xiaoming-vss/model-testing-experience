@@ -18,6 +18,14 @@
 **/build/
 **/*.egg-info/
 **/logs/
+**/*.log
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/artifacts/
+# Runtime storage; checked-in control-plane skills remain tracked.
+**/storage/*
+!**/storage/skills/
 **/.scratch/
 **/.trellis/
 **/.idea/

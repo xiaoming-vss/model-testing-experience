@@ -157,6 +157,21 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 
 共享基础层、跨项目协议或权限/领取/回传/停止语义变更时扩大回归范围。实际执行少于本表要求时，必须在交付说明中写明原因和未验证范围。
 
+## 本地工作区清理
+
+以下命令只删除本地生成物或可重新获取的依赖，不改变版本库。执行前确认没有需要保留的调试结果；不要删除正在使用的数据库卷或未归档的恢复证据。
+
+| 目标 | 命令 | 说明 |
+| --- | --- | --- |
+| `.scratch` 临时副本 | 按目录确认后 `rm -rf .scratch/<临时目录>` | 当前整改工单在 `.scratch/full-remediation-2026-11/`，清理前先归档工单记录 |
+| Studio 依赖 | `rm -rf apps/studio/node_modules` | 用 `npm ci` 重新安装 |
+| API/UI 运行产物 | `rm -rf apps/api-ui-worker/artifacts` | 先确认没有待排查的截图或 Trace |
+| Worker 运行状态 | `rm -rf apps/*/runtime` | 删除健康文件、证据日志和运行工作区；需要重新启动或恢复 |
+| 本地生成配置 | `rm -rf .runtime` 及 `python3 scripts/manage.py configure` 生成的文件 | 重新执行 `init`/`upgrade-config` 和 `configure` 生成 |
+| Python/Node 缓存 | `find . -name __pycache__ -prune -exec rm -rf {} +` 等 | 缓存可重新生成；不要用 `git clean` 代替逐项确认 |
+
+`node_modules`、`runtime`、`artifacts`、日志和数据库文件不应提交；根 `.gitignore` 与应用级规则共同覆盖这些路径。
+
 ## 外部验收
 
 以下验收不属于本地默认命令，发布前按对应文档在真实环境执行：
