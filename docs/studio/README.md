@@ -34,19 +34,19 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试
 | `app/layouts/AppShell.tsx` | 登录后的整体框架，业务页面在内部二次分发 |
 | `app/providers/` | Query 与主题 Provider |
 | `app/styles/` | 主题与设计断言测试 |
-| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`profile` |
+| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`test-orders`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`bugs`、`profile`、`admin` |
 | `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
 | `services/api.ts` | 各 feature API 的聚合出口 |
 | `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
 | `test/`、`utils/` | 测试辅助与工具函数 |
 
-HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/main.tsx`。顶层路由只有三条：`/login`、`/register`，其余全部交给 `ProtectedRoute` 包裹的 `AppShell`。
+HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/main.tsx`。顶层路由为 `/login`、`/register`、受保护的 `/test-orders/:orderId/graph`，其余全部交给 `ProtectedRoute` 包裹的 `AppShell`。
 
 任务和执行详情的代码按职责维护：
 
 - 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`caseNameTree.ts` 负责树编辑与布局计算，三个结果展示组件分别负责需求分析、候选用例和测试点树。
-- 五类 AI 任务详情页的执行后缓存刷新、运行记录删除收敛在 `ai-testing/hooks/useTaskRunActions.ts`。各页保留不同的执行参数、授权查询、审核业务和草稿清理；删除失败不清空草稿，删除非当前记录不切换选中项。UI 与代码风险任务仍只刷新运行列表，其余三类任务同步刷新详情与项目任务列表。
-- 运行详情按状态刷新，历史与报告减少重复请求，详见 [运行页面刷新策略](run-polling.md)。AI 详情与历史的缓存同步由 `ai-testing/hooks/useTaskRunHistorySync.ts` 维护。
+- AI 任务运行记录由 `ai-testing/components/RunHistoryTable.tsx` 展示；运行详情按状态刷新，历史与报告减少重复请求，统一策略见 [运行页面刷新策略](run-polling.md) 和 `domain/runs/`。删除失败不清空草稿，删除非当前记录不切换选中项。
+- 需求生成链的运行选择、草稿和查询刷新由 `ai-testing/hooks/useRequirementGenerationChain.ts` 维护；代码风险、测试报告等任务保留自己的执行参数、授权查询和审核业务。
 - 代码风险、测试报告和测试单图谱按执行 ID 展示并逐条删除已结束历史，运行中禁用删除；正式测试资产不受影响。AI Worker 队列协议中的 `runId` 是该次派发尝试 ID，页面请求和执行详情使用执行 ID，两者不得在前端混用。
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
@@ -104,7 +104,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `shared/components/RunCard.tsx`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根挂 `ui-detail-shell` 与 `ui-suite` 两个 Module 的作用域。
 - Sprint 详情页与 Projects 概览共用 `sprint-overview.module.css`，只保留卡片/健康带表面、图表色块、状态色映射与报告 Markdown 在 `sprint-overview.module.css`；页面网格、工具栏、指标与断点由 `SprintDetailPage` / `ProjectsPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
-列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
+列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/components/GeneratedCasesReviewView.delete.test.tsx` 等页面回归验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
 
 ### 共享数据工具
 

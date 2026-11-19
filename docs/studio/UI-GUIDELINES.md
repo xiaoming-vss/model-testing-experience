@@ -374,7 +374,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 基础服务的 GitLab、LLM 模型、MCP、Skill 库和性能监控沿用合并容器：分类 Tab 独立位于上方，各分类工具栏、内收 16px 的卡片区及分页共用一个外框。五类卡片复用同一服务卡片结构：顶部为图标、名称和状态标签，中部为字段行，底部为对象操作；Skill 卡片展示文件数、大小和最近更新时间，使用相同网格与操作按钮。实现为 `features/base-services/components/SharedServicesPanel.tsx`、`ZentaoMcpServiceCard.tsx`、`features/ai-testing/pages/AiSkillLibraryPage.tsx` 与 `features/performance/components/PerfMonitoringPanel.tsx`。
 
-2026-10-29 按用户反馈修正宽屏留白：卡片网格原在 1560px 以上固定为 4×310px，15 条 Skill 只占内容区左半部分。现改为 `repeat(auto-fill, minmax(310px, 1fr))`，按可用宽度自动增减列数并贴齐右侧，取代上文 2026-10-04 的 310px 固定列宽记录；1560px 及以下继续使用既有 4/3/2/1 列断点。静态检查为 `features/base-services/styles/baseServicesGrid.test.ts`；已在 2327px 浅色/深色下检查四类 Tab，并在 1680px 检查 Skill 库与 LLM 模型、1440/760/390px 检查 Skill 库，均无横向溢出。
+2026-10-29 按用户反馈修正宽屏留白：卡片网格原在 1560px 以上固定为 4×310px，15 条 Skill 只占内容区左半部分。现改为 `repeat(auto-fill, minmax(310px, 1fr))`，按可用宽度自动增减列数并贴齐右侧，取代上文 2026-10-04 的 310px 固定列宽记录；1560px 及以下继续使用既有 4/3/2/1 列断点。当前 `BaseServicesPage.test.tsx` 覆盖页面 Tab 渲染；网格列宽没有自动化断言，需在浏览器核对。已在 2327px 浅色/深色下检查四类 Tab，并在 1680px 检查 Skill 库与 LLM 模型、1440/760/390px 检查 Skill 库，均无横向溢出。
 
 
 ### 参考图对齐（2026-10-12）

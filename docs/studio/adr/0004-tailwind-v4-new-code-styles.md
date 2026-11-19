@@ -18,7 +18,7 @@ studio 当前有 106 个 CSS 文件、26,104 行、5,260 条规则、18,728 条�
 - **颜色**只消费已登记 token。Tailwind 通过 `@theme` 映射 `--app-*` / `--srf-*` 等语义 token，禁用默认色盘；禁止 `bg-[#...]`、`text-[#...]` 等任意色值。
 - **禁止新增**全局 CSS 文件（`app/styles/`、`shared/styles/` 下只允许 token 文件和既有公共层收缩）和 feature 级全局 CSS；禁止新增 `!important` 与 `.app-shell.app-shell-macos` 双类长前缀（macOS 外壳统一用单类 `.app-shell-macos`）。
 - **存量 CSS 冻结**，只允许删除或收缩。改到哪个页面就迁哪个页面，迁完删除原 CSS 文件；不得以“以后统一迁移”为由继续新增旧式 CSS。
-- **Tailwind 工具链接入前**，新增样式只能使用 CSS Modules；不得以等待接入为由恢复页面级全局 CSS。
+- **Tailwind 工具链接入前**，新增样式只能使用 CSS Modules；不得以等待接入为由恢复页面级全局 CSS。2026-11-19 起 Tailwind 已通过 `@tailwindcss/vite` 接入，新增样式按本 ADR 的 utility / CSS Modules 顺序执行；本句仅保留决策历史。
 
 工具链接入要求：使用 `@tailwindcss/vite`；在 `src/shared/styles/tailwind.css` 声明 `@layer theme, base, antd, reset, components, app-buttons, utilities;`；Ant Design 用 `<StyleProvider layer>` 包进 `@layer antd`，`antd/dist/reset.css` 在 `src/index.css` 中用 `layer(reset)` 导入，必要时启用 `cssVar`。reset 位于 antd 之后、utilities 之前：保持旧页面里 reset 压过组件库默认字重的行为，同时允许 Tailwind utility 覆盖 reset。初期不引入 preflight，或只作用域化引入，避免改掉 Ant Design 的基础样式。layer 只在生产入口开启；jsdom 无法完整解析 `@layer`，测试入口开启后 AntD 的关闭动画会挂起，因此测试使用普通的 `ThemeProvider`，layer 行为由浏览器验证。Tailwind 与旧 CSS 并存期间，未分层的旧规则仍可能压过 utility；新页面不得用 `!` 绕过，应按迁移规则把该页面的旧规则迁走或删除。阶段 20 起共享控件字体、`.tp-chip`、`.tp-tone-tag`、筛选原语与工具栏默认值已分层，剩余未分层契约集中在表格、按钮和外壳皮肤。
 

@@ -51,7 +51,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
 | S1 | `shared/`、`src/utils/`、`src/services/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts:1` import `features/auth/store/auth.store`；`src/utils/updatePayload.ts:17-19` import 3 个 feature 的表单类型 | ESLint `no-restricted-imports`（**待强制**） |
-| S2 | `app/` 可以 import `features/` 与 `shared/`；`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint（**待强制**） |
+| S2 | `app/` 可以 import `features/` 与 `shared/`；`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint + `npm run check:boundaries`（**已实现**，与 S3 使用同一规则块） |
 
 ## 二、feature 边界
 
@@ -398,7 +398,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 - 不新增 `!important`、`.app-shell.app-shell-macos` 双类长前缀（macOS 外壳统一用单类 `.app-shell-macos`）；需要覆盖时先迁走旧规则或调整 layer 顺序。
 - 颜色只用已登记 token；Tailwind 通过 `@theme` 映射，禁用默认色盘，禁止 `bg-[#...]` 等任意色值。
 - 存量 CSS 冻结，只减不增；改到哪个页面就迁哪个页面，迁完删除原 CSS 文件，不做“先留着”的兼容层。
-- Tailwind 工具链接入前，新增样式只能写 CSS Modules；不得以等待接入为由继续新增页面级全局 CSS。
+- Tailwind 已通过 `@tailwindcss/vite` 接入；新增样式按上文的 utility / CSS Modules 顺序选择，不得新增页面级全局 CSS。
 
 接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, reset, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；`antd/dist/reset.css` 用 `layer(reset)` 导入，reset 位于 antd 之后、utilities 之前，既保留旧页面 reset 压过组件库默认字重的行为，又允许 utility 覆盖 reset。初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
 
@@ -452,14 +452,14 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 - **没有真实部署环境的端到端验收。** 自动化覆盖的是 jsdom 下的单元与组件测试；浏览器端到端、以及真实部署后的验收均未做。
 - **静态引用图不能证明所有动态业务路径可达。** 本文的孤儿检查与依赖方向检查都基于静态 import 分析，动态拼接的路径不在覆盖内。
-- **构建体积没有预算约束。** 主包 gzip 约 970–980 kB、CSS 约 77 kB（随每次构建浮动），且全项目 0 处代码分割（无 `React.lazy` 或动态 `import()`），recharts、`@xyflow/react`、`docx-preview`、CodeMirror 全部进入主包。本文的规则里**没有**一条拦住它继续增长。
+- **构建体积没有预算约束。** 2026-11-19 的构建中，主包 gzip 约 1.38 MB、CSS gzip 约 64 KB（随每次构建浮动）；`vite build` 仍提示单个 chunk 超过 500 kB，页面级代码分割尚未配置，recharts、`@xyflow/react`、`docx-preview`、CodeMirror 仍进入主包。本文的规则里**没有**一条拦住它继续增长。
 
 ## 待办：把规则变成约束
 
-按收益排序，前三项不需要修改任何现有代码：
+以下为尚未落地的自动检查；已接入 `npm run verify` 的 S3、S8、S15、S16 见各条「检查」列。
 
-1. **S1、S3 上 ESLint** —— 依赖方向人眼最难发现。`no-restricted-imports` + 按 feature 生成规则块；存量豁免只有 4 个文件（`shared/api/request.ts`、`src/utils/updatePayload.ts`、`test-orders/components/TestOrderGraphViewer.tsx`、`test-orders/types.ts`），用 `overrides` 显式列名
-2. **C1、C3、C4、C8 上 ESLint `max-lines`** —— 现状违规按当前行数冻结在豁免名单里，新文件直接受 400/300/600 上限约束
-3. **S6–S13 上扫描脚本** —— 位置、前缀、token、孤儿文件都是可机械判定的，一个零依赖脚本即可覆盖
-4. **S16 上扫描脚本** —— 新增全局选择器/文件、声明与规则预算、`!important`/长前缀、重复规则体；同时扩展 `check:theme` 识别 className 任意色值。S16 落地前靠评审
-5. **把检查挂到会自动跑的地方** —— 没有 CI 和 hook 的话，上面几条依然只是文档
+1. **S1 上 ESLint** —— `shared/`、`src/utils/`、`src/services/` 反向引用 feature 仍需人工发现；存量豁免按文件显式列名。S3 已由 `check:boundaries` 覆盖。
+2. **C1、C3、C4、C8 上 ESLint `max-lines`** —— 现状违规按当前行数冻结在豁免名单里，新文件直接受 400/300/600 上限约束。
+3. **S6–S13 的剩余扫描** —— 位置、前缀、token 和孤儿文件尚未全部机械化；CSS 结构与预算已由 `check:css:all` 覆盖可判定部分。
+4. **S16 的 TSX className 检查** —— CSS 文件、结构与预算已落地；`!` 后缀和重复 utility 串仍需扫描脚本，当前靠评审与 `check:theme`。
+5. **把检查挂到会自动跑的地方** —— 没有 CI 和 hook 的话，上面几条依然只是文档。
