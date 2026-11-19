@@ -1,6 +1,5 @@
 """immutable version view using direct attempts for source details."""
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
@@ -10,9 +9,8 @@ from testing_agent.domain.generation_chain import (
     stage_names,
     upstream_stages,
 )
-from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.schemas.generation_chain import (
     ChainSourceInputsView,
     ChainStageVersionSummary,
@@ -27,12 +25,8 @@ async def version_detail(
     session: AsyncSession, task: AiGenerateTask, kind: DesignKind, version_id: str
 ) -> GenerationChainVersionDetail:
     """Caller must check project access and task ownership first."""
-    row = await session.scalar(
-        select(AiGenerateStageVersion).where(
-            AiGenerateStageVersion.task_id == task.task_id,
-            AiGenerateStageVersion.version_id == version_id,
-        )
-    )
+    repository = GenerationChainRepository(session)
+    row = await repository.version(task.task_id, version_id)
     if row is None or row.stage not in stage_names(kind):
         raise ErrNotFound()
     display_stage = row.stage
@@ -46,23 +40,9 @@ async def version_detail(
     for parent_stage, parent_id in recorded.items():
         parent_task_id = task.task_id
         if kind == "function" and parent_stage == "extracting_text":
-            parent_task = await session.scalar(
-                select(AiGenerateTask)
-                .where(
-                    AiGenerateTask.requirement_id == task.requirement_id,
-                    AiGenerateTask.task_type == "requirement_analysis",
-                )
-                .order_by(AiGenerateTask.created_at.desc(), AiGenerateTask.id.desc())
-                .limit(1)
-            )
+            parent_task = await repository.latest_requirement_analysis_task(task.requirement_id)
             parent_task_id = parent_task.task_id if parent_task else ""
-        parent = await session.scalar(
-            select(AiGenerateStageVersion).where(
-                AiGenerateStageVersion.task_id == parent_task_id,
-                AiGenerateStageVersion.version_id == parent_id,
-                AiGenerateStageVersion.stage == parent_stage,
-            )
-        )
+        parent = await repository.version_for_stage(parent_task_id, parent_id, parent_stage)
         if parent is not None:
             summaries.append(
                 ChainStageVersionSummary(
@@ -88,9 +68,7 @@ async def version_detail(
         if "uiSourceInputs" in context:
             source_inputs = context["uiSourceInputs"]
         else:
-            attempt = await session.scalar(
-                select(AiGenerationAttempt).where(AiGenerationAttempt.id == row.attempt_id)
-            )
+            attempt = await repository.attempt(row.attempt_id)
             source_inputs = ui_source_inputs(attempt_source(attempt)) if attempt else None
     return GenerationChainVersionDetail(
         version_id=row.version_id,

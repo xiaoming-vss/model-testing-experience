@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import AppError, ErrBadRequest, dynamic_error
 from testing_agent.repositories.generation_chain import GenerationChainRepository
+from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import (
@@ -317,15 +318,8 @@ class UiGenerationSourceService:
         *,
         gitlab_connection_id: str,
     ) -> RepoGitlabAccess:
-        from sqlalchemy import select
-
-        from testing_agent.models.software_repository import SoftwareRepository
-
-        row = await self.session.scalar(
-            select(SoftwareRepository).where(
-                SoftwareRepository.software_repository_id
-                == str(binding.get("softwareRepositoryId") or binding.get("bindingId") or "")
-            )
+        row = await SoftwareRepositoryRepository(self.session).get(
+            str(binding.get("softwareRepositoryId") or binding.get("bindingId") or "")
         )
         if row is None:
             raise dynamic_error(

@@ -22,6 +22,17 @@ class SharedServiceCatalogRepository:
             )
         )
 
+    async def zentao_mcp_services(self, project_id: str) -> list[SharedService]:
+        return list(
+            await self.session.scalars(
+                select(SharedService).where(
+                    SharedService.project_id == project_id,
+                    SharedService.provider == "mcp",
+                    SharedService.template_id == "zentao",
+                )
+            )
+        )
+
     async def owned_connections(
         self, resources: Sequence[SharedService], user_id: str
     ) -> dict[str, IntegrationConnection]:

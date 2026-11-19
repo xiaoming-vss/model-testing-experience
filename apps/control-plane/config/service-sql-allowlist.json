@@ -92,16 +92,18 @@
       "reason": "Validate and atomically publish visualization results in the Worker event transaction；读取使用行锁并与调用方事务绑定，保留在 service。"
     },
     "services/code_risk_analysis.py": {
-      "classification": "read-only",
-      "reason": "代码风险分析任务快照、GitLab 凭据下发与报告读取(工单 06/07,RC-4/RC-5)；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "GitLab 凭据下发查询已迁入 IntegrationConnectionRepository.get_active_for_user；文件仅保留 AsyncSession 类型导入、解密和响应组装。"
     },
     "services/database_snapshot.py": {
       "classification": "types-only",
       "reason": "Portable MySQL table snapshots; no credentials are written into the bundle；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
     },
     "services/environment_access.py": {
-      "classification": "read-only",
-      "reason": "Personal ownership of explicitly secret environment values；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "环境变量查询已迁入 ApiEnvironmentVarRepository.list_by_environment；文件保留秘密值归属校验。"
     },
     "services/file_naming.py": {
       "classification": "read-write",
@@ -167,10 +169,6 @@
       "classification": "read-write",
       "reason": "Maintenance-only restore decisions. Remote reads precede local CAS transactions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/integration_runtime.py": {
-      "classification": "read-only",
-      "reason": "Restored databases stay fenced even if an old application/configuration is started；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
-    },
     "services/integration_transaction.py": {
       "classification": "write",
       "reason": "Retry only known-aborted local MySQL transactions, never remote execution；写路径由 service 持有事务边界，保留直接 SQL。"
@@ -228,8 +226,9 @@
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/repository_profile_versions.py": {
-      "classification": "read-only",
-      "reason": "Project successful repository profile attempts as immutable profile versions；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "画像 attempt 查询已迁入 GenerationChainRepository.profile_attempts；文件保留版本投影和按 execution 去重规则。"
     },
     "services/requirement_document_migration.py": {
       "classification": "read-write",
@@ -277,7 +276,8 @@
     },
     "services/stage_storage/chain_view.py": {
       "classification": "read-only",
-      "reason": "full requirement-chain view from direct stage storage；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "生成链全景需跨 stage/attempt/version/import 多表组装，属于读模型投影；拆到单一 repository 会把视图规则分散到多个方法，保留到生成链读模型整体改造。"
     },
     "services/stage_storage/commands.py": {
       "classification": "read-write",
@@ -316,12 +316,14 @@
       "reason": "version deletion and direct dependent-draft invalidation；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/stage_storage/version_views.py": {
-      "classification": "read-only",
-      "reason": "immutable version view using direct attempts for source details；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "版本、上游任务和 attempt 查询已迁入 GenerationChainRepository；文件保留跨阶段视图组装。"
     },
     "services/stage_storage/views.py": {
       "classification": "read-only",
-      "reason": "requirement-chain stage views from the direct stage ledger；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "阶段与 attempt 展示投影跨多表并按任务批量组装，属于读模型；保留在 service 以免视图规则分散。"
     },
     "services/stage_storage/worker.py": {
       "classification": "read-write",
@@ -365,7 +367,8 @@
     },
     "services/standalone_worker_authorization.py": {
       "classification": "read-only",
-      "reason": "Resolve a Worker's current attempt within one independent execution；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "包含队列身份、执行、尝试和阶段的多表授权判断，属于独立执行授权策略；保留在 service 以便与后续加锁复核保持同一协议。"
     },
     "services/standalone_worker_events.py": {
       "classification": "read-write",
@@ -389,7 +392,8 @@
     },
     "services/stored_file_access.py": {
       "classification": "read-only",
-      "reason": "Validate persisted business ownership before exposing an associated file；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "下载授权需要按文件用途跨需求、Bug、运行、技能等业务资源验证归属，属于访问策略而非可复用查询。"
     },
     "services/stored_file_cleanup.py": {
       "classification": "write",
@@ -412,8 +416,9 @@
       "reason": "Stop API/UI executions without replaying external operations；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/ui_generation_source.py": {
-      "classification": "read-only",
-      "reason": "Resolve UI generation source from an immutable repository profile version；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "软件仓库查询已迁入 SoftwareRepositoryRepository.get；文件保留画像版本选择和 GitLab 授权规则。"
     },
     "services/ui_run_variables.py": {
       "classification": "read-write",
@@ -440,12 +445,14 @@
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/worker_domains/perf.py": {
-      "classification": "read-only",
-      "reason": "Performance execution lifecycle updates owned by the perf domain；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "PerfRun 查询已迁入 PerfRunRepository.get_run；文件保留性能任务状态迁移和结果应用。"
     },
     "services/worker_domains/ui.py": {
       "classification": "read-only",
-      "reason": "纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "读取与 UI 任务状态迁移、结果应用和计数更新交织，拆到 repository 会产生多套读取或跨事务重复读取；待 worker 域拆分时处理。"
     },
     "services/worker_task.py": {
       "classification": "read-write",
@@ -453,11 +460,8 @@
     },
     "services/zentao_bindings.py": {
       "classification": "read-only",
-      "reason": "纯读查询仍在 service；迁入 repository 的计划见开发规则。"
-    },
-    "services/zentao_mcp_authorization.py": {
-      "classification": "read-only",
-      "reason": "Invalidate previous personal credentials after a confirmed target switch；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+      "migration": "long-term-exception",
+      "reason": "绑定解析同时执行项目共享服务选择、子绑定校验和推送状态汇总，属于跨资源领域规则。"
     },
     "services/zentao_mcp_identity.py": {
       "classification": "read-write",
@@ -466,10 +470,6 @@
     "services/zentao_mcp_reset.py": {
       "classification": "read-write",
       "reason": "Detach project remote IDs atomically; retain Bug sync history in its activity feed；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/zentao_mcp_selection.py": {
-      "classification": "read-only",
-      "reason": "Resolve project MCP choices without selecting another member's credentials；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
     }
   }
 }

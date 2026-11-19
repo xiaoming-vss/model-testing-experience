@@ -3,10 +3,8 @@
 import hashlib
 from hmac import compare_digest
 
-from sqlalchemy import select
-
 from testing_agent.core.errors import AppError, ErrUnauthorized
-from testing_agent.models.integration_job import IntegrationRestoreReview, IntegrationRuntime
+from testing_agent.repositories.integration_runtime import IntegrationRuntimeRepository
 
 
 def key_digest(key: str) -> str:
@@ -14,27 +12,11 @@ def key_digest(key: str) -> str:
 
 
 async def restored_runtime(session):
-    return await session.scalar(select(IntegrationRuntime).where(IntegrationRuntime.id == 1))
+    return await IntegrationRuntimeRepository(session).restored()
 
 
 async def isolated_scope(session, bug_id):
-    return (
-        await session.scalar(
-            select(IntegrationRestoreReview.review_id)
-            .join(
-                IntegrationRuntime,
-                IntegrationRuntime.restore_id == IntegrationRestoreReview.restore_id,
-            )
-            .where(
-                IntegrationRuntime.id == 1,
-                IntegrationRestoreReview.scope_type == "bug",
-                IntegrationRestoreReview.scope_id == bug_id,
-                IntegrationRestoreReview.decision == "isolated",
-            )
-            .limit(1)
-        )
-        is not None
-    )
+    return await IntegrationRuntimeRepository(session).isolated_scope(bug_id)
 
 
 async def require_runtime(session, settings, *, worker=False):

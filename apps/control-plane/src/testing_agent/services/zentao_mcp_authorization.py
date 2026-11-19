@@ -1,24 +1,13 @@
 """Invalidate previous personal credentials after a confirmed target switch."""
 
-from sqlalchemy import select
-
-from testing_agent.models.integration_connection import IntegrationConnection
-from testing_agent.models.shared_service import ServiceAuthorization
+from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.services.worker_authorization import revoke_executions
 
 
 async def invalidate_others(session, service_id, current_connection_id=None):
-    statement = (
-        select(IntegrationConnection)
-        .join(
-            ServiceAuthorization,
-            ServiceAuthorization.connection_id == IntegrationConnection.connection_id,
-        )
-        .where(ServiceAuthorization.service_id == service_id)
+    connections = await IntegrationConnectionRepository(session).list_authorized_by_service(
+        service_id, exclude_connection_id=current_connection_id
     )
-    if current_connection_id is not None:
-        statement = statement.where(IntegrationConnection.connection_id != current_connection_id)
-    connections = await session.scalars(statement)
     notifications = []
     for connection in connections:
         notifications.extend(

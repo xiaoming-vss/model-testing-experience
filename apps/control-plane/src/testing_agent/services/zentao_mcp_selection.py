@@ -1,10 +1,8 @@
 """Resolve project MCP choices without selecting another member's credentials."""
 
-from sqlalchemy import select
-
 from testing_agent.core.errors import AppError
-from testing_agent.models.resource_binding import ResourceBinding
-from testing_agent.models.shared_service import SharedService
+from testing_agent.repositories.resource_binding import ResourceBindingRepository
+from testing_agent.repositories.shared_service_catalog import SharedServiceCatalogRepository
 from testing_agent.services.service_instance import instance_key
 
 
@@ -13,14 +11,7 @@ def binding_service_id(binding):
 
 
 async def project_binding(session, project_id):
-    return await session.scalar(
-        select(ResourceBinding).where(
-            ResourceBinding.provider == "zentao",
-            ResourceBinding.status == "active",
-            ResourceBinding.local_resource_type == "project",
-            ResourceBinding.local_resource_id == project_id,
-        )
-    )
+    return await ResourceBindingRepository(session).active_project_binding(project_id)
 
 
 async def inherited_mcp_service_id(session, project_id, requested=""):
@@ -32,15 +23,7 @@ async def inherited_mcp_service_id(session, project_id, requested=""):
 
 
 async def select_mcp_service(session, project_id, service_id="", expected_instance=""):
-    services = list(
-        await session.scalars(
-            select(SharedService).where(
-                SharedService.project_id == project_id,
-                SharedService.provider == "mcp",
-                SharedService.template_id == "zentao",
-            )
-        )
-    )
+    services = await SharedServiceCatalogRepository(session).zentao_mcp_services(project_id)
     if not service_id:
         binding = await project_binding(session, project_id)
         service_id = binding_service_id(binding)

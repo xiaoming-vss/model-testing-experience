@@ -15,7 +15,8 @@
 
 1. 在 `apps/control-plane/config/service-sql-allowlist.json` 中登记：
    - `classification`：`read-only`、`locking-read`、`read-write`、`write` 或 `types-only`；
-   - `reason`：说明该文件为什么需要直接 SQL，或纯读为何暂不迁移。
+   - `reason`：说明该文件为什么需要直接 SQL，或长期例外为何不迁移；
+   - `migration`（可选）：`migrated` 或 `long-term-exception`，用于标记纯读迁移结果；不登记视为普通 allowlist 例外。
 2. 在相关语句或模块顶部写 `# transaction-bound: <理由>`，说明事务边界。
 
 `apps/control-plane/tests/test_architecture_layers.py` 会扫描 `services/**/*.py`：
@@ -35,32 +36,34 @@ uv run --locked --extra dev pytest tests/test_architecture_layers.py -q
 
 ## 已迁移的纯读
 
-| 原位置 | 迁移后 | 说明 |
+| 原位置 | 迁移后 | 回归入口 |
 | --- | --- | --- |
-| `services/project.py::list_members` 的 owner/member 查询 | `ProjectRepository.owner`、`ProjectRepository.member_rows` | 项目访问校验仍在 service，成员读取进入 repository |
-| `services/worker_skills.py::authorized_skill` 的默认技能查询 | `WorkerTaskRepository.default_skill` | 租约和 Worker 身份校验仍在 service |
+| `services/project.py::list_members` 的 owner/member 查询 | `ProjectRepository.owner`、`ProjectRepository.member_rows` | `test_project_membership_api.py` |
+| `services/worker_skills.py::authorized_skill` 的默认技能查询 | `WorkerTaskRepository.default_skill` | `test_worker_contract.py` |
+| `services/code_risk_analysis.py::gitlab_credentials_payload` | `IntegrationConnectionRepository.get_active_for_user` | `test_code_risk_analysis_task.py`、`test_code_risk_latest_runs.py` |
+| `services/environment_access.py::authorized_environment_vars` | `ApiEnvironmentVarRepository.list_by_environment` | `test_remaining_control_plane.py`、`test_ui_variables.py` |
+| `services/integration_runtime.py` | `IntegrationRuntimeRepository.restored`、`isolated_scope` | `test_integration_maintenance.py` |
+| `services/repository_profile_versions.py::_profile_attempts` | `GenerationChainRepository.profile_attempts` | `test_repository_profile_api.py`、`test_repository_profile_task.py` |
+| `services/stage_storage/version_views.py` | `GenerationChainRepository.version`、`version_for_stage`、`latest_requirement_analysis_task`、`attempt` | `test_generation_chain.py`、`test_generation_chain_api.py` |
+| `services/ui_generation_source.py::_access` | `SoftwareRepositoryRepository.get` | `test_ui_generation_repository_source.py` |
+| `services/worker_domains/perf.py::get_run` | `PerfRunRepository.get_run` | `test_perf_api.py` |
+| `services/zentao_mcp_authorization.py::invalidate_others` | `IntegrationConnectionRepository.list_authorized_by_service` | `test_zentao_mcp_bindings_api.py` |
+| `services/zentao_mcp_selection.py` | `ResourceBindingRepository.active_project_binding`、`SharedServiceCatalogRepository.zentao_mcp_services` | `test_zentao_mcp_bindings_api.py`、`test_zentao_mcp_cases_api.py` |
 
-## 暂不迁移的纯读
+文件仍保留 `AsyncSession` 类型导入时，allowlist 记为 `types-only` + `migration: migrated`；完全移除 SQLAlchemy 导入的文件从 allowlist 删除，避免清单腐烂。
 
-以下文件在 2026-11-19 的扫描中只有读 SQL（没有写语句和提交）。它们保留在 service 的理由如下，迁移由后续工单 `68-service-read-migration` 跟踪。
+## 长期例外
 
-| 文件 | 保留理由 |
-| --- | --- |
-| `services/code_risk_analysis.py` | GitLab 绑定与凭据读取和任务授权、仓库范围绑定在一起，拆到 repository 会重复授权语义 |
-| `services/environment_access.py` | 环境变量读取同时执行项目与个人授权过滤，属于访问策略 |
-| `services/integration_runtime.py` | 集成执行开关与运行代次读取属于跨服务运行策略 |
-| `services/repository_profile_versions.py` | 多表 attempt 投影为不可变版本视图，属于读模型组装 |
-| `services/stage_storage/chain_view.py` | 生成链全景由 stage/attempt/version 多表组装，属于读模型 |
-| `services/stage_storage/version_views.py` | 版本详情包含上游版本与来源投影，属于读模型 |
-| `services/stage_storage/views.py` | 阶段与 attempt 的展示投影，拆开会使视图规则分散 |
-| `services/standalone_worker_authorization.py` | 独立执行的当前权限和租约检查属于授权策略 |
-| `services/stored_file_access.py` | 文件资源归属与下载授权属于访问策略 |
-| `services/ui_generation_source.py` | UI 生成源选择读取仓库画像与冻结 commit，属于领域选择规则 |
-| `services/worker_domains/perf.py` | 读取与性能任务状态迁移交织，待 worker 域拆分时再迁移 |
-| `services/worker_domains/ui.py` | 读取与 UI 步骤/运行状态迁移交织，待 worker 域拆分时再迁移 |
-| `services/zentao_bindings.py` | 禅道绑定解析包含项目共享服务选择规则 |
-| `services/zentao_mcp_authorization.py` | MCP 个人授权校验属于访问策略 |
-| `services/zentao_mcp_selection.py` | 共享服务/绑定选择涉及跨成员凭据隔离规则 |
+以下纯读保留在 service，并在 allowlist 中标记 `migration: long-term-exception`。这些查询与授权策略、跨表读模型或状态迁移共享同一读取上下文，迁移会分散规则或引入额外读取；行数或复杂度不再作为是否迁移的依据。
+
+| 文件 | 长期保留理由 | 重新评估条件 |
+| --- | --- | --- |
+| `services/stage_storage/chain_view.py` | 生成链全景由 stage/attempt/version/import 多表组装，属于读模型投影 | 生成链读模型整体收口时 |
+| `services/stage_storage/views.py` | 阶段与 attempt 展示投影按任务批量组装，拆开会使视图规则分散 | 与 chain_view 一并改造时 |
+| `services/standalone_worker_authorization.py` | 队列身份、执行、尝试和阶段的多表授权判断属于独立执行授权策略 | 执行授权协议调整时 |
+| `services/stored_file_access.py` | 下载授权按文件用途跨需求、Bug、运行、技能等资源验证归属，属于访问策略 | 文件访问策略抽为独立领域服务时 |
+| `services/worker_domains/ui.py` | 读取与 UI 任务状态迁移、结果应用和计数更新交织 | worker 域拆分时 |
+| `services/zentao_bindings.py` | 绑定解析同时执行共享服务选择、子绑定校验和推送状态汇总 | 绑定选择规则进入 domain 时 |
 
 ## 事务标记示例
 

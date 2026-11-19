@@ -26,7 +26,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import yaml
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import (
@@ -38,9 +37,9 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
+from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.repositories.requirement_software_repository import (
     RequirementRepositoryBinding,
     RequirementSoftwareRepositoryRepository,
@@ -480,14 +479,8 @@ async def gitlab_credentials_payload(
         if not connection_id or not repository_id:
             continue
         if connection_id not in grouped:
-            connection = await session.scalar(
-                select(IntegrationConnection).where(
-                    IntegrationConnection.connection_id == connection_id,
-                    IntegrationConnection.provider == "gitlab",
-                    IntegrationConnection.project_id.in_(("", project_id)),
-                    IntegrationConnection.user_id == user_id,
-                    IntegrationConnection.status == "active",
-                )
+            connection = await IntegrationConnectionRepository(session).get_active_for_user(
+                user_id, "gitlab", connection_id, project_id
             )
             if connection is None:
                 raise ErrIntegrationConnectionNotFound()

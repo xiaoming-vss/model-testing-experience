@@ -5,31 +5,17 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
-from testing_agent.models.ai_generation_stage import AiGenerationStage
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.services.repository_profile import parse_repository_profile
 
 
 async def _profile_attempts(
     session: AsyncSession, task_id: str
 ) -> list[tuple[int, AiGenerationAttempt]]:
-    rows = await session.scalars(
-        select(AiGenerationAttempt)
-        .join(AiGenerationStage, AiGenerationStage.id == AiGenerationAttempt.stage_id)
-        .where(
-            AiGenerationStage.task_id == task_id,
-            AiGenerationStage.stage == "generate",
-            AiGenerationAttempt.status == "success",
-            AiGenerationAttempt.output_content.is_not(None),
-        )
-        .order_by(
-            func.coalesce(AiGenerationAttempt.finished_at, AiGenerationAttempt.created_at),
-            AiGenerationAttempt.id,
-        )
-    )
+    rows = await GenerationChainRepository(session).profile_attempts(task_id)
     by_execution: dict[str, AiGenerationAttempt] = {}
     for attempt in rows:
         key = attempt.execution_id or attempt.id

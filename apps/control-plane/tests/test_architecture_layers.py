@@ -12,6 +12,7 @@ SERVICE_SQL_CLASSIFICATIONS = {
     "write",
     "types-only",
 }
+SERVICE_SQL_MIGRATIONS = {"migrated", "long-term-exception"}
 
 
 def test_fastapi_dependencies_are_split_by_domain():
@@ -694,6 +695,11 @@ def _service_sql_violations(root: Path, entries: dict) -> list[str]:
         reason = entry.get("reason")
         if not isinstance(reason, str) or not reason.strip():
             violations.append(f"{relative}: allowlist entry needs a non-empty reason")
+        migration = entry.get("migration")
+        if migration is not None and migration not in SERVICE_SQL_MIGRATIONS:
+            violations.append(
+                f"{relative}: migration must be one of {sorted(SERVICE_SQL_MIGRATIONS)}"
+            )
     for relative in entries:
         if relative not in sql_files:
             violations.append(f"{relative}: stale allowlist entry (no direct SQLAlchemy use)")
@@ -713,6 +719,32 @@ def test_service_sql_is_allowlisted_or_marked():
         PROJECT_ROOT / "src" / "testing_agent", _load_service_sql_allowlist()
     )
     assert not violations, "\n".join(violations)
+
+
+def test_pure_read_migration_backlog_is_classified():
+    entries = _load_service_sql_allowlist()
+    classified = {relative for relative, entry in entries.items() if entry.get("migration")}
+    assert classified == {
+        "services/code_risk_analysis.py",
+        "services/environment_access.py",
+        "services/repository_profile_versions.py",
+        "services/stage_storage/chain_view.py",
+        "services/stage_storage/version_views.py",
+        "services/stage_storage/views.py",
+        "services/standalone_worker_authorization.py",
+        "services/stored_file_access.py",
+        "services/ui_generation_source.py",
+        "services/worker_domains/perf.py",
+        "services/worker_domains/ui.py",
+        "services/zentao_bindings.py",
+    }
+    fully_migrated = {
+        "services/integration_runtime.py",
+        "services/zentao_mcp_authorization.py",
+        "services/zentao_mcp_selection.py",
+    }
+    assert not (classified & fully_migrated)
+    assert not (set(entries) & fully_migrated)
 
 
 def test_service_sql_check_rejects_unregistered_and_unexplained_files(tmp_path):

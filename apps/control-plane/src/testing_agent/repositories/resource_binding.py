@@ -125,6 +125,16 @@ class ResourceBindingRepository(ResourceRepository):
             .limit(1)
         )
 
+    async def active_project_binding(self, project_id: str) -> ResourceBinding | None:
+        return await self.session.scalar(
+            select(ResourceBinding).where(
+                ResourceBinding.provider == "zentao",
+                ResourceBinding.status == "active",
+                ResourceBinding.local_resource_type == "project",
+                ResourceBinding.local_resource_id == project_id,
+            )
+        )
+
     async def exists_active_by_remote_resource(
         self,
         provider: str,
