@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 FUNCTIONAL_SOURCE_FORMAT = "requirement_understanding_json"
 FUNCTIONAL_SOURCE_FORMAT_VERSION = "0.2"
 
 
-class PlatformClaimTask(BaseModel):
+class PlatformResponseModel(BaseModel):
+    """控制面响应允许扩展：新增字段按忽略处理，不阻断滚动升级。
+
+    请求侧与内部产物契约仍按各自模型的严格策略校验；只有控制面响应
+    使用本基类，未知字段不会被误当作业务输入。
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class PlatformClaimTask(PlatformResponseModel):
     claim_id: str = Field(
         default="",
         validation_alias=AliasChoices("id", "claimId", "claim_id", "leaseId", "lease_id"),
@@ -55,13 +65,13 @@ class PlatformClaimTask(BaseModel):
     )
 
 
-class PlatformLlmCredentials(BaseModel):
+class PlatformLlmCredentials(PlatformResponseModel):
     base_url: str = Field(validation_alias=AliasChoices("baseUrl", "base_url"))
     model_id: str = Field(validation_alias=AliasChoices("modelId", "model_id"))
     api_key: str = Field(validation_alias=AliasChoices("apiKey", "api_key"))
 
 
-class PlatformSnapshotRun(BaseModel):
+class PlatformSnapshotRun(PlatformResponseModel):
     workflow_version: int = Field(default=2, validation_alias="workflowVersion")
     task_id: str = Field(validation_alias=AliasChoices("taskId", "task_id", "id"))
     attempt_id: str = Field(default="", validation_alias=AliasChoices("attemptId", "attempt_id"))
@@ -155,7 +165,7 @@ class PlatformSnapshotRun(BaseModel):
     )
 
 
-class PlatformSnapshotResponse(BaseModel):
+class PlatformSnapshotResponse(PlatformResponseModel):
     run: PlatformSnapshotRun
     task_type: str = Field(
         default="",
@@ -203,7 +213,7 @@ class PlatformSnapshotResponse(BaseModel):
     )
 
 
-class PlatformGitlabCredentials(BaseModel):
+class PlatformGitlabCredentials(PlatformResponseModel):
     connection_id: str = Field(
         default="",
         validation_alias=AliasChoices("connectionId", "connection_id"),
@@ -219,7 +229,7 @@ class PlatformGitlabCredentials(BaseModel):
     )
 
 
-class PlatformGitlabCredentialsResponse(BaseModel):
+class PlatformGitlabCredentialsResponse(PlatformResponseModel):
     task_id: str = Field(default="", validation_alias=AliasChoices("taskId", "task_id"))
     bindings: list[dict[str, object]] = Field(default_factory=list)
     credentials: list[PlatformGitlabCredentials] = Field(default_factory=list)

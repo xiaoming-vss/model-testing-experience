@@ -6,7 +6,7 @@
 
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
 
-接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、仓库画像、测试报告生成、用例执行顺序图谱八类任务。
+接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、仓库画像、测试报告生成、用例执行顺序图谱八类生成任务，以及单条目图解辅助任务，共九类。
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：默认技能按任务从控制面技能库获取并校验；轮询无锁并行，收到 SIGTERM 立即退出。
 
@@ -38,7 +38,7 @@
 | `agent/` | 后端门面与适配器：`base.py`（契约）、`nanobot.py`、`pi.py`、`prompt.py`、`paths.py`、`config_builder.py` |
 | `app/bootstrap.py` | 构建 poller 与 runner，提供 `run_worker` 与 `run_poll_once` |
 | `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`executor.py`、`lifecycle.py` |
-| `tasks/` | 八类任务各自的实现，另有共享 `git_workspace.py` 与 `result_summary.py` |
+| `tasks/` | 九类任务各自的实现，另有共享 `git_workspace.py` 与 `result_summary.py`；`test_order_case_visualization` 为单阶段辅助阅读任务，不进入候选审核或正式资产导入 |
 | `platform/` | 与控制面通信：`http_client.py`、`task_source.py`、`result_sink.py`、`schemas.py`、`errors.py` |
 | `config/`、`logging/` | 配置加载与日志设置 |
 
@@ -53,7 +53,7 @@
 | `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `agent.nanobot.runtime_root` |
 | `TESTING_AGENT_PI_RUNTIME_ROOT` | `agent.pi.runtime_root` |
 
-其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
+其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[ui_generation]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
 
 ```toml
 [agent]
@@ -96,6 +96,16 @@ max_repos = 20
 max_output_chars = 100000
 ```
 
+UI 用例生成的单仓库源码准备在 `[ui_generation]` 中配置；限制按 checkout 后的工作树统计，不含 `.git`：
+
+```toml
+[ui_generation]
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_repo_size_mb = 500
+max_repo_files = 200000
+```
+
 ## 命令
 
 在 `apps/ai-worker/` 下安装依赖并启动：
@@ -106,7 +116,7 @@ npm ci                                            # Pi 后端需要固定版本 
 uv run --locked mtx-ai-worker                     # 启动（后端由配置决定）
 ```
 
-测试、Ruff 和格式检查命令统一见[命令矩阵](../commands.md#ai-worker)；按变更类型选择的专项入口见[开发规则](development-rules.md#验证入口)。测试使用 `unittest` 编写，因此运行方式不是 pytest；开发依赖组只声明了 ruff。
+测试、Ruff 和格式检查命令统一见[命令矩阵](../commands.md#ai-worker)；按变更类型选择的专项入口见[开发规则](development-rules.md#验证入口)。测试使用 `unittest` 编写，因此运行方式不是 pytest；开发依赖组只声明了 ruff。测试数量以命令实际输出为准，不在文档固定数量，避免随用例增长漂移。
 
 ## 与控制面的交互
 
@@ -117,6 +127,8 @@ uv run --locked mtx-ai-worker                     # 启动（后端由配置决�
 领取、快照、进度和完成回传使用 `attemptId` 表示本次派发的阶段尝试；面向客户端的独立任务执行 ID 只在控制面接口以 `runId` 出现。两者不可互换，Worker 不应把执行 ID 当作队列尝试标识。
 
 进度回传只发送当前阶段、阶段状态、配置中间产物和结果摘要；不再发送 `remediation` 或不被持久化的结果正文。完成回传发送状态、结果 YAML、中间产物、结果摘要和错误信息，失败原因通过 `errorMessage` 展示。旧版 Worker 多发的字段由平台按既有反序列化策略忽略。
+
+控制面响应采用“允许扩展”策略：`platform/schemas.py` 的响应基类显式使用 `extra="ignore"`，控制面新增未知字段不会让旧 Worker 校验失败，也不会进入业务对象。该策略只适用于控制面响应；请求体、内部任务载荷和模型产物继续按各自契约严格校验。兼容测试见 `tests/unit/platform/test_schemas.py`。
 
 ## 心跳、租约与结果恢复
 

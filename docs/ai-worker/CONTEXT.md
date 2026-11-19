@@ -81,9 +81,11 @@ _Avoid_: 受影响测试、被影响用例
 
 ## 任务类型
 
-`worker/dispatcher.py` 分派八种任务，未知类型返回 `不支持的任务类型: <type>`：
+`worker/dispatcher.py` 分派九种任务，未知类型返回 `不支持的任务类型: <type>`：
 
-`requirement_analysis`、`functional_case_generate`、`api_case_generate`、`ui_case_generate`、`code_risk_analysis`、`repository_profile`、`test_report_generate`、`test_order_graph`
+`requirement_analysis`、`functional_case_generate`、`api_case_generate`、`ui_case_generate`、`code_risk_analysis`、`repository_profile`、`test_report_generate`、`test_order_graph`、`test_order_case_visualization`
+
+前八种是生成类任务，沿用候选、审核或运行结果协议。`test_order_case_visualization` 是单阶段辅助阅读任务：控制面读取执行条目冻结正文，Worker 通过 `mtx-analyze-case-visualization` 返回 `ready`、`partial` 或 `unsupported`，不进入候选审核或正式资产导入；其输入、输出上限和失败语义见[单条目图解任务](case-visualization.md)。该类型不是待删除的旧协议，而是当前受支持的辅助任务；移除前必须同时更新控制面任务创建、Worker 分派、默认技能和 Studio 入口。
 
 `functional_case_generate` 的 `relation_analysis` 阶段为需求画布生成用例图谱。控制面冻结所选完整用例版本及其生成时使用的材料整理结果，首次生成和重新生成均只将这两份内容交给 `mtx-analyze-test-case-relations`。输出沿用关系协议 2.0。
 

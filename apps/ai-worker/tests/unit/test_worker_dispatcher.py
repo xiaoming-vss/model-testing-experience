@@ -32,7 +32,10 @@ class _FakeExecutor:
 
 class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
     def _dispatcher(
-        self, code_risk_executor=None, repository_profile_executor=None
+        self,
+        code_risk_executor=None,
+        repository_profile_executor=None,
+        case_visualization_executor=None,
     ) -> WorkerTaskDispatcherExecutor:
         return WorkerTaskDispatcherExecutor(
             api_executor=_FakeExecutor(),
@@ -42,6 +45,7 @@ class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
             ui_executor=_FakeExecutor(),
             code_risk_executor=code_risk_executor,
             repository_profile_executor=repository_profile_executor,
+            case_visualization_executor=case_visualization_executor,
         )
 
     def _task(self, task_type: str = "code_risk_analysis") -> Task:
@@ -114,6 +118,35 @@ class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("repository_profile", result.error_message or "")
+
+    def test_dispatches_case_visualization_to_configured_executor(self) -> None:
+        case_visualization_executor = _FakeExecutor()
+        dispatcher = self._dispatcher(case_visualization_executor=case_visualization_executor)
+
+        result = dispatcher.execute(
+            self._task("test_order_case_visualization"),
+            datetime.now().astimezone(),
+            lambda _progress: None,
+        )
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual(1, case_visualization_executor.calls)
+        self.assertEqual(
+            "test_order_case_visualization",
+            case_visualization_executor.last_task.task_type,
+        )
+
+    def test_unknown_task_type_returns_a_stable_failure(self) -> None:
+        dispatcher = self._dispatcher()
+
+        result = dispatcher.execute(
+            self._task("not-a-supported-task"),
+            datetime.now().astimezone(),
+            lambda _progress: None,
+        )
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertEqual("不支持的任务类型: not-a-supported-task", result.error_message)
 
 
 if __name__ == "__main__":
