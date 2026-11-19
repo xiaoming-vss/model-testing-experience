@@ -1,0 +1,475 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-11-19",
+  "policy": "Service 直接使用 SQL 的文件必须登记；新增文件需登记或添加 # transaction-bound: 标记。",
+  "files": {
+    "services/ai_run_launcher.py": {
+      "classification": "read-write",
+      "reason": "Launch AI runs with preparation and final authorization in separate transactions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/ai_task_commands.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/ai_task_scope.py": {
+      "classification": "locking-read",
+      "reason": "读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/api_collection.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/api_interface.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/api_interface_import.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/auth_mode.py": {
+      "classification": "write",
+      "reason": "Explicit authentication cutover; startup never resets existing sessions；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/auxiliary_execution.py": {
+      "classification": "types-only",
+      "reason": "Dispatch a no-review AI task using the shared stage-attempt lifecycle；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/auxiliary_execution_delete.py": {
+      "classification": "read-write",
+      "reason": "Delete one completed auxiliary execution without deleting business assets；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/auxiliary_execution_view.py": {
+      "classification": "write",
+      "reason": "Existing run response shapes projected from unified auxiliary executions；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/auxiliary_request.py": {
+      "classification": "locking-read",
+      "reason": "Identity and replay checks shared by no-review AI dispatch entry points；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/binding_summary.py": {
+      "classification": "types-only",
+      "reason": "Load display-only bindings for an already authorized resource list；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/binding_support.py": {
+      "classification": "write",
+      "reason": "Binding serialization, access contract, and explicit commit error translation；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/bug.py": {
+      "classification": "read-write",
+      "reason": "Bug 生命周期：创建自增编号、禅道三主状态与独立确认/解决方案、独立转派、处理记录与动态；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/bug_import/files.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/bug_import/writer.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/bug_zentao_attachment.py": {
+      "classification": "read-write",
+      "reason": "Read attachment mappings and recover uploads using verified remote content；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/bug_zentao_fields.py": {
+      "classification": "write",
+      "reason": "Read remote field choices and recover verified field update results locally；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/bug_zentao_pull.py": {
+      "classification": "read-write",
+      "reason": "已关联 Bug 从禅道拉取更新：远端读取、基线三方比对、确认应用（R28–R34）；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/bug_zentao_push.py": {
+      "classification": "read-write",
+      "reason": "Read Bug integration context and recover verified remote associations locally；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/builtin_skills.py": {
+      "classification": "read-write",
+      "reason": "Publish trusted on-disk default skills through the shared S3 file lifecycle；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/case_visualization_completion.py": {
+      "classification": "locking-read",
+      "reason": "Validate and atomically publish visualization results in the Worker event transaction；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/code_risk_analysis.py": {
+      "classification": "read-only",
+      "reason": "代码风险分析任务快照、GitLab 凭据下发与报告读取(工单 06/07,RC-4/RC-5)；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/database_snapshot.py": {
+      "classification": "types-only",
+      "reason": "Portable MySQL table snapshots; no credentials are written into the bundle；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/environment_access.py": {
+      "classification": "read-only",
+      "reason": "Personal ownership of explicitly secret environment values；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/file_naming.py": {
+      "classification": "read-write",
+      "reason": "Repair legacy names using private copy targets; preserve the original object；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/file_verification.py": {
+      "classification": "write",
+      "reason": "Short transactions around private, generation-specific storage verification；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/function_case_push_flow.py": {
+      "classification": "read-write",
+      "reason": "Local permission/intent transaction, one remote write, then durable receipt；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/function_generate_import.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/generation_chain.py": {
+      "classification": "read-write",
+      "reason": "Requirement generation chain orchestration；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_authorization.py": {
+      "classification": "locking-read",
+      "reason": "Local authorization only. Worker access is scoped to the job actor and bound service；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/integration_bug.py": {
+      "classification": "read-write",
+      "reason": "Bug integration coordinator: local commands, lease protocol and atomic domain receipts；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_bug_context.py": {
+      "classification": "locking-read",
+      "reason": "Build and revalidate credential-free Bug execution snapshots using only local state；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/integration_bug_state.py": {
+      "classification": "read-write",
+      "reason": "Apply local execution state and terminal activity; recovery is an explicit capability；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_connection.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_guards.py": {
+      "classification": "locking-read",
+      "reason": "Shared write fence for compatibility paths; call under the project write lock；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/integration_job.py": {
+      "classification": "read-write",
+      "reason": "Local queue commands. The caller commits once with any related domain changes；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_lifecycle.py": {
+      "classification": "locking-read",
+      "reason": "Resource mutation fences and revocation, without credentials or remote clients；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/integration_maintenance.py": {
+      "classification": "read-write",
+      "reason": "Bounded history compaction; never discard write evidence or step result receipts；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_recovery.py": {
+      "classification": "read-write",
+      "reason": "Join trusted read-only recovery to the original execution ledger in its local transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_restore.py": {
+      "classification": "read-write",
+      "reason": "Maintenance-only restore decisions. Remote reads precede local CAS transactions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/integration_runtime.py": {
+      "classification": "read-only",
+      "reason": "Restored databases stay fenced even if an old application/configuration is started；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/integration_transaction.py": {
+      "classification": "write",
+      "reason": "Retry only known-aborted local MySQL transactions, never remote execution；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/ldap_accounts.py": {
+      "classification": "write",
+      "reason": "Atomic LDAP JIT/link/profile persistence after external authentication；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/ldap_reconcile.py": {
+      "classification": "write",
+      "reason": "Complete-round LDAP eligibility reconciliation, coordinated by a database lease；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/live_debug_cleanup.py": {
+      "classification": "read-write",
+      "reason": "Deliver and retire ephemeral single-API debug runs；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/monitoring_connection.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/perf_case.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/perf_run.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/perf_suite.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/perf_suite_run.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/perf_worker.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/personal_authorization.py": {
+      "classification": "types-only",
+      "reason": "Credential access is always bound to an actor, separately from project roles；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/project.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/project_access.py": {
+      "classification": "types-only",
+      "reason": "Project-scoped roles from the database; immutable Casbin action policy；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/project_skill_space.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/repository_profile_versions.py": {
+      "classification": "read-only",
+      "reason": "Project successful repository profile attempts as immutable profile versions；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/requirement_document_migration.py": {
+      "classification": "read-write",
+      "reason": "Migrate legacy plain-text requirements to sanitized rich-text documents；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/requirement_generation_defaults.py": {
+      "classification": "write",
+      "reason": "Default generation tasks created atomically with a new requirement；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/requirement_software_repository.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/resource_deletion.py": {
+      "classification": "locking-read",
+      "reason": "Business deletion commands; the caller authorizes access and commits once；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/shared_service.py": {
+      "classification": "read-write",
+      "reason": "Shared catalog metadata with separate, actor-owned authorization operations；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/shared_service_catalog.py": {
+      "classification": "types-only",
+      "reason": "Read catalog state with bounded remote probes and serialized database access；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/skill_storage.py": {
+      "classification": "write",
+      "reason": "Publish immutable skill batches with durable copy permits and short transactions；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/software_repository.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/sprint_metrics_scheduler.py": {
+      "classification": "types-only",
+      "reason": "Collect local metrics at 23:55 Asia/Shanghai for currently running sprints；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/stage_storage/__init__.py": {
+      "classification": "read-write",
+      "reason": "direct stage persistence；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/authorization.py": {
+      "classification": "read-write",
+      "reason": "authority resolution for a stage-owned Worker task；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/chain_view.py": {
+      "classification": "read-only",
+      "reason": "full requirement-chain view from direct stage storage；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/stage_storage/commands.py": {
+      "classification": "read-write",
+      "reason": "editable draft and review commands for direct stage storage；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/dispatch.py": {
+      "classification": "read-write",
+      "reason": "transactional dispatch for a directly owned stage attempt；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/history_view.py": {
+      "classification": "types-only",
+      "reason": "Project direct requirement-stage history to the existing paginated response；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/stage_storage/relations.py": {
+      "classification": "read-write",
+      "reason": "Version-scoped functional case relation graphs for direct stages；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/run_command.py": {
+      "classification": "read-write",
+      "reason": "direct stage launch; caller owns authorization and transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/run_view.py": {
+      "classification": "types-only",
+      "reason": "Adapt one requirement-chain attempt to the established run-detail response；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/stage_storage/ui_batch.py": {
+      "classification": "read-write",
+      "reason": "UI source-batch transitions; caller owns task lock and transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/upstream.py": {
+      "classification": "locking-read",
+      "reason": "upstream version selection without old run ledger reads；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/stage_storage/version_delete.py": {
+      "classification": "read-write",
+      "reason": "version deletion and direct dependent-draft invalidation；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/version_views.py": {
+      "classification": "read-only",
+      "reason": "immutable version view using direct attempts for source details；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/stage_storage/views.py": {
+      "classification": "read-only",
+      "reason": "requirement-chain stage views from the direct stage ledger；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/stage_storage/worker.py": {
+      "classification": "read-write",
+      "reason": "stage-owned worker transitions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stage_storage/worker_events.py": {
+      "classification": "types-only",
+      "reason": "Worker event application for a direct stage attempt；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/stage_storage/worker_service.py": {
+      "classification": "read-write",
+      "reason": "Worker service for direct stage attempts；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_candidate.py": {
+      "classification": "read-write",
+      "reason": "Execution-scoped edits and review for independent generation candidates；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_dispatch.py": {
+      "classification": "read-write",
+      "reason": "Append a checkpoint continuation, retry or revision to one execution；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_execution.py": {
+      "classification": "read-write",
+      "reason": "Start independent generation workflows without sharing stage state across runs；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_execution_delete.py": {
+      "classification": "read-write",
+      "reason": "Delete a terminal independent execution while retaining formal assets and files；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_execution_view.py": {
+      "classification": "types-only",
+      "reason": "Project a single independent execution without mixing other runs' artifacts；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/standalone_history.py": {
+      "classification": "types-only",
+      "reason": "Project independent execution history into existing paginated responses；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+    },
+    "services/standalone_import.py": {
+      "classification": "write",
+      "reason": "Record formal-asset provenance for an approved independent candidate；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/standalone_worker_authorization.py": {
+      "classification": "read-only",
+      "reason": "Resolve a Worker's current attempt within one independent execution；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/standalone_worker_events.py": {
+      "classification": "read-write",
+      "reason": "Validate and apply independent workflow Worker results in one transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_worker_service.py": {
+      "classification": "read-write",
+      "reason": "Worker lease operations for an independent multi-stage dispatch；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/standalone_worker_transitions.py": {
+      "classification": "read-write",
+      "reason": "Execution-scoped state transitions for independent AI Worker dispatches；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/storage_backup.py": {
+      "classification": "write",
+      "reason": "Coordinated database/object bundles, restored only into isolated empty targets；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/stored_file.py": {
+      "classification": "read-write",
+      "reason": "File lifecycle and access. Business services attach inside their transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/stored_file_access.py": {
+      "classification": "read-only",
+      "reason": "Validate persisted business ownership before exposing an associated file；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/stored_file_cleanup.py": {
+      "classification": "write",
+      "reason": "Lease immutable-object deletion and publish receipts with a generation comparison；写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/super_admin.py": {
+      "classification": "read-write",
+      "reason": "Create the single system super administrator during process startup；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/test_order.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/test_order_entry.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+    },
+    "services/test_run_stop.py": {
+      "classification": "read-write",
+      "reason": "Stop API/UI executions without replaying external operations；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/ui_generation_source.py": {
+      "classification": "read-only",
+      "reason": "Resolve UI generation source from an immutable repository profile version；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/ui_run_variables.py": {
+      "classification": "read-write",
+      "reason": "Resolve and write environment values for a UI worker's current run；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/ui_test_case_run.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/user_admin.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/worker.py": {
+      "classification": "locking-read",
+      "reason": "Worker protocol dispatch and credential payloads; execution rules live by domain；读取使用行锁并与调用方事务绑定，保留在 service。"
+    },
+    "services/worker_authorization.py": {
+      "classification": "read-write",
+      "reason": "Recheck an execution's recorded actor before delivering inputs or credentials；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/worker_domains/api.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/worker_domains/perf.py": {
+      "classification": "read-only",
+      "reason": "Performance execution lifecycle updates owned by the perf domain；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/worker_domains/ui.py": {
+      "classification": "read-only",
+      "reason": "纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/worker_task.py": {
+      "classification": "read-write",
+      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/zentao_bindings.py": {
+      "classification": "read-only",
+      "reason": "纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/zentao_mcp_authorization.py": {
+      "classification": "read-only",
+      "reason": "Invalidate previous personal credentials after a confirmed target switch；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    },
+    "services/zentao_mcp_identity.py": {
+      "classification": "read-write",
+      "reason": "Detect target changes so an owner can reset the project's remote associations；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/zentao_mcp_reset.py": {
+      "classification": "read-write",
+      "reason": "Detach project remote IDs atomically; retain Bug sync history in its activity feed；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/zentao_mcp_selection.py": {
+      "classification": "read-only",
+      "reason": "Resolve project MCP choices without selecting another member's credentials；纯读查询仍在 service；迁入 repository 的计划见开发规则。"
+    }
+  }
+}

@@ -264,6 +264,9 @@ class IntegrationConnectionService:
 
         from testing_agent.models.shared_service import ServiceAuthorization
 
+        # transaction-bound: the linked-authorization check must see the same
+        # transaction as the update; moving it to a repository would not change
+        # that boundary, so it stays next to the update command.
         linked = await self.repository.session.scalar(
             select(ServiceAuthorization.id).where(
                 ServiceAuthorization.connection_id == connection_id

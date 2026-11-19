@@ -45,7 +45,7 @@
 
 Router 和 handler 必须保持轻量，业务判断集中在 service 或 domain，两层不得直接访问 ORM 模型或数据库 session。通用查询、筛选、分页、聚合与持久化默认放在 repository，service 负责业务规则及事务协调。
 
-Service 中保留 SQL 的例外限于同一业务事务内的跨资源一致性检查、锁定顺序和原子条件更新，必须说明该语句与事务边界的关系。可复用的查询应抽到 repository，并由调用者传入同一个 session；不能因保留一处事务查询，就把整个资源的查询复制到服务层。存量服务 SQL 按本次修改范围逐步整理，不要求一次性搬迁全部服务。
+Service 中保留 SQL 的例外限于同一业务事务内的跨资源一致性检查、锁定顺序和原子条件更新，必须说明该语句与事务边界的关系。可复用的查询应抽到 repository，并由调用者传入同一个 session；不能因保留一处事务查询，就把整个资源的查询复制到服务层。存量服务 SQL 按本次修改范围逐步整理，不要求一次性搬迁全部服务。直接导入 SQLAlchemy 的 service 文件必须登记在 `apps/control-plane/config/service-sql-allowlist.json`，或使用 `# transaction-bound: <理由>` 标记；登记格式、分类和纯读迁移清单见 [Service SQL 边界与纯读清单](service-sql-boundaries.md)。
 
 可复用的业务操作通过清晰的服务或领域接口暴露，不让其他模块依赖某个服务的私有函数。拆分模块时按业务职责划分，保留既有调用入口的兼容性，避免同一规则出现多份实现。
 

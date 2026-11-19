@@ -1,7 +1,17 @@
 import ast
+import json
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_SQL_ALLOWLIST = PROJECT_ROOT / "config" / "service-sql-allowlist.json"
+SERVICE_SQL_MARKER = "# transaction-bound:"
+SERVICE_SQL_CLASSIFICATIONS = {
+    "read-only",
+    "locking-read",
+    "read-write",
+    "write",
+    "types-only",
+}
 
 
 def test_generation_callers_cannot_reintroduce_the_aggregate_facade():
@@ -576,6 +586,83 @@ def test_http_layer_check_detects_injected_session_and_commit(tmp_path):
     assert any(item.endswith(".session") for item in violations)
     assert any(item.endswith(".commit") for item in violations)
     assert any(item.endswith(".rollback") for item in violations)
+
+
+def _service_sql_files(root: Path) -> dict[str, str]:
+    files = {}
+    services = root / "services"
+    for path in sorted(services.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if "from sqlalchemy" in source or "import sqlalchemy" in source:
+            files[str(path.relative_to(root))] = source
+    return files
+
+
+def _service_sql_violations(root: Path, entries: dict) -> list[str]:
+    violations = []
+    sql_files = _service_sql_files(root)
+    for relative, source in sql_files.items():
+        entry = entries.get(relative)
+        if entry is None:
+            if SERVICE_SQL_MARKER not in source:
+                violations.append(
+                    f"{relative}: direct SQLAlchemy use needs an allowlist entry or "
+                    f"'{SERVICE_SQL_MARKER} <reason>'"
+                )
+            continue
+        if not isinstance(entry, dict):
+            violations.append(f"{relative}: allowlist entry must be an object")
+            continue
+        classification = entry.get("classification")
+        if classification not in SERVICE_SQL_CLASSIFICATIONS:
+            violations.append(
+                f"{relative}: classification must be one of {sorted(SERVICE_SQL_CLASSIFICATIONS)}"
+            )
+        reason = entry.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            violations.append(f"{relative}: allowlist entry needs a non-empty reason")
+    for relative in entries:
+        if relative not in sql_files:
+            violations.append(f"{relative}: stale allowlist entry (no direct SQLAlchemy use)")
+    return violations
+
+
+def _load_service_sql_allowlist() -> dict:
+    manifest = json.loads(SERVICE_SQL_ALLOWLIST.read_text(encoding="utf-8"))
+    assert manifest.get("schema_version") == 1
+    files = manifest.get("files")
+    assert isinstance(files, dict)
+    return files
+
+
+def test_service_sql_is_allowlisted_or_marked():
+    violations = _service_sql_violations(
+        PROJECT_ROOT / "src" / "testing_agent", _load_service_sql_allowlist()
+    )
+    assert not violations, "\n".join(violations)
+
+
+def test_service_sql_check_rejects_unregistered_and_unexplained_files(tmp_path):
+    services = tmp_path / "services"
+    services.mkdir()
+    (services / "new_feature.py").write_text(
+        "from sqlalchemy import select\n\nQUERY = select\n", encoding="utf-8"
+    )
+
+    violations = _service_sql_violations(tmp_path, {})
+    assert any("new_feature.py" in item for item in violations)
+
+    (services / "new_feature.py").write_text(
+        "from sqlalchemy import select\n\n"
+        "# transaction-bound: read inside the feature transaction\n"
+        "QUERY = select\n",
+        encoding="utf-8",
+    )
+    assert not _service_sql_violations(tmp_path, {})
+
+    entries = {"services/new_feature.py": {"classification": "read-only", "reason": ""}}
+    violations = _service_sql_violations(tmp_path, entries)
+    assert any("non-empty reason" in item for item in violations)
 
 
 def test_no_legacy_service_shims_remain():

@@ -146,6 +146,14 @@ class WorkerTaskRepository(BaseRepository):
             select(UiTestSuiteRunItem).where(UiTestSuiteRunItem.item_id == item_id)
         )
 
+    async def default_skill(self, filename: str) -> ProjectSkillSpace | None:
+        return await self.session.scalar(
+            select(ProjectSkillSpace).where(
+                ProjectSkillSpace.is_default.is_(True),
+                ProjectSkillSpace.filename == filename,
+            )
+        )
+
     async def list_project_skills(self, project_id: str) -> list[ProjectSkillSpace]:
         return list(
             (

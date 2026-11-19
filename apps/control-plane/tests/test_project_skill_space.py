@@ -227,6 +227,7 @@ async def test_worker_skill_files_require_active_owner_and_default_membership(fi
     from unittest.mock import AsyncMock
 
     from testing_agent.handlers.worker_skills import skill_file, skill_manifest
+    from testing_agent.repositories.worker_task import WorkerTaskRepository
     from testing_agent.services.stored_file import utcnow
 
     source = tmp_path / "builtin"
@@ -238,7 +239,7 @@ async def test_worker_skill_files_require_active_owner_and_default_membership(fi
     )
     worker = SimpleNamespace(
         ai_worker_task=AsyncMock(return_value=task),
-        repository=SimpleNamespace(session=files.session),
+        repository=WorkerTaskRepository(files.session),
     )
     response = await skill_manifest("task", "builtin", "worker", worker)
     assert response.headers["cache-control"] == "no-store"

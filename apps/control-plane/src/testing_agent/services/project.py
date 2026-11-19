@@ -158,20 +158,14 @@ class ProjectService:
         project = await self.projects.get_active_by_id(project_id)
         if project is None:
             raise ErrNotFound()
-        session = self.projects.session
-        await require_project_access(session, user_id, project)
-        owner = await session.scalar(select(User).where(User.user_id == project.user_id))
+        await require_project_access(self.projects.session, user_id, project)
+        owner = await self.projects.owner(project.user_id)
         items = []
         if owner is not None:
             items.append({"userId": owner.user_id, "name": owner.nickname, "role": "owner"})
-        rows = await session.execute(
-            select(User, ProjectMember.role)
-            .join(ProjectMember, ProjectMember.user_id == User.user_id)
-            .where(ProjectMember.project_id == project_id)
-            .order_by(User.nickname)
-        )
         items.extend(
-            {"userId": user.user_id, "name": user.nickname, "role": role} for user, role in rows
+            {"userId": user.user_id, "name": user.nickname, "role": role}
+            for user, role in await self.projects.member_rows(project_id)
         )
         return list_payload(items)
 
