@@ -1,6 +1,6 @@
 # 集成执行灰度与回退
 
-本流程对应[拆分计划](../control-plane/integration-worker-split-plan.md)的 P3/P4/P5。配置来源是忽略的 `config/platform.toml`，示例见 `config/platform.example.toml`；修改后通过 `scripts/manage.py` 生成。实施验收环境与正式环境分别记录结果，隔离环境通过不等于正式项目已经切换。
+本流程对应一期拆分收尾的 P3/P4/P5。配置来源是忽略的 `config/platform.toml`，示例见 `config/platform.example.toml`；修改后通过 `scripts/manage.py` 生成。实施验收环境与正式环境分别记录结果，隔离环境通过不等于正式项目已经切换。
 
 ## 切换前准备
 

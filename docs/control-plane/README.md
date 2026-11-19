@@ -133,7 +133,7 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 自行直接启动 Uvicorn 时也应采用等价配置，以免另行记录原始路径和查询。
 
 诊断契约由 `test_http_diagnostics.py` 验证，包括上下文并发隔离、隐私、错误信封、
-流式失败以及启动日志配置。完整整改状态见[实施记录](remediation-implementation.md)。
+流式失败以及启动日志配置。完整整改状态已于 2026-11-18 收口，方案与实施记录已归档删除。
 
 ## 数据库读取与历史列表
 
@@ -208,7 +208,7 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 
 - 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId` 和令牌版本 `ver`；账号状态、改密、禁用、登录锁定、超级管理员与删除规则详见 [认证、账号与系统管理员](authentication.md)。
 - 认证、会话、项目策略和执行授权的职责、权限矩阵与回归入口见 [认证与权限模块](auth-permission-modules.md)。
-- 2026-10-20 的全项目检查见 [结构与质量排查记录](control-plane-audit-2026-10-20.md)；后续批次与验收标准见 [模块整改方案](control-plane-remediation-plan.md)。
+- 2026-10-20 的全项目检查与后续整改批次已于 2026-11-18 完成收口并归档。
 - Worker 请求使用 `X-Worker-Token` 头，值等于 `security.worker.key`
 
 ## 外部调用
@@ -231,7 +231,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 依次检查 Ruff、格式、全源码类型和完整测试。可通过 `--tests tests/<file>.py`
 选择关联回归，或 `--static-only` 仅执行静态检查。共享测试准备代码集中到
 `tests/support/`，新增共享夹具不放在 `test_*.py` 中供其他模块导入。
-当前整改的实际测试数量、失败修复和真实 MySQL 结果见[实施记录](remediation-implementation.md)，
+整改已于 2026-11-18 收口，方案与实施记录已归档删除；
 模拟测试不替代真实 MySQL、S3 或外部目录验收。
 
 - [内置 MCP 配置](builtin-mcp.md)
@@ -248,17 +248,14 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 ## 文件存储验收与恢复
 
 - [联合备份、恢复与部署门槛](storage-operations.md)
-- [2026-10-03 S3 P1 验收记录](s3-p1-acceptance-2026-10-03.md)
 
 - [ZenTao-MCP 手动部署](zentao-mcp-deployment.md)：已发布镜像、配置示例、直接 Compose 启动、多项目端口和网络排查。
 
-需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。需求评审是提示性首阶段，不阻断材料整理，见 [ADR 0018](adr/0018-requirement-review-advisory.md)。性能运行冻结监控接入公开快照、首期只保留 Remote Write 写入链路，见 [ADR 0020](adr/0020-performance-remote-write-only.md)；性能测试集按用例顺序串行执行、复用单用例 Worker 协议，见 [ADR 0021](adr/0021-performance-suite-serial-execution.md)；测试集和用例不设启用状态、运行时执行全部用例，见 [ADR 0022](adr/0022-remove-performance-enabled-state.md)。
+需求分析的阶段审核及拒绝后的只读规则以控制面实现和回归测试为准。需求评审是提示性首阶段，不阻断材料整理，见 [ADR 0018](adr/0018-requirement-review-advisory.md)。性能运行冻结监控接入公开快照、首期只保留 Remote Write 写入链路，见 [ADR 0020](adr/0020-performance-remote-write-only.md)；性能测试集按用例顺序串行执行、复用单用例 Worker 协议，见 [ADR 0021](adr/0021-performance-suite-serial-execution.md)；测试集和用例不设启用状态、运行时执行全部用例，见 [ADR 0022](adr/0022-remove-performance-enabled-state.md)。
 
 需求在线图文编辑与正文文件契约见[需求富文本正文](requirement-rich-text.md)。
 
 - [LDAP 统一认证配置、切换与目录验收](ldap-authentication.md)。
-
-- [LDAP 实施与验证记录](ldap-implementation-verification.md)。
 
 ## 资产文件导入资源预算
 

@@ -139,7 +139,7 @@ MTX_TEST_ZENTAO_MCP_RUNTIME=1 \
 
 此测试拉取模板引用的已发布镜像，以独立名称和随机端口启动两个临时容器，只调用不访问上游的实例信息工具。验证配置编辑后重启生效、停止一个不影响另一个，最后清理容器和网络。测试使用虚拟目标及测试 Token，不修改实际配置或现有服务。未设置上述环境变量时，常规测试跳过容器验收，不启动服务。
 
-实现及验证结果见 [验证记录](zentao-mcp-manual-acceptance-2026-10-04.md)。真实部署环境中的网络、个人 Token 和绑定、推送仍由部署负责人验收。
+实现及验证结果已于 2026-10-04 完成并归档。真实部署环境中的网络、个人 Token 和绑定、推送仍由部署负责人验收。
 
 ## 独立附件工具升级（2026-10-04）
 
@@ -166,7 +166,7 @@ MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 MTX_TEST_ZENTAO_MCP_SOURCE_DEADLINE=1 \
   python3 -m unittest discover -s tests -p test_zentao_mcp_attachment_runtime.py -v
 ```
 
-该检查使用真实发布二进制及隔离 HTTP 来源，验证 60 秒截止、明确失败与未执行 POST /files；真实 S3/禅道链路结果和 180 秒成功响应延迟场景分别记入[集成验收记录](../integration-worker/acceptance-2026-10-07.md)。
+该检查使用真实发布二进制及隔离 HTTP 来源，验证 60 秒截止、明确失败与未执行 POST /files；真实 S3/禅道链路结果和 180 秒成功响应延迟场景已记入集成验收记录并归档。
 
 发布控制面代码时执行数据库迁移至 `20261004_0026`，部署 Studio 的本轮构建。MCP、控制面迁移和 Studio 三者应一起升级；升级后读取工具列表应出现 `upload_bug_attachment`、`get_bug_attachment`。具体执行入口沿用部署现有流程；独立控制面可在应用目录执行 `uv run alembic upgrade head`，平台容器模式沿用既有迁移服务。
 

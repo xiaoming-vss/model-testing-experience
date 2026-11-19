@@ -78,7 +78,7 @@ CONTROL_PLANE_STORAGE_LIVE=1 apps/control-plane/.venv/bin/pytest apps/control-pl
 
 2026-10-03 六项通过：真实签名 POST / GET、私有读和过期重签、权限撤销及旧票据有效期边界、对象缺失与哈希失败、删除失败重试和多清理实例、完成/关联行锁与保存回滚、并发任务领取和过期租约失败、联合备份恢复及损坏快照拒绝。恢复演练覆盖 41 张应用表，保留需求原件与 Bug 历史引用，文件 ID / 大小 / SHA-256 均一致。
 
-2026-10-07 增补：当前真实 MySQL/RustFS 回归 9 项通过。独立禅道、发布版 MCP 和独立 Worker 的演练中，备份的 queued 任务在源环境之后实际创建了禅道 Bug，恢复旧快照后保持 quarantined；旧令牌 401，新领取与两种写入口 409，远端 Bug 数量未增加。详细范围见[真实隔离验收](../integration-worker/acceptance-2026-10-07.md)。
+2026-10-07 增补：当前真实 MySQL/RustFS 回归 9 项通过。独立禅道、发布版 MCP 和独立 Worker 的演练中，备份的 queued 任务在源环境之后实际创建了禅道 Bug，恢复旧快照后保持 quarantined；旧令牌 401，新领取与两种写入口 409，远端 Bug 数量未增加。详细范围已随真实验收归档。
 
 真实 HTTP 断流测试位于 `apps/ai-worker/tests/integration/test_signed_download_live.py`：仅使用专用 `s3-p1-*` 验收会话和该会话的 `ui-proof.json`，受控代理转发真实平台授权与 RustFS 对象，首次断流可恢复，连续断流三次后停止。不会修改主机网络或模拟成功文件内容。显式设置 `AI_WORKER_STORAGE_LIVE=1` 与 `S3_LIVE_SESSION_FILE` 才运行；会话文件为私有测试材料，不提交仓库。
 

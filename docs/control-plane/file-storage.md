@@ -174,7 +174,7 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 
 ## 联合备份与本机验收
 
-新增 `python -m testing_agent.cli.storage_backup backup|verify|restore`，在维护窗口协调 MySQL 表与 S3 对象快照，拒绝覆盖在线源或非空恢复目标。具体步骤、保留方式与部署门槛见[运维说明](storage-operations.md)；本次实际业务与剩余门槛见[验收记录](s3-p1-acceptance-2026-10-03.md)。
+新增 `python -m testing_agent.cli.storage_backup backup|verify|restore`，在维护窗口协调 MySQL 表与 S3 对象快照，拒绝覆盖在线源或非空恢复目标。具体步骤、保留方式与部署门槛见[运维说明](storage-operations.md)。
 
 ## 需求 HTML 正文
 

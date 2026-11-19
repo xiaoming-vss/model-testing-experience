@@ -1,4 +1,0 @@
-
-> @mtx/studio@0.0.0 type-check
-> tsc -b --pretty false
-

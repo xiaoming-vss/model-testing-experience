@@ -83,7 +83,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
 | S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；详情页板面必须显式追加 `workbench-panel-flat`，`shell-header.css` 用 `.app-shell-macos .workbench-panel.workbench-panel-flat` 统一压平玻璃底、内高光、阴影与 backdrop，页面不再各写高权重覆盖 | 评审 + 扫描脚本（**待强制**） |
 | S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 双类长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；阶段 45 后长前缀为 0、`!important` 49 处，已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
-| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
+| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 双类长前缀；macOS 外壳统一使用单类 `.app-shell-macos`；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 `!important` 与高权重选择器维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；存量整改已完成 |
 
 数据表行分隔由 `app/styles/theme.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查数据行覆盖及变量归属。
 
@@ -116,7 +116,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 浅色控件与内容面使用同一灰蓝色盘，不能继续使用组件库近白背景或按钮层的旧白底。`ThemeProvider.palette.test.tsx` 对真实 provider 的基础、容器与弹出背景做 CSS 色盘对齐检查，同时锁定既有深色值；`theme.palette.test.ts` 验证普通／禁用按钮、输入角色、来源标签和结构表面的关系。浏览器须另外检查选择框与复选框的伪元素、禁用控件、下拉及聚焦状态，变量测试不能替代实际组件级联验证。
 
-**主题支持浅色、深色和跟随系统**（[ADR 0002](adr/0002-token-based-github-dark.md) 取代 ADR 0001 的仅浅色决定）。默认跟随系统；登录页和页头提供同一切换器，偏好保存到 `mtx-theme-preference`。HTML 启动脚本在首屏绘制前设置 `data-theme` 和 `color-scheme`；store 处理系统变化及跨标签页同步。暗色参考 GitHub Primer Dark，颜色变化集中在登记的 token 文件和 Ant Design 配置。新增业务样式消费语义 token，并核对两种主题，不得恢复按 feature 类名堆叠的暗色补丁层。独立 HTML 报告与品牌图形保留自身配色。
+**主题支持浅色、深色和跟随系统**。默认跟随系统；登录页和页头提供同一切换器，偏好保存到 `mtx-theme-preference`。HTML 启动脚本在首屏绘制前设置 `data-theme` 和 `color-scheme`；store 处理系统变化及跨标签页同步。暗色参考 GitHub Primer Dark，颜色变化集中在登记的 token 文件和 Ant Design 配置。新增业务样式消费语义 token，并核对两种主题，不得恢复按 feature 类名堆叠的暗色补丁层。独立 HTML 报告与品牌图形保留自身配色。
 
 ### 列表页表面层（用例库 / 应用 / 测试单 / API 测试 / UI 测试）
 
@@ -403,34 +403,6 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, reset, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；`antd/dist/reset.css` 用 `layer(reset)` 导入，reset 位于 antd 之后、utilities 之前，既保留旧页面 reset 压过组件库默认字重的行为，又允许 utility 覆盖 reset。初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
 
 度量以声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体为准，不以行数判断，避免压缩/展开格式造成的误判。
-
-### 迁移执行清单（2026-11-17 试点补充）
-
-首次迁移（需求评审 / 测试点 / 测试范围分析 / 材料整理 → `shared/components/ArtifactView`）暴露的收尾要求。迁移一个页面时逐条完成，不能把下面这些问题留在新代码里；示例是本次试点的实际违规，修复后应不再命中，但规则长期有效。
-
-1. **CSS Modules 归属**：`shared/styles/*.module.css` 只放共享原语的皮肤；不得出现 feature 私有类名或 DOM 契约（例如 `gc-artifact-scroll`、`is-requirement-review`）。产物视图与 `GenerationChainModal` 滚动容器的宿主适配放在 `features/<f>/styles/*.module.css`，通过调用方传入的根类名配合，不从共享层用 `:has` 反查 feature 结构。
-2. **死规则与重复内联**：删除原 CSS 文件后，同时删掉 CSS Modules 中 0 引用的类；已抽公共组件后，页面不得再复制同一组 Ant Design 深层规则。示例：`.compactTags` 在共享 module 中 0 引用，而同一组 `.ant-tag` 规则被内联到两个页面，二者只能保留一处。
-3. **重复 utility 与 token**：同一串页面骨架 utility 出现 3 次以上必须抽到 `shared/`（C6）；字号、断点等重复值登记到 `shared/styles/tailwind.css` 的 `@theme`，不得在多个文件重复 `text-[11.5px]`、`max-[900px]`。900px 窄屏断点统一使用 `max-narrow:`（`--breakpoint-narrow: 900.01px`，覆盖旧 CSS 的 `max-width: 900px`）。新增 token 以视觉等值为准，不借迁移合并设计档位。
-4. **文件体积**：迁移后仍按 C1 检查；已超限文件只能减少，不能因为内联 className 变长再增加（本次 `RequirementReviewView.tsx` 434 → 452，属于反例）。
-5. **文档同步**：删除或改名 CSS 文件、改变实现归属时，同一改动内更新 `README.md`、`UI-GUIDELINES.md` 和本文件的引用，不能留下指向已删除文件的说明。
-
-验收方式（以下命令以本次四个产物视图为例；迁移其它页面时把路径替换为当前页面与模块）：
-
-```bash
-# 共享层不得出现 feature 私有选择器（--untracked 覆盖尚未 git add 的新 module）
-git grep --untracked -n -E "gc-artifact-scroll|is-requirement-" -- apps/studio/src/shared/styles
-# 迁移范围不得继续复制任意字号与 900px 断点
-git grep --untracked -n -E "text-\[(9|9\.5|10|10\.5|11|11\.5|13)px\]|max-\[900px\]" -- \
-  apps/studio/src/shared/components/ArtifactView \
-  apps/studio/src/features/ai-testing/components/RequirementReviewView.tsx \
-  apps/studio/src/features/ai-testing/components/TestScopeAnalysisView.tsx \
-  apps/studio/src/features/ai-testing/components/TraceablePointsView.tsx \
-  apps/studio/src/features/ai-testing/components/ReadableRequirementMaterial.tsx
-# 文档不得再引用已删除 CSS 的实现路径（README 中记录“已删除”的句子除外）
-git grep -n -E "styles/(requirement-review|traceable-points|test-scope-analysis|readable-requirement-material)\.css" -- docs
-```
-
-以上检查零命中后，在 `apps/studio` 下运行 `npm run verify` 与 `npm test`；`@layer` 与 `:has` 的最终级联效果必须在浏览器按浅色/深色、900px/760px 断点人工确认，jsdom 结果不能替代。
 
 ## 四、目录契约
 

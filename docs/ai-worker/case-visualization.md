@@ -58,7 +58,7 @@ python3 scripts/evaluate_case_visualization.py \
 
 在 `apps/ai-worker` 执行 `uv run --locked --group dev python -m unittest discover -s tests -v`、Ruff 及格式检查。专项为 `tests/unit/test_case_visualization.py`，覆盖无工具模式与运行时工具注册、输出非法、状态实体与变化约束、非负数值、unsupported、技能缺失/为空和输入篡改。
 
-控制面接口、权限、快照、批量、删除和真实 MySQL 检查，以及 Studio 浏览器证据见 [验收记录](../control-plane/test-order-case-visualization-validation.md)。
+控制面接口、权限、快照、批量、删除和真实 MySQL 检查，以及 Studio 浏览器证据已随验收记录归档。
 
 ## 2026-11-14 验证焦点生成策略调整
 

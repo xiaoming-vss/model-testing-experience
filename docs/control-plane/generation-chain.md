@@ -12,7 +12,7 @@
 - 评审版本按普通阶段版本保存和删除；删除评审版本不会作废材料提取版本或草稿。
 - 评审报告不传给材料提取或任何下游任务。后续如果决定接入，需要重新定义上游依赖和消费契约。
 
-详细决策见 [ADR 0018](adr/0018-requirement-review-advisory.md)，审核与拒绝规则见[需求分析审核规则](requirement-analysis-review.md)。
+详细决策见 [ADR 0018](adr/0018-requirement-review-advisory.md)，审核与拒绝规则以控制面实现和回归测试为准。
 
 ## 版本与草稿
 

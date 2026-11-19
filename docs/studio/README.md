@@ -4,7 +4,7 @@
 
 React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
 
-禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。
+需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。
 
 [需求详情测试设计工作区](requirement-design-workspace.md)
 
@@ -55,9 +55,9 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ### AI 测试样式归属
 
-文件统一放在 `src/features/ai-testing/styles/`。阶段 8 已把原全局 CSS 全部迁为根作用域 Module；阶段 33 再把页面壳、产物 API、关系图谱、UI 生成与阶段可视化布局整体迁入组件 utility，10 个 Module 收缩为 5 个。需求详情页根节点挂生成链/画布/产物/阶段可视化的 `.scope`，Skill 库页面与各弹窗根挂任务详情 Module 的 `.scope`；组件不再直接引入全局 CSS，页面层 token 保留在 `ai-task-detail.module.css` 的 `.ai-testing-page` 上。
+文件统一放在 `src/features/ai-testing/styles/`。需求详情页根节点挂生成链/画布/产物/阶段可视化的 `.scope`，Skill 库页面与各弹窗根挂任务详情 Module 的 `.scope`；组件不直接引入全局 CSS，页面层 token 保留在 `ai-task-detail.module.css` 的 `.ai-testing-page` 上。
 
-> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；存量整改顺序、阶段目标与验收口径见 [CSS 整改与迁移计划](css-migration-plan.md)。
+> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；存量 CSS 已冻结，后续只允许删除或收缩。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
@@ -67,11 +67,11 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 | `artifact-cases.module.css` | 用例名称树、用例浏览器、生成用例审核字段与仓库画像 |
 | `ui-stage-visual.module.css` | UI 三阶段可视化的深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局/排版在 `components/uiStageVisual/uiStageVisualClasses.ts` |
 
-需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/run-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。
+需求评审、测试点、测试范围分析和材料整理使用 `shared/components/ArtifactView` + Tailwind；公共原语的复杂皮肤只在 `shared/styles/run-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不新增同构布局 CSS。
 
 ### 测试单样式归属
 
-文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。阶段 21 合并同根 Module；阶段 31 再把列表、工作台骨架、图谱页壳/查看器、执行面板与判定区整体迁入组件 utility，删除 `test-orders-list.module.css`、`test-order-graph.module.css` 与 `test-order-graph-execution.module.css`。阶段 39 删除 `test-order-visualization.module.css`，可视化面板、步骤条、关系图与批量按钮改用 `components/visualization/visualizationClasses.ts` 的 utility 与容器查询变体。工作台页面根挂 `test-order-workspace` 的 `.root`，图谱执行面板与加入用例 Modal 复用同一作用域。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS；剩余一个 Module 只保留高度链、AntD 深层结构与执行条。
+文件统一放在 `src/features/test-orders/styles/`。`features/test-orders` 下没有非 Module CSS。工作台页面根挂 `test-order-workspace` 的 `.root`，图谱执行面板与加入用例 Modal 复用同一作用域；可视化面板、步骤条、关系图与批量按钮使用 `components/visualization/visualizationClasses.ts` 的 utility 与容器查询变体。旧类名保留为 `:global()` 测试与兼容钩子；剩余一个 Module 只保留高度链、AntD 深层结构与执行条。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
@@ -79,8 +79,8 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 ### 测试用例样式归属
 
-- `case-library.module.css` 承载用例库侧栏渐变、选中态、等宽徽标与优先级色块皮肤；两栏骨架、导航与筛选布局由 `CaseLibraryPage` utility 负责。阶段 21 已把原 `case-editor` 与 `case-push` Module 合并进该文件，用例编辑弹窗与导入禅道弹窗共用同一个 `.root`。
-- 原 `case-editor-v2.css`、`index.css`、`case-push.css` 已删除，`features/test-cases` 下不再有非 Module CSS。
+- `case-library.module.css` 承载用例库侧栏渐变、选中态、等宽徽标与优先级色块皮肤；两栏骨架、导航与筛选布局由 `CaseLibraryPage` utility 负责。用例编辑弹窗与导入禅道弹窗共用同一个 `.root`。
+- `features/test-cases` 下没有非 Module CSS。
 
 ### 需求详情、个人设置与基础服务样式归属
 
@@ -88,18 +88,18 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 登录页、个人设置页与独立修改密码页共用 `shared/styles/account.module.css`，该 Module 只保留登录页渐变/纹理/玻璃壳、个人设置根背景/头像与 AntD 深层结构；布局、间距和排版由三页的 Tailwind utility 负责。跨 feature 的共享已收敛到 `shared/`，不再需要 `ChangePasswordPage` 对 feature Module 的跨 feature 导入豁免。
 - 禅道 MCP 卡片不再有独立 Module；标题、状态、实例省略与间距均由 `ZentaoMcpServiceCard.tsx` 的 utility 表达。
 - `antd/dist/reset.css` 在 `src/index.css` 中以 `layer(reset)` 导入，位于 `@layer antd` 之后、`utilities` 之前；既保留 reset 对组件库默认字重的旧优先级，也让新页面的 utility 能覆盖 reset。`src/index.css` 不再重复声明控件 `font-family`，避免未分层规则压过 `font-mono`。
-- 阶段 14 后 `src/features` 下不再有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
-- TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责，两个原 Module 已删除。
+- `src/features` 下没有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
+- TestingPage 的标签外壳与 pane 布局、项目设置抽屉的 body padding 与设置行布局均由组件 utility 负责。
 - 共享 `tp-list-toolbar` 的搜索框宽度已迁到页面 `w-72` utility；工具栏表面、最小高度与 `.api-filter-field`/`.api-filter-group`/`.api-filter-field-label` 原语位于 `@layer components`，utility 可在页面按需覆盖。UI 列表搜索框用 `min-w-64 max-narrow:w-full max-narrow:min-w-0` 表达原 256px 下限。
 
 ### 公共表格与按钮
 
 - `shared/styles/list-table.css` 是表头和数据行尺寸、底色、悬停背景的共用实现，颜色取自 `surface-tokens.css` 的 `--srf-list-*`。页面保留业务类名并声明 `tp-list-surface`，表格保留业务类名并声明 `tp-list-table`；使用表格的入口显式引入这两个样式文件。列内容、边框及圆角的现有优先级仍由 feature 维护。
 - 按钮外观由 `app/styles/buttons.css` 的 `app-buttons` 层统一负责。`app-buttons` 已加入 `tailwind.css` 的层顺序（位于 `components` 与 `utilities` 之间）；页面保留尺寸、排布与边框结构，不再重复声明已经被该层覆盖的文字色、背景、阴影和字重。
-- 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义，并放在 `@layer components`。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
-- 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`theme.css`；旧 `legacy-surface.css` 已随阶段 36 删除，聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
-- 接口库列表、软件仓库树与共用的方法签在 `interface-library.module.css`；详情、编辑器深层 AntD 规则与 OpenAPI 导入标签间距在 `interface-detail.module.css`。阶段 32 后页面根与 Modal/Drawer 根挂两个 `.scope`；布局、树节点、仓库表格、编辑器面板、导入步骤与结果都已迁入组件 utility。
-- UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `shared/components/RunCard.tsx`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根挂 `ui-detail-shell` 与 `ui-suite` 两个 Module 的作用域。阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
+- 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义，并放在 `@layer components`。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布。
+- 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`theme.css`；结构门禁会拦截 `src/App.css` 重新出现。
+- 接口库列表、软件仓库树与共用的方法签在 `interface-library.module.css`；详情、编辑器深层 AntD 规则与 OpenAPI 导入标签间距在 `interface-detail.module.css`。页面根与 Modal/Drawer 根挂两个 `.scope`；布局、树节点、仓库表格、编辑器面板、导入步骤与结果由组件 utility 负责。
+- UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `shared/components/RunCard.tsx`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根挂 `ui-detail-shell` 与 `ui-suite` 两个 Module 的作用域。
 - Sprint 详情页与 Projects 概览共用 `sprint-overview.module.css`，只保留卡片/健康带表面、图表色块、状态色映射与报告 Markdown 在 `sprint-overview.module.css`；页面网格、工具栏、指标与断点由 `SprintDetailPage` / `ProjectsPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
@@ -135,11 +135,9 @@ npm run verify        # type-check + lint + check:theme + check:css + check:css:
 
 `npm run verify` 不包含 `npm test`；迁移和发布前仍需单独执行全量测试。
 
-测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。2026-09-24 全量验证为 62 个文件、396 项，耗时约 2 分钟；数量以后续测试输出为准。历史整改与验证过程见 git 提交 `72164d2`。
+测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。测试数量以后续输出为准。
 
-**列表页表面层的观感不在自动化覆盖内**（jsdom 不做布局）。UI 测试页重做时用一次性 Playwright 脚本对着 `npm run dev` 核对过：脚本用 `context.route('**/v1/**')` stub 掉 `/v1/user`、`/v1/projects`、`/v1/projects/:id/sprints`、`/v1/sprints/:id/requirements`、`/v1/requirements/:id/ui-test-suites`，然后在 `1680×1000` 下截整页。脚本没有落库——要复查时照这个思路现写即可；当前判据见 [界面规范](UI-GUIDELINES.md)：工具栏与表格卡片边缘对齐、控件不溢出；UI 顶部信息条已移除，不再按旧三卡片结构验收。
-
-同一套脚本也能抓「多出来的容器」：把每个元素的 `backgroundColor` / `boxShadow` / `borderWidth` 采成一张表，**本该无面（无底色 / 无描边 / 无阴影）的元素却有面，就是外壳的玻璃规则压过了页面覆盖**——这类冲突在同权重时只靠样式表顺序决胜（判据与三处已知坑见 [STRUCTURE.md](STRUCTURE.md) 的「列表页表面层」）。
+**列表页表面层的观感不在自动化覆盖内**（jsdom 不做布局）。需要核对时，用一次性 Playwright 脚本对 `npm run dev` 截图，并用 `context.route('**/v1/**')` stub 掉业务请求；也可采集元素的 `backgroundColor` / `boxShadow` / `borderWidth`，本该无面的元素却有面，通常是外壳玻璃规则压过了页面覆盖。当前判据见 [界面规范](UI-GUIDELINES.md)：工具栏与表格卡片边缘对齐、控件不溢出。
 
 ## 与后端的交互
 
@@ -152,6 +150,7 @@ npm run verify        # type-check + lint + check:theme + check:css + check:css:
 
 - [内置 MCP 配置](builtin-mcp.md)
 - [Bug 手动推送到禅道](../control-plane/bug-zentao-push.md)
+- [Bug 管理需求核对与页面整理](bug-management-review.md)
 
 - [文件直传与预览](file-storage.md)
 

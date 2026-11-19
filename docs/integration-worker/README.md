@@ -2,7 +2,7 @@
 
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[集成 Worker 开发规则](development-rules.md)，遵守一次写入、租约和未知结果证据的边界。
 
-integration-worker 是拉取式执行进程。控制面管理数据库、权限、个人授权、冻结输入、写入意图和结果事务；Worker 通过内部 HTTP 领取任务，通过 MCP 做只读复核及一次远端写入。它没有数据库连接、长期 S3 密钥或公开监听端口。执行决策见 [ADR 0006](../control-plane/adr/0006-independent-integration-execution.md)，总体切换步骤见[拆分计划](../control-plane/integration-worker-split-plan.md)。
+integration-worker 是拉取式执行进程。控制面管理数据库、权限、个人授权、冻结输入、写入意图和结果事务；Worker 通过内部 HTTP 领取任务，通过 MCP 做只读复核及一次远端写入。它没有数据库连接、长期 S3 密钥或公开监听端口。执行决策见 [ADR 0006](../control-plane/adr/0006-independent-integration-execution.md)，总体切换步骤见[切换流程](rollout.md)。
 
 源码使用 control-plane 风格的 src layout。`main/app` 负责启动及装配，`worker` 负责主循环和租约，`handlers` 分派两类任务，`services` 执行创建/附件/正文/字段工作流，`repositories` 实现控制面 HTTP Adapter，`gateways` 实现 MCP 传输和禅道工具，`domain` 保存纯规则，`schemas` 保存协议模型。
 
@@ -12,7 +12,7 @@ integration-worker 是拉取式执行进程。控制面管理数据库、权限�
 
 控制面网络重试复用 claim/prepare/result 编号；外部写入不重试。失去 prepare 响应时只查询原意图，不能把第二次查询当成新的许可。结果回传失败时保留安全结果及原操作身份，用受限 evidence 接口回报，不把票据、Token、原始错误或冻结输入写入恢复日志。
 
-用户授权的当前本地环境已全量启用独立 Worker，旧同步写链路已移除；示例配置仍默认关闭，关闭执行后暂停异步提交，不回落同步写入。原步骤恢复、留存、恢复隔离、核对放行、执行观测及真实 Studio 创建/上传/推送已验证。慢传输与 180 秒结果等待见[真实隔离验收](acceptance-2026-10-07.md)。当前环境暂停协调源码回退已演练，旧 Docker 镜像回退未验证。实际进度及收尾回归见[实施记录](../control-plane/integration-worker-implementation.md)，部署按[切换流程](rollout.md)。
+用户授权的当前本地环境已全量启用独立 Worker，旧同步写链路已移除；示例配置仍默认关闭，关闭执行后暂停异步提交，不回落同步写入。原步骤恢复、留存、恢复隔离、核对放行、执行观测及真实 Studio 创建/上传/推送已验证。慢传输与 180 秒结果等待已完成验收并归档。当前环境暂停协调源码回退已演练，旧 Docker 镜像回退未验证。实际进度及收尾回归见[实施记录](../control-plane/integration-worker-implementation.md)，部署按[切换流程](rollout.md)。
 
 2026-10-07 用户授权的当前环境沿用本地启动方式，Zata-Platform/test 两个项目已启用，独立 Worker 持续运行；实际异步任务与暂停源码回退后恢复的新任务均 succeeded 且全部 noop。全量切换与旧路径收尾尚未完成，示例配置继续默认关闭；当前环境配置及回退记录见实施记录。
 
@@ -90,7 +90,7 @@ docker cp <副本容器编号>:/app/runtime/evidence.json .runtime/integration-e
 
 联合数据库/S3 恢复同时要求新的专属 Worker 令牌并关闭执行、提交、领取三个开关；数据库中的恢复门控会继续阻止远端写入。通过控制面 `integration_maintenance` 的 restore-review/audit/isolate/release 完成清单核对、只读证明、保留隔离和全局放行。核对使用当前项目所有者自己的授权，放行不重放旧任务，也不自动开启配置；完整操作入口见[存储运维](../control-plane/storage-operations.md)。
 
-正文图片可能不出现在禅道 Bug 的 files 列表中。Worker 使用 `get_files_fileID` 读取已确认编号的文件元信息，校验原 Bug 归属，再从已观察的正文提取原生读取路径；不推测路径或放宽文件归属。发布版 MCP 需要重新生成并挂载 `enable-bug-options.py` 提供的 schema。禅道 22.6 的实际验收发现 REST 请求复用编辑器 uid 会将前一个 Bug 的图片重新关联到后一个 Bug；上线前必须修复上游并验证连续创建后的文件归属，详见[部署指南](../control-plane/zentao-mcp-deployment.md)与[验收记录](acceptance-2026-10-07.md)。
+正文图片可能不出现在禅道 Bug 的 files 列表中。Worker 使用 `get_files_fileID` 读取已确认编号的文件元信息，校验原 Bug 归属，再从已观察的正文提取原生读取路径；不推测路径或放宽文件归属。发布版 MCP 需要重新生成并挂载 `enable-bug-options.py` 提供的 schema。禅道 22.6 的实际验收发现 REST 请求复用编辑器 uid 会将前一个 Bug 的图片重新关联到后一个 Bug；上线前必须修复上游并验证连续创建后的文件归属，详见[部署指南](../control-plane/zentao-mcp-deployment.md)；验收记录已归档。
 
 控制面自动清理已知终态且不再参与当前关联的快照和步骤输入，成功/失败历史默认分别为 30/90 天；原请求、操作身份和结果回执继续保留。unknown、write_intent、当前关联及恢复隔离记录保护。期限和每次批量数由统一配置中的 `control_plane.integration_execution` 管理。
 
