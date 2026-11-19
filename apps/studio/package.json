@@ -12,10 +12,11 @@
     "check:css": "node scripts/check-css-budget.mjs",
     "check:css:structure": "node scripts/check-css-structure.mjs",
     "check:css:all": "npm run check:css && npm run check:css:structure",
+    "check:boundaries": "node scripts/check-feature-boundaries.mjs",
     "lint:fix": "eslint . --fix",
     "format": "npm run lint:fix",
     "test": "vitest run",
-    "verify": "npm run type-check && npm run lint && npm run check:theme && npm run check:css:all && npm run build",
+    "verify": "npm run type-check && npm run lint && npm run check:theme && npm run check:css:all && npm run check:boundaries && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
