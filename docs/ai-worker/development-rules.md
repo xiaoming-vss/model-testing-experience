@@ -26,7 +26,7 @@
 | --- | --- |
 | 领取、分派、运行及回传 | `tests/unit/test_task_source.py`、`test_worker_dispatcher.py`、`test_worker_runner.py`、`test_result_sink.py` 及 `test_worker_main.py` |
 | 控制面通信与凭据 | `tests/unit/test_http_client.py`，加控制面 `test_worker_contract.py` 和相应任务协议验证 |
-| 需求分析 | `tests/unit/tasks/requirement_analysis/test_executor.py`、`test_two_stage.py`，加控制面的需求分析专项 |
+| 需求分析 | `tests/unit/tasks/requirement_analysis/test_executor.py`、`test_material_stage.py`、`test_review_stage.py`，加控制面的需求分析专项 |
 | 功能用例校验与编号 | `tests/unit/tasks/functional_case_generate/test_validation.py`、`test_case_ids.py`、`test_revision.py` |
 | 技能或签名下载 | `tests/unit/platform/test_skills.py`、`test_signed_download.py`，真实存储变化追加显式验收 |
 | 其他模型任务 | 对应 `tests/unit/tasks/` 专项，报告和图谱使用各自执行器回归 |

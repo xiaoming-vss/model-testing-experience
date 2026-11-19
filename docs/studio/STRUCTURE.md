@@ -349,7 +349,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 `.ui-wb-console`（逐步骤日志与汇总行、`过滤` 按钮与级别菜单），
 以及用例名称输入框的 `aria-label="用例名称"`、「前一个用例 / 后一个用例」两个 `aria-label`。非空用例列表时
 「新建用例」按钮的 `aria-label` 是「新建 UI测试用例」（空态里那个按钮的可及名仍是「新建用例」），
-`src/test/automationEditors.test.tsx` 按前者点击。改这一页时逐条保留。
+`UiTestSuiteCasePage.test.tsx` 按前者点击。改这一页时逐条保留。
 
 ### 测试单执行工作台（`test-order-workspace.module.css`）
 

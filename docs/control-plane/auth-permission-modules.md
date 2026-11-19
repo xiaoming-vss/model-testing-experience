@@ -104,7 +104,7 @@ uv run --locked --extra dev python -m pytest \
   tests/test_super_admin_seed.py tests/test_integration_recovery.py \
   tests/test_integration_jobs.py tests/test_integration_bug_api.py \
   tests/test_platform_access_regressions.py tests/test_stored_file_access.py \
-  tests/test_worker_contract.py tests/test_worker_queue_storage.py \
+  tests/test_worker_contract.py tests/test_realtime_stop_and_queue.py \
   tests/test_app_contract.py tests/test_go_field_contracts.py tests/test_full_route_parity.py -q
 ```
 
@@ -142,8 +142,8 @@ uv run --locked --extra dev python -m pytest \
 
 结果为 12 项通过、13 项跳过。跳过原因为未设置指向空的可丢弃测试库的
 `CONTROL_PLANE_TEST_DATABASE_URL`；没有借用开发或生产业务库进行验证。
-扩大回归中的 `test_mysql_claim_skips_locked_task` 使用同一测试库要求，单独以
-`pytest tests/test_worker_queue_storage.py::test_mysql_claim_skips_locked_task -q -rs`
-复核后确认同样因此跳过。总计 332 项不同的后端测试通过，14 项 MySQL 检查跳过；
+扩大回归中的 MySQL 队列锁检查已随队列存储重构迁移；当前同类入口为
+`tests/test_direct_stage_storage_mysql.py`（派发锁）和 `tests/test_worker_expiry_mysql.py`（租约），
+未设置 `CONTROL_PLANE_TEST_DATABASE_URL` 时同样跳过。总计 332 项不同的后端测试通过，14 项 MySQL 检查跳过；
 最后 12 项矩阵复验不重复计数。
 本次未修改编排文件，因此没有运行根目录编排 unittest 或 Compose 配置生成。

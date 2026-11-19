@@ -185,7 +185,7 @@ Worker 领取、心跳、执行结果和取消操作遵循各自状态机、领�
 | 业务状态 | 对应业务域专项，例如 `test_bug_lifecycle.py`、`test_generic_import_state.py`；改动删除行为加 `test_hard_deletion.py`，覆盖合法、非法及重复操作 |
 | 查询与分页 | `test_database_read_paths.py`；项目列表变化加 `test_project_list_queries.py`，检查筛选总数、稳定排序、大字段排除及批量查询 |
 | 模型与迁移 | `test_initial_schema_migration.py`、`test_schema_comments.py`；MySQL 属性或锁行为变化必须运行真实 MySQL 的 `test_mysql_initialization.py` 或对应专项 |
-| 队列与集成写入 | AI/API/UI 队列使用 `test_worker_queue_storage.py`、`test_worker_contract.py`；集成队列使用 `test_integration_jobs.py`、`test_integration_bug_api.py`，并按影响追加恢复、失租、授权及 `test_integration_jobs_mysql.py`；性能队列使用 `test_perf_api.py`、`test_perf_validation.py`、`test_perf_files.py`、`test_perf_suite_api.py` |
+| 队列与集成写入 | AI/API/UI 队列使用 `test_realtime_stop_and_queue.py`、`test_worker_contract.py`；集成队列使用 `test_integration_jobs.py`、`test_integration_bug_api.py`，并按影响追加恢复、失租、授权及 `test_integration_jobs_mysql.py`；性能队列使用 `test_perf_api.py`、`test_perf_validation.py`、`test_perf_files.py`、`test_perf_suite_api.py` |
 | 文件与凭据 | `test_stored_files.py`、`test_stored_file_access.py`，加受影响授权和交付路径测试；真实存储行为变化追加显式存储验收 |
 | 错误与日志 | `test_error_definitions.py`、`test_app_contract.py`，加本次修改的异常记录、脱敏与追踪专项 |
 
