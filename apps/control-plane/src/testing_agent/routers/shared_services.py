@@ -74,6 +74,8 @@ async def rename_service(
             body.zentao_instance_url,
             body.base_url,
             body.confirm_instance_switch,
+            body.allow_http,
+            body.insecure_skip_verify,
         )
     )
 

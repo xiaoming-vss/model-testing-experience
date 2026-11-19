@@ -29,6 +29,8 @@ type Props = {
 
 export function SharedServiceDialogs({ provider, providerLabel, editor, authorization, configuration, credentials, saving, closeEditor, closeAuthorization, saveConfiguration, saveAuthorization }: Props) {
   const endpoint = Form.useWatch('baseUrl', configuration)
+  const allowHttp = Form.useWatch('allowHttp', configuration)
+  const insecureSkipVerify = Form.useWatch('insecureSkipVerify', configuration)
   const confirmed = Form.useWatch('confirmInstanceSwitch', configuration)
   const needsConfirmation = provider === 'mcp' && editor && editor !== 'create'
     && (editor.instanceResetRequired || (endpoint !== undefined && endpoint.trim() !== editor.baseUrl))
@@ -39,6 +41,11 @@ export function SharedServiceDialogs({ provider, providerLabel, editor, authoriz
       <Form form={configuration} layout="vertical" preserve={false}>
         <Form.Item name="name" label="服务名称" rules={[{ required: true, whitespace: true }]}><Input maxLength={120} placeholder={provider === 'mcp' ? '例如：项目禅道 MCP' : undefined} /></Form.Item>
         <Form.Item name="baseUrl" label={provider === 'mcp' ? 'MCP 服务地址' : '服务地址'} rules={[{ required: true }, provider === 'mcp' ? { validator: validateMcpUrl } : { type: 'url', message: '请输入完整的 http 或 https 地址' }]}><Input placeholder={provider === 'mcp' ? 'http://服务器地址:9091/zentao/mcp' : 'https://…'} disabled={provider !== 'mcp' && editor !== 'create'} onChange={() => configuration.setFieldValue('confirmInstanceSwitch', false)} /></Form.Item>
+        {(provider === 'zentao' || provider === 'gitlab') && <>
+          <Form.Item name="allowHttp" valuePropName="checked" initialValue={false}><Checkbox>允许明文 HTTP（仅限自部署或内网实例）</Checkbox></Form.Item>
+          <Form.Item name="insecureSkipVerify" valuePropName="checked" initialValue={false}><Checkbox>跳过 HTTPS 证书校验（自签名或内网 CA）</Checkbox></Form.Item>
+          {(allowHttp || insecureSkipVerify) && <Alert type="warning" showIcon title="不安全连接" description="明文 HTTP 或跳过证书校验会降低连接安全性；仅在确认网络可信且无法使用受信任 HTTPS 时开启。" style={{ marginBottom: 12 }} />}
+        </>}
         {provider === 'mcp' && editor === 'create' && <Form.Item name="templateId" label="MCP 类型" rules={[{ required: true, message: '请选择 MCP 类型' }]}>
           <Select options={[{ value: 'zentao', label: '禅道（ZenTao）' }]} />
         </Form.Item>}

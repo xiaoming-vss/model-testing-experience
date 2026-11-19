@@ -7,6 +7,8 @@ export type SharedService = {
   provider: ServiceProvider
   name: string
   baseUrl: string
+  allowHttp?: boolean
+  insecureSkipVerify?: boolean
   modelId: string
   zentaoInstanceUrl?: string
   zentaoApiBaseUrl?: string
@@ -22,7 +24,7 @@ export type SharedService = {
     lastAuthAt?: string | null
   }
 }
-export type ServiceConfiguration = { name: string; baseUrl: string; modelId?: string; templateId?: 'zentao'; confirmInstanceSwitch?: boolean }
+export type ServiceConfiguration = { name: string; baseUrl: string; allowHttp?: boolean; insecureSkipVerify?: boolean; modelId?: string; templateId?: 'zentao'; confirmInstanceSwitch?: boolean }
 export type McpTemplate = { templateId: 'zentao'; name: string; type: 'streamableHttp'; authorizationHeader: 'token' }
 export type PersonalAuthorization = { token?: string; apiKey?: string; accessToken?: string; account?: string; password?: string }
 const path = (projectId: string, provider: ServiceProvider, serviceId?: string) =>
@@ -33,8 +35,8 @@ export const sharedServicesApi = {
   list: (projectId: string, provider: ServiceProvider) => request<ListResponse<SharedService>>(path(projectId, provider)),
   create: (projectId: string, provider: ServiceProvider, body: ServiceConfiguration) =>
     request<SharedService>(path(projectId, provider), { method: 'POST', body: JSON.stringify(body) }),
-  rename: (projectId: string, provider: ServiceProvider, serviceId: string, name: string, baseUrl?: string, confirmInstanceSwitch?: boolean) =>
-    request<SharedService>(path(projectId, provider, serviceId), { method: 'PATCH', body: JSON.stringify({ name, ...(baseUrl === undefined ? {} : { baseUrl }), ...(confirmInstanceSwitch === undefined ? {} : { confirmInstanceSwitch }) }) }),
+  rename: (projectId: string, provider: ServiceProvider, serviceId: string, name: string, baseUrl?: string, confirmInstanceSwitch?: boolean, allowHttp?: boolean, insecureSkipVerify?: boolean) =>
+    request<SharedService>(path(projectId, provider, serviceId), { method: 'PATCH', body: JSON.stringify({ name, ...(baseUrl === undefined ? {} : { baseUrl }), ...(confirmInstanceSwitch === undefined ? {} : { confirmInstanceSwitch }), ...(allowHttp === undefined ? {} : { allowHttp }), ...(insecureSkipVerify === undefined ? {} : { insecureSkipVerify }) }) }),
   delete: (projectId: string, provider: ServiceProvider, serviceId: string) =>
     request<Record<string, never>>(path(projectId, provider, serviceId), { method: 'DELETE' }),
   authorize: (projectId: string, provider: ServiceProvider, serviceId: string, body: PersonalAuthorization) =>

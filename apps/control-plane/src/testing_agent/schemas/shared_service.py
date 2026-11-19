@@ -13,6 +13,8 @@ class ServiceCreate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
     name: str = Field(min_length=1, max_length=120)
     base_url: str = Field(min_length=1, max_length=512)
+    allow_http: bool = False
+    insecure_skip_verify: bool = False
     model_id: str = Field(default="", max_length=255)
     template_id: Literal["zentao"] | None = None
     zentao_instance_url: str = Field(default="", max_length=512)
@@ -22,6 +24,8 @@ class ServiceRename(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
     name: str = Field(min_length=1, max_length=120)
     base_url: str | None = Field(default=None, min_length=1, max_length=512)
+    allow_http: bool | None = None
+    insecure_skip_verify: bool | None = None
     zentao_instance_url: str | None = Field(default=None, max_length=512)
     confirm_instance_switch: bool = False
 

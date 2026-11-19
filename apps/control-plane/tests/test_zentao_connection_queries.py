@@ -57,7 +57,13 @@ async def test_zentao_query_refreshes_and_commits_auth_before_remote_read():
     assert result["total"] == 10
     assert result["connectionId"] == "personal"
     assert row.status == "active"
-    auth.authenticate.assert_awaited_once_with("https://zentao.test", "tester", "test-password")
+    auth.authenticate.assert_awaited_once_with(
+        "https://zentao.test",
+        "tester",
+        "test-password",
+        allow_http=False,
+        insecure_skip_verify=False,
+    )
 
 
 async def test_zentao_failed_refresh_records_auth_failure_without_resource_read():

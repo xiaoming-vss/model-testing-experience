@@ -151,6 +151,8 @@ class SprintCodeOverviewService:
                 repository_id,
                 from_ref=from_ref,
                 to_ref=entry["branch"],
+                allow_http=access.allow_http,
+                insecure_skip_verify=access.insecure_skip_verify,
             )
         except GitLabResourceError as exc:
             entry["error"] = truncate_error(str(exc))

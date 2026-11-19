@@ -144,3 +144,48 @@ def test_mcp_authorization_rechecks_endpoint_after_remote_discovery(api, monkeyp
     listed = api.get(base, headers=owner)
     assert listed.status_code == 200
     assert listed.json()["data"]["items"][0]["authorization"]["status"] == "unauthorized"
+
+
+def test_shared_service_rejects_http_without_explicit_opt_in(api):
+    _, owner = account(api, "owner")
+    pid = project(api, owner)
+    response = api.post(
+        f"/v1/projects/{pid}/services/gitlab",
+        headers=owner,
+        json={"name": "内网 GitLab", "baseUrl": "http://gitlab.test"},
+    )
+    assert response.status_code == 400
+
+
+def test_shared_service_http_flags_reach_personal_connection(api):
+    _, owner = account(api, "owner")
+    pid = project(api, owner)
+    base = f"/v1/projects/{pid}/services/gitlab"
+    created = api.post(
+        base,
+        headers=owner,
+        json={
+            "name": "内网 GitLab",
+            "baseUrl": "http://gitlab.test",
+            "allowHttp": True,
+            "insecureSkipVerify": True,
+        },
+    )
+    assert created.status_code == 200, created.text
+    resource = created.json()["data"]
+    assert resource["allowHttp"] is True
+    assert resource["insecureSkipVerify"] is True
+    service_id = resource["serviceId"]
+    authorized = api.put(
+        f"{base}/{service_id}/authorization",
+        headers=owner,
+        json={"accessToken": "personal-token"},
+    )
+    assert authorized.status_code == 200, authorized.text
+    connections = api.get(
+        f"/v1/projects/{pid}/integrations/gitlab/connections", headers=owner
+    )
+    assert connections.status_code == 200
+    personal = connections.json()["data"]["items"][0]
+    assert personal["allowHttp"] is True
+    assert personal["insecureSkipVerify"] is True

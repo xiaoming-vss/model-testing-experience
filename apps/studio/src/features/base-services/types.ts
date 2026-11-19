@@ -6,6 +6,8 @@ export type ZentaoConnection = {
   provider: 'zentao' | string
   name: string
   baseUrl: string
+  allowHttp?: boolean
+  insecureSkipVerify?: boolean
   authType: 'account_password' | string
   account: string
   status: IntegrationConnectionStatus
@@ -23,6 +25,8 @@ export type GitlabConnection = {
   provider: 'gitlab' | string
   name: string
   baseUrl: string
+  allowHttp?: boolean
+  insecureSkipVerify?: boolean
   authType: 'personal_access_token' | string
   account: string
   status: IntegrationConnectionStatus

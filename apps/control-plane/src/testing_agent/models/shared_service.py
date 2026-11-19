@@ -1,6 +1,6 @@
 """Project-visible service configuration; credentials remain in personal connections."""
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
@@ -20,6 +20,12 @@ class SharedService(Base):
     provider: Mapped[str] = mapped_column(String(30), comment="外部服务提供方类型")
     name: Mapped[str] = mapped_column(String(120), comment="名称")
     base_url: Mapped[str] = mapped_column(String(512), comment="服务或环境基础地址")
+    allow_http: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="禅道/GitLab 服务地址是否允许明文 HTTP"
+    )
+    insecure_skip_verify: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, comment="禅道/GitLab 的 HTTPS 是否跳过证书校验"
+    )
     template_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True, comment="内置服务模板标识"
     )

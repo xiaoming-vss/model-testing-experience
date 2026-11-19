@@ -122,6 +122,8 @@ class SharedServiceCatalog:
             "provider": resource.provider,
             "name": resource.name,
             "baseUrl": resource.base_url,
+            "allowHttp": bool(getattr(resource, "allow_http", False)),
+            "insecureSkipVerify": bool(getattr(resource, "insecure_skip_verify", False)),
             "modelId": resource.model_id,
             "templateId": resource.template_id,
             "zentaoInstanceUrl": instance.get("instanceUrl", ""),

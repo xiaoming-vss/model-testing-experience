@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 from testing_agent.core.errors import ErrResourceBindingInvalid
 from testing_agent.models.software_repository import SoftwareRepository
+from testing_agent.services.connection_security import connection_security_flags
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 
@@ -14,6 +15,8 @@ class RepoGitlabAccess(NamedTuple):
     connection_id: str
     base_url: str
     access_token: str
+    allow_http: bool = False
+    insecure_skip_verify: bool = False
 
 
 async def resolve_repo_gitlab_access(
@@ -38,4 +41,11 @@ async def resolve_repo_gitlab_access(
         connection_id,
     )
     token = credential_cipher.decrypt(connection.access_token)
-    return RepoGitlabAccess(connection.connection_id, connection.base_url, token)
+    allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
+    return RepoGitlabAccess(
+        connection.connection_id,
+        connection.base_url,
+        token,
+        allow_http,
+        insecure_skip_verify,
+    )

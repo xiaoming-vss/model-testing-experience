@@ -11,6 +11,8 @@ class CreateZentaoIntegrationConnectionRequest(BaseModel):
     project_id: str = Field(default="")
     name: str
     base_url: str = Field()
+    allow_http: bool = False
+    insecure_skip_verify: bool = False
     account: str
     password: str
 
@@ -20,6 +22,8 @@ class CreateZentaoIntegrationConnectionRequest(BaseModel):
 class UpdateZentaoIntegrationConnectionRequest(BaseModel):
     name: str | None = None
     base_url: str | None = Field(default=None)
+    allow_http: bool | None = None
+    insecure_skip_verify: bool | None = None
     account: str | None = None
     password: str | None = None
 
@@ -29,6 +33,8 @@ class UpdateZentaoIntegrationConnectionRequest(BaseModel):
 class CreateGitLabIntegrationConnectionRequest(BaseModel):
     name: str
     base_url: str = Field()
+    allow_http: bool = False
+    insecure_skip_verify: bool = False
     access_token: str = Field()
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -37,6 +43,8 @@ class CreateGitLabIntegrationConnectionRequest(BaseModel):
 class UpdateGitLabIntegrationConnectionRequest(BaseModel):
     name: str | None = None
     base_url: str | None = Field(default=None)
+    allow_http: bool | None = None
+    insecure_skip_verify: bool | None = None
     access_token: str | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -67,6 +75,8 @@ class IntegrationConnectionResponse(BaseModel):
     provider: str
     name: str
     base_url: str = Field()
+    allow_http: bool = False
+    insecure_skip_verify: bool = False
     auth_type: str = Field()
     account: str = ""
     status: str

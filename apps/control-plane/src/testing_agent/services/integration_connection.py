@@ -15,6 +15,10 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.services.common import list_payload
+from testing_agent.services.connection_security import (
+    connection_security_flags,
+    require_secure_scheme,
+)
 from testing_agent.services.gitlab_auth import GitLabAuthProvider, normalize_gitlab_base_url
 from testing_agent.services.gitlab_queries import GitLabResources
 from testing_agent.services.gitlab_resource import GitLabResourceClient
@@ -40,12 +44,15 @@ def dump_connection(connection: IntegrationConnection) -> dict[str, Any]:
     extra = connection.extra_json or {}
     secret = getattr(connection, "secret_json", None) or {}
     model_id = extra.get("modelId") or extra.get("model_id") or secret.get("modelId") or ""
+    allow_http, insecure_skip_verify = connection_security_flags(extra)
     return {
         "connectionId": connection.connection_id,
         "projectId": getattr(connection, "project_id", ""),
         "provider": connection.provider,
         "name": extra.get("serviceName") or connection.name,
         "baseUrl": connection.base_url,
+        "allowHttp": allow_http,
+        "insecureSkipVerify": insecure_skip_verify,
         "authType": connection.auth_type,
         "account": connection.account,
         "status": connection.status,
@@ -128,11 +135,22 @@ class IntegrationConnectionService:
             base_url = str(body.get("baseUrl") or "").strip()
             account = str(body.get("account") or "").strip()
             password = str(body.get("password") or "")
+            allow_http, insecure_skip_verify = self._security_flags(body)
             if not name or not base_url or not account or not password.strip():
                 raise ErrBadRequest()
-            auth_result = await self._authenticate_zentao(base_url, account, password)
+            self._require_secure_scheme(base_url, allow_http)
+            auth_result = await self._authenticate_zentao(
+                base_url,
+                account,
+                password,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
+            )
             secret_json = {"password": self._encrypt_secret(body.get("password", ""))}
-            extra_json: dict[str, Any] = {}
+            extra_json: dict[str, Any] = {
+                "allowHttp": allow_http,
+                "insecureSkipVerify": insecure_skip_verify,
+            }
             auth_type = "account_password"
             access_token = auth_result.access_token
             status = ConnectionStatus.ACTIVE.value
@@ -157,13 +175,23 @@ class IntegrationConnectionService:
             account_value = ""
         elif provider == "gitlab":
             name = str(body.get("name") or "").strip()
+            allow_http, insecure_skip_verify = self._security_flags(body)
             base_url = self._normalize_gitlab_base_url(str(body.get("baseUrl") or ""))
+            self._require_secure_scheme(base_url, allow_http)
             access_token_value = str(body.get("accessToken") or "").strip()
             if not name or not access_token_value:
                 raise ErrBadRequest()
-            await self._validate_gitlab(base_url, access_token_value)
+            await self._validate_gitlab(
+                base_url,
+                access_token_value,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
+            )
             secret_json = {}
-            extra_json = {}
+            extra_json = {
+                "allowHttp": allow_http,
+                "insecureSkipVerify": insecure_skip_verify,
+            }
             auth_type = "personal_access_token"
             access_token = self._encrypt_gitlab_token(access_token_value)
             status = ConnectionStatus.ACTIVE.value
@@ -247,10 +275,14 @@ class IntegrationConnectionService:
             name = str(body.get("name", connection.name)).strip()
             if not name:
                 raise ErrBadRequest()
+            old_allow, old_insecure = connection_security_flags(connection.extra_json)
+            allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
             base_url = self._normalize_gitlab_base_url(
                 str(body.get("baseUrl", connection.base_url))
             )
-            credentials_changed = "baseUrl" in body or "accessToken" in body
+            self._require_secure_scheme(base_url, allow_http)
+            flags_changed = (allow_http, insecure_skip_verify) != (old_allow, old_insecure)
+            credentials_changed = "baseUrl" in body or "accessToken" in body or flags_changed
             if "accessToken" in body:
                 access_token = str(body["accessToken"] or "").strip()
                 if not access_token:
@@ -258,9 +290,18 @@ class IntegrationConnectionService:
             else:
                 access_token = self._decrypt_gitlab_token(connection.access_token)
             if credentials_changed:
-                await self._validate_gitlab(base_url, access_token)
+                await self._validate_gitlab(
+                    base_url,
+                    access_token,
+                    allow_http=allow_http,
+                    insecure_skip_verify=insecure_skip_verify,
+                )
             connection.name = name
             connection.base_url = base_url
+            extra = dict(connection.extra_json or {})
+            extra["allowHttp"] = allow_http
+            extra["insecureSkipVerify"] = insecure_skip_verify
+            connection.extra_json = extra
             if "accessToken" in body:
                 connection.access_token = self._encrypt_gitlab_token(access_token)
             if credentials_changed:
@@ -289,10 +330,18 @@ class IntegrationConnectionService:
             raise ErrBadRequest()
         old_base_url = connection.base_url
         old_account = connection.account
+        old_allow, old_insecure = connection_security_flags(connection.extra_json)
+        allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
+        flags_changed = (allow_http, insecure_skip_verify) != (old_allow, old_insecure)
         old_password = self._zentao_password(connection) if provider == "zentao" else ""
         for key, attr in {"name": "name", "baseUrl": "base_url", "account": "account"}.items():
             if key in body:
                 setattr(connection, attr, body[key])
+        if provider == "zentao":
+            extra = dict(connection.extra_json or {})
+            extra["allowHttp"] = allow_http
+            extra["insecureSkipVerify"] = insecure_skip_verify
+            connection.extra_json = extra
         if "password" in body:
             secret = dict(connection.secret_json or {})
             secret["password"] = self._encrypt_secret(str(body["password"]))
@@ -309,12 +358,16 @@ class IntegrationConnectionService:
             connection.base_url != old_base_url
             or connection.account != old_account
             or ("password" in body and body["password"] != old_password)
+            or flags_changed
         ):
+            self._require_secure_scheme(connection.base_url, allow_http)
             password = self._zentao_password(connection)
             auth_result = await self._authenticate_zentao(
                 connection.base_url,
                 connection.account,
                 password,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
             )
             self._apply_zentao_auth_success(connection, auth_result)
         if commit:
@@ -341,11 +394,15 @@ class IntegrationConnectionService:
             secret["password"] = self._encrypt_secret(str(body["password"]))
             connection.secret_json = secret
         password = self._zentao_password(connection)
+        allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
+        self._require_secure_scheme(connection.base_url, allow_http)
         try:
             auth_result = await self.zentao_auth_provider.authenticate(
                 connection.base_url,
                 connection.account,
                 password,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
             )
         except Exception as exc:
             self._apply_zentao_auth_failure(connection, str(exc))
@@ -375,7 +432,14 @@ class IntegrationConnectionService:
                 raise ErrBadRequest()
         else:
             access_token = self._decrypt_gitlab_token(connection.access_token)
-        await self._validate_gitlab(connection.base_url, access_token)
+        allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
+        self._require_secure_scheme(connection.base_url, allow_http)
+        await self._validate_gitlab(
+            connection.base_url,
+            access_token,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
+        )
         if body and "accessToken" in body:
             connection.access_token = self._encrypt_gitlab_token(access_token)
         connection.status = ConnectionStatus.ACTIVE.value
@@ -593,11 +657,17 @@ class IntegrationConnectionService:
         if connection.access_token and connection.status == ConnectionStatus.ACTIVE.value:
             return
         password = self._zentao_password(connection)
+        allow_http, insecure_skip_verify = connection_security_flags(
+            getattr(connection, "extra_json", None)
+        )
+        self._require_secure_scheme(connection.base_url, allow_http)
         try:
             auth_result = await self.zentao_auth_provider.authenticate(
                 connection.base_url,
                 connection.account,
                 password,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
             )
         except Exception as exc:
             self._apply_zentao_auth_failure(connection, str(exc))
@@ -609,18 +679,44 @@ class IntegrationConnectionService:
         self._apply_zentao_auth_success(connection, auth_result)
         await self.repository.commit()
 
-    async def _authenticate_zentao(self, base_url: str, account: str, password: str) -> Any:
+    async def _authenticate_zentao(
+        self,
+        base_url: str,
+        account: str,
+        password: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
+    ) -> Any:
         try:
-            return await self.zentao_auth_provider.authenticate(base_url, account, password)
+            return await self.zentao_auth_provider.authenticate(
+                base_url,
+                account,
+                password,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
+            )
         except Exception as exc:
             raise dynamic_error(
                 ErrIntegrationConnectionAuthFailed,
                 truncate_error(str(exc)),
             ) from exc
 
-    async def _validate_gitlab(self, base_url: str, access_token: str) -> None:
+    async def _validate_gitlab(
+        self,
+        base_url: str,
+        access_token: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
+    ) -> None:
         try:
-            await self.gitlab_auth_provider.validate(base_url, access_token)
+            await self.gitlab_auth_provider.validate(
+                base_url,
+                access_token,
+                allow_http=allow_http,
+                insecure_skip_verify=insecure_skip_verify,
+            )
         except Exception as exc:
             raise dynamic_error(
                 ErrIntegrationConnectionAuthFailed,
@@ -647,6 +743,35 @@ class IntegrationConnectionService:
             raise dynamic_error(
                 ErrIntegrationConnectionAuthFailed, "集成凭据解密失败,请重新授权该连接"
             ) from exc
+
+    @staticmethod
+    def _security_flags(body: dict[str, Any]) -> tuple[bool, bool]:
+        return (
+            bool(body.get("allowHttp", body.get("allow_http", False))),
+            bool(body.get("insecureSkipVerify", body.get("insecure_skip_verify", False))),
+        )
+
+    @staticmethod
+    def _updated_security_flags(
+        connection: IntegrationConnection, body: dict[str, Any]
+    ) -> tuple[bool, bool]:
+        allow_http, insecure_skip_verify = connection_security_flags(
+            getattr(connection, "extra_json", None)
+        )
+        if "allowHttp" in body or "allow_http" in body:
+            allow_http = bool(body.get("allowHttp", body.get("allow_http")))
+        if "insecureSkipVerify" in body or "insecure_skip_verify" in body:
+            insecure_skip_verify = bool(
+                body.get("insecureSkipVerify", body.get("insecure_skip_verify"))
+            )
+        return allow_http, insecure_skip_verify
+
+    @staticmethod
+    def _require_secure_scheme(base_url: str, allow_http: bool) -> None:
+        try:
+            require_secure_scheme(base_url, allow_http=allow_http)
+        except ValueError as exc:
+            raise ErrBadRequest() from exc
 
     def _normalize_gitlab_base_url(self, base_url: str) -> str:
         try:

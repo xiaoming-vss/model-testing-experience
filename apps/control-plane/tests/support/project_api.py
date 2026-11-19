@@ -117,7 +117,7 @@ def gitlab_remote(monkeypatch):
 
     calls = []
 
-    async def validate(self, base_url, access_token):
+    async def validate(self, base_url, access_token, **kwargs):
         calls.append(("auth", base_url, access_token))
 
     async def groups(self, base_url, token, **kwargs):

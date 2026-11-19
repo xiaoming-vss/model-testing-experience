@@ -11,6 +11,7 @@ from testing_agent.core.errors import (
     ErrResourceBindingInvalid,
     dynamic_error,
 )
+from testing_agent.services.connection_security import connection_security_flags
 from testing_agent.services.gitlab_resource import GitLabResourceClient, GitLabResourceError
 from testing_agent.services.integration_access import ActivePersonalConnection
 from testing_agent.services.personal_credentials import PersonalCredentialAccess
@@ -47,6 +48,7 @@ class GitLabResources:
             self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
             group_id,
             repository_id,
+            **self._security_kwargs(connection),
         )
         if not result["withinGroup"]:
             raise dynamic_error(ErrResourceBindingInvalid, "仓库不在所选 GitLab 群组范围内")
@@ -66,6 +68,7 @@ class GitLabResources:
             connection.base_url,
             self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
             repository_id,
+            **self._security_kwargs(connection),
         )
         base = urlsplit(connection.base_url)
         clone = urlsplit(str(result.get("cloneUrl") or ""))
@@ -92,6 +95,7 @@ class GitLabResources:
             self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
             repository_id,
             branch,
+            **self._security_kwargs(connection),
         )
 
     async def resolve_commit(
@@ -110,6 +114,7 @@ class GitLabResources:
             self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
             repository_id,
             ref,
+            **self._security_kwargs(connection),
         )
 
     async def list_groups(
@@ -131,6 +136,7 @@ class GitLabResources:
             search=search,
             page=page,
             page_size=page_size,
+            **self._security_kwargs(connection),
         )
         return {"connectionId": connection_id, **result}
 
@@ -153,6 +159,7 @@ class GitLabResources:
             group_id,
             page=page,
             page_size=page_size,
+            **self._security_kwargs(connection),
         )
         return {"connectionId": connection_id, "groupId": group_id, **result}
 
@@ -177,6 +184,7 @@ class GitLabResources:
             search=search,
             page=page,
             page_size=page_size,
+            **self._security_kwargs(connection),
         )
         return {"connectionId": connection_id, "repositoryId": repository_id, **result}
 
@@ -185,6 +193,16 @@ class GitLabResources:
             return await method(*args, **kwargs)
         except GitLabResourceError as exc:
             raise self._error(exc) from exc
+
+    @staticmethod
+    def _security_kwargs(connection: Any) -> dict[str, bool]:
+        allow_http, insecure_skip_verify = connection_security_flags(
+            getattr(connection, "extra_json", None)
+        )
+        return {
+            "allow_http": allow_http,
+            "insecure_skip_verify": insecure_skip_verify,
+        }
 
     def _error(self, exc: GitLabResourceError) -> AppError:
         # PAT 失效(HTTP 401)归入鉴权失败;其余 GitLab 异常(404/5xx/网络等)统一映射。

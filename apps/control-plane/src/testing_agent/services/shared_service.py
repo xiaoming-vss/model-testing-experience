@@ -13,6 +13,7 @@ from testing_agent.models.project import Project
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.repositories.shared_service_catalog import SharedServiceCatalogRepository
 from testing_agent.schemas.shared_service import McpTemplate
+from testing_agent.services.connection_security import require_secure_scheme
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
@@ -104,12 +105,24 @@ class SharedServiceService:
             target_instance = ""
         if provider == "mcp":
             base_url = self.normalize_mcp_endpoint(body.base_url)
+        allow_http = bool(body.allow_http)
+        insecure_skip_verify = bool(body.insecure_skip_verify)
+        if provider in {"zentao", "gitlab"}:
+            try:
+                require_secure_scheme(base_url, allow_http=allow_http)
+            except ValueError as exc:
+                raise ErrBadRequest() from exc
+        else:
+            allow_http = False
+            insecure_skip_verify = False
         resource = SharedService(
             service_id=new_id(),
             project_id=project_id,
             provider=provider,
             name=name,
             base_url=base_url,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
             template_id=body.template_id,
             model_id=model,
             zentao_instance_url=target_instance,
@@ -156,6 +169,8 @@ class SharedServiceService:
         zentao_instance_url=None,
         base_url=None,
         confirm_instance_switch=False,
+        allow_http=None,
+        insecure_skip_verify=None,
     ):
         resource = await self.get_resource(user_id, project_id, provider, service_id, "manage")
         revoked: list[tuple[str, str, str]] = []
@@ -199,6 +214,21 @@ class SharedServiceService:
         resource.base_url = endpoint
         # Instance identity is read from MCP, including for legacy catalog rows.
         resource.name = name.strip()
+        if provider in {"zentao", "gitlab"}:
+            resource.allow_http = (
+                bool(getattr(resource, "allow_http", False))
+                if allow_http is None
+                else bool(allow_http)
+            )
+            resource.insecure_skip_verify = (
+                bool(getattr(resource, "insecure_skip_verify", False))
+                if insecure_skip_verify is None
+                else bool(insecure_skip_verify)
+            )
+            try:
+                require_secure_scheme(endpoint, allow_http=resource.allow_http)
+            except ValueError as exc:
+                raise ErrBadRequest() from exc
         connections = await self.session.scalars(
             select(IntegrationConnection)
             .join(
@@ -208,7 +238,11 @@ class SharedServiceService:
             .where(ServiceAuthorization.service_id == service_id)
         )
         for connection in connections:
-            connection.extra_json = {**(connection.extra_json or {}), "serviceName": resource.name}
+            extra = {**(connection.extra_json or {}), "serviceName": resource.name}
+            if provider in {"zentao", "gitlab"}:
+                extra["allowHttp"] = resource.allow_http
+                extra["insecureSkipVerify"] = resource.insecure_skip_verify
+            connection.extra_json = extra
             if provider == "mcp":
                 connection.base_url = resource.base_url
         await self.commit_name()
@@ -236,6 +270,12 @@ class SharedServiceService:
         ):
             raise ErrBadRequest()
         endpoint = resource.base_url
+        security = {}
+        if provider in {"zentao", "gitlab"}:
+            security = {
+                "allowHttp": bool(getattr(resource, "allow_http", False)),
+                "insecureSkipVerify": bool(getattr(resource, "insecure_skip_verify", False)),
+            }
         info = None
         if provider == "mcp":
             try:
@@ -266,6 +306,7 @@ class SharedServiceService:
                     "baseUrl": resource.base_url,
                     "modelId": resource.model_id,
                     **credentials,
+                    **security,
                 },
                 user_id,
                 project_id,
@@ -285,9 +326,18 @@ class SharedServiceService:
             )
         else:
             await self.connections.update(
-                provider, own.connection_id, credentials, user_id, project_id, commit=False
+                provider,
+                own.connection_id,
+                {**credentials, **security},
+                user_id,
+                project_id,
+                commit=False,
             )
-        own.extra_json = {**(own.extra_json or {}), "serviceName": resource.name}
+        own.extra_json = {
+            **(own.extra_json or {}),
+            "serviceName": resource.name,
+            **security,
+        }
         own.status = "active"
         own.last_auth_at = datetime.now(UTC)
         if info is not None:

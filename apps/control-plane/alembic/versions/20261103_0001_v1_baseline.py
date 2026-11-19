@@ -1877,6 +1877,18 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(length=30), nullable=False, comment="外部服务提供方类型"),
         sa.Column("name", sa.String(length=120), nullable=False, comment="名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
+        sa.Column(
+            "allow_http",
+            sa.Boolean(),
+            nullable=False,
+            comment="禅道/GitLab 服务地址是否允许明文 HTTP",
+        ),
+        sa.Column(
+            "insecure_skip_verify",
+            sa.Boolean(),
+            nullable=False,
+            comment="禅道/GitLab 的 HTTPS 是否跳过证书校验",
+        ),
         sa.Column("template_id", sa.String(length=64), nullable=True, comment="内置服务模板标识"),
         sa.Column("model_id", sa.String(length=255), nullable=False, comment="LLM 模型标识"),
         sa.Column(

@@ -10,6 +10,8 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试
 
 性能测试用例、运行记录与基础服务中的性能监控接入见[性能测试](performance-testing.md)。
 
+基础服务中的禅道/GitLab 服务地址默认要求 HTTPS。自部署 HTTP 实例需在服务配置中勾选“允许明文 HTTP”；自签名或内网 CA 的 HTTPS 可勾选“跳过 HTTPS 证书校验”。两项都会在控制面记录 WARNING，不改变凭据加密方式。
+
 完整用例阶段的模块子 Agent 进度及兼容规则见[按模块并发生成完整用例](../ai-worker/module-case-generation.md)；测试点阶段复用该面板，区分分组初稿、全局审查和增量复核，见[测试点生成进度](../ai-worker/traceable-test-points.md#测试点生成进度)。
 
 ## 运行时与依赖

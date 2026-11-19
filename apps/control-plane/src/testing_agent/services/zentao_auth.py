@@ -7,6 +7,10 @@ from urllib.parse import urlparse, urlunparse
 
 import httpx
 
+from testing_agent.services.connection_security import (
+    require_secure_scheme,
+    warn_if_insecure,
+)
 from testing_agent.services.zentao_resource import truncate_error
 
 
@@ -17,9 +21,24 @@ class ZentaoAuthResult:
 
 
 class ZentaoAuthProvider:
-    async def authenticate(self, base_url: str, account: str, password: str) -> ZentaoAuthResult:
+    async def authenticate(
+        self,
+        base_url: str,
+        account: str,
+        password: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
+    ) -> ZentaoAuthResult:
+        require_secure_scheme(base_url, allow_http=allow_http)
+        warn_if_insecure(
+            "zentao",
+            base_url,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
+        )
         token_url = build_zentao_token_url(base_url)
-        async with httpx.AsyncClient(timeout=10, verify=False) as client:
+        async with httpx.AsyncClient(timeout=10, verify=not insecure_skip_verify) as client:
             response = await client.post(
                 token_url,
                 json={"account": account, "password": password},

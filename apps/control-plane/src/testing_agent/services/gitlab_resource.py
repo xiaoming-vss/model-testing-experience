@@ -5,6 +5,10 @@ from urllib.parse import quote, urlsplit
 
 import httpx
 
+from testing_agent.services.connection_security import (
+    require_secure_scheme,
+    warn_if_insecure,
+)
 from testing_agent.services.gitlab_auth import normalize_gitlab_base_url
 from testing_agent.services.zentao_resource import truncate_error
 
@@ -140,7 +144,13 @@ class GitLabResourceClient:
         self._transport = transport
 
     async def get_project(
-        self, base_url: str, access_token: str, repository_id: str
+        self,
+        base_url: str,
+        access_token: str,
+        repository_id: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         """读取仓库元信息，供代码分析固定克隆地址和默认分支。"""
         project, _ = await self._request_json(
@@ -148,6 +158,8 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/projects/{encode_gitlab_id(repository_id)}",
             {},
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         if not isinstance(project, dict):
             raise GitLabResourceError("GitLab 仓库信息格式不合法")
@@ -167,6 +179,9 @@ class GitLabResourceClient:
         access_token: str,
         repository_id: str,
         branch: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         """读取单个分支，用于绑定前校验分支存在且当前操作人可访问。"""
         encoded_branch = encode_gitlab_id(branch)
@@ -175,6 +190,8 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/projects/{encode_gitlab_id(repository_id)}/repository/branches/{encoded_branch}",
             {},
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         if not isinstance(data, dict):
             raise GitLabResourceError("GitLab 分支信息格式不合法")
@@ -191,6 +208,9 @@ class GitLabResourceClient:
         access_token: str,
         repository_id: str,
         ref: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> str:
         """把分支/tag/SHA 解析为固定 commit SHA。"""
         data, _ = await self._request(
@@ -198,13 +218,22 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/projects/{encode_gitlab_id(repository_id)}/repository/commits",
             {"ref_name": str(ref), "per_page": "1"},
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         if not data or not isinstance(data[0], dict) or not data[0].get("id"):
             raise GitLabResourceError(f"GitLab ref {ref} 无法解析为 commit")
         return str(data[0]["id"])
 
     async def get_repository_group_scope(
-        self, base_url: str, access_token: str, group_id: str, repository_id: str
+        self,
+        base_url: str,
+        access_token: str,
+        group_id: str,
+        repository_id: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         """Check namespace ownership, not projects merely shared with a group.
 
@@ -216,9 +245,16 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/groups/{encode_gitlab_id(group_id)}",
             {"with_projects": "false"},
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         repository, _ = await self._request_json(
-            base_url, access_token, f"/api/v4/projects/{encode_gitlab_id(repository_id)}", {}
+            base_url,
+            access_token,
+            f"/api/v4/projects/{encode_gitlab_id(repository_id)}",
+            {},
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         if not isinstance(group, dict) or not isinstance(repository, dict):
             raise GitLabResourceError("GitLab 响应数据格式不合法")
@@ -245,6 +281,8 @@ class GitLabResourceClient:
         search: str = "",
         page: int = 1,
         page_size: int = 100,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         params = {
             "top_level_only": "false",
@@ -255,7 +293,14 @@ class GitLabResourceClient:
         }
         if search:
             params["search"] = str(search)
-        data, headers = await self._request(base_url, access_token, "/api/v4/groups", params)
+        data, headers = await self._request(
+            base_url,
+            access_token,
+            "/api/v4/groups",
+            params,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
+        )
         return {
             "items": [group_payload(item) for item in data],
             "total": response_total(headers, len(data)),
@@ -269,6 +314,8 @@ class GitLabResourceClient:
         *,
         page: int = 1,
         page_size: int = 100,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         encoded_group_id = encode_gitlab_id(group_id)
         params = {
@@ -282,6 +329,8 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/groups/{encoded_group_id}/projects",
             params,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         return {
             "items": [repository_payload(item) for item in data],
@@ -297,6 +346,8 @@ class GitLabResourceClient:
         search: str = "",
         page: int = 1,
         page_size: int = 100,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         encoded_repository_id = encode_gitlab_id(repository_id)
         params = {
@@ -310,6 +361,8 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/projects/{encoded_repository_id}/repository/branches",
             params,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         return {
             "items": [branch_payload(item) for item in data],
@@ -323,6 +376,9 @@ class GitLabResourceClient:
         repository_id: str,
         from_ref: str,
         to_ref: str,
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> dict[str, Any]:
         """GitLab compare API:from 到 to 的 commits 数与增删行数。
 
@@ -336,6 +392,8 @@ class GitLabResourceClient:
             access_token,
             f"/api/v4/projects/{encoded_repository_id}/repository/compare",
             params,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
         )
         if not isinstance(data, dict):
             raise GitLabResourceError("GitLab 响应数据格式不合法")
@@ -347,8 +405,18 @@ class GitLabResourceClient:
         access_token: str,
         resource_path: str,
         params: dict[str, str],
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> tuple[list[dict[str, Any]], httpx.Headers]:
-        data, headers = await self._request_json(base_url, access_token, resource_path, params)
+        data, headers = await self._request_json(
+            base_url,
+            access_token,
+            resource_path,
+            params,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
+        )
         if not isinstance(data, list):
             raise GitLabResourceError("GitLab 响应数据格式不合法")
         return data, headers
@@ -359,15 +427,29 @@ class GitLabResourceClient:
         access_token: str,
         resource_path: str,
         params: dict[str, str],
+        *,
+        allow_http: bool = False,
+        insecure_skip_verify: bool = False,
     ) -> tuple[Any, httpx.Headers]:
         try:
             normalized_base_url = normalize_gitlab_base_url(base_url)
+            require_secure_scheme(normalized_base_url, allow_http=allow_http)
         except ValueError as exc:
             raise GitLabResourceError(f"GitLab 地址不合法: {truncate_error(str(exc))}") from exc
+        warn_if_insecure(
+            "gitlab",
+            normalized_base_url,
+            allow_http=allow_http,
+            insecure_skip_verify=insecure_skip_verify,
+        )
         url = f"{normalized_base_url}{resource_path}"
         headers = {"PRIVATE-TOKEN": access_token}
         try:
-            async with httpx.AsyncClient(timeout=30.0, transport=self._transport) as client:
+            async with httpx.AsyncClient(
+                timeout=30.0,
+                transport=self._transport,
+                verify=not insecure_skip_verify,
+            ) as client:
                 response = await client.get(url, headers=headers, params=params)
         except httpx.HTTPError as exc:
             raise GitLabResourceError(f"GitLab 请求失败: {truncate_error(str(exc))}") from exc

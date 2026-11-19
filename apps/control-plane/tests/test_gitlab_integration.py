@@ -65,13 +65,15 @@ class FakeIntegrationConnectionRepository:
 class AcceptingGitLabAuthProvider:
     def __init__(self):
         self.validated = []
+        self.flags = []
 
-    async def validate(self, base_url, access_token):
+    async def validate(self, base_url, access_token, **kwargs):
         self.validated.append((base_url, access_token))
+        self.flags.append(kwargs)
 
 
 class RejectingGitLabAuthProvider:
-    async def validate(self, base_url, access_token):
+    async def validate(self, base_url, access_token, **kwargs):
         raise RuntimeError("GitLab 鉴权失败，HTTP 401")
 
 
@@ -137,6 +139,16 @@ async def test_gitlab_auth_validates_with_user_endpoint_without_returning_profil
     assert requests[0].headers["PRIVATE-TOKEN"] == "glpat-secret-token"
 
 
+@pytest.mark.asyncio
+async def test_gitlab_auth_rejects_http_without_opt_in():
+    provider = GitLabAuthProvider(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))
+    )
+
+    with pytest.raises(ValueError, match="allowHttp"):
+        await provider.validate("http://gitlab.example.com", "glpat-secret-token")
+
+
 def test_user_creates_a_gitlab_connection_with_an_encrypted_token():
     repository = FakeIntegrationConnectionRepository()
     auth_provider = AcceptingGitLabAuthProvider()
@@ -168,8 +180,58 @@ def test_user_creates_a_gitlab_connection_with_an_encrypted_token():
     )
     assert "accessToken" not in response.json()["data"]
     assert auth_provider.validated == [("https://gitlab.example.com", "glpat-secret-token")]
+    assert auth_provider.flags == [{"allow_http": False, "insecure_skip_verify": False}]
     assert repository.rows[0].access_token != "glpat-secret-token"
     assert cipher.decrypt(repository.rows[0].access_token) == "glpat-secret-token"
+
+
+def test_gitlab_connection_requires_explicit_http_opt_in():
+    repository = FakeIntegrationConnectionRepository()
+    auth_provider = AcceptingGitLabAuthProvider()
+    client = gitlab_client(
+        repository,
+        auth_provider,
+        IntegrationCredentialCipher("integration-key"),
+    )
+
+    response = client.post(
+        PROJECT_CONNECTIONS_URL,
+        json={
+            "name": "内网 GitLab",
+            "baseUrl": "http://gitlab.example.com",
+            "accessToken": "glpat-secret-token",
+        },
+    )
+
+    assert response.status_code == 400
+    assert repository.rows == []
+    assert auth_provider.validated == []
+
+
+def test_gitlab_connection_accepts_explicit_http_and_flags():
+    repository = FakeIntegrationConnectionRepository()
+    auth_provider = AcceptingGitLabAuthProvider()
+    client = gitlab_client(
+        repository,
+        auth_provider,
+        IntegrationCredentialCipher("integration-key"),
+    )
+
+    response = client.post(
+        PROJECT_CONNECTIONS_URL,
+        json={
+            "name": "内网 GitLab",
+            "baseUrl": "http://gitlab.example.com",
+            "accessToken": "glpat-secret-token",
+            "allowHttp": True,
+            "insecureSkipVerify": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["allowHttp"] is True
+    assert response.json()["data"]["insecureSkipVerify"] is True
+    assert auth_provider.flags == [{"allow_http": True, "insecure_skip_verify": True}]
 
 
 def test_invalid_gitlab_token_does_not_create_a_connection():

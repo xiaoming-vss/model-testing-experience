@@ -6,6 +6,7 @@ from support import generation as ai_tasks
 from support.generation import generation_services
 
 from testing_agent.core.errors import (
+    AppError,
     ErrApiCollectionImportInvalid,
     ErrBadRequest,
     ErrRemoteResourceAlreadyBound,
@@ -319,8 +320,8 @@ class FakeZentaoAuthProvider:
         self.token = token
         self.calls = []
 
-    async def authenticate(self, base_url, account, password):
-        self.calls.append((base_url, account, password))
+    async def authenticate(self, base_url, account, password, **kwargs):
+        self.calls.append((base_url, account, password, kwargs))
         return SimpleNamespace(access_token=self.token, expires_at=None)
 
 
@@ -345,7 +346,7 @@ class FakeZentaoAuthHttpClient:
 
 
 @pytest.mark.asyncio
-async def test_zentao_auth_provider_disables_ssl_verification(monkeypatch):
+async def test_zentao_auth_provider_verifies_ssl_by_default(monkeypatch):
     monkeypatch.setattr(
         "testing_agent.services.zentao_auth.httpx.AsyncClient",
         FakeZentaoAuthHttpClient,
@@ -358,7 +359,51 @@ async def test_zentao_auth_provider_disables_ssl_verification(monkeypatch):
     )
 
     assert result.access_token == "token-ssl"
+    assert FakeZentaoAuthHttpClient.kwargs["verify"] is True
+
+
+@pytest.mark.asyncio
+async def test_zentao_auth_provider_allows_explicit_insecure_skip(monkeypatch):
+    monkeypatch.setattr(
+        "testing_agent.services.zentao_auth.httpx.AsyncClient",
+        FakeZentaoAuthHttpClient,
+    )
+
+    await ZentaoAuthProvider().authenticate(
+        "https://zentao.example",
+        "tester",
+        "secret",
+        insecure_skip_verify=True,
+    )
+
     assert FakeZentaoAuthHttpClient.kwargs["verify"] is False
+
+
+@pytest.mark.asyncio
+async def test_zentao_auth_provider_rejects_http_without_opt_in():
+    with pytest.raises(ValueError, match="allowHttp"):
+        await ZentaoAuthProvider().authenticate(
+            "http://zentao.example",
+            "tester",
+            "secret",
+        )
+
+
+@pytest.mark.asyncio
+async def test_zentao_auth_provider_allows_explicit_http(monkeypatch):
+    monkeypatch.setattr(
+        "testing_agent.services.zentao_auth.httpx.AsyncClient",
+        FakeZentaoAuthHttpClient,
+    )
+
+    await ZentaoAuthProvider().authenticate(
+        "http://zentao.example",
+        "tester",
+        "secret",
+        allow_http=True,
+    )
+
+    assert FakeZentaoAuthHttpClient.kwargs["verify"] is True
 
 
 @pytest.mark.asyncio
@@ -384,12 +429,80 @@ async def test_create_zentao_connection_authenticates_and_stores_token(monkeypat
         "user-1",
     )
 
-    assert auth_provider.calls == [("https://zentao.example", "tester", "secret")]
+    assert auth_provider.calls == [
+        (
+            "https://zentao.example",
+            "tester",
+            "secret",
+            {"allow_http": False, "insecure_skip_verify": False},
+        )
+    ]
     assert repository.rows[0].access_token == "token-1"
     assert repository.rows[0].auth_type == "account_password"
     assert repository.rows[0].last_auth_at is not None
     assert result["connectionId"] == "connection-1"
     assert result["hasAccessToken"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_zentao_connection_requires_explicit_http_opt_in():
+    repository = FakeIntegrationRepositoryForConnectionAuth()
+    service = IntegrationConnectionService(
+        repository,
+        zentao_auth_provider=FakeZentaoAuthProvider(),
+        credential_cipher=IntegrationCredentialCipher("test-key"),
+    )
+
+    with pytest.raises(AppError) as exc:
+        await service.create(
+            "zentao",
+            {
+                "name": "公司禅道",
+                "baseUrl": "http://zentao.example",
+                "account": "tester",
+                "password": "secret",
+            },
+            "user-1",
+        )
+    assert exc.value.http_code == 400
+    assert repository.rows == []
+
+
+@pytest.mark.asyncio
+async def test_create_zentao_connection_persists_security_flags(monkeypatch):
+    ids = iter(["connection-1"])
+    monkeypatch.setattr("testing_agent.services.integration_connection.new_id", lambda: next(ids))
+    repository = FakeIntegrationRepositoryForConnectionAuth()
+    auth_provider = FakeZentaoAuthProvider()
+    service = IntegrationConnectionService(
+        repository,
+        zentao_auth_provider=auth_provider,
+        credential_cipher=IntegrationCredentialCipher("test-key"),
+    )
+
+    result = await service.create(
+        "zentao",
+        {
+            "name": "公司禅道",
+            "baseUrl": "http://zentao.example",
+            "account": "tester",
+            "password": "secret",
+            "allowHttp": True,
+            "insecureSkipVerify": True,
+        },
+        "user-1",
+    )
+
+    assert result["allowHttp"] is True
+    assert result["insecureSkipVerify"] is True
+    assert repository.rows[0].extra_json == {
+        "allowHttp": True,
+        "insecureSkipVerify": True,
+    }
+    assert auth_provider.calls[0][3] == {
+        "allow_http": True,
+        "insecure_skip_verify": True,
+    }
 
 
 @pytest.mark.asyncio

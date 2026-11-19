@@ -77,7 +77,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
   const closeEditor = () => { configuration.resetFields(); setEditor(null) }
   const openEditor = (resource: SharedService | 'create') => {
     configuration.resetFields()
-    if (resource !== 'create') configuration.setFieldsValue({ name: resource.name, baseUrl: resource.baseUrl, modelId: resource.modelId, templateId: resource.templateId ?? undefined })
+    if (resource !== 'create') configuration.setFieldsValue({ name: resource.name, baseUrl: resource.baseUrl, allowHttp: resource.allowHttp === true, insecureSkipVerify: resource.insecureSkipVerify === true, modelId: resource.modelId, templateId: resource.templateId ?? undefined })
     else if (provider === 'mcp') configuration.setFieldsValue({ templateId: 'zentao' })
     setEditor(resource)
   }
@@ -91,12 +91,14 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
         if (provider === 'mcp' && !mcpTemplate) return
         await api.create(projectId, provider, {
           name: values.name.trim(), baseUrl: values.baseUrl.trim(),
+          ...(provider === 'zentao' || provider === 'gitlab' ? { allowHttp: values.allowHttp === true, insecureSkipVerify: values.insecureSkipVerify === true } : {}),
           ...(provider === 'llm' ? { modelId: values.modelId?.trim() } : {}),
           ...(provider === 'mcp' ? { templateId: values.templateId } : {}),
         })
         message.success('服务配置已保存，请单独完成我的授权')
       } else {
         if (provider === 'mcp') await api.rename(projectId, provider, editor.serviceId, values.name.trim(), values.baseUrl.trim(), values.confirmInstanceSwitch === true)
+        else if (provider === 'zentao' || provider === 'gitlab') await api.rename(projectId, provider, editor.serviceId, values.name.trim(), undefined, undefined, values.allowHttp === true, values.insecureSkipVerify === true)
         else await api.rename(projectId, provider, editor.serviceId, values.name.trim())
       }
       closeEditor()

@@ -66,6 +66,21 @@ describe('共享服务和个人授权', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('project-1', 'llm', 'service-1'))
     expect(remove).not.toHaveBeenCalled()
   })
+
+  it('creates a GitLab service with explicit HTTP opt-in', async () => {
+    vi.spyOn(api, 'list').mockResolvedValue([] as never)
+    const create = vi.spyOn(api, 'create').mockResolvedValue({ ...resource, provider: 'gitlab', name: '内网 GitLab', baseUrl: 'http://gitlab.test' })
+    mount('owner', 'gitlab')
+    fireEvent.click(await screen.findByRole('button', { name: /新建服务/ }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('服务名称'), { target: { value: '内网 GitLab' } })
+    fireEvent.change(within(dialog).getByLabelText('服务地址'), { target: { value: 'http://gitlab.test' } })
+    fireEvent.click(within(dialog).getByLabelText('允许明文 HTTP（仅限自部署或内网实例）'))
+    fireEvent.click(within(dialog).getByRole('button', { name: /确.*认|OK|保\s*存/ }))
+    await waitFor(() => expect(create).toHaveBeenCalledWith('project-1', 'gitlab', {
+      name: '内网 GitLab', baseUrl: 'http://gitlab.test', allowHttp: true, insecureSkipVerify: false,
+    }))
+  })
 })
 
 const mcpResource: SharedService = {
