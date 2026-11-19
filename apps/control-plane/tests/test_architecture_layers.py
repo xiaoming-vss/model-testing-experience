@@ -57,6 +57,16 @@ def test_fastapi_dependencies_are_split_by_domain():
         visit(module)
 
 
+def test_openapi_import_is_split_by_stage():
+    domain = PROJECT_ROOT / "src/testing_agent/domain"
+    facade = domain / "openapi_import.py"
+    assert len(facade.read_text(encoding="utf-8").splitlines()) < 400
+    for name in ("openapi_models.py", "openapi_parameters.py", "openapi_responses.py"):
+        assert (domain / name).exists(), name
+    assert "ParsedOpenApiDocument" in facade.read_text(encoding="utf-8")
+    assert "parse_openapi_document" in facade.read_text(encoding="utf-8")
+
+
 def test_generation_callers_cannot_reintroduce_the_aggregate_facade():
     root = PROJECT_ROOT / "src/testing_agent"
     assert not (root / "services/ai_generate_task.py").exists()
