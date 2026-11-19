@@ -290,6 +290,17 @@ def validate(data):
         raise ValueError("Service ports must be distinct integers between 1 and 65535")
 
 
+def external_redis_url(data):
+    """Return a validated external Redis URL, or an empty string for the bundled service."""
+    raw = (data.get("redis", {}).get("url", "") or "").strip()
+    if not raw:
+        return ""
+    parsed = urlsplit(raw)
+    if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
+        raise ValueError("redis.url must use redis:// or rediss:// and include a host")
+    return raw
+
+
 def configurations(data, mode, root=ROOT):
     validate(data)
     s, db = data["shared"], data["database"]
@@ -307,11 +318,7 @@ def configurations(data, mode, root=ROOT):
         dsn = f"mysql+asyncmy://{quote(db['user'], safe='')}:{quote(db['password'], safe='')}@{db_host}:{db_port}/{db['name']}?charset=utf8mb4"
     redis_host = "redis" if docker else "127.0.0.1"
     redis_port = 6379 if docker else s.get("redis_port", 16379)
-    redis_url = (data.get("redis", {}).get("url", "") or "").strip()
-    if redis_url:
-        parsed_redis = urlsplit(redis_url)
-        if parsed_redis.scheme not in {"redis", "rediss"} or not parsed_redis.hostname:
-            raise ValueError("redis.url must use redis:// or rediss:// and include a host")
+    redis_url = external_redis_url(data)
     redis_url = redis_url or f"redis://{redis_host}:{redis_port}/0"
     specs = {
         "control-plane": ("config/local.example.toml", "control_plane"),
@@ -437,7 +444,8 @@ def configure(mode, root=ROOT):
         env["AI_RUNTIME_VOLUME"] = "ai-pi-runtime" if ai_backend == "pi" else "ai-runtime"
         env["AI_LOGS_VOLUME"] = "ai-pi-logs" if ai_backend == "pi" else "ai-logs"
         env["MYSQL_PORT"] = s.get("mysql_port", 13306)
-        env["REDIS_PORT"] = s.get("redis_port", 16379)
+        if not external_redis_url(data):
+            env["REDIS_PORT"] = s.get("redis_port", 16379)
         env.update(mysql_observability(data))
         if external_database_url(data):
             # Compose interpolates the base file before !reset removes mysql.
@@ -485,8 +493,11 @@ def compose_command(root=ROOT):
         "-f",
         str(root / "compose.yaml"),
     ]
-    if external_database_url(read(root / "config/platform.toml")):
+    data = read(root / "config/platform.toml")
+    if external_database_url(data):
         command.extend(["-f", str(root / "deploy/compose.external-db.yaml")])
+    if external_redis_url(data):
+        command.extend(["-f", str(root / "deploy/compose.external-redis.yaml")])
     ca_override = root / ".runtime/compose.ldap-ca.json"
     if ca_override.exists():
         command.extend(["-f", str(ca_override)])

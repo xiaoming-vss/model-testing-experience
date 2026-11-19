@@ -26,6 +26,8 @@ python3 scripts/manage.py upgrade-config
 
 默认只允许本机访问。服务器部署时将 `shared.bind_host` 改为 `0.0.0.0`，浏览器通过服务器 IP/域名和发布端口访问。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
 
+`redis.url` 留空时 Compose 启动内置 Redis，仅通过 `127.0.0.1:${REDIS_PORT}` 发布；填写 `redis://` 或 `rediss://` 地址时自动叠加 `deploy/compose.external-redis.yaml`，不启动本地 `redis` 服务，也不生成 `REDIS_PORT`。外部地址必须同时能被控制面和 api-ui-worker 访问。
+
 ## Kubernetes
 
 平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker 和性能 Worker；MySQL、Redis、S3 使用外部地址。

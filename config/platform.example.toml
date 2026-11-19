@@ -20,7 +20,7 @@ jwt_key = "GENERATE"
 integration_key = "GENERATE"
 
 [redis]
-# 多机部署可填共享 Redis 地址（redis:// 或 rediss://）；留空使用内置 Redis。
+# 多机部署可填共享 Redis 地址（redis:// 或 rediss://）；填写后 Compose 不启动本地 Redis。
 url = ""
 
 [database]

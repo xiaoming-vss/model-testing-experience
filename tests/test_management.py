@@ -564,5 +564,42 @@ class ManagementTests(unittest.TestCase):
         self.assertIn("migrate", bundled["services"]["control-plane"]["depends_on"])
 
 
+    def test_external_redis_compose_skips_bundled_service(self):
+        url = "rediss://shared.example:6380/1"
+        self.data["redis"]["url"] = url
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+
+        def rendered():
+            command = manage.compose_command(self.root)
+            return json.loads(
+                subprocess.check_output(
+                    command + ["config", "--format", "json"], text=True
+                )
+            )
+
+        external = rendered()
+        self.assertNotIn("redis", external["services"])
+        env = (self.root / ".runtime/compose.env").read_text()
+        self.assertNotIn("REDIS_PORT=", env)
+        for mode in ("local", "docker"):
+            configs = manage.configurations(self.data, mode, self.root)
+            self.assertEqual(
+                configs["control-plane"]["test_run_notifications"]["redis_url"], url
+            )
+            self.assertEqual(
+                configs["api-ui-worker"]["notifications"]["redis_url"], url
+            )
+
+        self.data["redis"]["url"] = ""
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+        bundled = rendered()
+        self.assertIn("redis", bundled["services"])
+        self.assertIn(
+            "REDIS_PORT=", (self.root / ".runtime/compose.env").read_text()
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

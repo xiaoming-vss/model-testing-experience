@@ -1,0 +1,4 @@
+# Selected automatically when redis.url is set.
+# External Redis is never started by Compose.
+services:
+  redis: !reset null
