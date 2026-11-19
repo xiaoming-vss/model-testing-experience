@@ -10,6 +10,7 @@ from uvicorn.config import LOGGING_CONFIG
 
 from testing_agent.core.config import load_settings
 from testing_agent.core.http_diagnostics import LOGGER_NAME
+from testing_agent.core.secrets import validate_runtime_secrets
 from testing_agent.services.super_admin import seed_super_admin
 
 
@@ -19,6 +20,7 @@ def main() -> None:
     args = parser.parse_args()
     os.environ["APP_CONF"] = args.config
     settings = load_settings(args.config)
+    validate_runtime_secrets(settings)
     asyncio.run(seed_super_admin(settings))
     log_config = deepcopy(LOGGING_CONFIG)
     log_config["loggers"][LOGGER_NAME] = {
