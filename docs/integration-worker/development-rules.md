@@ -21,6 +21,21 @@
 
 失租、许可到期和停止后不开始新写入，在途调用保留明确结果或 unknown。结果回传失败使用安全证据路径恢复，不重新发起 MCP 写入。源码重启、容器重建和数据库恢复均不能把未知操作当成未执行。
 
+### 写后证据标准
+
+成功证据按业务操作区分；没有规定证据时，不能把 MCP 返回的任意响应当成写入成功。
+
+| 操作 | 成功证据 | 缺失或不一致 |
+| --- | --- | --- |
+| `create_bug` | MCP 返回 `status=success`，且 `id` 是有效正整数 | `WriteUncertain`，按未知结果恢复 |
+| `upload_bug_attachment` | MCP 返回 `status=success`，且 `id` 是有效正整数 | `WriteUncertain`，按未知结果恢复 |
+| `update_fields` | 写后独立读取 `get_bugs_bugID`，比较 `openedBuild` 与 `assignedTo` | `remote_rejected` |
+| `update_description` | 写后独立读回 `steps`，按目标实例归一化比较正文 | `WriteUncertain` |
+
+`create_bug` 与 `upload_bug_attachment` 不要求第二次网络读回：显式成功状态和资源 ID 已提供可追踪的远端身份，后续步骤继续使用该 ID。若业务方要求更强证据，先补读回实现和协议字段，再修改本表，不在执行路径临时追加读取。
+
+`update_fields` 与 `update_description` 的回读是独立读取，不是第二次写入；不得为确认结果重新发起 MCP 写调用。回读缺失或不一致按上表判定，恢复路径使用控制面写意图和本地结果日志，不根据回读结果重新写。
+
 凭据、签名 URL 和访问材料仅驻内存。本地结果日志只保存 Schema 限定的原操作身份及安全结果，禁止保存原始错误、冻结输入或自行改写旧事件以适配新版本。恢复日志的权限、每副本隔离、排空及归档按[运维说明](README.md#停止与结果日志)执行。
 
 ## 验证入口

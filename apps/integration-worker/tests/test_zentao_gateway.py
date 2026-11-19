@@ -37,6 +37,55 @@ async def test_source_failure_requires_explicit_negative_write_certainty(certain
     assert calls == ["upload_bug_attachment"]
 
 
+@pytest.mark.parametrize(
+    ("tool", "evidence_field"),
+    [("post_bugs", "remote_bug_id"), ("upload_bug_attachment", "remote_file_id")],
+)
+async def test_create_and_upload_accept_one_explicit_success_id(tool, evidence_field):
+    calls = []
+
+    def tools(name, arguments):
+        calls.append((name, arguments))
+        return {"status": "success", "id": 77}
+
+    async with ZentaoGateway(
+        Access(endpoint="http://mcp.test", token="actor-key"), transport=transport_for(tools)
+    ) as gateway:
+        result = await gateway.write(
+            Operation(tool=tool, arguments={"resource": 10}, timeout_seconds=180)
+        )
+
+    assert getattr(result, evidence_field) == 77
+    assert calls == [(tool, {"resource": 10})]
+
+
+@pytest.mark.parametrize("tool", ["post_bugs", "upload_bug_attachment"])
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"id": 77},
+        {"status": "success"},
+        {"status": "success", "id": 0},
+        {"status": "success", "id": "unknown"},
+        {"status": "success", "id": True},
+    ],
+)
+async def test_create_and_upload_require_an_explicit_success_id(tool, response):
+    calls = []
+
+    def tools(name, arguments):
+        calls.append(name)
+        return response
+
+    async with ZentaoGateway(
+        Access(endpoint="http://mcp.test", token="actor-key"), transport=transport_for(tools)
+    ) as gateway:
+        with pytest.raises(WriteUncertain):
+            await gateway.write(Operation(tool=tool, arguments={}, timeout_seconds=180))
+
+    assert calls == [tool]
+
+
 @pytest.mark.parametrize("foreign", [False, True])
 async def test_existing_inline_image_uses_owned_metadata_when_bug_list_filters_it(foreign):
     calls = []
@@ -115,9 +164,7 @@ async def test_description_drift_overwrites_and_records_the_fact(local_edited, r
         if name == "get_bugs_bugID":
             return {"bug": {"id": 50, **TARGET, "product": 40, "files": [], "steps": remote_steps}}
         if name == "get_files_fileID":
-            return {
-                "file": {"id": 101, "objectType": "bug", "objectID": 50, "extension": "png"}
-            }
+            return {"file": {"id": 101, "objectType": "bug", "objectID": 50, "extension": "png"}}
         raise AssertionError("Description preparation must remain read-only")
 
     view = JobInput(
@@ -280,3 +327,52 @@ async def test_description_readback_requires_a_working_native_image(src):
     else:
         with pytest.raises(WriteUncertain):
             await execution.readback(Gateway(), view, step, {"desiredSteps": desired})
+
+
+@pytest.mark.parametrize(
+    ("remote", "error_code"),
+    [
+        ({"openedBuild": ["61"], "assignedTo": "dev"}, None),
+        ({"openedBuild": ["62"], "assignedTo": "dev"}, "remote_rejected"),
+        ({"openedBuild": ["61"], "assignedTo": "qa"}, "remote_rejected"),
+    ],
+)
+async def test_field_readback_compares_remote_values_with_the_frozen_target(remote, error_code):
+    target = {**TARGET, "instanceUrl": "https://zentao.example"}
+
+    class Gateway:
+        async def verify_instance(self, value):
+            assert value == target
+
+        async def bug(self, identifier, value, product):
+            assert (identifier, value, product) == (50, target, 40)
+            return remote
+
+    view = JobInput(
+        job_id="j",
+        job_status="running",
+        task_type="zentao_bug_sync",
+        protocol_version=1,
+        result={},
+        input_revision="i",
+        target_revision="t",
+        steps=[],
+        mapping={"remoteBugId": 50, "productId": 40},
+        snapshot={
+            "target": target,
+            "desired": {"openedBuild": ["61"], "assignedTo": "dev"},
+        },
+    )
+    step = JobStep(
+        step_key="update_fields",
+        kind="update_fields",
+        status="write_intent",
+        dependencies=[],
+        input={},
+    )
+
+    result = await StepExecution(None, None, None).readback(Gateway(), view, step, {})
+
+    assert result.opened_build == remote["openedBuild"]
+    assert result.assigned_to == remote["assignedTo"]
+    assert result.error_code == error_code

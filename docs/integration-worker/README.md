@@ -12,6 +12,8 @@ integration-worker 是拉取式执行进程。控制面管理数据库、权限�
 
 控制面网络重试复用 claim/prepare/result 编号；外部写入不重试。失去 prepare 响应时只查询原意图，不能把第二次查询当成新的许可。结果回传失败时保留安全结果及原操作身份，用受限 evidence 接口回报，不把票据、Token、原始错误或冻结输入写入恢复日志。
 
+写后证据按操作区分：`create_bug` 与 `upload_bug_attachment` 以 MCP 的 `status=success` 和有效正整数 `id` 作为成功证据，不做第二次读取；`update_fields` 与 `update_description` 必须独立读回，分别比较字段和归一化正文。证据缺失或未确认时按 unknown 或 `remote_rejected` 处理，不重新写入。详见[写后证据标准](development-rules.md#写后证据标准)。
+
 用户授权的当前本地环境已全量启用独立 Worker，旧同步写链路已移除；示例配置仍默认关闭，关闭执行后暂停异步提交，不回落同步写入。原步骤恢复、留存、恢复隔离、核对放行、执行观测及真实 Studio 创建/上传/推送已验证。慢传输与 180 秒结果等待已完成验收并归档。当前环境暂停协调源码回退已演练，旧 Docker 镜像回退未验证。实际进度及收尾回归见[实施记录](../control-plane/integration-worker-implementation.md)，部署按[切换流程](rollout.md)。
 
 2026-10-07 用户授权的当前环境沿用本地启动方式，Zata-Platform/test 两个项目已启用，独立 Worker 持续运行；实际异步任务与暂停源码回退后恢复的新任务均 succeeded 且全部 noop。全量切换与旧路径收尾尚未完成，示例配置继续默认关闭；当前环境配置及回退记录见实施记录。
