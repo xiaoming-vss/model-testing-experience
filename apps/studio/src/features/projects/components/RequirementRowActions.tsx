@@ -16,7 +16,7 @@ export function RequirementRowActions({ name, canWrite, canManage, deleting, sho
       catch (error) { message.error(getErrorMessage(error)); throw error }
     },
   })
-  return <Space size={8} className="project-requirement-list-actions">
+  return <Space size={8}>
     {contextHolder}
     <ProjectActionButton action="write" operation="edit" iconOnly aria-label="编辑需求" type="text" onClick={onEdit} />
     {showBinding ? <ProjectActionButton action="manage" operation="bind" iconOnly aria-label="禅道绑定" type="text" onClick={onBind} /> : null}

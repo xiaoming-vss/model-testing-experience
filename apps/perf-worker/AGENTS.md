@@ -8,4 +8,4 @@
 
 本项目独立执行性能测试：通过控制面 `poll` 模式领取性能运行，或读取本地运行规格，使用固定 k6 模板和数据文件驱动 k6，将指标写入 Prometheus，并回传执行结果。Worker 不直接访问控制面数据库；数据文件由控制面流式下发，Worker 不持有 S3 凭据。保留独立依赖、锁文件、Dockerfile 与启动入口。
 
-持续维护文档放在 `docs/perf-worker/`，规格和工单放在仓库根目录 `.scratch/`。
+持续维护文档放在 `docs/perf-worker/`；进行中的规格和工单放在仓库根目录 `.scratch/`，需要长期追溯的规格及验收证据按[长期记录规则](../../docs/records/README.md)提升到项目 records 目录。

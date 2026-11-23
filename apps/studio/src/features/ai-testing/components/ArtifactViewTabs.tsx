@@ -32,7 +32,7 @@ function CopyButton({ copyText, copyLabel = '复制 JSON' }: { copyText?: string
 }
 
 /** 视图切换与复制本体，供标题栏或正文内工具条直接摆放。 */
-export function ArtifactModeControls({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
+function ArtifactModeControls({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
   copyText?: string
   copyLabel?: string
   extra?: ReactNode

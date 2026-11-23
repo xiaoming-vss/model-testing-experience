@@ -7,7 +7,6 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.services.ai_task_output import validate_ui_candidate_cases
 from testing_agent.services.import_payload import parse_import_payload
-from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_generation_contracts import is_ui_workflow
 from testing_agent.services.ui_test_case import validate_ui_import_payload
 
@@ -34,6 +33,7 @@ def stored_case_comparison(case: UiTestCase) -> dict[str, Any]:
         "enabled": case.enabled,
         "orderNo": case.order_no,
         "stepsJson": case.steps_json,
+        "invalidatedAt": case.invalidated_at,
     }
 
 
@@ -42,6 +42,7 @@ def apply_generated_case(case: UiTestCase, item: dict[str, Any]) -> None:
     case.enabled = item["enabled"]
     case.order_no = item["orderNo"]
     case.steps_json = item["stepsJson"]
+    case.invalidated_at = None
 
 
 async def import_ui_run(
@@ -54,21 +55,10 @@ async def import_ui_run(
     artifact_content: str | None = None,
     allow_reimport: bool = False,
     approved_source: Any | None = None,
+    preview_only: bool = False,
 ) -> dict[str, Any]:
     if approved_source is None:
-        owned_run = await service.owned_run(user_id, run_id, "ui", action="execute")
-        if not isinstance(owned_run, StandaloneRun):
-            raise ErrNotFound()
-        from testing_agent.services.standalone_ui_import import import_standalone_ui
-
-        return await import_standalone_ui(
-            service,
-            owned_run,
-            suite_id=suite_id,
-            confirm_overwrite=confirm_overwrite,
-            user_id=user_id,
-            apply_import=import_ui_run,
-        )
+        raise ErrBadRequest()
     run = approved_source
     if artifact_content is None and (
         run.status != "success"
@@ -80,7 +70,9 @@ async def import_ui_run(
     suite = await service.repository.get_ui_suite(suite_id)
     if suite is None:
         raise ErrNotFound()
-    await service.ensure_requirement_access(user_id, suite.requirement_id, action="execute")
+    if suite.requirement_id != run.requirement_id:
+        raise ErrBadRequest()
+    await service.ensure_requirement_access(user_id, run.requirement_id, action="execute")
 
     raw_content = (run.result_yaml or "") if artifact_content is None else artifact_content
     generated_cases = (
@@ -116,9 +108,9 @@ async def import_ui_run(
                 }
             )
 
-    if conflicts and not confirm_overwrite:
+    if preview_only or (conflicts and not confirm_overwrite):
         return {
-            "requiresConfirmation": True,
+            "requiresConfirmation": bool(conflicts),
             "conflicts": conflicts,
             "importChanges": [],
             "run": {},

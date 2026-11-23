@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import headersTsx from '../components/ApiCaseHeadersPanel.tsx?raw'
 import bodyTsx from '../components/ApiCaseBodyPanel.tsx?raw'
+import headerToolbarTsx from '@/shared/components/request-editor/RequestHeaderToolbar.tsx?raw'
+import bodyStatusTsx from '@/shared/components/request-editor/RequestBodyStatus.tsx?raw'
+import validityTsx from '@/shared/components/request-editor/RequestJsonValidity.tsx?raw'
 import shellCss from './api-detail-shell.module.css?raw'
 import rulesCss from './api-detail-rules.module.css?raw'
 
@@ -37,13 +40,13 @@ describe('API 请求编辑面板样式', () => {
 
   it('请求头工具条、表头与请求体状态条用表面 token', () => {
     expect(headersTsx).toContain('bg-[var(--srf-hover)]')
-    expect(headersTsx).toContain('border-b border-[var(--srf-card-border)]')
-    expect(bodyTsx).toContain('border-t border-[var(--srf-divider)] bg-[var(--srf-hover)]')
+    expect(headerToolbarTsx).toContain('border-b border-[var(--srf-card-border)]')
+    expect(bodyStatusTsx).toContain('border-t border-[var(--srf-divider)] bg-[var(--srf-hover)]')
   })
 
   it('合法性徽标走九色盘 tone token', () => {
-    expect(bodyTsx).toContain('border-[var(--srf-tone-border)]')
-    expect(bodyTsx).toContain('bg-[var(--srf-tone-bg)]')
-    expect(bodyTsx).toContain('text-[var(--srf-tone-text)]')
+    expect(validityTsx).toContain('border-[var(--srf-tone-border)]')
+    expect(validityTsx).toContain('bg-[var(--srf-tone-bg)]')
+    expect(validityTsx).toContain('text-[var(--srf-tone-text)]')
   })
 })

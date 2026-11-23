@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from typing import Literal
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+
+from testing_agent_ai_worker.platform.generation_candidates import FrozenCandidateInput
 
 FUNCTIONAL_SOURCE_FORMAT = "requirement_understanding_json"
 FUNCTIONAL_SOURCE_FORMAT_VERSION = "0.2"
@@ -167,6 +171,12 @@ class PlatformSnapshotRun(PlatformResponseModel):
 
 class PlatformSnapshotResponse(PlatformResponseModel):
     run: PlatformSnapshotRun
+    candidate_protocol: Literal["single-current/1"] | None = Field(
+        default=None, validation_alias=AliasChoices("candidateProtocol", "candidate_protocol")
+    )
+    candidate_input: FrozenCandidateInput | None = Field(
+        default=None, validation_alias=AliasChoices("candidateInput", "candidate_input")
+    )
     task_type: str = Field(
         default="",
         validation_alias=AliasChoices("taskType", "task_type", "type"),
@@ -211,6 +221,12 @@ class PlatformSnapshotResponse(PlatformResponseModel):
         default="",
         validation_alias=AliasChoices("sourceCommit", "source_commit"),
     )
+
+    @model_validator(mode="after")
+    def validate_candidate_protocol(self) -> PlatformSnapshotResponse:
+        if (self.candidate_protocol is None) != (self.candidate_input is None):
+            raise ValueError("candidate protocol and frozen input must occur together")
+        return self
 
 
 class PlatformGitlabCredentials(PlatformResponseModel):

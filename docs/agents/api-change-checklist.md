@@ -81,7 +81,7 @@ cd apps/control-plane && uv run --locked --extra dev pytest tests/test_app_contr
 
 # 受影响 Worker / Studio 按项目命令矩阵执行
 cd apps/<project> && <项目全量测试命令>
-cd apps/studio && npm run verify && npm test
+cd apps/studio && npm run verify
 ```
 
 真实 MySQL、S3、禅道/GitLab、浏览器、LLM、Prometheus 的验收不能由 SQLite、模拟 HTTP 或 fixture 代替；相关项在“未验证范围”中单独说明。

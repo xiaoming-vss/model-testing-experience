@@ -17,10 +17,7 @@ _AI_TASK_REASON = "AI task payload fields are validated by the task domain"
 REQUEST_EXTRA_EXCEPTIONS = {
     f"testing_agent.schemas.ai_generate_task.{name}": _AI_TASK_REASON
     for name in (
-        "AiGenerateTaskRunRequest",
-        "CodeRiskAnalysisRunRequest",
         "CodeRiskAnalysisTaskRequest",
-        "RepositoryProfileRunRequest",
         "RepositoryProfileTaskRequest",
         "TestReportGenerateTaskRunRequest",
     )
@@ -110,3 +107,18 @@ def test_project_patch_keeps_omitted_field_and_rejects_null(api):
         json={"description": None},
     )
     assert rejected.status_code == 400, rejected.text
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    ["AiGenerateTaskRunRequest", "CodeRiskAnalysisRunRequest", "RepositoryProfileRunRequest"],
+)
+@pytest.mark.parametrize(
+    "field", ["requirementMaterialVersionId", "requirementUnderstandingVersionId"]
+)
+def test_generation_requests_reject_removed_material_version_fields(model_name, field):
+    from testing_agent.schemas import ai_generate_task
+
+    with pytest.raises(ValidationError) as rejected:
+        getattr(ai_generate_task, model_name).model_validate({field: "obsolete"})
+    assert rejected.value.errors()[0]["type"] == "extra_forbidden"

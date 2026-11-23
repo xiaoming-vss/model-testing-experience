@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -47,13 +46,6 @@ class Workspace:
     def write_result(self, text: str) -> None:
         write_secure_text(self.result_path, text, overwrite=True)
 
-    def read_log_tail(self, max_bytes: int = 8192) -> str:
-        try:
-            data = self.log_path.read_bytes()
-        except OSError:
-            return ""
-        return data[-max_bytes:].decode("utf-8", errors="replace")
-
     def secure_summary(self) -> None:
         """k6 writes summary.json itself; tighten it to the workspace policy."""
 
@@ -61,9 +53,6 @@ class Workspace:
             self.summary_path.chmod(0o600)
         except FileNotFoundError:
             return
-
-    def cleanup(self) -> None:
-        shutil.rmtree(self.root, ignore_errors=True)
 
 
 def _safe_name(run_id: str) -> str:

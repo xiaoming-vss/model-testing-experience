@@ -12,6 +12,7 @@ from testing_agent.core.errors import AppError
 from testing_agent.repositories.requirement_software_repository import (
     RequirementRepositoryBinding,
 )
+from testing_agent.services.generation_current_material import CurrentMaterial
 from testing_agent.services.repository_profile import (
     RepositoryProfileService,
     parse_repository_profile,
@@ -161,17 +162,27 @@ def make_service(
 
 @pytest.fixture(autouse=True)
 def approved_version(monkeypatch):
-    from testing_agent.services import repository_profile as module
+    material = CurrentMaterial(
+        candidate_id="candidate",
+        snapshot_id="snapshot",
+        candidate_token="token",
+        current_token="current-token",
+        task_id="understanding-task",
+        attempt_id="understanding-attempt",
+        content=json.dumps(material_artifact(), ensure_ascii=False),
+        content_hash="hash",
+        basis_hash="basis",
+        lineage_hash="lineage",
+        document_root_hash="document",
+    )
+    original = RepositoryProfileService.build_snapshot
 
-    version = understanding_version()
-    requested: dict[str, str] = {}
+    async def build_with_material(self, *args, **kwargs):
+        kwargs.setdefault("current_material", material)
+        return await original(self, *args, **kwargs)
 
-    async def resolve(repository, requirement_id, version_id=""):
-        requested["version_id"] = version_id
-        return version
-
-    monkeypatch.setattr(module, "approved_material", resolve)
-    return version, requested
+    monkeypatch.setattr(RepositoryProfileService, "build_snapshot", build_with_material)
+    return material
 
 
 @pytest.mark.asyncio
@@ -185,12 +196,8 @@ async def test_snapshot_freezes_understanding_and_working_branch_head():
 
     assert snapshot["taskType"] == "repository_profile"
     assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
-    assert snapshot["requirementMaterialVersion"] == {
-        "versionId": "sv-understanding-1",
-        "versionNo": 1,
-        "taskId": "understanding-task",
-        "runId": "understanding-attempt",
-    }
+    assert snapshot["requirementMaterialCurrent"]["candidateId"] == "candidate"
+    assert "requirementMaterialVersion" not in snapshot
     assert snapshot["gitlabCredentialsUrl"] == (
         "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials"
     )
@@ -209,23 +216,30 @@ async def test_snapshot_freezes_understanding_and_working_branch_head():
     ]
 
 
-@pytest.mark.asyncio
-async def test_explicit_understanding_version_is_forwarded(approved_version):
-    _, requested = approved_version
+async def test_profile_snapshot_uses_verified_current_material():
     service, _ = make_service(
         bindings=[make_binding("binding-1", "repo-1")],
         connections=[make_connection("conn-1")],
     )
-
-    await service.build_snapshot(
-        make_task(),
-        "run-1",
-        "worker-task-1",
-        user_id="user-1",
-        material_version_id="sv-old",
+    material = CurrentMaterial(
+        candidate_id="candidate",
+        snapshot_id="snapshot",
+        candidate_token="candidate-token",
+        current_token="current-token",
+        task_id="material-task",
+        attempt_id="attempt",
+        content=json.dumps(material_artifact()),
+        content_hash="content-hash",
+        basis_hash="basis-hash",
+        lineage_hash="lineage-hash",
+        document_root_hash="document-hash",
     )
-
-    assert requested["version_id"] == "sv-old"
+    snapshot = await service.build_snapshot(
+        make_task(), "run-1", "worker-task-1", user_id="user-1", current_material=material
+    )
+    assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
+    assert snapshot["requirementMaterialCurrent"]["candidateId"] == "candidate"
+    assert "requirementMaterialVersion" not in snapshot
 
 
 @pytest.mark.asyncio
@@ -239,22 +253,12 @@ async def test_no_binding_rejects_run():
 
 
 @pytest.mark.asyncio
-async def test_missing_approved_understanding_rejects_run(monkeypatch):
-    from testing_agent.services import repository_profile as module
-
-    async def missing(repository, requirement_id, version_id=""):
-        return None
-
-    monkeypatch.setattr(module, "approved_material", missing)
-    service, _ = make_service(
-        bindings=[make_binding("binding-1", "repo-1")],
-        connections=[make_connection("conn-1")],
-    )
-
-    with pytest.raises(AppError) as error:
-        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
-
-    assert "先审核通过材料整理" in str(error.value)
+async def test_missing_approved_understanding_rejects_run():
+    service, _ = make_service()
+    with pytest.raises(AppError, match="材料整理"):
+        await service.build_snapshot(
+            make_task(), "run-1", "worker-task-1", user_id="user-1", current_material=None
+        )
 
 
 @pytest.mark.asyncio

@@ -59,7 +59,7 @@ it('状态条给出 JSON 结论与内容大小', async () => {
   renderPanel('json', '{"code":200}')
 
   expect(await screen.findByText('无语法错误')).toBeInTheDocument()
-  expect(screen.getByText('JSON Schema 合法')).toBeInTheDocument()
+  expect(screen.getByText('JSON 合法')).toBeInTheDocument()
   expect(screen.getByText('大小: 12 B')).toBeInTheDocument()
   expect(screen.getByText('格式: JSON')).toBeInTheDocument()
 })
@@ -84,7 +84,7 @@ it('非 JSON 类型隐藏 JSON 专属动作，状态条只报大小与编码', a
   renderPanel('raw', '')
 
   expect(await screen.findByText('无需校验')).toBeInTheDocument()
-  expect(screen.queryByText('JSON Schema 合法')).toBeNull()
+  expect(screen.queryByText('JSON 合法')).toBeNull()
   expect(screen.queryByRole('button', { name: /插入变量/ })).toBeNull()
   expect(screen.getByText('编码: UTF-8')).toBeInTheDocument()
 })

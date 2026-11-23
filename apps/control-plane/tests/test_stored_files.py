@@ -262,9 +262,15 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files):
 
     files.session.add_all(
         [
-            UiTestSuite(suite_id="suite", requirement_id="r", name="suite"),
+            UiTestSuite(suite_id="suite", project_id="p", requirement_id="r", name="suite"),
             UiTestCase(case_id="case", suite_id="suite", name="case", steps_json=[]),
-            UiTestCaseRun(run_id="run", case_id="case", suite_id="suite", trigger_user_id="owner"),
+            UiTestCaseRun(
+                run_id="run",
+                case_id="case",
+                suite_id="suite",
+                project_id="p",
+                trigger_user_id="owner",
+            ),
             WorkerTask(domain="ui", task_id="task", task_type="case_debug", run_id="run"),
         ]
     )

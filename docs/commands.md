@@ -152,12 +152,12 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | CSS 结构检查 | `npm run check:css:structure` | — |
 | CSS 全部检查 | `npm run check:css:all` | 等价于 `check:css` + `check:css:structure` |
 | feature 边界检查 | `npm run check:boundaries` | — |
-| 首屏 bundle 预算 | `npm run check:bundle` | 先执行 `npm run build`；首屏 JS gzip ≤260 kB、CSS gzip ≤60 kB |
+| 首屏 bundle 预算 | `npm run check:bundle` | 先执行 `npm run build`；HTML 初始资源及登录、默认项目页预算见[结构规范](studio/STRUCTURE.md#已知验证盲区) |
 | Tailwind className 检查 | `npm run check:tailwind` | `!` 零容忍；重复 utility 串按 `apps/studio/scripts/tailwind-class-budget.json` ratchet |
 | 构建 | `npm run build` | — |
 | 完整静态验证 | `npm run verify` | 包含 type-check、lint、主题/CSS/边界/Tailwind 检查、build、首屏 bundle 预算和 `npm test` |
 
-前端交付前至少执行 `npm run verify` 和 `npm test`。真实浏览器布局、窄屏、浅色/深色和列表表面观感仍需按[界面规范](studio/UI-GUIDELINES.md)人工核对；jsdom 不能替代真实布局验收。
+前端交付前执行一次 `npm run verify`，其中已包含 `npm test`。真实浏览器布局、窄屏、浅色/深色和列表表面观感仍需按[界面规范](studio/UI-GUIDELINES.md)人工核对；jsdom 不能替代真实布局验收。
 
 ## 按变更选择入口
 
@@ -169,7 +169,7 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | api-ui-worker | pytest 全量，再按[API/UI Worker 开发规则](api-ui-worker/development-rules.md#验证入口)追加专项 |
 | integration-worker | pytest 全量，再按[集成 Worker 开发规则](integration-worker/development-rules.md#验证入口)追加专项 |
 | perf-worker | pytest 全量，再按[性能 Worker 开发规则](perf-worker/development-rules.md#验证入口)追加专项 |
-| studio | `npm run verify` + `npm test`，再按改动范围执行对应页面/样式检查 |
+| studio | `npm run verify`（含 `npm test`），再按改动范围执行对应页面/样式检查 |
 | 纯文档 | 运行 `python3 scripts/check_docs.py`；涉及新增文档时再运行 `python3 -m unittest tests.test_documents -v` |
 
 共享基础层、跨项目协议或权限/领取/回传/停止语义变更时扩大回归范围。实际执行少于本表要求时，必须在交付说明中写明原因和未验证范围。

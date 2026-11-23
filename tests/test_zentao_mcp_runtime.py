@@ -13,7 +13,7 @@ from urllib.error import URLError
 from urllib.request import ProxyHandler, Request, build_opener
 from uuid import uuid4
 
-from test_zentao_mcp_deployment import (
+from tests.test_zentao_mcp_deployment import (
     compose_command,
     compose_environment,
     prepare_deployment,

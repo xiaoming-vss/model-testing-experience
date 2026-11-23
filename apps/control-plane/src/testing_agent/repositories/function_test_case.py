@@ -88,15 +88,18 @@ class FunctionTestCaseRepository(ResourceRepository):
             )
         return result
 
-    async def list_by_suite(self, suite_id: str) -> list[FunctionTestCase]:
+    async def list_by_suite(
+        self, suite_id: str, *, invalidated: bool | None = None
+    ) -> list[FunctionTestCase]:
+        conditions = [FunctionTestCase.suite_id == suite_id]
+        if invalidated is True:
+            conditions.append(FunctionTestCase.invalidated_at.is_not(None))
+        elif invalidated is False:
+            conditions.append(FunctionTestCase.invalidated_at.is_(None))
         return list(
             (
                 await self.session.scalars(
-                    select(FunctionTestCase)
-                    .where(
-                        FunctionTestCase.suite_id == suite_id,
-                    )
-                    .order_by(FunctionTestCase.order_no)
+                    select(FunctionTestCase).where(*conditions).order_by(FunctionTestCase.order_no)
                 )
             ).all()
         )
@@ -120,6 +123,10 @@ class FunctionTestCaseRepository(ResourceRepository):
             conditions.append(FunctionTestCase.priority.in_(values))
         if query.case_type:
             conditions.append(FunctionTestCase.case_type == query.case_type)
+        if query.invalidated is True:
+            conditions.append(FunctionTestCase.invalidated_at.is_not(None))
+        elif query.invalidated is False:
+            conditions.append(FunctionTestCase.invalidated_at.is_(None))
         if query.keyword:
             pattern = f"%{query.keyword}%"
             conditions.append(
@@ -156,6 +163,36 @@ class FunctionTestCaseRepository(ResourceRepository):
             case.sprint_name = sprint.name
             cases.append(case)
         return cases, int(total or 0)
+
+    async def list_project_cases_by_ids(
+        self, project_id: str, case_ids: list[str]
+    ) -> list[FunctionTestCase]:
+        """按项目范围加载选中用例并锁定状态列，供批量失效/恢复正常事务使用。"""
+        cases: list[FunctionTestCase] = []
+        for offset in range(0, len(case_ids), 500):
+            cases.extend(
+                (
+                    await self.session.scalars(
+                        select(FunctionTestCase)
+                        .join(
+                            FunctionTestSuite,
+                            FunctionTestSuite.suite_id == FunctionTestCase.suite_id,
+                        )
+                        .join(
+                            Requirement,
+                            Requirement.requirement_id == FunctionTestSuite.requirement_id,
+                        )
+                        .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+                        .where(
+                            Sprint.project_id == project_id,
+                            FunctionTestCase.case_id.in_(case_ids[offset : offset + 500]),
+                        )
+                        .with_for_update()
+                        .execution_options(populate_existing=True)
+                    )
+                ).all()
+            )
+        return cases
 
     async def get_active_binding(
         self,

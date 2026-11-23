@@ -203,6 +203,7 @@ def test_ui_suite_screenshot_policy_uses_go_field():
 
     payload = UiSuiteResponse(
         suiteId="suite1",
+        projectId="project1",
         requirementId="req1",
         name="UI Suite",
         screenshotPolicy="never",

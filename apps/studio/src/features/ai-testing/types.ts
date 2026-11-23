@@ -364,7 +364,6 @@ export type RunCodeRiskTaskPayload = {
   llmConnectionId?: string
   instruction?: string
   triggerType?: 'manual' | string
-  requirementMaterialVersionId?: string
 }
 
 export type RepositoryProfileRole = 'frontend' | 'backend' | 'fullstack' | 'infra' | 'test' | 'unknown'
@@ -429,13 +428,6 @@ export type RepositoryProfileTaskRun = {
   stageStatus?: string
   reviewStatus?: string
   snapshotJson?: {
-    requirementMaterialVersion?: {
-      versionId?: string
-      versionNo?: number
-      taskId?: string
-      runId?: string
-      [key: string]: unknown
-    } | null
     bindings?: RepositoryProfileSnapshotBinding[]
     [key: string]: unknown
   }
@@ -447,20 +439,23 @@ export type RepositoryProfileTaskRun = {
   profile?: RepositoryProfile | null
 }
 
-/** 一次成功的仓库画像运行投影为一个不可变版本。 */
-export type RepositoryProfileVersion = {
-  versionId: string
-  versionNo: number
+/** 仓库画像候选的展示数据。 */
+export type RepositoryProfileCandidateView = {
+  candidateId: string
   label: string
   profile?: RepositoryProfile | null
   resultYaml: string
   sourceRunId: string
-  requirementMaterialVersion?: {
-    versionId?: string
-    versionNo?: number
-    taskId?: string
-    runId?: string
-    [key: string]: unknown
+  requirementMaterialCurrent?: {
+    candidateId: string
+    snapshotId: string
+    contentHash: string
+    basisHash: string
+    lineageHash: string
+    documentRootHash: string
+    taskId: string
+    attemptId?: string | null
+    currentToken: string
   } | null
   createdAt: string
 }
@@ -477,5 +472,4 @@ export type RunRepositoryProfileTaskPayload = {
   llmConnectionId?: string
   instruction?: string
   triggerType?: 'manual' | string
-  requirementMaterialVersionId?: string
 }

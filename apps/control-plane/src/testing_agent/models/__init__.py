@@ -1,8 +1,7 @@
 from testing_agent.db.base import Base
 from testing_agent.models.ai_execution import AiExecution
-from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
+from testing_agent.models.ai_generate_import import AiGenerateImport, AiGenerateImportRequest
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.api_assert_rule import ApiAssertRule
@@ -33,6 +32,12 @@ from testing_agent.models.function_case_push import (
 )
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
+from testing_agent.models.generation_candidates import (
+    AiGenerationCandidate,
+    AiGenerationReviewReceipt,
+    AiGenerationStageContent,
+    RequirementGenerationChain,
+)
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.integration_job import (
     IntegrationClaimReceipt,
@@ -72,6 +77,10 @@ from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
+    "AiGenerationCandidate",
+    "AiGenerationReviewReceipt",
+    "AiGenerationStageContent",
+    "RequirementGenerationChain",
     "TestOrderEntryVisualization",
     "TestOrderVisualizationBatch",
     "FunctionCasePushOperation",
@@ -81,8 +90,8 @@ __all__ = [
     "ServiceAuthorization",
     "SharedService",
     "AiExecution",
-    "AiGenerateStageVersion",
-    "AiGenerateVersionImport",
+    "AiGenerateImport",
+    "AiGenerateImportRequest",
     "AiGenerationAttempt",
     "AiGenerationStage",
     "AiGenerateTask",

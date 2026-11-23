@@ -26,9 +26,7 @@ TRACEABLE_CONFIG = {"requirementAnalysis": SCOPE_ANALYSIS}
 
 def setup_stage(session):
     seed_task(session)
-    stage = AiGenerationStage(
-        id="stage-direct", task_id="task", stage="case_names", next_version_no=1
-    )
+    stage = AiGenerationStage(id="stage-direct", task_id="task", stage="case_names")
     session.add(stage)
     session.commit()
     return stage, DirectStageStorage(AsyncSessionAdapter(session))

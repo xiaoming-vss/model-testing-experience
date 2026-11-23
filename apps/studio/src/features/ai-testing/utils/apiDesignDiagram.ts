@@ -14,11 +14,40 @@ const CATEGORY_LABELS: Record<string, string> = {
   boundary: '边界',
 }
 
-const REASON_LABELS: Record<string, string> = {
-  soft_cap: '数量上限',
-  low_value: '价值较低',
-  duplicate: '重复覆盖',
-  not_verifiable: '不可验证',
+const REASON_META: Record<string, { label: string; description: string }> = {
+  soft_cap: { label: '数量上限', description: '同类约束已达到生成数量上限' },
+  low_value: { label: '价值较低', description: '场景价值较低，暂不生成用例' },
+  duplicate: { label: '重复覆盖', description: '已有用例覆盖了相同约束' },
+  not_verifiable: { label: '不可验证', description: '当前执行环境无法自动验证' },
+}
+
+const ASSERT_SOURCE_LABELS: Record<string, string> = {
+  body_jsonpath: 'JSONPath',
+  status_code: '状态码',
+  header: '响应头',
+  response_header: '响应头',
+}
+
+const COMPARATOR_LABELS: Record<string, string> = {
+  exists: '存在',
+  equals: '等于',
+  notEquals: '不等于',
+  greaterThan: '大于',
+  lessThan: '小于',
+  contains: '包含',
+  matches: '匹配',
+}
+
+const PATCH_OP_LABELS: Record<string, string> = {
+  add: '新增',
+  remove: '删除',
+  replace: '改为',
+}
+
+const UNCOVERED_KIND_LABELS: Record<string, string> = {
+  constraint: '约束',
+  required: '必传',
+  type: '类型',
 }
 
 export type ApiDesignPatchOpView = {
@@ -27,6 +56,17 @@ export type ApiDesignPatchOpView = {
   opLabel: string
   target: string
   valueLabel: string
+}
+
+export type ApiDesignAssertionView = {
+  key: string
+  source: string
+  sourceLabel: string
+  target: string
+  comparator: string
+  comparatorLabel: string
+  expected: string
+  hasExpected: boolean
 }
 
 export type ApiDesignCaseView = {
@@ -40,7 +80,7 @@ export type ApiDesignCaseView = {
   statusClass: string
   basisLabel: string
   patchOps: ApiDesignPatchOpView[]
-  assertions: string[]
+  assertions: ApiDesignAssertionView[]
 }
 
 export type ApiDesignUncoveredView = {
@@ -48,7 +88,9 @@ export type ApiDesignUncoveredView = {
   kindLabel: string
   fieldLabel: string
   constraint: string
+  reason: string
   reasonLabel: string
+  reasonDescription: string
 }
 
 export type ApiDesignInterfaceView = {
@@ -87,10 +129,14 @@ function sectionLabel(section: string) {
 }
 
 function targetLabel(section: string, pointer: string) {
-  return `${sectionLabel(section)}${pointerPath(pointer)}`
+  const label = sectionLabel(section)
+  const path = pointerPath(pointer)
+  if (!label) return path.replace(/^\./, '')
+  return `${label}${path}`
 }
 
 function formatValue(value: unknown) {
+  if (value === undefined) return ''
   if (typeof value === 'string') return JSON.stringify(value)
   if (value === null) return 'null'
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
@@ -99,12 +145,6 @@ function formatValue(value: unknown) {
   } catch {
     return String(value)
   }
-}
-
-const PATCH_OP_LABELS: Record<string, string> = {
-  add: '新增',
-  remove: '删除',
-  replace: '改为',
 }
 
 function normalizePatchOps(section: string, raw: unknown): ApiDesignPatchOpView[] {
@@ -131,15 +171,25 @@ function basisLabel(basis: Record<string, unknown>) {
   const constraint = text(basis.constraint)
   if (kind === 'required') return `${field} · 必传`
   if (kind === 'type') return `${field} · 类型 ${constraint}`
-  return `${field} · ${constraint}`
+  return [field, constraint].filter(Boolean).join(' · ') || kind
 }
 
-function assertionLabel(assertion: Record<string, unknown>) {
-  const source = text(assertion.assertSource)
-  const target = text(assertion.targetExpr)
-  const comparator = text(assertion.comparator)
-  const expected = text(assertion.expectedValue)
-  return [source, target, comparator, expected].filter(Boolean).join(' ')
+function normalizeAssertion(raw: unknown, index: number, caseKey: string): ApiDesignAssertionView | null {
+  const record = toRecord(raw)
+  if (!record) return null
+  const source = text(record.assertSource)
+  const comparator = text(record.comparator)
+  const expectedValue = record.expectedValue
+  return {
+    key: `${caseKey}-assert-${index}`,
+    source,
+    sourceLabel: ASSERT_SOURCE_LABELS[source] ?? (source || '断言'),
+    target: text(record.targetExpr),
+    comparator,
+    comparatorLabel: COMPARATOR_LABELS[comparator] ?? comparator,
+    expected: formatValue(expectedValue),
+    hasExpected: expectedValue !== undefined && expectedValue !== null && expectedValue !== '',
+  }
 }
 
 function normalizeCase(raw: unknown, index: number): ApiDesignCaseView | null {
@@ -147,11 +197,12 @@ function normalizeCase(raw: unknown, index: number): ApiDesignCaseView | null {
   if (!record) return null
   const title = text(record.title) || text(record.id) || `用例 ${index + 1}`
   const category = text(record.category) || 'positive'
+  const key = text(record.id) || `case-${index + 1}`
   const patch = toRecord(record.patch) ?? {}
   const expected = toRecord(record.expected) ?? {}
   const basis = toRecord(record.basis) ?? {}
   return {
-    key: text(record.id) || `case-${index + 1}`,
+    key,
     id: text(record.id),
     title,
     category,
@@ -161,19 +212,26 @@ function normalizeCase(raw: unknown, index: number): ApiDesignCaseView | null {
     statusClass: text(expected.statusClass),
     basisLabel: basisLabel(basis),
     patchOps: Object.entries(patch).flatMap(([section, value]) => normalizePatchOps(section, value)),
-    assertions: toRecordArray(expected.assertions).map(assertionLabel).filter(Boolean),
+    assertions: toRecordArray(expected.assertions).flatMap((item, assertionIndex) => {
+      const view = normalizeAssertion(item, assertionIndex, key)
+      return view ? [view] : []
+    }),
   }
 }
 
 function normalizeUncovered(raw: unknown, index: number): ApiDesignUncoveredView | null {
   const record = toRecord(raw)
   if (!record) return null
+  const reason = text(record.reason)
+  const reasonMeta = REASON_META[reason] ?? { label: reason || '未说明', description: '' }
   return {
     key: `uncovered-${index + 1}`,
-    kindLabel: text(record.kind) || 'constraint',
+    kindLabel: UNCOVERED_KIND_LABELS[text(record.kind)] ?? (text(record.kind) || '约束'),
     fieldLabel: targetLabel(text(record.section), text(record.field)),
     constraint: text(record.constraint),
-    reasonLabel: REASON_LABELS[text(record.reason)] ?? text(record.reason),
+    reason,
+    reasonLabel: reasonMeta.label,
+    reasonDescription: reasonMeta.description,
   }
 }
 

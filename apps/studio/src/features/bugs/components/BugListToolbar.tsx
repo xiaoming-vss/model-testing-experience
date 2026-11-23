@@ -1,17 +1,20 @@
 import { DownloadOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Popover, Select, Space, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import { SprintFilterSelect } from '@/domain/projects/components/SprintFilterSelect'
 import { listItems } from '@/services/api'
 import { BUG_STATUS_LABELS, BUG_SEVERITY_LABELS, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 import type { useBugList } from '../hooks/useBugList'
 type Model = ReturnType<typeof useBugList>
 export function BugListToolbar({ model }: { model: Model }) {
-  const { activeProjectId, sprints,
+  const { activeProjectId, sprints, sprintFilter,
     keyword, setKeyword, bugsQuery, setCreateOpen, setImportOpen } = model
   return (
           <div className="panel-header api-panel-header bugs-toolbar tp-list-toolbar">
             <div className="api-filter-group bugs-filters flex-1">
               <h1 className="tp-list-title">Bug 列表</h1>
+              <SprintFilterSelect value={sprintFilter.selectValue} options={sprintFilter.filterOptions}
+                loading={sprintFilter.loading} onChange={sprintFilter.selectSprint} />
               <Popover trigger="click" placement="bottomLeft" title="筛选与显示" content={<BugListFilters model={model} />}>
                 <Button type="text" icon={<FilterOutlined />} aria-label="筛选与显示">
                   筛选{(model.status || model.confirmed !== undefined || model.resolution || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}

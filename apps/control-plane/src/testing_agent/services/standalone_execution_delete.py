@@ -1,17 +1,13 @@
 """Delete a terminal independent execution while retaining formal assets and files."""
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.enums import RUN_ACTIVE_STATUSES
 from testing_agent.core.errors import ErrAiGenerateTaskRunRunning, ErrBadRequest, ErrNotFound
 from testing_agent.models.ai_execution import AiExecution
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
-from testing_agent.models.api_collection import ApiCollection
-from testing_agent.models.function_test_suite import FunctionTestSuite
-from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.worker_task import WorkerTask
 
 
@@ -78,22 +74,6 @@ async def delete_standalone_execution(
         or any(queue.status in RUN_ACTIVE_STATUSES for queue in queues)
     ):
         raise ErrAiGenerateTaskRunRunning()
-    import_ids = list(
-        (
-            await session.scalars(
-                select(AiGenerateVersionImport.import_id)
-                .where(AiGenerateVersionImport.attempt_id.in_(attempt_ids))
-                .with_for_update()
-            )
-        ).all()
-    )
-    if import_ids:
-        for target in (FunctionTestSuite, ApiCollection, UiTestSuite):
-            await session.execute(
-                update(target)
-                .where(target.effective_import_id.in_(import_ids))
-                .values(effective_import_id=None)
-            )
     for queue in queues:
         await session.delete(queue)
     await session.delete(execution)

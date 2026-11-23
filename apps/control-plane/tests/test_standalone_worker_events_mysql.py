@@ -1,5 +1,7 @@
 """Real MySQL exercise of the independent Worker callback transaction."""
 
+import json
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -7,9 +9,12 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.direct_graph import cases_output
 from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
+from testing_agent.domain.ai_execution_format import final_review_stage
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
@@ -18,7 +23,10 @@ from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
 from testing_agent.services import standalone_worker_authorization as auth
-from testing_agent.services.standalone_execution import start_standalone_execution
+from testing_agent.services.standalone_execution import (
+    start_standalone_execution,
+    workflow_stage_names,
+)
 from testing_agent.services.standalone_execution_view import project_standalone_execution
 from testing_agent.services.worker_task import WorkerTaskService
 
@@ -47,7 +55,7 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
                 request_id="mysql-worker",
                 actor_id="user",
                 connection_id="llm",
-                source={},
+                source={"sourceContent": json.dumps(material_artifact(), ensure_ascii=False)},
                 config={},
                 checkpoint_enabled=False,
             )
@@ -66,8 +74,8 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
                     current_stage="case_names",
                     stage_status="running",
                     config_json={
-                        "requirementAnalysis": {"purpose": "login"},
-                        "caseNames": {"points": ["login"]},
+                        "requirementAnalysis": scope_artifact(),
+                        "caseNames": points_artifact(),
                     },
                 ),
             )
@@ -80,8 +88,8 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
                     status="success",
                     result_yaml=cases_output(),
                     config_json={
-                        "requirementAnalysis": {"purpose": "login"},
-                        "caseNames": {"points": ["login"]},
+                        "requirementAnalysis": scope_artifact(),
+                        "caseNames": points_artifact(),
                     },
                 ),
             )
@@ -106,24 +114,38 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
             access.owned_task.assert_awaited_once_with(
                 "reader", task_row["task_id"], "function", action="read"
             )
-            from testing_agent.services.ai_candidate_review import GenerationCandidateReview
             from testing_agent.services.ai_task_scope import GenerationAccess
 
             repository = AiGenerateTaskRepository(session)
             generation_access = GenerationAccess(repository)
             owned_task = await repository.get_task(task_row["task_id"])
             generation_access.owned_task = AsyncMock(return_value=owned_task)
-            review = GenerationCandidateReview(repository, generation_access.owned_run)
-            edited = await review.update_result(
-                "function", execution_id, cases_output(), "reviewer"
+            final_stage = final_review_stage(
+                "functional_case_generate",
+                workflow_stage_names(
+                    "functional_case_generate", execution.source_snapshot_json or {}
+                ),
             )
-            assert edited["reviewStatus"] == "pending"
-            approved = await review.review(
-                "function", execution_id, {"action": "approve", "comment": "ready"}, "reviewer"
+            final = await session.scalar(
+                sa.select(AiGenerationAttempt)
+                .join(
+                    AiGenerationStage,
+                    AiGenerationStage.id == AiGenerationAttempt.stage_id,
+                )
+                .where(
+                    AiGenerationAttempt.execution_id == execution_id,
+                    AiGenerationStage.stage == final_stage,
+                    AiGenerationAttempt.status == "success",
+                )
+                .order_by(AiGenerationAttempt.attempt_no.desc(), AiGenerationAttempt.id.desc())
+                .limit(1)
             )
-            assert (
-                approved["reviewStatus"] == "approved" and approved["reviewerUserId"] == "reviewer"
-            )
+            assert final is not None
+            final.review_status = "approved"
+            final.reviewer_user_id = "reviewer"
+            final.reviewed_at = datetime.now(UTC)
+            final.review_comment = "ready"
+            await session.commit()
             history = await GenerationQueries(repository, generation_access).list_run_summaries(
                 "function",
                 task_row["task_id"],

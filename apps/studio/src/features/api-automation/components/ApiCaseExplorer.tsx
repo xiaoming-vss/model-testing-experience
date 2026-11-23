@@ -1,7 +1,9 @@
-import { SearchOutlined } from '@ant-design/icons'
+import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { Button, Empty, Input, Popconfirm, Tooltip } from 'antd'
 import { memo, useEffect, useState, type DragEvent } from 'react'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import { CaseInvalidatedTag } from '@/shared/components/CaseInvalidatedTag'
+import type { CaseInvalidationFilter } from '@/shared/utils/caseInvalidation'
 import type { ApiCase } from '@/services/api'
 import { DRAFT_CASE_ID, methodTone } from '../config/collectionConfig'
 import { getCaseDisplayPath, getCaseId } from '../utils/apiCaseEditor'
@@ -21,7 +23,12 @@ type Props = {
   loading: boolean
   /** 不带搜索词的用例总数，用于区分「还没有用例」与「没有匹配到用例」。 */
   totalCaseCount: number
+  /** 全量用例中有效 / 已失效的数量，用于筛选胶囊计数；未传时不显示。 */
+  validCaseCount?: number
+  invalidCaseCount?: number
   search: string
+  invalidatedFilter: CaseInvalidationFilter
+  onInvalidatedFilterChange: (filter: CaseInvalidationFilter) => void
   canReorder: boolean
   draggingCaseId: string | null
   onSearchChange: (value: string) => void
@@ -40,7 +47,11 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
   selectedCaseId,
   loading,
   totalCaseCount,
+  validCaseCount,
+  invalidCaseCount,
   search,
+  invalidatedFilter,
+  onInvalidatedFilterChange,
   canReorder,
   draggingCaseId,
   onSearchChange,
@@ -68,8 +79,9 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
     <section className="api-wb-explorer flex min-h-0 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] max-[1180.01px]:max-h-[460px]" aria-label="用例列表">
       <div className="api-wb-explorer-head flex items-center justify-between gap-2 border-b border-[var(--srf-divider)] px-3 py-2.5">
         <span className="api-wb-explorer-title inline-flex items-center gap-1.5 text-[12px] font-bold leading-[18px] text-[var(--srf-text)]">
+          <UnorderedListOutlined className="text-[13px] text-[var(--srf-accent)]" aria-hidden />
           用例列表
-          <span className="api-wb-explorer-count rounded-full bg-[var(--srf-count-badge)] px-1.5 font-mono text-[11px] font-medium leading-[18px] text-[var(--srf-accent-strong)]">{cases.length}</span>
+          <span className="api-wb-explorer-count rounded-full bg-[var(--srf-count-badge)] px-1.5 font-mono text-[11px] font-medium leading-[18px] text-[var(--srf-accent-strong)]">{totalCaseCount}</span>
         </span>
         <span className="api-wb-explorer-actions inline-flex items-center gap-0.5">
           <ProjectActionButton
@@ -103,6 +115,25 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
           placeholder="搜索用例名称 / 接口路径"
           onChange={(event) => onSearchChange(event.target.value)}
         />
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--srf-text-secondary)]">
+          <span>状态:</span>
+          {([
+            ['all', '全部', totalCaseCount],
+            ['valid', '有效', validCaseCount],
+            ['invalid', '已失效', invalidCaseCount],
+          ] as const).map(([value, label, count]) => (
+            <button
+              key={value}
+              type="button"
+              className={`tp-chip px-1.5 text-[11px]${invalidatedFilter === value ? ' active' : ''}`}
+              aria-pressed={invalidatedFilter === value}
+              onClick={() => onInvalidatedFilterChange(value)}
+            >
+              {label}
+              {count === undefined ? null : <span className="ml-1 font-mono text-[10px] opacity-70" aria-hidden="true">{count}</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="api-wb-explorer-scroll min-h-0 flex-auto overflow-auto p-2">
@@ -164,6 +195,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                   <span className="api-wb-case-item-head flex min-w-0 flex-auto items-center gap-1.5">
                     <span className="api-wb-case-method flex-none rounded-[4px] border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-[5px] font-mono text-[10px] font-bold leading-4 text-[var(--srf-tone-text)]">{item.method}</span>
                     <span className="api-wb-case-item-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-[18px] text-[var(--srf-text)]">{item.name}</span>
+                    <CaseInvalidatedTag invalidatedAt={item.invalidatedAt} className="flex-none" />
                     {isDraft ? <span className="api-wb-case-draft rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 text-[10px] leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))]">草稿</span> : null}
                   </span>
                   <span className={`api-wb-case-item-actions flex-none transition-opacity duration-150 ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
@@ -205,6 +237,10 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
             ) : null}
           </div>
         )}
+      </div>
+      <div className="api-wb-explorer-foot flex flex-none items-center justify-between gap-2 border-t border-[var(--srf-divider)] px-3 py-2 text-[11px] text-[var(--srf-text-muted)]">
+        <span>共 {cases.length} 条</span>
+        <span>{canReorder ? '拖拽可排序' : '当前筛选结果'}</span>
       </div>
     </section>
   )

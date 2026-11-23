@@ -7,10 +7,7 @@ import json
 from datetime import datetime
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
@@ -42,7 +39,6 @@ class TestReportExecutor(TaskExecutor):
         skill_name: str = TEST_REPORT_SKILL_NAME,
     ) -> None:
         self.agent_config = agent_config
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.skill_name = skill_name
 

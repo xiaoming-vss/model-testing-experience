@@ -48,7 +48,8 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
     enabled: Boolean(sprintId),
   })
 
-  const projectId = sprintQuery.data?.projectId ?? sprintQuery.data?.project_id
+  // 测试集归属项目，需求/迭代只是可选的来源关联，不能再用它们反推项目。
+  const projectId = collectionQuery.data?.projectId ?? collectionQuery.data?.project_id
 
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', projectId, 'api'],

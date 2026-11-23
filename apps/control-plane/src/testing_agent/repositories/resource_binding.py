@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import NamedTuple
 
 from sqlalchemy import RowMapping, select
 
@@ -17,13 +16,6 @@ _GITLAB_ACTIVE_REPO_BINDING_CRITERIA = (
     ResourceBinding.remote_resource_type == "repository",
     ResourceBinding.status == "active",
 )
-
-
-class RepoBindingWithSprint(NamedTuple):
-    """需求代码绑定与其所属迭代(基线解析历史行)。"""
-
-    binding: ResourceBinding
-    sprint: Sprint
 
 
 class ResourceBindingRepository(ResourceRepository):
@@ -212,89 +204,6 @@ class ResourceBindingRepository(ResourceRepository):
                 )
             ).all()
         )
-
-    async def exists_active_requirement_repo_binding(
-        self,
-        requirement_id: str,
-        repository_id: str,
-        *,
-        instance: str | None = None,
-    ) -> bool:
-        row = await self.session.scalar(
-            select(ResourceBinding.binding_id)
-            .where(
-                *_GITLAB_ACTIVE_REPO_BINDING_CRITERIA,
-                ResourceBinding.local_resource_type == "requirement",
-                ResourceBinding.local_resource_id == requirement_id,
-                ResourceBinding.remote_resource_id == repository_id,
-                *((ResourceBinding.instance_key == instance,) if instance is not None else ()),
-            )
-            .limit(1)
-        )
-        return row is not None
-
-    async def list_active_repo_bindings_for_requirement(
-        self, requirement_id: str
-    ) -> Sequence[ResourceBinding]:
-        """需求激活的 GitLab 仓库绑定(共享资产,不过滤 user_id,ADR-0007)。"""
-        return list(
-            (
-                await self.session.scalars(
-                    select(ResourceBinding)
-                    .where(
-                        *_GITLAB_ACTIVE_REPO_BINDING_CRITERIA,
-                        ResourceBinding.local_resource_type == "requirement",
-                        ResourceBinding.local_resource_id == requirement_id,
-                    )
-                    .order_by(ResourceBinding.id.asc())
-                )
-            ).all()
-        )
-
-    async def list_active_repo_bindings_for_sprint(
-        self, sprint_id: str
-    ) -> Sequence[ResourceBinding]:
-        """迭代内所有激活的 GitLab 需求代码绑定(仓库),供迭代代码概览聚合。
-
-        覆盖该迭代全部需求(需求与迭代均未删除),不过滤 user_id(ADR-0007);
-        按绑定创建时间倒序,创建时间相同时取 id 较大者在前,保证聚合结果确定。
-        """
-        return list(
-            (
-                await self.session.scalars(
-                    select(ResourceBinding)
-                    .join(
-                        Requirement,
-                        Requirement.requirement_id == ResourceBinding.local_resource_id,
-                    )
-                    .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-                    .where(
-                        *_GITLAB_ACTIVE_REPO_BINDING_CRITERIA,
-                        ResourceBinding.local_resource_type == "requirement",
-                        Sprint.sprint_id == sprint_id,
-                    )
-                    .order_by(ResourceBinding.created_at.desc(), ResourceBinding.id.desc())
-                )
-            ).all()
-        )
-
-    async def list_active_repo_bindings_with_sprint_for_project(
-        self, project_id: str
-    ) -> Sequence[RepoBindingWithSprint]:
-        """项目内激活的 GitLab 需求代码绑定(仓库)及其所属迭代:
-        基线解析历史口径,需求与迭代均未删除,不过滤 user_id(ADR-0007)。"""
-        rows = await self.session.execute(
-            select(ResourceBinding, Sprint)
-            .join(Requirement, Requirement.requirement_id == ResourceBinding.local_resource_id)
-            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-            .where(
-                *_GITLAB_ACTIVE_REPO_BINDING_CRITERIA,
-                ResourceBinding.local_resource_type == "requirement",
-                Sprint.project_id == project_id,
-            )
-            .order_by(ResourceBinding.created_at.desc(), ResourceBinding.id.desc())
-        )
-        return [RepoBindingWithSprint(binding, sprint) for binding, sprint in rows.all()]
 
     async def get(
         self, resource_type: str, resource_id: str, binding_id: str

@@ -17,10 +17,7 @@
 
 | 模型 | 保留理由 |
 | --- | --- |
-| `AiGenerateTaskRunRequest` | AI 生成任务载荷包含任务类型专属字段，由任务域解析 |
-| `CodeRiskAnalysisRunRequest` | 代码风险运行载荷由任务域解析 |
 | `CodeRiskAnalysisTaskRequest` | 代码风险任务载荷由任务域解析 |
-| `RepositoryProfileRunRequest` | 仓库画像运行载荷由任务域解析 |
 | `RepositoryProfileTaskRequest` | 仓库画像任务载荷由任务域解析 |
 | `TestReportGenerateTaskRunRequest` | 测试报告任务载荷由任务域解析 |
 

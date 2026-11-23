@@ -47,6 +47,7 @@ class PerfCaseSummaryResponse(BaseModel):
     data_files: list[PerfDataFile]
     created_at: datetime | str | None = ""
     updated_at: datetime | str | None = ""
+    invalidated_at: datetime | None = None
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

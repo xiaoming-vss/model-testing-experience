@@ -49,6 +49,18 @@ class DocumentationCheckTests(unittest.TestCase):
         self.write("docs/README.md", "[Missing](missing.md)\n")
         self.assertTrue(any("missing.md" in issue for issue in self.issues()))
 
+    def test_heading_anchors_and_explicit_ids(self):
+        self.write("docs/guide.md", '# 中文标题（说明）\n\n## Repeat\n\n## Repeat-1\n\n## Repeat\n\n<a id="manual"></a>\n')
+        self.write("docs/README.md", "[a](guide.md#中文标题说明) [b](guide.md#repeat-2) [c](guide.md#manual)\n")
+        self.assertEqual(self.issues(), [])
+        self.write("docs/README.md", "[broken](guide.md#missing)\n")
+        self.assertTrue(any("文档锚点不存在" in issue for issue in self.issues()))
+
+    def test_agent_skill_links_are_checked(self):
+        self.write(".agents/skills/review/SKILL.md", "[Rules](rules.md#missing)\n")
+        self.write(".agents/skills/review/rules.md", "# Rules\n")
+        self.assertTrue(any("文档锚点不存在" in issue for issue in self.issues()))
+
     def test_missing_source_path_fails(self):
         self.write("docs/studio/README.md", "Use `src/missing.ts`.\n")
         self.assertTrue(any("src/missing.ts" in issue for issue in self.issues()))

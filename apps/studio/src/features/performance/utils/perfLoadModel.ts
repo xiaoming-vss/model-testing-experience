@@ -208,22 +208,6 @@ export function serializePerfLoad(values: PerfLoadFormValues): Record<string, un
   return load
 }
 
-export function updatePerfLoadInYaml(yamlText: string, values: PerfLoadFormValues): string {
-  try {
-    const document = parseDocument(yamlText)
-    if (document.errors.length > 0) return yamlText
-    document.setIn(['case', 'load'], serializePerfLoad(values))
-    return document.toString({ indent: 2, lineWidth: 0 }).trimEnd()
-  } catch {
-    return yamlText
-  }
-}
-
-export function countPerfStepsFromYaml(yamlText: string): number {
-  const caseNode = toRecord(parseYamlRoot(yamlText)?.case)
-  return Array.isArray(caseNode?.steps) ? caseNode.steps.length : 0
-}
-
 export function stagedLoadPeakVus(values: PerfLoadFormValues) {
   if (values.stages.length === 0) return 0
   return Math.max(...values.stages.map(stage => Math.max(0, Math.round(stage.target))))
@@ -289,5 +273,3 @@ export function perfLoadFormError(values: PerfLoadFormValues, stepCount: number)
   if (values.model === 'request_rate' && stepCount > 1) return '固定请求速率只支持单步骤迭代'
   return ''
 }
-
-export const PERF_LOAD_DEFAULTS = DEFAULT_LOAD

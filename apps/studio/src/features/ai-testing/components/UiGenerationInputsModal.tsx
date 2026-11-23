@@ -10,13 +10,14 @@ import taskStyles from '../styles/ai-task-detail.module.css'
 const steps = [{ title: '选择源码' }, { title: '选择用例' }, { title: '核对配置' }]
 
 export function UiGenerationInputsModal({
-  requirementId, refreshInputs, source, sourceOptions, busy = false, onOpenProfile, onClose, onSubmit,
+  requirementId, refreshInputs, source, sourceOptions, busy = false, candidateMode = false, onOpenProfile, onClose, onSubmit,
 }: {
   requirementId: string
   refreshInputs: boolean
   source?: UiGenerationSourceInputs | null
   sourceOptions: UiGenerationSourceOptionsState
   busy?: boolean
+  candidateMode?: boolean
   onOpenProfile?: () => void
   onClose: () => void
   onSubmit: (inputs: UiGenerationRunInputs) => Promise<unknown>
@@ -28,15 +29,15 @@ export function UiGenerationInputsModal({
   const [error, setError] = useState<unknown>()
   const submitting = useRef(false)
   const stepTop = useRef<HTMLDivElement>(null)
-  const { selection, resolved, setProfileVersionId, setRepositoryId, setCommitMode } = useUiGenerationSourceSelection(sourceOptions.data)
-  const { version, repository } = resolved
+  const { selection, resolved, setRepositoryId, setCommitMode } = useUiGenerationSourceSelection(sourceOptions.data)
+  const { profile, repository } = resolved
   const canContinueSource = !sourceOptions.loading && !sourceOptions.error && resolved.ready
   const canSubmit = !saving && !busy && ready && Boolean(ids?.length) && canContinueSource
 
   useEffect(() => { stepTop.current?.closest('.ant-modal-body')?.scrollTo?.(0, 0) }, [step])
 
   async function submit() {
-    if (submitting.current || !canSubmit || !ids?.length || !version || !repository) return
+    if (submitting.current || !canSubmit || !ids?.length || !profile || !repository) return
     submitting.current = true
     setSaving(true)
     setError(undefined)
@@ -44,7 +45,7 @@ export function UiGenerationInputsModal({
       await onSubmit({
         refreshInputs,
         functionCaseIds: ids,
-        sourceProfileVersionId: version.versionId,
+        sourceProfileCandidateId: profile.candidateId,
         sourceRepositoryId: repository.repositoryId,
         sourceCommitMode: selection.commitMode,
       })
@@ -81,7 +82,7 @@ export function UiGenerationInputsModal({
     {busy && !saving ? <Alert showIcon type="info" title="UI 测试正在运行，请等待本次运行结束。" /> : null}
     {step === 0 ? <UiGenerationSourceConfig requirementId={requirementId} optionsState={sourceOptions}
       selection={selection} resolved={resolved} disabled={saving || busy}
-      onProfileVersionChange={setProfileVersionId} onRepositoryChange={setRepositoryId} onCommitModeChange={setCommitMode}
+      onRepositoryChange={setRepositoryId} onCommitModeChange={setCommitMode}
       onOpenProfile={onOpenProfile ? () => { onClose(); onOpenProfile() } : undefined} /> : null}
     {step === 1 ? <fieldset disabled={saving || busy} className="gc-ui-input-cases gc-ui-input-step-panel m-0 mt-4 min-w-0 border-0 p-0 [&_.ui-generation-case-selector]:mb-0">
       <UiGenerationCaseSelector requirementId={requirementId} open value={ids} onChange={setIds} onReady={setReady}
@@ -89,15 +90,16 @@ export function UiGenerationInputsModal({
     </fieldset> : null}
     {step === 2 ? <div className="gc-ui-input-confirm gc-ui-input-step-panel mt-4 grid gap-4">
       <dl className="gc-ui-input-summary m-0 grid grid-cols-[110px_minmax(0,1fr)] overflow-hidden rounded-[8px] border border-[var(--app-surface-divider)] [&>*]:m-0 [&>*]:border-b [&>*]:border-[var(--app-surface-divider)] [&>*]:px-3 [&>*]:py-2.5 [&>:nth-last-child(-n+2)]:border-b-0 [&_dd]:min-w-0 [&_dd]:[overflow-wrap:anywhere] [&_dt]:bg-[var(--app-surface-hover)] [&_dt]:text-[var(--app-surface-text-muted)] max-[640.01px]:grid-cols-[82px_minmax(0,1fr)]">
-        <dt>画像版本</dt><dd>{version?.label ?? '未选择'}</dd>
+        <dt>当前画像</dt><dd>{profile?.label ?? '未选择'}</dd>
         <dt>前端仓库</dt><dd>{repository?.pathWithNamespace ?? '未选择'}</dd>
         <dt>分支</dt><dd>{repository?.branch || '未记录'}</dd>
         <dt>Commit</dt><dd>{selection.commitMode === 'profile' ? repository?.commit || '未记录' : '启动时读取分支最新 HEAD'}</dd>
         <dt>功能用例</dt><dd>{ids?.length ?? 0} 条</dd>
       </dl>
-      <Alert showIcon type={refreshInputs ? 'warning' : 'info'} title={refreshInputs
-        ? '本次将创建新的输入批次，从元素控件清单重新生成。'
-        : '将从元素控件清单开始生成，完成后进入待审核。'} />
+      <Alert showIcon type={refreshInputs ? 'warning' : 'info'} title={candidateMode
+        ? '将以本次输入生成一份候选，已有候选和当前内容会保留。'
+        : refreshInputs ? '本次将创建新的输入批次，从元素控件清单重新生成。'
+          : '将从元素控件清单开始生成，完成后生成候选结果。'} />
     </div> : null}
   </Modal>
 }

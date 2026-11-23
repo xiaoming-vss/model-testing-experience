@@ -14,7 +14,7 @@ import { UiSuiteRunConfigCell } from './UiSuiteRunConfigCell'
 import { UiTestSuiteDrawer, type UiTestSuiteFormValues } from './UiTestSuiteDrawer'
 import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG } from '../constants/defaultRunConfig'
 import { buildUiSuiteRunPayload } from '../utils/runHelpers'
-import { api, ApiError, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
+import { api, ApiError, listItems, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
 import { formatTime, getErrorMessage, normalizeUiTestSuiteId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
 import { entityCardBadgesClass, entityCardDescClass, entityCardDescEmptyClass, entityCardGridClass, tableFooterClass } from '@/shared/utils/surfaceClasses'
@@ -38,16 +38,11 @@ function getUiSuiteRunId(run?: UiTestSuiteRunSummary | null) {
 export const UiTestSuiteSection = forwardRef<
   UiTestSuiteSectionRef,
   {
+    projectId?: string
     requirementId?: string
-    requirementIds?: string[]
-    selectedSprintId?: string
-    sprintOptions?: Array<{ label: string; value: string }>
     requirementOptions?: Array<{ label: string; value: string }>
-    sprintName?: string
     requirementName?: string
-    sprintNameResolver?: (suite: UiTestSuite) => string
     requirementNameResolver?: (suite: UiTestSuite) => string
-    onCreateSprintChange?: (value?: string) => void
     /** 工具栏里的搜索词，前端过滤名称与描述；空态里的「清空搜索」回调也在这里。 */
     keyword?: string
     onClearKeyword?: () => void
@@ -59,16 +54,11 @@ export const UiTestSuiteSection = forwardRef<
   }
 >(function UiTestSuiteSection(
   {
+    projectId,
     requirementId,
-    requirementIds,
-    selectedSprintId,
-    sprintOptions,
     requirementOptions,
-    sprintName,
     requirementName,
-    sprintNameResolver,
     requirementNameResolver,
-    onCreateSprintChange,
     keyword = '',
     onClearKeyword,
     onRefreshingChange,
@@ -86,36 +76,24 @@ export const UiTestSuiteSection = forwardRef<
   const [form] = Form.useForm<UiTestSuiteFormValues>()
 
   const suitesQuery = useQuery({
-    queryKey: ['uiTestSuites', requirementId ?? requirementIds?.join(',') ?? ''],
+    queryKey: ['uiTestSuites', projectId ?? '', requirementId ?? 'all'],
     queryFn: async () => {
-      if (requirementId) {
-        const suites = await api.getUiTestSuites(requirementId)
-        return suites.map((suite) => ({
-          ...suite,
-          requirementId: suite.requirementId ?? suite.requirement_id ?? requirementId,
-        }))
-      }
-
-      if (!requirementIds || requirementIds.length === 0) return []
-
-      const suiteGroups = await Promise.all(
-        requirementIds.map(async (currentRequirementId) => {
-          const suites = await api.getUiTestSuites(currentRequirementId)
-          return suites.map((suite) => ({
-            ...suite,
-            requirementId: suite.requirementId ?? suite.requirement_id ?? currentRequirementId,
-          }))
-        }),
-      )
-
-      return suiteGroups.flat()
+      if (!projectId) return []
+      return listItems(await api.getProjectUiTestSuites(projectId))
     },
-    enabled: Boolean(requirementId) || Boolean(requirementIds?.length),
+    enabled: Boolean(projectId),
   })
-  const suites = useMemo(() => suitesQuery.data ?? [], [suitesQuery.data])
-  const resolvedSprintName = sprintName || sprintOptions?.find((item) => item.value === selectedSprintId)?.label || selectedSprintId || '-'
+  const suites = useMemo(() => {
+    const data = suitesQuery.data ?? []
+    if (!requirementId) return data
+    return data.filter(
+      (suite) => (suite.requirementId ?? suite.requirement_id) === requirementId,
+    )
+  }, [requirementId, suitesQuery.data])
   const resolvedRequirementName =
-    requirementName || requirementOptions?.find((item) => item.value === requirementId)?.label || requirementId || '-'
+    requirementName ||
+    requirementOptions?.find((item) => item.value === requirementId)?.label ||
+    (requirementId ? requirementId : '项目级')
 
   const orderedSuites = useMemo(
     () =>
@@ -139,10 +117,9 @@ export const UiTestSuiteSection = forwardRef<
     [filteredSuites, page, pageSize],
   )
 
-  const requirementScopeKey = requirementIds?.join(",") ?? ""
   useEffect(() => {
     setPage(1)
-  }, [keyword, requirementId, requirementScopeKey, selectedSprintId])
+  }, [keyword, requirementId, projectId])
 
 
   const saveSuiteMutation = useMutation({
@@ -152,8 +129,7 @@ export const UiTestSuiteSection = forwardRef<
         return api.updateUiTestSuite(suiteId, buildUiTestSuiteUpdatePayload(editingSuite, values))
       }
       const targetRequirementId = values.requirementId || requirementId
-      if (!targetRequirementId) throw new Error('请选择所属需求')
-      return api.createUiTestSuite(targetRequirementId, {
+      const payload = {
         name: values.name,
         description: values.description,
         ...(values.headless !== undefined ? { headless: values.headless } : {}),
@@ -162,7 +138,10 @@ export const UiTestSuiteSection = forwardRef<
         ...(values.viewportHeight !== undefined ? { viewportHeight: values.viewportHeight } : {}),
         ...(values.defaultStepTimeoutMs !== undefined ? { defaultStepTimeoutMs: values.defaultStepTimeoutMs } : {}),
         screenshotPolicy: values.screenshotPolicy ?? DEFAULT_UI_TEST_SUITE_RUN_CONFIG.screenshotPolicy,
-      })
+      }
+      if (targetRequirementId) return api.createUiTestSuite(targetRequirementId, payload)
+      if (!projectId) throw new Error('请先选择项目')
+      return api.createProjectUiTestSuite(projectId, payload)
     },
     onSuccess: (suite) => {
       const suiteId = normalizeUiTestSuiteId(suite)
@@ -226,18 +205,18 @@ export const UiTestSuiteSection = forwardRef<
   const openCreateDrawer = useCallback(() => {
     setEditingSuite(null)
     form.setFieldsValue({
-      sprintId: selectedSprintId,
       requirementId,
       name: '',
       description: '',
       ...DEFAULT_UI_TEST_SUITE_RUN_CONFIG,
     })
     setDrawerOpen(true)
-  }, [form, requirementId, selectedSprintId])
+  }, [form, requirementId])
 
   function openEditDrawer(suite: UiTestSuite) {
     setEditingSuite(suite)
     form.setFieldsValue({
+      requirementId: suite.requirementId ?? suite.requirement_id ?? undefined,
       name: suite.name,
       description: suite.description,
       headless: suite.headless ?? DEFAULT_UI_TEST_SUITE_RUN_CONFIG.headless,
@@ -257,14 +236,15 @@ export const UiTestSuiteSection = forwardRef<
   function getSuiteRowContext(suite: UiTestSuite) {
     const suiteId = normalizeUiTestSuiteId(suite)
     const suiteDescription = suite.description || '暂无测试集描述'
-    const suiteSprintName = sprintNameResolver?.(suite) ?? resolvedSprintName
+    const suiteRequirementId = suite.requirementId ?? suite.requirement_id
     const suiteRequirementName = requirementNameResolver?.(suite) ?? resolvedRequirementName
 
-    return { suiteDescription, suiteId, suiteRequirementName, suiteSprintName }
+    return { suiteDescription, suiteId, suiteRequirementId, suiteRequirementName }
   }
 
   function renderSuiteCard(suite: UiTestSuite) {
-    const { suiteDescription, suiteId, suiteRequirementName, suiteSprintName } = getSuiteRowContext(suite)
+    const { suiteDescription, suiteId, suiteRequirementId, suiteRequirementName } =
+      getSuiteRowContext(suite)
     const title = suiteId ? (
       <Link to={`/ui-automation/suites/${suiteId}`} title={suite.name}>
         {suite.name}
@@ -276,8 +256,8 @@ export const UiTestSuiteSection = forwardRef<
         key={suiteId || suite.name}
         title={title}
         meta={[
-          { label: '所属迭代', value: suiteSprintName },
           { label: '所属需求', value: suiteRequirementName },
+          { label: '范围', value: suiteRequirementId ? '需求关联' : '项目级' },
         ]}
         footerNote={<>最近更新 {formatTime(pickUpdatedAt(suite))}</>}
         actions={
@@ -329,7 +309,7 @@ export const UiTestSuiteSection = forwardRef<
                 image={<AppstoreOutlined />}
                 description={
                   <Space orientation="vertical" size={4}>
-                    <Text strong>{keyword.trim() ? '没有符合搜索条件的 UI测试集' : '当前需求下还没有 UI测试集'}</Text>
+                    <Text strong>{keyword.trim() ? '没有符合搜索条件的 UI测试集' : '当前项目下还没有 UI测试集'}</Text>
                     <Text type="secondary">
                       {keyword.trim()
                         ? '换个关键词，或者清空搜索看全部测试集。'
@@ -377,16 +357,7 @@ export const UiTestSuiteSection = forwardRef<
           setEditingSuite(null)
           form.resetFields()
         }}
-        sprintOptions={editingSuite ? undefined : sprintOptions}
-        requirementOptions={editingSuite ? undefined : requirementOptions}
-        onSprintChange={
-          editingSuite
-            ? undefined
-            : (value) => {
-                form.setFieldValue('requirementId', undefined)
-                onCreateSprintChange?.(value)
-              }
-        }
+        requirementOptions={requirementOptions}
         onFinish={(values) => saveSuiteMutation.mutate(values)}
       />
     </div>

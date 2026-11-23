@@ -1,62 +1,34 @@
-import { ArrowLeftOutlined, CloseOutlined, EllipsisOutlined, FileTextOutlined, HistoryOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Spin, Typography } from 'antd'
+import { CloseOutlined, EllipsisOutlined, FileTextOutlined, HistoryOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { Alert, Button, Empty, Spin } from 'antd'
+import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getErrorMessage } from '@/utils/format'
 import { randomId } from '@/shared/utils/crypto'
+import { message } from '@/shared/utils/feedback'
+import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { requirementDesignApi } from '../api/requirementDesign.api'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { useRequirementGenerationChain } from '../hooks/useRequirementGenerationChain'
 import { useRequirementRepositoryProfileWorkspace } from '../hooks/useRequirementRepositoryProfileWorkspace'
 import { useUiGenerationSourceOptions, useUiGenerationSourceSnapshot } from '../hooks/useUiGenerationSourceOptions'
-import type { GenerationChain, GenerationChainKind, GenerationChainStage, UiGenerationSourceInputs } from '../api/generationChain.api'
+import type { GenerationChain, GenerationChainKind, GenerationChainStage } from '../api/generationChain.api'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { GenerationChainModal } from './GenerationChainModal'
-import { GC_STATE_CLASS } from './generationClasses'
 import { RequirementRepositoryProfileInspector } from './RequirementRepositoryProfileInspector'
 import { RequirementRepositoryProfileReading } from './RequirementRepositoryProfileReading'
-import { UiGenerationSourceTrace } from './UiGenerationSourceTrace'
 import { UiGenerationSourcePanel } from './UiGenerationSourcePanel'
 import { ApiGenerationSourcePanel } from './ApiGenerationSourcePanel'
 import { FunctionalCaseRelationsModal } from './FunctionalCaseRelationsModal'
 import { RequirementGenerationCanvas } from './RequirementGenerationCanvas'
 import { animateInspectorContents, animateReadingExit, setReadingOrigin } from './readingTransition'
-import { generationStageLabel, generationStageClass, generationFailureMeta } from '../utils/generationStageDisplay'
+import { generationFailureMeta } from '../utils/generationStageDisplay'
 import { getRunPipelineModel } from '../utils/runPipeline'
 
 const laneOrder: GenerationChainKind[] = ['requirement_analysis', 'function', 'api', 'ui']
-const API_STAGE_DESCRIPTIONS: Record<string, string> = {
-  interface_extract: '提取接口库中的接口配置，审核通过后可用于设计 API 用例。',
-  api_design: '基于已审核的接口配置设计正向、反向和边界用例，审核通过后用于生成 YAML。',
-  generate: '使用已审核的接口配置和用例设计生成 API 用例 YAML。',
-}
 /** 侧栏可交给页面级容器渲染，避免被画布大容器包裹；未提供 host 时保持内嵌。 */
 function InspectorPortal({ host, children }: { host?: HTMLElement | null; children: ReactNode }) {
   return host ? createPortal(children, host) : <>{children}</>
-}
-/** 侧栏追溯：显示当前待审核产物或所选版本实际引用的上游版本。 */
-function UpstreamTrace({ stage, chain, upstreamStages, versionKey, upstream, versionUpstreams, source, loading }: {
-  stage: GenerationChainStage
-  upstreamStages: GenerationChainStage[]
-  chain: GenerationChain
-  versionKey: string
-  upstream: Record<string, string>
-  versionUpstreams?: Record<string, string>
-  source?: UiGenerationSourceInputs | null
-  loading?: boolean
-}) {
-  return <section className="gc-inspector-section"><h3>上游追溯</h3><div className="gc-inspector-trace flex flex-wrap gap-[5px]">
-    {stage.upstreamStages.length ? stage.upstreamStages.map(name => {
-      const upstreamStage = upstreamStages.find(item => item.stage === name)
-      const selectedId = versionKey === 'draft' || !versionKey ? upstream[name] : versionUpstreams?.[name]
-      const version = upstreamStage?.versions.find(item => item.versionId === selectedId)
-      if (versionKey && versionKey !== 'draft' && !version) return null
-      const missing = Boolean(selectedId) && !version
-      return <span className={`gc-trace-chip${missing ? ' is-danger' : ''}`} key={name}>
-        {upstreamStage?.label ?? name}<b>{version?.label ?? (missing ? '上游已删除' : '未选择')}</b>
-      </span>
-    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? '接口库接口' : '需求材料'}<b>只读来源</b></span> : null}
-    {chain.kind === 'ui' ? <UiGenerationSourceTrace source={source} loading={loading} /> : null}
-  </div></section>
 }
 type SpecialKind = 'content' | 'codeRisk' | 'repositoryProfile' | 'relations'
 export type RequirementReadingNodeKind = 'document' | 'stage' | 'relations'
@@ -79,7 +51,8 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   const exitAnimation = useRef<Animation | null>(null)
   useEffect(() => () => { exitAnimation.current?.cancel() }, [])
   const workspace = useRequirementGenerationChain({ requirementId, projectId, enabled: Boolean(projectId) })
-  const { overview, filter, openStage, refresh, chain, stage, selected, versionOptions, versionKey } = workspace
+  const { overview, openStage, refresh, chain, stage, selected } = workspace
+  const guardChanges = () => canNavigateAway()
   const [inspectorActionContainer, setInspectorActionContainer] = useState<HTMLDivElement | null>(null)
   const [inspectorContainer, setInspectorContainer] = useState<HTMLDivElement | null>(null)
   const [documentOpen, setDocumentOpen] = useState(false)
@@ -146,7 +119,7 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   }, [requirementId, canWrite, Boolean(overview.data), initializationAttempt])
   const visibleChains = laneOrder.map(kind => chains.find(item => item.kind === kind)).filter(Boolean) as GenerationChain[]
   const selectStage = (kind: GenerationChainKind, entry: GenerationChainStage) => {
-    if (!workspace.guardUnsaved()) return false
+    if (!guardChanges()) return false
     setInspectorOpen(true)
     setSourceSelected(null)
     setSpecial(null); setDocumentOpen(false); setRelationsOpen(false); setModalOpen(false); setProfileReadingOpen(false)
@@ -168,13 +141,13 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
       setInspectorOpen(false)
     })
   }
-  const closeStageReading = () => { if (workspace.guardUnsaved()) closeReading(() => {
-    setModalOpen(false); setRelationsOpen(false); setInspectorOpen(false); workspace.setRevisionOpen(false); refresh()
+  const closeStageReading = () => { if (guardChanges()) closeReading(() => {
+    setModalOpen(false); setRelationsOpen(false); setInspectorOpen(false); refresh()
   }) }
   const closeProfileReading = () => closeReading(() => { setProfileReadingOpen(false); setInspectorOpen(false) })
   // 面包屑点「需求名」一级：退出阅读态，回到生成流程。
-  const leaveReading = () => { if (workspace.guardUnsaved()) closeReading(() => {
-    setModalOpen(false); setRelationsOpen(false); setDocumentOpen(false); setInspectorOpen(false); workspace.setRevisionOpen(false); refresh()
+  const leaveReading = () => { if (guardChanges()) closeReading(() => {
+    setModalOpen(false); setRelationsOpen(false); setDocumentOpen(false); setInspectorOpen(false); refresh()
   }) }
   const leaveReadingRef = useRef<() => void>(() => {})
   useEffect(() => { leaveReadingRef.current = leaveReading })
@@ -189,10 +162,10 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
     onReadingNodeChange(null)
   }, [onReadingNodeChange, profileReadingOpen, documentOpen, relationsOpen, modalOpen, stage, leaveReadingAction])
   const selectSpecial = (value: SpecialKind) => {
-    if (!workspace.guardUnsaved()) return false
+    if (!guardChanges()) return false
     setInspectorOpen(true)
     setSourceSelected(null)
-    setSpecial(value); setDocumentOpen(false); setModalOpen(false); setRelationsOpen(false); setProfileReadingOpen(false); workspace.setRevisionOpen(false)
+    setSpecial(value); setDocumentOpen(false); setModalOpen(false); setRelationsOpen(false); setProfileReadingOpen(false)
     return true
   }
   const openSpecial = (value: SpecialKind, origin?: HTMLElement) => {
@@ -209,24 +182,27 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   }
   // 没有画像时的引导：收起当前生成设置，打开仓库画像阅读区与运行操作。
   const openProfileGuide = () => {
-    if (!workspace.guardUnsaved()) return
+    if (!guardChanges()) return
     setModalOpen(false)
-    workspace.setRevisionOpen(false)
     openSpecial('repositoryProfile')
   }
   const functionChain = chains.find(item => item.kind === 'function')
   const detailedStage = functionChain?.stages.find(item => item.stage === 'detailed_cases')
-  const detailedDraft = detailedStage?.draft && !detailedStage.draft.invalidated ? detailedStage.draft : undefined
-  // 用例图谱挂在「完整用例」的运行上：有待审核产物时跟随该次运行，否则跟随最新已通过版本。
-  const relationsRunId = functionChain?.configured
-    ? detailedDraft?.runId ?? detailedStage?.latestVersion?.sourceRunId
+  const currentCases = useQuery({
+    queryKey: ['candidateWorkflow', requirementId, 'function', 'detailed_cases', 'current'],
+    queryFn: () => generationCandidatesApi.current(requirementId, 'function', 'detailed_cases'),
+    enabled: Boolean(requirementId && functionChain?.candidateMode),
+  })
+  const candidateRelations = functionChain?.candidateMode && currentCases.data?.candidateId
+    ? { requirementId, currentToken: currentCases.data.currentToken }
     : undefined
+  const relationsRunId = currentCases.data?.sourceAttemptId ?? currentCases.data?.candidateId ?? undefined
   const relations = relationsRunId ? { active: inspectorOpen && special === 'relations', onOpen: (origin?: HTMLElement) => openSpecial('relations', origin) } : undefined
-  const profileSelectedVersion = profileWorkspace.selectedVersion
+  const profileSelectedCandidate = profileWorkspace.selectedProfileView
   const profileModel = profileWorkspace.latestRun
     ? getRunPipelineModel(profileWorkspace.latestRun, { stages: ['generate'] })
     : undefined
-  const profileLatestVersion = profileWorkspace.latestVersion
+  const profileLatestCandidate = profileWorkspace.latestProfileView
   const profileRunning = profileModel?.statusTone === 'processing'
   const profileCard = useMemo(
     () => ({
@@ -234,75 +210,55 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
         ? '运行中'
         : profileModel?.statusTone === 'error'
           ? '执行失败'
-          : profileLatestVersion
+          : profileWorkspace.profileCandidateMode && profileWorkspace.currentProfile?.candidateId
+            ? '已采用'
+            : profileWorkspace.profileCandidateMode && profileLatestCandidate
+              ? '待采用'
+          : profileLatestCandidate
             ? '已生成'
             : '未运行',
       statusClass: profileRunning
         ? 'is-running'
         : profileModel?.statusTone === 'error'
           ? 'is-failed'
-          : profileLatestVersion
+          : profileWorkspace.profileCandidateMode && profileLatestCandidate && !profileWorkspace.currentProfile?.candidateId
+            ? 'is-muted'
+          : profileLatestCandidate
             ? 'is-approved'
             : 'is-empty',
       running: Boolean(profileRunning),
-      versionLabel: profileLatestVersion?.label,
-      meta: profileLatestVersion?.profile
-        ? `${profileLatestVersion.profile.repositories.length} 个仓库`
+      versionLabel: profileLatestCandidate?.label,
+      meta: profileLatestCandidate?.profile
+        ? `${profileLatestCandidate.profile.repositories.length} 个仓库`
         : '暂无画像',
     }),
-    [profileLatestVersion, profileModel?.statusTone, profileRunning],
+    [profileLatestCandidate, profileModel?.statusTone, profileRunning, profileWorkspace.profileCandidateMode, profileWorkspace.currentProfile?.candidateId],
   )
   if (initializationError) return <div className="gc-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-auto p-4"><Alert type="error" showIcon title={`初始化生成流程失败：${getErrorMessage(initializationError)}`} action={<Button onClick={() => setInitializationAttempt(value => value + 1)}>重试</Button>} /></div>
   if (overview.isPending || initializing) return <div className="gc-panorama gc-loading flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3.5 overflow-auto p-4"><Spin /></div>
   if (overview.error) return <div className="gc-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-auto p-4"><Alert type="error" showIcon title={getErrorMessage(overview.error)} action={<Button onClick={refresh}>重试读取</Button>} /></div>
   const activeStage = special || sourceSelected ? undefined : stage
   const activeChain = sourceSelected ? sourceChain : special === 'relations' ? functionChain : special ? undefined : chain
-  const selectedMaterialVersion = profileWorkspace.materialVersions.find(
-    version => version.versionId === profileWorkspace.materialVersionId,
-  )
-  const profileStatusClass = profileModel
-    ? profileModel.statusTone === 'success'
-      ? 'is-approved'
-      : profileModel.statusTone === 'error'
-        ? 'is-failed'
-        : profileModel.statusTone === 'processing'
-          ? 'is-running'
-          : 'is-muted'
-    : 'is-muted'
-  const status = activeStage
-    ? generationStageLabel(activeStage)
-    : special === 'content'
-      ? '只读来源'
-      : special === 'codeRisk'
-        ? '独立分析'
-        : special === 'repositoryProfile'
-          ? profileModel?.statusLabel ?? '未运行'
-          : special === 'relations'
-            ? '派生'
-            : ''
-  const frozenMaterial = profileSelectedVersion?.requirementMaterialVersion
+  const frozenCurrentMaterial = profileSelectedCandidate?.requirementMaterialCurrent
+  const profileMaterialLabel = frozenCurrentMaterial
+    ? `候选 ${frozenCurrentMaterial.candidateId.slice(0, 8)}`
+    : profileWorkspace.profileCandidateMode && profileSelectedCandidate ? '已冻结，采用时核对'
+      : profileSelectedCandidate ? '未记录'
+        : profileWorkspace.currentMaterialAvailable ? '当前已采用' : '未选择'
   const stageRunning = activeStage?.state === 'running'
   const details = special === 'repositoryProfile'
-    ? `画像 ${profileSelectedVersion?.label ?? '未选择'} · 材料整理 ${frozenMaterial?.versionNo ? `v${frozenMaterial.versionNo}` : selectedMaterialVersion?.label ?? '未选择'} · ${profileWorkspace.bindings.length} 个仓库`
-    : stageRunning ? '' : (versionKey === 'draft' ? activeStage?.draft?.summary : workspace.selectedVersion?.summary) ?? activeStage?.latestVersion?.summary ?? activeStage?.blockedReason ?? ''
-  const runId = special === 'repositoryProfile'
-    ? profileSelectedVersion?.sourceRunId ?? profileWorkspace.latestRun?.runId
-    : special === 'relations'
-      ? relationsRunId
-      : stageRunning
-        ? activeStage.activeRunId
-        : versionKey === 'draft'
-          ? activeStage?.draft?.runId
-          : workspace.selectedVersion?.sourceRunId
+    ? `画像 ${profileSelectedCandidate?.label ?? '未选择'} · 材料整理 ${profileMaterialLabel} · ${profileWorkspace.bindings.length} 个仓库`
+    : stageRunning ? '' : activeStage?.blockedReason ?? ''
   const inspectorSelection = sourceSelected ? `${sourceSelected}-source` : special ?? `${selected?.kind}:${selected?.stage}`
   return <div className="gc-panorama gc-canvas-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden p-0">
     {workspace.personalLlm.dialog}
-    <div className="gc-canvas-workspace flex min-h-0 min-w-0 flex-1 gap-3 max-[900.01px]:flex-col max-[900.01px]:overflow-auto"><div ref={stageRef} className={`gc-canvas-stage relative flex min-h-0 min-w-0 flex-1 max-[900.01px]:h-[min(60vh,600px)] max-[900.01px]:min-h-[380px] max-[900.01px]:flex-none${modalOpen || relationsOpen || documentOpen || profileReadingOpen ? ' is-reading' : ''}`}><div className="gc-canvas-map flex min-h-0 min-w-0 flex-1" inert={modalOpen || relationsOpen || documentOpen || profileReadingOpen}><RequirementGenerationCanvas canWrite={canWrite} chains={visibleChains} filter={filter} selected={inspectorOpen && !sourceSelected ? selected : undefined} special={inspectorOpen ? special : null} profile={profileCard} relations={relations}
-      sourceSelected={inspectorOpen ? sourceSelected : null} onSelectSource={kind => { if (!workspace.guardUnsaved()) return; setInspectorOpen(true); setSourceSelected(kind); setSpecial(null); setModalOpen(false); setDocumentOpen(false); setRelationsOpen(false); workspace.setRevisionOpen(false) }}
-      onOpenStage={openStageContent} onOpenSpecial={openSpecial} onOpenTab={tab => { if (workspace.guardUnsaved()) onOpenTab(tab) }} /></div>      <GenerationArtifactFrame embedded hideHeader open={documentOpen} title="需求文档" onCancel={() => closeReading(() => setDocumentOpen(false))}
+    <div className="gc-canvas-workspace flex min-h-0 min-w-0 flex-1 gap-3 max-[900.01px]:flex-col max-[900.01px]:overflow-auto"><div ref={stageRef} className={`gc-canvas-stage relative flex min-h-0 min-w-0 flex-1 max-[900.01px]:h-[min(60vh,600px)] max-[900.01px]:min-h-[380px] max-[900.01px]:flex-none${modalOpen || relationsOpen || documentOpen || profileReadingOpen ? ' is-reading' : ''}`}><div className="gc-canvas-map flex min-h-0 min-w-0 flex-1" inert={modalOpen || relationsOpen || documentOpen || profileReadingOpen}><RequirementGenerationCanvas canWrite={canWrite} chains={visibleChains} selected={inspectorOpen && !sourceSelected ? selected : undefined} special={inspectorOpen ? special : null} profile={profileCard} relations={relations}
+      sourceSelected={inspectorOpen ? sourceSelected : null} onSelectSource={kind => { if (!guardChanges()) return; setInspectorOpen(true); setSourceSelected(kind); setSpecial(null); setModalOpen(false); setDocumentOpen(false); setRelationsOpen(false) }}
+      onOpenStage={openStageContent} onOpenSpecial={openSpecial} onOpenTab={tab => { if (guardChanges()) onOpenTab(tab) }} /></div>      <GenerationArtifactFrame embedded hideHeader open={documentOpen} title="需求文档" onCancel={() => closeReading(() => setDocumentOpen(false))}
         className="generation-chain-document">{documentPreview}</GenerationArtifactFrame>
       <GenerationChainModal embedded showApiRunInInspector={inspectorOpen && !sourceSelected && !special && !documentOpen && !relationsOpen} inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} readingActionsContainer={readingActionsHost} workspace={workspace} requirementId={requirementId} projectId={projectId} open={modalOpen}
         uiSourceOptions={uiSourceOptionsState} onOpenProfile={openProfileGuide}
+        chooseGitlab={profileWorkspace.personalGitlab.choose} gitlabDialog={profileWorkspace.personalGitlab.dialog}
         onClose={closeStageReading} onOpenLegacy={onOpenTab} />
       <GenerationArtifactFrame embedded hideHeader open={profileReadingOpen} title="仓库画像" onCancel={closeProfileReading}
         className="generation-chain-modal generation-profile-reading">
@@ -310,50 +266,54 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
       </GenerationArtifactFrame>
       <FunctionalCaseRelationsModal embedded inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} open={relationsOpen} onClose={() => closeReading(() => setRelationsOpen(false))}
         taskId={functionChain?.taskId ?? ''} runId={relationsRunId} disabled={detailedStage?.state === 'running'}
-        chooseConnection={workspace.personalLlm.choose} />
+        chooseConnection={workspace.personalLlm.choose} candidate={candidateRelations} />
     </div>{inspectorOpen ? <InspectorPortal host={inspectorHost}><div className={`gc-inspector-drawer${inspectorCollapsed ? ' is-collapsed' : ''}`}>
       <div className="gc-inspector-rail" aria-hidden="true"><FileTextOutlined /><HistoryOutlined /><EllipsisOutlined /></div>
       {readingOpen ? <button type="button" className="gc-inspector-toggle" aria-controls={inspectorId} aria-expanded={!inspectorCollapsed} aria-label={inspectorCollapsed ? '展开阶段详情' : '收起阶段详情'} title={inspectorCollapsed ? '展开阶段详情' : '收起阶段详情'} onClick={() => setInspectorCollapsed(value => !value)}>{inspectorCollapsed ? <LeftOutlined aria-hidden /> : <RightOutlined aria-hidden />}</button> : null}
       <aside id={inspectorId} ref={inspectorRef} className="gc-inspector flex h-full w-[304px] min-w-0 min-h-0 flex-col overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--app-surface)] max-[900.01px]:w-full max-[900.01px]:min-h-[220px]" aria-label="阶段详情" inert={inspectorCollapsed} aria-hidden={inspectorCollapsed || undefined}>
-      {special || selected || sourceSelected ? <><div className="gc-inspector-header flex flex-none flex-col items-stretch gap-1.5 border-b border-[var(--app-surface-divider)] bg-[var(--app-list-toolbar-bg)] p-4" key={inspectorSelection}>
-        {modalOpen || relationsOpen || documentOpen || profileReadingOpen ? <Button className="gc-inspector-back" type="text" size="small" icon={<ArrowLeftOutlined aria-hidden />} onClick={profileReadingOpen ? closeProfileReading : documentOpen ? () => closeReading(() => setDocumentOpen(false)) : closeStageReading}>返回流程</Button> : null}
-        <div className="gc-inspector-heading flex items-center justify-between gap-2"><h2>{sourceSelected ? sourceChain?.label : special === 'content' ? '需求文档' : special === 'codeRisk' ? '代码风险分析' : special === 'repositoryProfile' ? '仓库画像' : special === 'relations' ? '用例图谱' : activeStage?.label ?? '阶段详情'}</h2>{status ? <span className={`${GC_STATE_CLASS} ${activeStage ? generationStageClass(activeStage) : special === 'repositoryProfile' ? profileStatusClass : 'is-muted'}`}><span className="gc-state-text">{status}</span></span> : null}{!modalOpen && !relationsOpen && !documentOpen && !profileReadingOpen ? <Button type="text" size="small" icon={<CloseOutlined />} aria-label="关闭阶段详情" onClick={() => { if (workspace.guardUnsaved()) { setInspectorOpen(false); workspace.clearStage() } }} /> : null}</div>
-        <p>{activeChain?.label ?? (special === 'content' ? '需求材料' : special === 'codeRisk' ? '代码风险' : special === 'repositoryProfile' ? '独立分析' : '正在读取阶段信息')}{(activeStage || special === 'repositoryProfile') && details && !(activeChain?.kind === 'api' && details === activeStage?.blockedReason) ? <span className="gc-inspector-stage-summary">{details}</span> : null}</p>
-        {runId ? <div className="gc-inspector-run-meta mt-1 flex items-baseline gap-2 text-[12px] text-[var(--app-surface-text-muted)] [&>span:first-child]:flex-none"><span>运行 ID</span><Typography.Text className="gc-inspector-run-id min-w-0 whitespace-nowrap text-[12px]" title={runId} copyable={{ text: runId, tooltips: ['复制运行 ID', '已复制'] }}>{runId.length > 20 ? `${runId.slice(0, 8)}…${runId.slice(-4)}` : runId}</Typography.Text></div> : null}
+      {special || selected || sourceSelected ? <><div className="gc-inspector-header flex flex-none items-center justify-between gap-2 border-b border-[var(--app-surface-divider)] bg-[var(--app-list-toolbar-bg)] px-4 py-3" key={inspectorSelection}>
+        <h2 className="min-w-0 flex-1 truncate">{sourceSelected ? sourceChain?.label : special === 'content' ? '需求文档' : special === 'codeRisk' ? '代码风险分析' : special === 'repositoryProfile' ? '仓库画像' : special === 'relations' ? '用例图谱' : activeStage?.label ?? '阶段详情'}</h2>
+        {!modalOpen && !relationsOpen && !documentOpen && !profileReadingOpen ? <Button type="text" size="small" icon={<CloseOutlined />} aria-label="关闭阶段详情" onClick={() => { if (guardChanges()) { setInspectorOpen(false); workspace.clearStage() } }} /> : null}
       </div>
-        <div className="gc-inspector-content min-h-0 flex-1 overflow-auto px-4 pb-4 [&>.gc-inspector-section]:mt-4 [&>.gc-inspector-section]:flex [&>.gc-inspector-section]:flex-col [&>.gc-inspector-section]:gap-2.5 [&>.gc-inspector-section]:border-t [&>.gc-inspector-section]:border-[var(--app-surface-divider)] [&>.gc-inspector-section]:pt-4 [&>.gc-inspector-section:first-child]:border-t-0 [&>.gc-inspector-section:first-child]:pt-0 [&>.gc-inspector-section_h3]:m-0 [&>.gc-inspector-section_h3]:text-[12px] [&>.gc-inspector-section_h3]:font-semibold">
-          {sourceSelected === 'ui' ? <UiGenerationSourcePanel key={requirementId} requirementId={requirementId} projectId={projectId}
+        <div className="gc-inspector-content min-h-0 flex-1 overflow-auto px-4 pt-4 pb-4 [&>.gc-inspector-section]:mt-4 [&>.gc-inspector-section]:flex [&>.gc-inspector-section]:flex-col [&>.gc-inspector-section]:gap-2.5 [&>.gc-inspector-section]:border-t [&>.gc-inspector-section]:border-[var(--app-surface-divider)] [&>.gc-inspector-section]:pt-4 [&>.gc-inspector-section:first-child]:border-t-0 [&>.gc-inspector-section:first-child]:pt-0 [&>.gc-inspector-section_h3]:m-0 [&>.gc-inspector-section_h3]:text-[12px] [&>.gc-inspector-section_h3]:font-semibold">
+          {sourceSelected === 'ui' ? <UiGenerationSourcePanel key={requirementId} projectId={projectId}
             sourceOptions={uiSourceOptionsState} canWrite={canWrite}
             busy={Boolean(sourceChain?.busy || sourceChain?.stages.some(item => item.state === 'running'))}
-            refreshInputs={Boolean(sourceChain?.runId)} configured={Boolean(sourceChain?.taskId)}
             existingSource={showUiSourceSnapshot ? uiSourceSnapshot.data : undefined}
             snapshotLoading={showUiSourceSnapshot && uiSourceSnapshot.isPending}
-            onConfigure={() => requirementDesignApi.configure(requirementId, 'ui', {
-              requestId: uiConfigurationRequestId, newConfiguration: false,
-            })}
-            onOpenProfile={openProfileGuide} onStart={inputs => workspace.runUiSurface.mutateAsync(inputs)} /> : null}
+            onOpenCandidate={() => { void (async () => {
+              try {
+                if (!sourceChain?.configured) {
+                  await requirementDesignApi.configure(requirementId, 'ui', {
+                    requestId: uiConfigurationRequestId, newConfiguration: false,
+                  })
+                }
+                const result = await overview.refetch()
+                if (result.error) throw result.error
+                const uiChain = result.data?.chains.find(item => item.kind === 'ui')
+                const entry = uiChain?.stages.find(item => item.stage === 'ui_surface')
+                if (!uiChain?.candidateMode || !entry) throw new Error('UI 候选工作区尚未就绪，请刷新后重试')
+                openStageContent('ui', entry)
+              } catch (error) {
+                message.error(getErrorMessage(error))
+              }
+            })() }}
+            onOpenProfile={openProfileGuide} /> : null}
           {sourceSelected === 'api' ? <ApiGenerationSourcePanel key={sourceChain?.taskId ?? 'new-api-source'} requirementId={requirementId} projectId={projectId} taskId={sourceChain?.taskId} canWrite={canWrite}
             busy={Boolean(sourceChain?.busy || sourceChain?.stages.some(item => item.state === 'running'))}
-            profileVersion={profileLatestVersion} profileLoading={profileWorkspace.versionsLoading} onOpenProfile={openProfileGuide} onSaved={refresh} /> : null}
-          {activeChain?.kind === 'api' && activeStage ? <section className="gc-inspector-section">
-            <h3>生成流程</h3><p>{API_STAGE_DESCRIPTIONS[activeStage.stage] ?? '按阶段完成接口配置提取、用例设计和 YAML 生成，每一步审核通过后进入下一阶段。'}</p>
-            {activeStage.blockedReason ? <Alert showIcon type="info" title={activeStage.blockedReason} /> : null}
+            profileCandidate={profileLatestCandidate} profileLoading={profileWorkspace.candidateViewsLoading} onOpenProfile={openProfileGuide} onSaved={refresh} /> : null}
+          {activeChain?.kind === 'api' && activeStage?.blockedReason ? <section className="gc-inspector-section">
+            <Alert showIcon type="info" title={activeStage.blockedReason} />
           </section> : null}
           {workspace.detail.error && !special && !sourceSelected ? <Alert type="error" showIcon title={getErrorMessage(workspace.detail.error)} action={<Button onClick={() => void workspace.detail.refetch()}>重试</Button>} /> : null}
-          {!special && !sourceSelected && workspace.detail.isPending && !activeStage ? <Spin /> : <>{special !== 'repositoryProfile' && !activeStage && !sourceSelected ? <div className="gc-inspector-summary mb-3.5 text-[12px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere] [&_dl]:m-0 [&_dl]:mt-3 [&_dl]:border-t [&_dl]:border-[var(--app-surface-divider)] [&_dl_div]:flex [&_dl_div]:justify-between [&_dl_div]:gap-2.5 [&_dl_div]:pt-2 [&_dd]:m-0 [&_dd]:text-right [&_dd]:text-[var(--app-surface-text)] [&_dt]:text-[var(--app-surface-text-muted)]" key={inspectorSelection}><span>{special === 'content' ? '生成链读取这里的最新正文。单击卡片打开需求文档。' : special === 'codeRisk' ? '独立运行并查看分析报告' : special === 'relations' ? '由「完整用例」派生的用例关联图，不单独审核。' : details}</span>{special === 'relations' ? <dl><div><dt>所属阶段</dt><dd>{functionChain?.label ?? '功能测试'}</dd></div><div><dt>来源</dt><dd>{detailedDraft ? '待审核产物' : detailedStage?.latestVersion?.label ?? '完整用例'}</dd></div></dl> : null}</div> : null}
+          {!special && !sourceSelected && workspace.detail.isPending && !activeStage ? <Spin /> : <>{special !== 'repositoryProfile' && !activeStage && !sourceSelected ? <div className="gc-inspector-summary mb-3.5 text-[12px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere] [&_dl]:m-0 [&_dl]:mt-3 [&_dl]:border-t [&_dl]:border-[var(--app-surface-divider)] [&_dl_div]:flex [&_dl_div]:justify-between [&_dl_div]:gap-2.5 [&_dl_div]:pt-2 [&_dd]:m-0 [&_dd]:text-right [&_dd]:text-[var(--app-surface-text)] [&_dt]:text-[var(--app-surface-text-muted)]" key={inspectorSelection}><span>{special === 'content' ? '生成链读取这里的最新正文。单击卡片打开需求文档。' : special === 'codeRisk' ? '独立运行并查看分析报告' : special === 'relations' ? '由「完整用例」派生的用例关联图，不单独采用。' : details}</span>{special === 'relations' ? <dl><div><dt>所属阶段</dt><dd>{functionChain?.label ?? '功能测试'}</dd></div><div><dt>来源</dt><dd>当前采用的完整用例</dd></div></dl> : null}</div> : null}
             {special === 'repositoryProfile' ? <RequirementRepositoryProfileInspector workspace={profileWorkspace} showRun={profileReadingOpen} /> : null}
-            {activeStage && activeChain ? <>
-              {versionOptions.length ? <section className="gc-inspector-section" key={`${inspectorSelection}:versions`}>
-                <h3>版本选择</h3>
-                <div className="gc-inspector-versions flex flex-wrap gap-[5px]" role="group" aria-label="侧栏选择版本">
-                  {versionOptions.map(option => <button type="button" key={option.key} className={`gc-version-button inline-flex h-[27px] cursor-pointer items-center gap-1 rounded-[7px] border px-[9px] font-mono text-[11px] ${versionKey === option.key ? 'is-active border-[var(--app-accent-border)] bg-[var(--app-accent-surface)] font-semibold text-[var(--app-accent)]' : 'border-[var(--app-surface-border)] bg-[var(--app-surface)] text-[var(--app-surface-text-muted)] hover:border-[var(--app-accent-border)] hover:text-[var(--app-accent)]'}`} aria-pressed={versionKey === option.key} onClick={() => { workspace.setVersionKey(option.key); workspace.setDiffOpen(false) }}>{option.label}</button>)}
-                </div>
-              </section> : null}
-              {versionOptions.length || activeStage.upstreamStages.length || activeChain.kind === 'api' ? <UpstreamTrace key={`${inspectorSelection}:trace`} stage={activeStage} chain={activeChain} upstreamStages={workspace.upstreamStages} versionKey={versionKey} upstream={workspace.upstream} versionUpstreams={workspace.versionDetail.data?.upstreamVersions}
-                source={versionKey === 'draft' ? activeStage.draft?.sourceInputs : workspace.selectedVersion ? workspace.versionDetail.data?.sourceInputs : activeChain.sourceInputs}
-                loading={Boolean(workspace.selectedVersion && workspace.versionDetail.isFetching)} /> : null}
-              {activeStage.state === 'failed' ? <section className="gc-inspector-section" key={`${inspectorSelection}:failure`}><h3>失败详情</h3><Alert showIcon type="error" style={{ whiteSpace: 'pre-line' }} title={activeStage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /><p className="gc-failure-meta m-0 text-[11px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">{generationFailureMeta(activeStage) || '请重新执行；若持续失败，请查看 Worker 日志。'}</p></section> : null}
-            </> : null}
+            {activeStage && activeChain?.candidateMode && !modalOpen ? <section className="gc-inspector-section">
+              <h3>候选与当前内容</h3>
+              <p>可比较多份候选、选择试生成来源，并采用任意基于有效冻结来源的结果。</p>
+              <Button onClick={() => openStageContent(activeChain.kind, activeStage)}>打开候选工作区</Button>
+            </section> : null}
+            {activeStage?.state === 'failed' ? <section className="gc-inspector-section" key={`${inspectorSelection}:failure`}><h3>失败详情</h3><Alert showIcon type="error" style={{ whiteSpace: 'pre-line' }} title={activeStage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /><p className="gc-failure-meta m-0 text-[11px] leading-[1.6] text-[var(--app-surface-text-muted)] [overflow-wrap:anywhere]">{generationFailureMeta(activeStage) || '请重新执行；若持续失败，请查看 Worker 日志。'}</p></section> : null}
 </>}
           <div ref={setInspectorContainer} />
         </div><div className="gc-inspector-footer max-h-[60%] flex-none overflow-auto empty:hidden" ref={setInspectorActionContainer} /></> : <Empty description="选择一个阶段查看详情" image={Empty.PRESENTED_IMAGE_SIMPLE} />}

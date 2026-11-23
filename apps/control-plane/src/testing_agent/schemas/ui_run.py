@@ -13,6 +13,7 @@ from testing_agent.schemas.common import StrictRequest
 class DebugRunUiCaseRequest(StrictRequest):
     environment_id: str = Field()
     live_debug: bool = False
+    sprint_id: str | None = Field(default=None, min_length=1, max_length=64)
     headless: bool | None = None
     slow_mo_ms: int | None = Field(default=None)
     viewport_width: int | None = Field(default=None)
@@ -33,9 +34,11 @@ class UiCaseRunResponse(BaseModel):
     suite_id: str = Field()
     environment_id: str = Field(default="")
     environment_name: str = Field(default="")
-    requirement_id: str = Field()
-    sprint_id: str = Field()
-    project_id: str = Field()
+    requirement_id: str | None = Field(default=None)
+    requirement_name: str = Field(default="")
+    sprint_id: str | None = Field(default=None)
+    sprint_name: str = Field(default="")
+    project_id: str = Field(default="")
     trigger_user_id: str = Field()
     trigger_type: str = Field()
     status: str
@@ -75,8 +78,10 @@ class UiSuiteRunResponse(BaseModel):
     suite_id: str = Field()
     environment_id: str = Field(default="")
     environment_name: str = Field(default="")
-    requirement_id: str = Field()
-    sprint_id: str = Field()
+    requirement_id: str | None = Field(default=None)
+    requirement_name: str = Field(default="")
+    sprint_id: str | None = Field(default=None)
+    sprint_name: str = Field(default="")
     project_id: str = Field()
     trigger_user_id: str = Field()
     trigger_type: str = Field()

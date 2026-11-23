@@ -9,8 +9,3 @@ export function formatJsonArtifact(content: string): string {
     return content
   }
 }
-
-/** 按产物语言格式化原文：JSON 展开缩进，YAML/纯文本保持原样。 */
-export function formatRawArtifact(content: string, label: string): string {
-  return label === 'JSON' ? formatJsonArtifact(content) : content
-}

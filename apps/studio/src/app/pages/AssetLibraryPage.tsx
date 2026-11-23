@@ -3,6 +3,11 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { RouteSuspense } from '@/app/router/RouteSuspense'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 import type { AssetLibraryTab } from '@/app/layouts/navigation'
+import {
+  ASSET_LIBRARY_PAGE_CLASS,
+  ASSET_LIBRARY_TAB_PANEL_CLASS,
+  ASSET_LIBRARY_TAB_PANE_CLASS,
+} from '@/shared/ui/assetLibraryShell'
 
 const CaseLibraryPage = lazy(() => import('@/features/test-cases/pages/CaseLibraryPage').then(({ CaseLibraryPage }) => ({ default: CaseLibraryPage })))
 const SoftwareRepositoriesPage = lazy(() => import('@/features/interface-library/pages/SoftwareRepositoriesPage').then(({ SoftwareRepositoriesPage }) => ({ default: SoftwareRepositoriesPage })))
@@ -38,12 +43,12 @@ export function AssetLibraryPage() {
   }
 
   return (
-    <div className="workbench-page asset-library-page flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="asset-library-tab-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className={ASSET_LIBRARY_PAGE_CLASS}>
+      <div className={ASSET_LIBRARY_TAB_PANEL_CLASS}>
         {ASSET_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (
-            <div key={key} className="asset-library-tab-pane flex min-h-0 min-w-0 flex-1 flex-col [&[hidden]]:hidden [&>.workbench-page]:min-h-0 [&>.workbench-page]:flex-auto [&>.workbench-page]:p-0" id={`asset-panel-${key}`} hidden={activeTab !== key}>
+            <div key={key} className={ASSET_LIBRARY_TAB_PANE_CLASS} id={`asset-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
                 <RouteSuspense>
                   <Page />

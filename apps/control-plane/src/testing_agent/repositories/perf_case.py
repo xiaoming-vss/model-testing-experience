@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from sqlalchemy import func, select
 
 from testing_agent.models.perf_case import PerfCase
@@ -25,27 +27,62 @@ class PerfCaseRepository(ResourceRepository):
             select(PerfCase).where(PerfCase.project_id == project_id, PerfCase.name == name)
         )
 
-    async def list_by_project(self, project_id: str) -> list[PerfCase]:
+    async def list_by_project(
+        self, project_id: str, *, invalidated: bool | None = None
+    ) -> list[PerfCase]:
+        conditions = [PerfCase.project_id == project_id]
+        if invalidated is True:
+            conditions.append(PerfCase.invalidated_at.is_not(None))
+        elif invalidated is False:
+            conditions.append(PerfCase.invalidated_at.is_(None))
         return list(
             (
                 await self.session.scalars(
                     select(PerfCase)
-                    .where(PerfCase.project_id == project_id)
+                    .where(*conditions)
                     .order_by(PerfCase.created_at.desc(), PerfCase.id.desc())
                 )
             ).all()
         )
 
-    async def list_by_suite(self, suite_id: str) -> list[PerfCase]:
+    async def list_by_suite(
+        self, suite_id: str, *, invalidated: bool | None = None
+    ) -> list[PerfCase]:
+        conditions = [PerfCase.suite_id == suite_id]
+        if invalidated is True:
+            conditions.append(PerfCase.invalidated_at.is_not(None))
+        elif invalidated is False:
+            conditions.append(PerfCase.invalidated_at.is_(None))
         return list(
             (
                 await self.session.scalars(
                     select(PerfCase)
-                    .where(PerfCase.suite_id == suite_id)
+                    .where(*conditions)
                     .order_by(PerfCase.order_no.asc(), PerfCase.created_at.asc(), PerfCase.id.asc())
                 )
             ).all()
         )
+
+    async def list_project_cases_by_ids(
+        self, project_id: str, case_ids: Sequence[str]
+    ) -> list[PerfCase]:
+        """按项目范围加载选中用例并锁定状态列，供批量失效/恢复正常事务使用。"""
+        cases: list[PerfCase] = []
+        for offset in range(0, len(case_ids), 500):
+            cases.extend(
+                (
+                    await self.session.scalars(
+                        select(PerfCase)
+                        .where(
+                            PerfCase.project_id == project_id,
+                            PerfCase.case_id.in_(case_ids[offset : offset + 500]),
+                        )
+                        .with_for_update()
+                        .execution_options(populate_existing=True)
+                    )
+                ).all()
+            )
+        return cases
 
     async def next_order_no(self, suite_id: str) -> int:
         current = await self.session.scalar(

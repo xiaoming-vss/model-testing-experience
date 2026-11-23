@@ -44,6 +44,7 @@ export type PerfStepFormValues = {
   bodyMode: PerfBodyMode
   bodyContentType: PerfBodyContentType
   bodyText: string
+  expectedStatuses: number[]
   checks: PerfCheckRow[]
   extract: PerfExtractRow[]
   onFailure: PerfFailurePolicy
@@ -122,7 +123,8 @@ export function createPerfStep(overrides: Partial<PerfStepFormValues> = {}): Per
     bodyMode: 'none',
     bodyContentType: 'json',
     bodyText: '',
-    checks: [createPerfCheckRow()],
+    expectedStatuses: [],
+    checks: [],
     extract: [],
     onFailure: 'abort_iteration',
     thinkTimeMs: 0,
@@ -207,6 +209,7 @@ function readSteps(value: unknown): PerfStepFormValues[] {
         ? String(body ?? '')
         : bodyMode === 'json' ? JSON.stringify(body, null, 2) : '',
       checks: readChecks(step?.checks),
+      expectedStatuses: Array.isArray(step?.expectedStatuses) ? step.expectedStatuses.map(Number) : [],
       extract: readExtract(step?.extract),
       onFailure: pick(step?.onFailure, ['abort_iteration', 'continue', 'abort_test'] as const, 'abort_iteration'),
       thinkTimeMs: numberValue(step?.thinkTimeMs, 0),
@@ -310,6 +313,7 @@ function stepToYaml(step: PerfStepFormValues): Record<string, unknown> {
     }
   }
   if (step.checks.length > 0) output.checks = step.checks.map(checkToYaml)
+  if (step.expectedStatuses.length > 0) output.expectedStatuses = step.expectedStatuses
   if (step.extract.length > 0) output.extract = step.extract.map(extractToYaml)
   if (step.onFailure !== 'abort_iteration') output.onFailure = step.onFailure
   if (step.thinkTimeMs > 0) output.thinkTimeMs = Math.max(0, Math.round(step.thinkTimeMs))
@@ -368,6 +372,10 @@ export function perfCaseFormErrors(form: PerfCaseFormValues): string[] {
     if (stepNames.has(step.name.trim())) errors.push(`${label}：步骤名称重复`)
     stepNames.add(step.name.trim())
     if (!step.path.trim()) errors.push(`${label}：请求路径不能为空`)
+    if (step.expectedStatuses.some((status) => !Number.isInteger(status) || status < 100 || status > 599)
+      || new Set(step.expectedStatuses).size !== step.expectedStatuses.length) {
+      errors.push(`${label}：预期状态码须为不重复的 100 至 599 整数`)
+    }
     if (step.bodyMode === 'json' && step.bodyText.trim()) {
       try {
         JSON.parse(step.bodyText)

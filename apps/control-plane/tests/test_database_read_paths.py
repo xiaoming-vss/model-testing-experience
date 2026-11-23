@@ -115,6 +115,7 @@ async def test_private_live_debug_does_not_replace_shared_latest_run_or_metrics(
                 run_id="api-private",
                 case_id="api-0",
                 collection_id="ac",
+                project_id="p",
                 environment_id="e",
                 trigger_user_id="u",
                 trigger_type="live_debug",
@@ -125,6 +126,7 @@ async def test_private_live_debug_does_not_replace_shared_latest_run_or_metrics(
                 run_id="ui-private",
                 case_id="ui-0",
                 suite_id="uc",
+                project_id="p",
                 trigger_user_id="u",
                 trigger_type="live_debug",
                 status="error",
@@ -136,8 +138,6 @@ async def test_private_live_debug_does_not_replace_shared_latest_run_or_metrics(
     repo = AiGenerateTaskRepository(session)
     assert (await repo.latest_case_run_summaries(["api-0"], "api"))["api-0"].status == "success"
     assert (await repo.latest_case_run_summaries(["ui-0"], "ui"))["ui-0"].status == "success"
-    assert (await repo.get_latest_api_case_run("api-0")).run_id == "api-0-1"
-    assert (await repo.get_latest_ui_case_run("ui-0")).run_id == "ui-0-1"
     assert await SprintDailyMetricsRepository(session).list_latest_api_run_statuses("s") == {
         "api-0": "success"
     }

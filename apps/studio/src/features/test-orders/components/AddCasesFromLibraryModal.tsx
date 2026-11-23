@@ -139,6 +139,7 @@ export function AddCasesFromLibraryModal({
         sprintId: sprintFilter === ALL ? '' : sprintFilter,
         requirementId: requirementFilter === ALL ? '' : requirementFilter,
         suiteId: suiteFilter === ALL ? '' : suiteFilter,
+        invalidated: false,
         keyword,
         page,
         pageSize,

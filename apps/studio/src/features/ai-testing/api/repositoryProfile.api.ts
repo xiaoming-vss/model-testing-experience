@@ -3,7 +3,6 @@ import type {
   CreateRepositoryProfileTaskPayload,
   RepositoryProfileTask,
   RepositoryProfileTaskRun,
-  RepositoryProfileVersion,
   RunHistoryResponse,
   RunRepositoryProfileTaskPayload,
 } from '../types'
@@ -36,9 +35,5 @@ export const repositoryProfileApi = {
   ) =>
     request<RunHistoryResponse<RepositoryProfileTaskRun>>(
       `/v1/repository-profile-tasks/${taskId}/runs${buildQuery(params)}`,
-    ),
-  getRepositoryProfileVersions: (taskId: string) =>
-    request<ListResponse<RepositoryProfileVersion>>(
-      `/v1/repository-profile-tasks/${taskId}/versions`,
     ),
 }

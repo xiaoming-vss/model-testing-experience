@@ -69,6 +69,30 @@ def test_vus_constant_scenario(tmp_path: Path) -> None:
     assert scenario["vus"] == 3
 
 
+def test_run_identity_is_emitted_as_global_tags(tmp_path: Path) -> None:
+    data = base_spec_dict()
+    data.update(projectId="p1", sprintId="s1", suiteId="t1", suiteRunId="r1", caseId="c1")
+    compiled, _ = _compile(tmp_path, data)
+    assert compiled.plan["options"]["tags"] == {
+        "run_id": data["runId"],
+        "project_id": "p1",
+        "sprint_id": "s1",
+        "suite_id": "t1",
+        "suite_run_id": "r1",
+        "case_id": "c1",
+    }
+
+
+def test_expected_statuses_are_validated(tmp_path: Path) -> None:
+    data = base_spec_dict()
+    data["case"]["steps"][0]["expectedStatuses"] = [200, 404]
+    compiled, _ = _compile(tmp_path, data)
+    assert compiled.plan["steps"][0]["expectedStatuses"] == [200, 404]
+    data["case"]["steps"][0]["expectedStatuses"] = []
+    with pytest.raises(ValueError):
+        RunSpec.model_validate(data)
+
+
 def test_vus_ramp_scenario(tmp_path: Path) -> None:
     data = base_spec_dict()
     data["case"]["load"] = {

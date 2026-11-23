@@ -11,6 +11,7 @@ from testing_agent.handlers.api_assert_rule import (
 )
 from testing_agent.handlers.api_collection import (
     create_api_collection,
+    create_project_api_collection,
     delete_api_collection,
     get_api_collection,
     import_api_cases,
@@ -59,6 +60,10 @@ router.get(
     "/requirements/{requirement_id}/api-collections",
     response_model=ApiResponse[ListResponse[ApiCollectionResponse]],
 )(list_api_collections)
+router.post(
+    "/projects/{project_id}/api-collections",
+    response_model=ApiResponse[ApiCollectionResponse],
+)(create_project_api_collection)
 router.get(
     "/projects/{project_id}/api-collections",
     response_model=ApiResponse[ListResponse[ApiCollectionResponse]],

@@ -77,9 +77,10 @@ export type ApiCaseEditorProps = {
   runApiCaseMutation: { isPending: boolean }
   isApiCaseRunInProgress: boolean
   isSelectedCaseReady: boolean
+  selectedCaseInvalidated: boolean
   handleSendRequest: () => Promise<void>
-  /** Query 行变化时补齐末尾空行；由编辑器监听，避免页面为每次键入重渲染。 */
-  ensureQueryTrailingRow: (items?: Array<{ enabled?: boolean; key?: string; value?: string }>) => void
+  /** 所属测试集名称，显示在标题下方的元信息里。 */
+  collectionName?: string
   environment: EnvironmentProps
   templates: TemplatesProps
   rules: RulesProps

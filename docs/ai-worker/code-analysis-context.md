@@ -42,7 +42,6 @@
 
 | 字段 | 默认 | 作用 |
 | --- | --- | --- |
-| `gitlab_timeout_seconds` | 120 | 兼容旧配置；当前代码拉取使用 `git_timeout_seconds` |
 | `git_timeout_seconds` | 300 | 单次 git 命令超时 |
 | `workspace_retention_hours` | 24 | 失败工作区保留时长 |
 | `max_diff_chars` | 1000000 | 预置 diff 字符预算 |

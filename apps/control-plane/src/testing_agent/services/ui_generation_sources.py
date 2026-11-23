@@ -11,8 +11,7 @@ def _public_repository(snapshot: dict[str, Any], repository: dict[str, Any]) -> 
         "branch": repository.get("branch") or "",
         "commit": repository.get("commit") or "",
         "commitMode": repository.get("commitMode") or "",
-        "profileVersionId": snapshot.get("sourceProfileVersionId") or "",
-        "profileVersionNo": snapshot.get("sourceProfileVersionNo") or 0,
+        "profileCandidateId": snapshot.get("sourceProfileCandidateId") or "",
         "resolvedAt": repository.get("resolvedAt"),
     }
 
@@ -32,6 +31,7 @@ def ui_source_inputs(snapshot: dict[str, Any] | None) -> dict[str, Any] | None:
             "sourceKind": "repository",
             "repository": _public_repository(snapshot, repository),
             "cases": cases,
+            "sourceBatchId": str(snapshot.get("uiSourceBatchId") or ""),
         }
     return None
 
@@ -45,10 +45,9 @@ def public_ui_source_snapshot(source: dict[str, Any] | None) -> dict[str, Any]:
         key: deepcopy(source[key])
         for key in (
             "sourceKind",
+            "sourceProfileCandidateId",
             "sourceType",
             "sourceContent",
-            "sourceProfileVersionId",
-            "sourceProfileVersionNo",
             "functionalCases",
             "uiWorkflowVersion",
             "uiSourceBatchId",

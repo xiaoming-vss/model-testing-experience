@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { getErrorMessage } from '@/utils/format'
 import { aiTestingApi } from '../api/aiTesting.api'
-import type { RepositoryProfileVersion } from '../types'
+import type { RepositoryProfileCandidateView } from '../types'
 import { formatProfileConfidence, repositoryRoleMeta } from '../utils/repositoryProfileDisplay'
 import { RequirementDesignConfigurationModal } from './RequirementDesignConfigurationModal'
 import type { ApiSuggestedRepository } from './ApiInterfaceSelector'
@@ -17,7 +17,7 @@ export function ApiGenerationSourcePanel({
   taskId,
   canWrite,
   busy,
-  profileVersion,
+  profileCandidate,
   profileLoading = false,
   onOpenProfile,
   onSaved,
@@ -27,7 +27,7 @@ export function ApiGenerationSourcePanel({
   taskId?: string
   canWrite: boolean
   busy: boolean
-  profileVersion?: RepositoryProfileVersion | null
+  profileCandidate?: RepositoryProfileCandidateView | null
   profileLoading?: boolean
   onOpenProfile?: () => void
   onSaved: () => void
@@ -43,10 +43,10 @@ export function ApiGenerationSourcePanel({
   const count = task.data?.interfaceCount ?? task.data?.interfaceIds?.length ?? 0
   const backendRepositories = useMemo(
     () =>
-      (profileVersion?.profile?.repositories ?? []).filter(repository =>
+      (profileCandidate?.profile?.repositories ?? []).filter(repository =>
         backendRoles.has(repository.role),
       ),
-    [profileVersion],
+    [profileCandidate],
   )
   const recommendedRepositoryId = useMemo(
     () =>
@@ -63,8 +63,8 @@ export function ApiGenerationSourcePanel({
       })),
     [backendRepositories],
   )
-  const profileLabel = profileVersion
-    ? profileVersion.label || `v${profileVersion.versionNo}`
+  const profileLabel = profileCandidate
+    ? profileCandidate.label
     : ''
   return (
     <>
@@ -72,7 +72,7 @@ export function ApiGenerationSourcePanel({
         <h3>建议的后端仓库</h3>
         {profileLoading ? (
           <p className="gc-inspector-summary">正在读取仓库画像...</p>
-        ) : profileVersion ? (
+        ) : profileCandidate ? (
           backendRepositories.length ? (
             <>
               <p className="gc-inspector-summary">
@@ -118,7 +118,7 @@ export function ApiGenerationSourcePanel({
             尚未生成仓库画像。接口仍可从接口库任意选择；生成画像后可获得后端仓库建议。
           </p>
         )}
-        {!profileVersion && !profileLoading && onOpenProfile ? (
+        {!profileCandidate && !profileLoading && onOpenProfile ? (
           <Button type="link" size="small" onClick={onOpenProfile}>
             去生成仓库画像
           </Button>

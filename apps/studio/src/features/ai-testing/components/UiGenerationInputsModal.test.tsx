@@ -47,33 +47,7 @@ function repository(overrides: Partial<UiGenerationSourceRepository> = {}): UiGe
 }
 
 function sourceOptions(): UiGenerationSourceOptions {
-  return {
-    defaultProfileVersionId: 'pv2',
-    profileVersions: [
-      {
-        versionId: 'pv2',
-        versionNo: 2,
-        label: 'v2',
-        createdAt: '2026-11-09T10:00:00Z',
-        requirementMaterialVersion: { versionId: 'understand-2', versionNo: 2 },
-        repositories: [repository()],
-      },
-      {
-        versionId: 'pv1',
-        versionNo: 1,
-        label: 'v1',
-        createdAt: '2026-11-08T10:00:00Z',
-        requirementMaterialVersion: { versionId: 'understand-1', versionNo: 1 },
-        repositories: [repository({
-          repositoryId: 'repo-old',
-          pathWithNamespace: 'team/old-web',
-          role: 'fullstack',
-          branch: 'release',
-          commit: '9999999',
-        })],
-      },
-    ],
-  }
+  return { currentProfile: { candidateId: 'pv2', label: '当前画像', createdAt: '2026-11-09T10:00:00Z', repositories: [repository()] } }
 }
 
 function mount({
@@ -82,12 +56,14 @@ function mount({
   source,
   onSubmit = vi.fn(async () => undefined),
   onOpenProfile = vi.fn(),
+  candidateMode = false,
 }: {
   options?: UiGenerationSourceOptions
   refreshInputs?: boolean
   source?: React.ComponentProps<typeof UiGenerationInputsModal>['source']
   onSubmit?: (inputs: UiGenerationRunInputs) => Promise<unknown>
   onOpenProfile?: () => void
+  candidateMode?: boolean
 } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   clients.push(client)
@@ -98,6 +74,7 @@ function mount({
         <UiGenerationInputsModal
           requirementId="req"
           refreshInputs={refreshInputs}
+          candidateMode={candidateMode}
           source={source}
           sourceOptions={{ data: options, loading: false }}
           onOpenProfile={onOpenProfile}
@@ -114,10 +91,10 @@ it('默认使用最新画像版本和唯一前端仓库，提交仓库来源与�
   const { onSubmit, onClose } = mount()
   const user = userEvent.setup()
   await waitFor(() => expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeEnabled())
-  expect(screen.getByRole('button', { name: /v2/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('当前已采用')).toBeInTheDocument()
   expect(screen.getByRole('radio', { name: '选择仓库 team/web' })).toBeChecked()
   expect(screen.getByText('a1b2c3d4')).toBeInTheDocument()
-  expect(screen.getByText(/启动时使用所选画像版本冻结的 commit/)).toBeInTheDocument()
+  expect(screen.getByText(/启动时使用当前画像冻结的 commit/)).toBeInTheDocument()
   expect(screen.queryByText('源码 ZIP')).not.toBeInTheDocument()
   expect(document.querySelector('input[type="file"]')).toBeNull()
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
@@ -131,33 +108,40 @@ it('默认使用最新画像版本和唯一前端仓库，提交仓库来源与�
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({
     refreshInputs: false,
     functionCaseIds: ['c1'],
-    sourceProfileVersionId: 'pv2',
+    sourceProfileCandidateId: 'pv2',
     sourceRepositoryId: 'repo-web',
     sourceCommitMode: 'profile',
   }))
   expect(onClose).toHaveBeenCalled()
 })
 
-it('可以切换历史画像版本并同步仓库候选', async () => {
-  const { onSubmit } = mount()
+it('当前画像模式只展示已采用画像，不提供历史画像选择', async () => {
+  const options = sourceOptions()
+  options.currentProfile = { ...options.currentProfile!, candidateId: 'candidate-a' }
+  mount({ options })
+  await waitFor(() => expect(screen.getByText('当前已采用')).toBeInTheDocument())
+  expect(screen.queryByRole('group', { name: '选择仓库画像版本' })).not.toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: '选择仓库 team/web' })).toBeChecked()
+  expect(screen.getByText(/使用当前画像冻结的 commit/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeEnabled()
+})
+
+it('候选生成可使用当前画像并提交所选正式用例', async () => {
+  const options = sourceOptions()
+  options.currentProfile = { ...options.currentProfile!, candidateId: 'candidate-a' }
+  const { onSubmit } = mount({ options, candidateMode: true })
   const user = userEvent.setup()
   await waitFor(() => expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeEnabled())
-  await user.click(screen.getByRole('button', { name: 'v1' }))
-  expect(await screen.findByText('team/old-web')).toBeInTheDocument()
-  expect(screen.getByRole('radio', { name: '选择仓库 team/old-web' })).toBeChecked()
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   await screen.findByRole('checkbox', { name: '选择用例：转换成功' })
   await user.click(screen.getByRole('button', { name: '核对配置' }))
-  await user.click(await screen.findByRole('button', { name: '开始生成' }))
-  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
-    sourceProfileVersionId: 'pv1',
-    sourceRepositoryId: 'repo-old',
-  })))
+  await user.click(screen.getByRole('button', { name: '开始生成' }))
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ sourceProfileCandidateId: 'candidate-a', sourceRepositoryId: 'repo-web', functionCaseIds: ['c1', 'c2'] })))
 })
 
 it('多个前端仓库时必须先选择一个才能开始生成', async () => {
   const options = sourceOptions()
-  options.profileVersions[0].repositories = [
+  options.currentProfile!.repositories = [
     repository(),
     repository({
       repositoryId: 'repo-admin',
@@ -184,10 +168,10 @@ it('多个前端仓库时必须先选择一个才能开始生成', async () => {
 
 it('没有画像版本时阻止生成并引导去生成仓库画像', async () => {
   const { onOpenProfile } = mount({
-    options: { profileVersions: [], defaultProfileVersionId: '' },
+    options: { currentProfile: null },
   })
   const user = userEvent.setup()
-  expect(await screen.findByText('尚未生成仓库画像')).toBeInTheDocument()
+  expect(await screen.findByText('尚未采用仓库画像')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeDisabled()
   await user.click(screen.getByRole('button', { name: '去生成仓库画像' }))
   expect(onOpenProfile).toHaveBeenCalled()
@@ -208,7 +192,7 @@ it('可以切换最新 HEAD 并检查分支更新', async () => {
   await user.click(screen.getByRole('button', { name: '检查更新' }))
   expect(await screen.findByText('分支已有新提交')).toBeInTheDocument()
   expect(generationChainApi.uiSourceCheck).toHaveBeenCalledWith('req', {
-    profileVersionId: 'pv2',
+    profileCandidateId: 'pv2',
     repositoryId: 'repo-web',
     pinnedCommit: 'a1b2c3d4',
   })
@@ -245,8 +229,7 @@ it('更换输入保留原功能用例选择并提交 refreshInputs', async () =>
         branch: 'main',
         commit: 'a1b2c3d4',
         commitMode: 'profile',
-        profileVersionId: 'pv2',
-        profileVersionNo: 2,
+        profileCandidateId: 'pv2',
         resolvedAt: '2026-11-09T10:00:00Z',
       },
       cases: [{ caseId: 'c2', title: '历史标题' }],

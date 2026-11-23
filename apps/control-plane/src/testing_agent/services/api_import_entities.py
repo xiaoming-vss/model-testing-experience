@@ -102,6 +102,7 @@ def apply_api_case(case: ApiCase, item: dict[str, Any]) -> None:
     case.body_text = item["bodyText"]
     case.timeout_ms = item["timeoutMs"]
     case.continue_on_failure = item["continueOnFailure"]
+    case.invalidated_at = None
 
 
 def add_api_rules(repository, case_id: str, item: dict[str, Any]) -> None:

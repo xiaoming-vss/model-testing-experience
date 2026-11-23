@@ -21,9 +21,6 @@ from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
 from testing_agent.services.worker_domains import api, perf, ui
-from testing_agent.services.worker_domains.ai import (
-    apply_ai_completion_to_run as apply_ai_completion_to_run,
-)
 from testing_agent.services.worker_domains.events import LEASE_SECONDS as LEASE_SECONDS
 from testing_agent.services.worker_domains.events import apply_event_to_task as apply_event_to_task
 from testing_agent.services.worker_domains.events import parse_event_time as parse_event_time

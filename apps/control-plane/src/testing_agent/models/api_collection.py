@@ -9,19 +9,30 @@ from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
 class ApiCollection(Base):
     __tablename__ = "api_collections"
     __table_args__ = (
-        UniqueConstraint("requirement_id", "name", name="uk_api_collection_requirement_name"),
+        UniqueConstraint("project_id", "name", name="uk_api_collection_project_name"),
+        Index("idx_api_collections_project_updated", "project_id", "updated_at"),
         Index("idx_api_collections_effective_import", "effective_import_id"),
-        {"comment": "需求下的 API 测试集合"},
+        {"comment": "项目级 API 测试集，可选关联来源需求"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     collection_id: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, comment="API 集合业务标识"
     )
-    requirement_id: Mapped[str] = mapped_column(
+    project_id: Mapped[str] = mapped_column(
         String(64),
-        ForeignKey("requirements.requirement_id", name="fk_api_collections_requirement"),
+        ForeignKey("projects.project_id", name="fk_api_collections_project"),
         nullable=False,
-        comment="需求业务标识",
+        comment="所属项目业务标识，决定权限、生命周期和名称唯一性",
+    )
+    requirement_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey(
+            "requirements.requirement_id",
+            name="fk_api_collections_requirement",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        comment="可选关联的来源需求业务标识；空值表示项目级测试集",
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False, comment="API 测试集名称")
     description: Mapped[str] = mapped_column(

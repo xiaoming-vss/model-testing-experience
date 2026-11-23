@@ -59,6 +59,8 @@ async def _blockers(session, obj):
             (m.ProjectSkillSpace, m.ProjectSkillSpace.project_id == obj.project_id, "项目技能"),
             (m.SharedService, m.SharedService.project_id == obj.project_id, "项目共享服务"),
             (m.SoftwareRepository, m.SoftwareRepository.project_id == obj.project_id, "软件仓库"),
+            (m.ApiCollection, m.ApiCollection.project_id == obj.project_id, "API 测试集"),
+            (m.UiTestSuite, m.UiTestSuite.project_id == obj.project_id, "UI 测试集"),
             (m.PerfSuite, m.PerfSuite.project_id == obj.project_id, "性能测试集"),
             (m.PerfCase, m.PerfCase.project_id == obj.project_id, "性能用例"),
             (
@@ -73,14 +75,13 @@ async def _blockers(session, obj):
             (m.TestOrder, m.TestOrder.sprint_id == obj.sprint_id, "测试单"),
         ]
     elif isinstance(obj, m.Requirement):
-        checks += [
-            (model, model.requirement_id == obj.requirement_id, label)
-            for model, label in (
-                (m.FunctionTestSuite, "功能测试集"),
-                (m.ApiCollection, "API 集合"),
-                (m.UiTestSuite, "UI 测试集"),
+        checks.append(
+            (
+                m.FunctionTestSuite,
+                m.FunctionTestSuite.requirement_id == obj.requirement_id,
+                "功能测试集",
             )
-        ]
+        )
     elif isinstance(obj, m.FunctionTestSuite):
         checks.append((m.FunctionTestCase, m.FunctionTestCase.suite_id == obj.suite_id, "测试用例"))
     elif isinstance(obj, m.UiTestSuite):

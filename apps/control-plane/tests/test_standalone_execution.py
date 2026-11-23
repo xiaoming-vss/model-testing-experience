@@ -256,97 +256,9 @@ async def test_independent_projection_never_mixes_other_execution_artifacts(db):
     assert second_payload["resultYaml"] == "" and second_payload["reviewStatus"] == "pending"
 
 
-async def test_independent_edit_and_review_are_scoped_to_their_execution(db):  # noqa: F811
-    from testing_agent.services.standalone_candidate import (
-        review_standalone_candidate,
-        save_standalone_draft,
-    )
-    from testing_agent.services.standalone_execution_view import project_standalone_execution
-
-    seed_task(db)
-    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
-    task.requirement_id, task.task_type = "", "api_case_generate"
-    db.commit()
-    session = AsyncSessionAdapter(db)
-    executions, attempts = [], []
-    for number in (1, 2):
-        execution, attempt, _ = await start_standalone_execution(
-            session,
-            task=task,
-            execution_id=f"run-{number}",
-            request_id=f"worker-{number}",
-            actor_id="u",
-            connection_id="llm",
-            source={"sourceContent": f"source-{number}"},
-            config={},
-            checkpoint_enabled=False,
-        )
-        execution.workflow_status, execution.current_stage = "success", "completed"
-        attempt.status, attempt.output_content, attempt.output_format = (
-            "success",
-            f"original-{number}",
-            "text",
-        )
-        queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == f"worker-{number}"))
-        queue.status = "success"
-        executions.append(execution)
-        attempts.append(attempt)
-    db.commit()
-    edited = await save_standalone_draft(
-        session,
-        task=task,
-        execution_id="run-1",
-        stage_name="generate",
-        expected_attempt_id=attempts[0].id,
-        actor_id="editor",
-        content="edited-1",
-        output_format="text",
-    )
-    assert edited.execution_id == "run-1" and edited.worker_task_id is None
-    assert edited.input_snapshot_json["editBaseAttemptId"] == attempts[0].id
-    assert attempts[0].output_content == "original-1"
-    assert len(db.scalars(select(WorkerTask)).all()) == 2
-    assert len(db.scalars(select(AiExecution)).all()) == 2
-    with pytest.raises(AppError):
-        await review_standalone_candidate(
-            session,
-            task=task,
-            execution_id="run-1",
-            stage_name="generate",
-            expected_attempt_id=attempts[0].id,
-            actor_id="reviewer",
-            approved=True,
-            comment="stale",
-        )
-    await review_standalone_candidate(
-        session,
-        task=task,
-        execution_id="run-2",
-        stage_name="generate",
-        expected_attempt_id=attempts[1].id,
-        actor_id="reviewer-2",
-        approved=True,
-        comment="two",
-    )
-    assert edited.review_status == "pending" and attempts[1].reviewer_user_id == "reviewer-2"
-    await review_standalone_candidate(
-        session,
-        task=task,
-        execution_id="run-1",
-        stage_name="generate",
-        expected_attempt_id=edited.id,
-        actor_id="reviewer-1",
-        approved=True,
-        comment="one",
-    )
-    first = await project_standalone_execution(session, "run-1")
-    second = await project_standalone_execution(session, "run-2")
-    assert (first.result_yaml, first.reviewer_user_id) == ("edited-1", "reviewer-1")
-    assert (second.result_yaml, second.reviewer_user_id) == ("original-2", "reviewer-2")
-
-
 async def test_checkpoint_advance_retry_and_revision_keep_execution_identity(db):  # noqa: F811
-    from testing_agent.services.standalone_candidate import review_standalone_candidate
+    from datetime import UTC, datetime
+
     from testing_agent.services.standalone_dispatch import enqueue_standalone_attempt
 
     seed_task(db)
@@ -373,16 +285,10 @@ async def test_checkpoint_advance_retry_and_revision_keep_execution_identity(db)
     execution.workflow_status = "waiting_review"
     db.scalar(select(WorkerTask).where(WorkerTask.task_id == "worker-1")).status = "success"
     db.commit()
-    await review_standalone_candidate(
-        session,
-        task=task,
-        execution_id="run",
-        stage_name="requirement_analysis",
-        expected_attempt_id=first.id,
-        actor_id="reviewer",
-        approved=True,
-        comment="ok",
-    )
+    first.review_status = "approved"
+    first.reviewer_user_id = "reviewer"
+    first.reviewed_at = datetime.now(UTC)
+    first.review_comment = "ok"
     second, replay = await enqueue_standalone_attempt(
         session,
         task=task,

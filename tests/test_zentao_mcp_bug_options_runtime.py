@@ -14,7 +14,7 @@ import unittest
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
-from test_zentao_mcp_runtime import MetadataClient
+from tests.test_zentao_mcp_runtime import MetadataClient
 
 SCRIPT = Path(__file__).resolve().parents[1] / "deploy/zentao-mcp/enable-bug-options.py"
 spec = importlib.util.spec_from_file_location("bug_options_schema", SCRIPT)

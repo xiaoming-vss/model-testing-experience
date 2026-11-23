@@ -163,8 +163,9 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
     with pytest.raises(AppError):
         await service.complete(queue, body)
 
+    from datetime import UTC, datetime
+
     from testing_agent.models.ai_generation_stage import AiGenerationStage
-    from testing_agent.services.standalone_candidate import review_standalone_candidate
     from testing_agent.services.standalone_dispatch import enqueue_standalone_attempt
 
     final = db.scalar(
@@ -175,16 +176,11 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
             AiGenerationStage.stage == "detailed_cases",
         )
     )
-    await review_standalone_candidate(
-        session,
-        task=task,
-        execution_id=execution.execution_id,
-        stage_name="detailed_cases",
-        expected_attempt_id=final.id,
-        actor_id="reviewer",
-        approved=True,
-        comment="ok",
-    )
+    final.review_status = "approved"
+    final.reviewer_user_id = "reviewer"
+    final.reviewed_at = datetime.now(UTC)
+    final.review_comment = "ok"
+    await session.flush()
     graph, _ = await enqueue_standalone_attempt(
         session,
         task=task,

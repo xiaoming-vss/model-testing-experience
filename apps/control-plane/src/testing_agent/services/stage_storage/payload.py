@@ -4,9 +4,12 @@ import json
 from copy import deepcopy
 from typing import Any
 
+from pydantic import ValidationError
+
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.ai_tasks import AUXILIARY_EXECUTION_TYPES
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.schemas.generation_candidates import FrozenCandidateInput
 from testing_agent.services.stage_storage.authorization import DirectWorkerAuthority
 
 
@@ -86,4 +89,16 @@ def worker_payloads(
         "configJson": config_text,
         "run": run,
     }
+    protocol = snapshot.get("candidateProtocol")
+    if protocol is not None:
+        if protocol not in {"single-current/1", "single-current/2"}:
+            raise ErrBadRequest()
+        try:
+            candidate_input = FrozenCandidateInput.model_validate(snapshot.get("candidateInput"))
+        except ValidationError as exc:
+            raise ErrBadRequest() from exc
+        # Revision ancestry is a control-plane concern; Worker still receives
+        # the same frozen candidate input contract and existing revision fields.
+        detailed["candidateProtocol"] = "single-current/1"
+        detailed["candidateInput"] = candidate_input.model_dump(mode="json", by_alias=True)
     return claim, detailed

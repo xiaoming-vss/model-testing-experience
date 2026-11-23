@@ -6,6 +6,7 @@ import { ListPagination } from '@/shared/components/ListPagination'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ListSurface } from '@/shared/components/ListSurface'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage, normalizeSprintId, pickEndTime, pickStartTime } from '@/utils/format'
 import type { Sprint } from '@/domain/projects/types'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
@@ -38,7 +39,7 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
     {error ? <Alert type="error" showIcon title={getErrorMessage(error)} action={<Button loading={refreshing} onClick={onRefresh}>重试读取</Button>} /> : null}
     {loading ? <Skeleton active title paragraph={{ rows: 4 }} /> : null}
     {!loading && !error && !ordered.length ? <Empty description="暂无迭代，创建后即可开始管理需求与测试" /> : null}
-    {!loading ? <div className="entity-card-grid sprint-board-grid" aria-label="迭代列表">{visible.map(sprint => {
+    {!loading ? <div className={`entity-card-grid sprint-board-grid ${entityCardGridClass}`} aria-label="迭代列表">{visible.map(sprint => {
       const group = groups.find(item => item.key === groupKey(sprint.status))!
       const sprintId = normalizeSprintId(sprint)
       return <EntityCard key={sprintId} className={`sprint-board-card sprint-board-card-${group.key} max-[680.01px]:[&_.entity-card-foot]:flex-wrap`}

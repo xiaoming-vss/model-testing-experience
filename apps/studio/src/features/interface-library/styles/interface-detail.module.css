@@ -4,31 +4,8 @@
 
 /* ===== 详情顶栏：AntD Tag 间距 ===== */
 
-.scope :global(.if-detail-title-row .ant-tag),
-.scope :global(.if-readonly-tag) {
+.scope :global(.if-detail-topbar .ant-tag) {
   margin: 0;
-}
-
-/* ===== 接口名称：无边框标题输入 ===== */
-
-.scope :global(.if-name-input.ant-input) {
-  height: 34px;
-  padding: 2px 0;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: var(--srf-text);
-  font-size: 17px;
-  font-weight: 650;
-}
-
-.scope :global(.if-name-input.ant-input:hover),
-.scope :global(.if-name-input.ant-input:focus) {
-  border-bottom-color: var(--srf-card-border);
-  background: transparent;
-  box-shadow: none;
 }
 
 /* ===== 请求方法：等宽字重 ===== */

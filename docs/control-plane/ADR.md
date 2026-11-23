@@ -34,3 +34,7 @@
 - [0021 性能测试集按顺序串行执行用例](adr/0021-performance-suite-serial-execution.md)
 - [0022 移除性能测试集与用例的启用状态](adr/0022-remove-performance-enabled-state.md)
 - [0023 禅道/GitLab 连接的传输安全策略](adr/0023-external-connection-transport-security.md)
+- [0024 生成链多候选与唯一当前结果](adr/0024-generation-candidates-current.md)
+- [0025 阶段采用是独立指针](adr/0025-independent-stage-adoption.md)
+- [0026 用例失效是独立的生命周期标记](adr/0026-case-invalidation-marker.md)
+- [0027 API/UI 测试集归项目所有，需求仅作可选关联](adr/0027-project-owned-api-ui-test-suites.md)

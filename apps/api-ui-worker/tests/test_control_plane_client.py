@@ -41,10 +41,7 @@ def _config() -> WorkerConfig:
         request_timeout_ms=15000,
         heartbeat_interval_ms=10000,
         artifacts_root_dir="./artifacts",
-        default_headless=True,
-        default_slow_mo_ms=0,
         trace_enabled=True,
-        screenshot_on_failure=True,
         snapshot_file="",
     )
 

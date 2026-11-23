@@ -70,7 +70,6 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
         context_builder: Callable[..., ContextPackage] | None = None,
         prompt_runner: Callable[..., Any] | None = None,
         client: PlatformHttpClient | None = None,
-        timeout_seconds: float = 120.0,
     ) -> None:
         self.agent_config = agent_config
         self.code_risk_config = code_risk_config or CodeRiskAnalysisConfig()
@@ -80,7 +79,6 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
         self.workspace_preparer = workspace_preparer or prepare_code_workspace
         self.context_builder = context_builder or build_code_context
         self.prompt_runner = prompt_runner or run_agent_prompt
-        self.timeout_seconds = timeout_seconds
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
         if task.task_type != "code_risk_analysis":

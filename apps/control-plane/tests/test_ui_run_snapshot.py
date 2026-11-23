@@ -30,6 +30,7 @@ class FakeUiRunRepository:
         self.cases = cases
         self.suite = SimpleNamespace(
             suite_id="suite-1",
+            project_id="project-1",
             requirement_id="requirement-1",
             name="xiaoming",
             headless=False,
@@ -41,9 +42,10 @@ class FakeUiRunRepository:
         )
         self.requirement = SimpleNamespace(
             requirement_id="requirement-1",
+            name="requirement",
             sprint_id="sprint-1",
         )
-        self.sprint = SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
+        self.sprint = SimpleNamespace(sprint_id="sprint-1", name="sprint", project_id="project-1")
         self.project = SimpleNamespace(project_id="project-1", user_id="user-1")
 
     async def get_case(self, case_id):
@@ -107,6 +109,7 @@ def ui_case(case_id, name, order_no, steps):
         suite_id="suite-1",
         name=name,
         enabled=True,
+        invalidated_at=None,
         order_no=order_no,
         steps_json=steps,
     )

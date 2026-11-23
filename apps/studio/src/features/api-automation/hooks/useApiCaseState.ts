@@ -3,6 +3,8 @@ import type { FormInstance } from 'antd'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import type { ApiCase } from '@/services/api'
 import type { ProjectAction } from '@/domain/projects/types'
+import type { CaseInvalidationFilter } from '@/shared/utils/caseInvalidation'
+import { isCaseInvalidated } from '@/shared/utils/caseInvalidation'
 import { DRAFT_CASE_ID } from '../config/collectionConfig'
 import {
   buildCaseFormValues,
@@ -24,9 +26,11 @@ export function useApiCaseState({
   selectedCaseId,
   setSelectedCaseId,
   selectedCaseDetail,
+  invalidatedFilter,
 }: {
   collectionId: string
   cases: ApiCase[]
+  invalidatedFilter: CaseInvalidationFilter
   caseForm: FormInstance<ApiCaseFormValues>
   queryClient: ReturnType<typeof useQueryClient>
   can: (action: ProjectAction) => boolean
@@ -51,8 +55,8 @@ export function useApiCaseState({
     return {
       ...createDefaultCaseFormValues(),
       ...allValues,
-      headers: allValues.headers ?? [{ enabled: false, key: '', value: '' }],
-      query: allValues.query ?? [{ enabled: false, key: '', value: '' }],
+      headers: allValues.headers ?? [],
+      query: allValues.query ?? [],
     } satisfies ApiCaseFormValues
   }
 
@@ -100,14 +104,19 @@ export function useApiCaseState({
 
   const filteredCases = useMemo(() => {
     const keyword = caseSearch.trim().toLowerCase()
-    if (!keyword) return effectiveCases
+    const statusFiltered = effectiveCases.filter((item) => {
+      if (invalidatedFilter === 'valid') return !isCaseInvalidated(item)
+      if (invalidatedFilter === 'invalid') return isCaseInvalidated(item)
+      return true
+    })
+    if (!keyword) return statusFiltered
 
-    return effectiveCases.filter((item) =>
+    return statusFiltered.filter((item) =>
       [item.name, item.urlTemplate, item.description, item.method]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(keyword)),
     )
-  }, [caseSearch, effectiveCases])
+  }, [caseSearch, effectiveCases, invalidatedFilter])
 
   const orderedByRuleCases = useMemo(() => sortCasesByOrderNo(filteredCases), [filteredCases])
 
@@ -161,7 +170,8 @@ export function useApiCaseState({
     [activeCaseId, effectiveCases, orderedCases],
   )
 
-  const canReorder = can('write') && caseSearch.trim().length === 0
+  const canReorder =
+    can('write') && caseSearch.trim().length === 0 && invalidatedFilter === 'all'
 
   // 选中用例后立刻用列表数据填表单，避免绘制出一帧上一条用例的内容。
   useLayoutEffect(() => {

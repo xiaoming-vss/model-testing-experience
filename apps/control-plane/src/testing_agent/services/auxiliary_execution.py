@@ -10,6 +10,7 @@ from testing_agent.domain.ai_tasks import AUXILIARY_EXECUTION_TYPES
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
+from testing_agent.services.repository_profile_candidates import PROFILE_CANDIDATE_PROTOCOL
 from testing_agent.services.stage_storage.dispatch import dispatch_stage_attempt
 
 
@@ -56,19 +57,24 @@ async def dispatch_auxiliary_execution(
     frozen_source["taskId"] = task.task_id
     frozen_source["runId"] = execution_id
     stage = await lock_or_create_stage(session, task.task_id)
+    input_snapshot = {
+        "source": frozen_source,
+        "config": deepcopy(config),
+        "llmConnectionId": connection_id,
+        "triggerType": trigger_type,
+        "requestSignature": request_signature,
+    }
+    if task.task_type == "repository_profile" and isinstance(
+        frozen_source.get("requirementMaterialCurrent"), dict
+    ):
+        input_snapshot["profileCandidateProtocol"] = PROFILE_CANDIDATE_PROTOCOL
     attempt, replay = await dispatch_stage_attempt(
         session,
         task=task,
         stage_id=stage.id,
         request_id=request_id,
         actor_id=actor_id,
-        input_snapshot={
-            "source": frozen_source,
-            "config": deepcopy(config),
-            "llmConnectionId": connection_id,
-            "triggerType": trigger_type,
-            "requestSignature": request_signature,
-        },
+        input_snapshot=input_snapshot,
         new_execution_id=execution_id,
         review_required=False,
     )

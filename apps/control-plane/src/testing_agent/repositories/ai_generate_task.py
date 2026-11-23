@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from copy import deepcopy
+from typing import Any
 
 from sqlalchemy import func, or_, select
 
@@ -23,6 +25,23 @@ from testing_agent.repositories.auxiliary_execution import latest_task_status_su
 from testing_agent.repositories.base import ResourceRepository
 
 
+def project_ui_source_cases(rows: Iterable[tuple[FunctionTestCase, str]]) -> list[dict[str, Any]]:
+    """Keep the UI generation and source-verification projections identical."""
+    return [
+        {
+            "caseId": case.case_id,
+            "suiteId": case.suite_id,
+            "suiteName": name,
+            "module": case.module,
+            "title": case.title,
+            "priority": case.priority,
+            "caseType": case.case_type,
+            "content": deepcopy(case.content_json),
+        }
+        for case, name in rows
+    ]
+
+
 class AiGenerateTaskRepository(ResourceRepository):
     model = AiGenerateTask
     id_column = "task_id"
@@ -33,25 +52,16 @@ class AiGenerateTaskRepository(ResourceRepository):
         query = (
             select(FunctionTestCase, FunctionTestSuite.name)
             .join(FunctionTestSuite, FunctionTestCase.suite_id == FunctionTestSuite.suite_id)
-            .where(FunctionTestSuite.requirement_id == requirement_id)
+            .where(
+                FunctionTestSuite.requirement_id == requirement_id,
+                FunctionTestCase.invalidated_at.is_(None),
+            )
             .order_by(FunctionTestSuite.id, FunctionTestCase.order_no, FunctionTestCase.id)
         )
         if case_ids is not None:
             query = query.where(FunctionTestCase.case_id.in_(case_ids))
         rows = (await self.session.execute(query)).all()
-        return [
-            {
-                "caseId": case.case_id,
-                "suiteId": case.suite_id,
-                "suiteName": name,
-                "module": case.module,
-                "title": case.title,
-                "priority": case.priority,
-                "caseType": case.case_type,
-                "content": deepcopy(case.content_json),
-            }
-            for case, name in rows
-        ]
+        return project_ui_source_cases((row[0], row[1]) for row in rows)
 
     async def get_project(self, project_id: str) -> Project | None:
         return await self.session.scalar(select(Project).where(Project.project_id == project_id))
@@ -107,42 +117,37 @@ class AiGenerateTaskRepository(ResourceRepository):
         )
         return row is not None
 
-    async def list_api_cases(self, collection_id: str) -> list[ApiCase]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiCase).where(
-                        ApiCase.collection_id == collection_id,
-                    )
-                )
-            ).all()
-        )
+    async def list_api_cases(
+        self, collection_id: str, *, for_update: bool = False
+    ) -> list[ApiCase]:
+        query = select(ApiCase).where(ApiCase.collection_id == collection_id)
+        if for_update:
+            query = query.with_for_update().execution_options(populate_existing=True)
+        return list((await self.session.scalars(query)).all())
 
-    async def list_api_extract_rules(self, case_id: str) -> list[ApiExtractRule]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiExtractRule)
-                    .where(
-                        ApiExtractRule.case_id == case_id,
-                    )
-                    .order_by(ApiExtractRule.order_no, ApiExtractRule.id)
-                )
-            ).all()
+    async def list_api_extract_rules(
+        self, case_id: str, *, for_update: bool = False
+    ) -> list[ApiExtractRule]:
+        query = (
+            select(ApiExtractRule)
+            .where(ApiExtractRule.case_id == case_id)
+            .order_by(ApiExtractRule.order_no, ApiExtractRule.id)
         )
+        if for_update:
+            query = query.with_for_update().execution_options(populate_existing=True)
+        return list((await self.session.scalars(query)).all())
 
-    async def list_api_assert_rules(self, case_id: str) -> list[ApiAssertRule]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiAssertRule)
-                    .where(
-                        ApiAssertRule.case_id == case_id,
-                    )
-                    .order_by(ApiAssertRule.order_no, ApiAssertRule.id)
-                )
-            ).all()
+    async def list_api_assert_rules(
+        self, case_id: str, *, for_update: bool = False
+    ) -> list[ApiAssertRule]:
+        query = (
+            select(ApiAssertRule)
+            .where(ApiAssertRule.case_id == case_id)
+            .order_by(ApiAssertRule.order_no, ApiAssertRule.id)
         )
+        if for_update:
+            query = query.with_for_update().execution_options(populate_existing=True)
+        return list((await self.session.scalars(query)).all())
 
     async def get_task(self, task_id: str) -> AiGenerateTask | None:
         return await self.session.scalar(
@@ -393,21 +398,12 @@ class AiGenerateTaskRepository(ResourceRepository):
             select(FunctionTestSuite).where(FunctionTestSuite.suite_id == suite_id)
         )
 
-    async def get_case(self, case_id: str) -> FunctionTestCase | None:
+    async def get_case(self, case_id: str, *, for_update: bool = False) -> FunctionTestCase | None:
         """Look up a fixed case ID across suites before adopting a candidate ID."""
-        return await self.session.scalar(
-            select(FunctionTestCase).where(FunctionTestCase.case_id == case_id)
-        )
-
-    async def get_function_case_by_suite_and_title(
-        self, suite_id: str, title: str
-    ) -> FunctionTestCase | None:
-        return await self.session.scalar(
-            select(FunctionTestCase).where(
-                FunctionTestCase.suite_id == suite_id,
-                FunctionTestCase.title == title,
-            )
-        )
+        query = select(FunctionTestCase).where(FunctionTestCase.case_id == case_id)
+        if for_update:
+            query = query.with_for_update().execution_options(populate_existing=True)
+        return await self.session.scalar(query)
 
     async def list_function_cases(self, suite_id: str) -> list[FunctionTestCase]:
         return list(
@@ -454,47 +450,6 @@ class AiGenerateTaskRepository(ResourceRepository):
             ).all()
         )
 
-    async def list_function_suites_by_requirement(
-        self, requirement_id: str
-    ) -> list[FunctionTestSuite]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(FunctionTestSuite)
-                    .where(
-                        FunctionTestSuite.requirement_id == requirement_id,
-                    )
-                    .order_by(FunctionTestSuite.created_at.asc(), FunctionTestSuite.id.asc())
-                )
-            ).all()
-        )
-
-    async def list_api_collections_by_requirement(self, requirement_id: str) -> list[ApiCollection]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiCollection)
-                    .where(
-                        ApiCollection.requirement_id == requirement_id,
-                    )
-                    .order_by(ApiCollection.created_at.asc(), ApiCollection.id.asc())
-                )
-            ).all()
-        )
-
-    async def list_ui_suites_by_requirement(self, requirement_id: str) -> list[UiTestSuite]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(UiTestSuite)
-                    .where(
-                        UiTestSuite.requirement_id == requirement_id,
-                    )
-                    .order_by(UiTestSuite.created_at.asc(), UiTestSuite.id.asc())
-                )
-            ).all()
-        )
-
     async def list_requirement_case_pairs(self, requirement_id: str, kind: str):
         models: dict[
             str,
@@ -512,7 +467,10 @@ class AiGenerateTaskRepository(ResourceRepository):
         rows = await self.session.execute(
             select(case, parent)
             .join(parent, getattr(parent, parent_key) == getattr(case, parent_key))
-            .where(parent.requirement_id == requirement_id)
+            .where(
+                parent.requirement_id == requirement_id,
+                case.invalidated_at.is_(None),
+            )
             .order_by(parent.created_at, parent.id, case.order_no, case.id)
         )
         return list(rows.all())
@@ -547,24 +505,6 @@ class AiGenerateTaskRepository(ResourceRepository):
             )
         )
         return {row.case_id: row for row in rows.all()}
-
-    async def get_latest_api_case_run(self, case_id: str) -> ApiCaseRun | None:
-        """该用例最近一次 run(创建时间最新在前,同刻取 id 较大者,结果确定)。"""
-        return await self.session.scalar(
-            select(ApiCaseRun)
-            .where(ApiCaseRun.case_id == case_id, ApiCaseRun.trigger_type != "live_debug")
-            .order_by(ApiCaseRun.created_at.desc(), ApiCaseRun.id.desc())
-            .limit(1)
-        )
-
-    async def get_latest_ui_case_run(self, case_id: str) -> UiTestCaseRun | None:
-        """该用例最近一次 run(创建时间最新在前,同刻取 id 较大者,结果确定)。"""
-        return await self.session.scalar(
-            select(UiTestCaseRun)
-            .where(UiTestCaseRun.case_id == case_id, UiTestCaseRun.trigger_type != "live_debug")
-            .order_by(UiTestCaseRun.created_at.desc(), UiTestCaseRun.id.desc())
-            .limit(1)
-        )
 
     def add(self, row: object) -> None:
         self.session.add(row)

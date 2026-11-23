@@ -39,6 +39,7 @@ class K6Execution:
     log_tail: str
     log_truncated: bool
     error_message: str = ""
+    remote_write_error: bool = False
 
 
 class K6Runner:
@@ -108,6 +109,7 @@ class K6Runner:
         with workspace.log_path.open("a", encoding="utf-8", errors="replace") as log_file:
             lock = asyncio.Lock()
             tail = _TailBuffer(_LOG_TAIL_BYTES)
+            remote_write_error = asyncio.Event()
             try:
                 process = await asyncio.create_subprocess_exec(
                     *command,
@@ -121,8 +123,12 @@ class K6Runner:
                 raise ExecutionError(f"无法启动 k6: {binary}") from exc
 
             readers = [
-                asyncio.create_task(_pump(process.stdout, log_file, lock, tail, secrets)),
-                asyncio.create_task(_pump(process.stderr, log_file, lock, tail, secrets)),
+                asyncio.create_task(
+                    _pump(process.stdout, log_file, lock, tail, secrets, remote_write_error)
+                ),
+                asyncio.create_task(
+                    _pump(process.stderr, log_file, lock, tail, secrets, remote_write_error)
+                ),
             ]
             wait_task = asyncio.create_task(process.wait())
             stop_task = asyncio.create_task(stop_event.wait()) if stop_event is not None else None
@@ -171,9 +177,13 @@ class K6Runner:
                         with suppress(asyncio.CancelledError):
                             await wait_task
                         raise
-                for reader in readers:
-                    reader.cancel()
-                await asyncio.gather(*readers, return_exceptions=True)
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*readers, return_exceptions=True), timeout=2
+                    )
+                except TimeoutError:
+                    for reader in readers:
+                        reader.cancel()
                 if not wait_task.done():
                     wait_task.cancel()
                 await asyncio.gather(wait_task, return_exceptions=True)
@@ -202,6 +212,7 @@ class K6Runner:
             log_tail=log_tail,
             log_truncated=tail.truncated,
             error_message=error_message,
+            remote_write_error=remote_write_error.is_set(),
         )
 
     async def _wait_for_process(
@@ -317,6 +328,7 @@ async def _pump(
     lock: asyncio.Lock,
     tail: _TailBuffer,
     secrets: list[str],
+    remote_write_error: asyncio.Event,
 ) -> None:
     if stream is None:
         return
@@ -325,6 +337,8 @@ async def _pump(
         if not line:
             return
         text = redact(line.decode("utf-8", errors="replace"), secrets)
+        if "Failed to send the time series data to the endpoint" in text:
+            remote_write_error.set()
         async with lock:
             log_file.write(text)
             log_file.flush()

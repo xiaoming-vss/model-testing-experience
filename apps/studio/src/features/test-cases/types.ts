@@ -42,6 +42,7 @@ export type FunctionTestCase = {
   created_at?: string
   updatedAt?: string
   updated_at?: string
+  invalidatedAt?: string | null
 }
 
 export type FunctionTestCaseImportResult = {
@@ -117,6 +118,7 @@ export type FunctionCaseLibraryFilters = {
   module?: string
   priority?: string
   caseType?: string
+  invalidated?: boolean
   keyword?: string
   page?: number
   pageSize?: number

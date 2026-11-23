@@ -20,6 +20,7 @@ import detailStyles from '@/features/requirements/styles/requirement-detail.modu
 import taskStyles from '@/features/ai-testing/styles/ai-task-detail.module.css'
 import chainStyles from '@/features/ai-testing/styles/generation-chain.module.css'
 import canvasStyles from '@/features/ai-testing/styles/generation-canvas.module.css'
+import candidateStyles from '@/features/ai-testing/styles/candidate-workspace.module.css'
 import caseArtifactStyles from '@/features/ai-testing/styles/artifact-cases.module.css'
 import uiStageStyles from '@/features/ai-testing/styles/ui-stage-visual.module.css'
 
@@ -56,11 +57,10 @@ export function RequirementDetailPage() {
   const canRead = access.can('read')
   const canonicalProjectId = sprint.data?.projectId
   useEffect(() => {
-    if (!canRead || !canonicalProjectId || !sprintId) return
+    if (!canRead || !canonicalProjectId) return
     const scope = useWorkbenchStore.getState()
     if (scope.activeProjectId !== canonicalProjectId) scope.setActiveProjectId(canonicalProjectId)
-    if (useWorkbenchStore.getState().activeSprintId !== sprintId) useWorkbenchStore.getState().setActiveSprintId(sprintId)
-  }, [canRead, canonicalProjectId, sprintId])
+  }, [canRead, canonicalProjectId])
   useEffect(() => {
     if (!editing || requirement?.documentType !== 'richtext') return
     const sequence = ++documentHydrationSeq.current
@@ -82,7 +82,12 @@ export function RequirementDetailPage() {
     if (values.file) return requirementsApi.replaceRequirementDocument(requirementId, { name: values.name, file: values.file, documentType: values.documentType, onUploadProgress: values.onUploadProgress })
     return requirementsApi.updateRequirement(requirementId, { name: values.name })
   }, onSuccess: () => { setEditing(false); void client.invalidateQueries({ queryKey: ['requirement', requirementId] }); void client.invalidateQueries({ queryKey: ['requirementDesign', requirementId] }); void client.invalidateQueries({ queryKey: ['requirementsPool'] }); message.success('需求已更新') } })
-  const back = () => { if (canNavigateAway()) navigate('/projects?board=requirements') }
+  const back = () => {
+    if (!canNavigateAway()) return
+    const params = new URLSearchParams({ board: 'requirements' })
+    if (sprintId) params.set('sprint', sprintId)
+    navigate(`/projects?${params}`)
+  }
   // 生成全景的刷新入口在需求标题栏，这里直接刷新生成链查询。
   const refreshGeneration = () => {
     setRefreshingGeneration(true)
@@ -101,7 +106,7 @@ export function RequirementDetailPage() {
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
-    <div className={`requirement-detail-page tp-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-transparent p-[var(--app-page-gutter)] pb-4 text-[var(--srf-text)] ${detailStyles.root} ${taskStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope}`}>
+    <div className={`requirement-detail-page tp-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-transparent p-[var(--app-page-gutter)] pb-4 text-[var(--srf-text)] ${detailStyles.root} ${taskStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${candidateStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope}`}>
       <div className="requirement-detail-layout flex min-h-0 min-w-0 flex-1 gap-3 max-narrow:flex-col max-narrow:overflow-auto">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
         <section className="requirement-detail-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--srf-card)] max-narrow:flex-none">

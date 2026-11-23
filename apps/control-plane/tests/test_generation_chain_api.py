@@ -35,19 +35,17 @@ def seed_requirement(client, project_id):
     asyncio.run(insert())
 
 
-def test_generation_version_import_routes_are_public():
+def test_candidate_routes_replace_legacy_version_routes():
     paths = openapi_schema()["paths"]
     assert (
-        "get"
-        in paths[
-            "/v1/requirements/{requirementId}/generation/{kind}/versions/{versionId}/import-options"
-        ]
+        "/v1/requirements/{requirementId}/generation/{kind}/versions/{versionId}/import"
+        not in paths
     )
+    assert "/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/draft" not in paths
     assert (
         "post"
-        in paths["/v1/requirements/{requirementId}/generation/{kind}/versions/{versionId}/import"]
+        in paths["/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/current/import"]
     )
-    assert "put" in paths["/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/draft"]
 
 
 def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
@@ -79,9 +77,9 @@ def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
         )
     for headers in (viewer, developer, stranger):
         response = api.put(
-            "/v1/requirements/req/generation/function/stages/case_names/draft",
+            "/v1/requirements/req/generation/function/stages/case_names/candidates/candidate",
             headers=headers,
-            json={"expectedAttemptId": "draft", "content": "{}"},
+            json={"expectedAttemptId": "draft", "expectedCandidateToken": "token", "content": "{}"},
         )
         assert response.status_code == 403
     data = api.get("/v1/requirements/req/generation", headers=owner).json()["data"]
@@ -104,7 +102,7 @@ def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
             headers=owner,
             json={"action": "approve"},
         ).status_code
-        == 400
+        == 404
     )
     assert api.get("/v1/requirements/other/generation/function", headers=owner).status_code == 200
     assert api.get("/v1/requirements/missing/generation/function", headers=owner).status_code == 404
@@ -114,5 +112,5 @@ def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
             headers=owner,
             json={"action": "approve"},
         ).status_code
-        == 400
+        == 404
     )

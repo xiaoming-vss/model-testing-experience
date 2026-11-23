@@ -8,16 +8,14 @@ from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
 from testing_agent.models.api_environment import ApiEnvironment
-from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.repositories.api_run_scope import ApiRunScopeRepositoryMixin
 from testing_agent.repositories.base import BaseRepository
 
 
-class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
+class ApiCollectionRunRepository(BaseRepository):
     async def get_collection(self, collection_id: str) -> ApiCollection | None:
         return await self.session.scalar(
             select(ApiCollection).where(
@@ -46,17 +44,6 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
             )
             # Snapshot readers may run concurrently while environment writers wait.
             .with_for_update(read=True)
-        )
-
-    async def list_environment_vars(self, environment_id: str) -> list[ApiEnvironmentVar]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiEnvironmentVar)
-                    .where(ApiEnvironmentVar.environment_id == environment_id)
-                    .order_by(ApiEnvironmentVar.created_at)
-                )
-            ).all()
         )
 
     async def list_cases(self, collection_id: str) -> list[ApiCase]:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 from testing_agent.api.deps import get_api_case_service, get_current_user_id
 from testing_agent.core.errors import success_payload
@@ -10,6 +10,7 @@ from testing_agent.schemas.api_case import (
     ApiCaseUpdateRequest,
 )
 from testing_agent.schemas.api_run import RunApiCaseRequest
+from testing_agent.schemas.case_lifecycle import CaseInvalidationRequest
 from testing_agent.services.api_case import ApiCaseService
 
 
@@ -24,10 +25,24 @@ async def create_api_case(
 
 async def list_api_cases(
     collection_id: str,
+    invalidated: bool | None = Query(default=None),
     user_id: str = Depends(get_current_user_id),
     service: ApiCaseService = Depends(get_api_case_service),
 ):
-    return success_payload(await service.list_by_collection(user_id, collection_id))
+    return success_payload(
+        await service.list_by_collection(user_id, collection_id, invalidated=invalidated)
+    )
+
+
+async def batch_invalidate_api_cases(
+    project_id: str,
+    body: CaseInvalidationRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: ApiCaseService = Depends(get_api_case_service),
+):
+    return success_payload(
+        await service.batch_set_invalidated(user_id, project_id, body.case_ids, body.invalidated)
+    )
 
 
 async def get_api_case(

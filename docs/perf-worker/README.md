@@ -7,7 +7,12 @@
 - **`poll`（控制面接入）**：通过 `/internal/perf-worker` 领取性能运行，下载冻结的数据文件，执行后回传结果；Compose 已纳入该模式。
 - **`once`（本地排查）**：直接读取一份 RunSpec（YAML 或 JSON），不连接控制面。
 
-决策记录见 [ADR 0001](adr/0001-independent-perf-worker.md) 和 [ADR 0002](adr/0002-control-plane-poll-mode.md)。
+决策记录见 [ADR 0001](adr/0001-independent-perf-worker.md)、[ADR 0002](adr/0002-control-plane-poll-mode.md) 和 [ADR 0003](adr/0003-performance-run-metrics-context.md)；[性能运行指标规格](records/2026-11-20-performance-metrics-spec.md)记录本次实施范围。
+
+外部夜莺看板查询参考[夜莺性能运行查询](nightingale-dashboard.md)；中文名称映射仍待实现。
+本地隔离验证范围见[性能运行指标阶段验证](records/2026-11-20-performance-metrics-validation.md)。
+
+首次公开发布前，新增运行迭代字段已写入唯一 Alembic baseline。已经执行过该 baseline 的开发数据库不会因重复执行 `alembic upgrade head` 自动获得新列；应先备份并确认本地库版本，在停机状态下按预发布本地库维护流程补齐 `perf_runs` 和 `perf_suite_runs` 的可空 `sprint_id VARCHAR(64)`、非空且默认为空字符串的 `sprint_name VARCHAR(100)`，并核对中文列注释与 baseline 一致。不得直接在生产库执行未经验证的 DDL。
 
 ## 执行链路
 
@@ -99,6 +104,8 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 - `acceptance.source` 为 `user_confirmed | model_suggested | missing`；模型建议不能标记 `confirmed=true`。
 - `data` 支持 `source` 文件或内联 `rows`；列名跨数据集必须唯一。
 - 模板占位符支持 `{{data.x}}`、`{{var.x}}`、`{{env.x}}` 以及 `{{uuid}}`、`{{timestamp}}`、`{{iteration}}`、`{{vu}}`。
+- 步骤的 `expectedStatuses` 可列出可接受的 HTTP 状态码；省略时接受 2xx。按请求状态、响应检查、变量提取的顺序判定，第一个失败阶段决定失败原因。
+- 运行规格可选 `projectId`、`sprintId`、`suiteId`、`suiteRunId` 和 `caseId`；非空身份随 `run_id` 加入指标标签。
 - 环境变量名不能以 `K6_` 开头，也不能使用 `PATH`、`HOME` 等保留名。
 
 ## 执行结果
@@ -109,7 +116,7 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 - `outcome`：`passed`、`threshold_failed`、`inconclusive`、`execution_error`、`stopped`
 - `exitCode`、时间、k6 版本、模板版本、脚本 SHA-256
 - `summary`：从 `summary.json` 提取的指标与阈值结果
-- `flags`：`summary_missing`、`log_truncated`
+- `flags`：`summary_missing`、`log_truncated`、`remote_write_error`。其中 `remote_write_error` 表示从 k6 输出中观察到 Remote Write 失败；没有该标志不能证明监控已成功接收。
 - `logTail`：脱敏后的日志尾部
 - `runner`：主机名、CPU 数量和 k6 版本
 

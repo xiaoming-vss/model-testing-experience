@@ -672,34 +672,6 @@ async def test_legacy_checkpoint_progress_is_rejected(
     assert run.status == "running"
 
 
-def test_ai_worker_completion_accepts_output_yaml_alias_for_requirement_analysis():
-    run = SimpleNamespace(
-        status="running",
-        snapshot_json={},
-        current_stage="extracting_text",
-        stage_status="running",
-        error_message="",
-        config_json={},
-        result_yaml="",
-        result_summary_json={},
-        finished_at=None,
-        duration_ms=0,
-    )
-
-    worker_service_module.apply_ai_completion_to_run(
-        run,
-        WorkerTaskEventRequest(
-            workerId="worker-1",
-            taskId="worker-task-1",
-            status="success",
-            outputYaml="final requirement understanding",
-        ),
-    )
-
-    assert run.status == "success"
-    assert run.result_yaml == "final requirement understanding"
-
-
 @pytest.mark.asyncio
 async def test_api_collection_item_complete_creates_case_run_and_binds_item(monkeypatch):
     task = SimpleNamespace(
@@ -726,7 +698,9 @@ async def test_api_collection_item_complete_creates_case_run_and_binds_item(monk
         collection_id="collection-1",
         collection_run_id="collection-run-1",
         requirement_id="requirement-1",
+        requirement_name="requirement",
         sprint_id="sprint-1",
+        sprint_name="sprint",
         project_id="project-1",
         environment_id="env-1",
         trigger_user_id="user-1",

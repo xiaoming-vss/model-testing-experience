@@ -68,7 +68,6 @@ class AgentConfig(BaseModel):
 
 
 class CodeRiskAnalysisConfig(BaseModel):
-    gitlab_timeout_seconds: float = 120.0
     git_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
     workspace_retention_hours: float = Field(default=24.0, gt=0, allow_inf_nan=False)
     max_diff_chars: int = Field(default=1_000_000, gt=0)

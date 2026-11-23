@@ -1,8 +1,10 @@
 export type ApiCollection = {
   collectionId?: string
   collection_id?: string
-  requirementId?: string
-  requirement_id?: string
+  projectId?: string
+  project_id?: string
+  requirementId?: string | null
+  requirement_id?: string | null
   name: string
   description?: string
   createdAt?: string
@@ -67,6 +69,7 @@ export type ApiCase = {
   created_at?: string
   updatedAt?: string
   updated_at?: string
+  invalidatedAt?: string | null
 }
 
 export type ApiAssertSource = 'status_code' | 'header' | 'body_jsonpath' | 'body_text'
@@ -126,7 +129,13 @@ export type CreateApiCollectionPayload = {
   description?: string
 }
 
-export type UpdateApiCollectionPayload = Partial<CreateApiCollectionPayload> & { requirementId?: string }
+export type CreateProjectApiCollectionPayload = CreateApiCollectionPayload & {
+  requirementId?: string | null
+}
+
+export type UpdateApiCollectionPayload = Partial<CreateApiCollectionPayload> & {
+  requirementId?: string | null
+}
 
 export type CreateApiEnvironmentPayload = {
   name: string
@@ -192,10 +201,12 @@ export type UpdateApiExtractRulePayload = Partial<CreateApiExtractRulePayload>
 export type RunApiCasePayload = {
   environmentId: string
   liveDebug?: boolean
+  sprintId?: string
 }
 
 export type RunApiCollectionPayload = {
   environmentId: string
+  sprintId?: string
 }
 
 export type ApiCaseRunStatus = 'pending' | 'queued' | 'claimed' | 'running' | 'stopping' | 'success' | 'failed' | 'error' | 'canceled'
@@ -277,6 +288,11 @@ export type ApiCollectionRunItem = {
 export type ApiCollectionRunSummary = {
   collectionRunId?: string
   collectionId?: string
+  projectId?: string
+  requirementId?: string | null
+  requirementName?: string
+  sprintId?: string | null
+  sprintName?: string
   environmentId?: string
   status?: ApiCaseRunStatus
   totalCount?: number

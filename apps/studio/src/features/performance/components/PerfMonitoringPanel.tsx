@@ -150,7 +150,7 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
                 <span className={serviceCardLabelClass}>最近更新</span>
                 <span className={serviceCardValueClass}>{formatTime(connection.updatedAt)}</span>
               </div>
-              <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
+              <div className={cx('base-services-connection-actions', serviceCardActionsClass)}>
                 <Tooltip title="编辑监控接入">
                   <ProjectActionButton
                     action="manage"

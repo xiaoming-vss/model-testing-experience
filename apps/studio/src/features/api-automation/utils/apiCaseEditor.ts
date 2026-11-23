@@ -39,9 +39,9 @@ export function createDefaultCaseFormValues(): ApiCaseFormValues {
     method: 'POST',
     path: '',
     description: '',
-    // 请求头页签自带虚线「新增」行，所以默认值里不放空行；Query 参数页签仍靠空行新增。
+    // Query 通过全宽「添加参数」创建首行，请求头使用自己的虚线新增行；默认值里不放占位空行。
     headers: [],
-    query: [{ enabled: false, key: '', value: '' }],
+    query: [],
     bodyType: 'none',
     bodyJson: '',
     bodyText: '',
@@ -55,14 +55,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function normalizeKeyValueRows(
-  rows: Array<{ enabled?: boolean; key?: string; value?: string }>,
-  placeholderRow = true,
-) {
-  if (!placeholderRow) return rows
-  return rows.length > 0 ? [...rows, { enabled: false, key: '', value: '' }] : [{ enabled: false, key: '', value: '' }]
-}
-
 function pickStringField(source: Record<string, unknown>, ...keys: string[]) {
   for (const key of keys) {
     const value = source[key]
@@ -72,8 +64,8 @@ function pickStringField(source: Record<string, unknown>, ...keys: string[]) {
   return ''
 }
 
-function parseKeyValueObject(value: Record<string, unknown>, placeholderRow: boolean) {
-  const entries = Object.entries(value).map(([key, itemValue]) => {
+function parseKeyValueObject(value: Record<string, unknown>) {
+  return Object.entries(value).map(([key, itemValue]) => {
     if (isRecord(itemValue)) {
       return {
         enabled: itemValue.enabled === undefined ? true : Boolean(itemValue.enabled),
@@ -88,12 +80,10 @@ function parseKeyValueObject(value: Record<string, unknown>, placeholderRow: boo
       value: itemValue == null ? '' : String(itemValue),
     }
   })
-
-  return normalizeKeyValueRows(entries, placeholderRow)
 }
 
-function parseKeyValueArray(value: unknown[], placeholderRow: boolean) {
-  const entries = value
+function parseKeyValueArray(value: unknown[]) {
+  return value
     .filter(isRecord)
     .map((item) => ({
       enabled: item.enabled === undefined ? true : Boolean(item.enabled),
@@ -101,26 +91,19 @@ function parseKeyValueArray(value: unknown[], placeholderRow: boolean) {
       value: pickStringField(item, 'value', 'values', 'paramValue', 'param_value'),
     }))
     .filter((item) => item.key || item.value)
-
-  return normalizeKeyValueRows(entries, placeholderRow)
 }
 
-/**
- * `placeholderRow` 决定末尾是否补一行空行：Query 参数页签靠它当「新增一行」的入口，
- * 请求头页签有自己的虚线新增行，所以传 false，列表里只留真实存在的请求头。
- */
-export function parseKeyValueJson(value?: unknown, options?: { placeholderRow?: boolean }): Array<{ enabled?: boolean; key?: string; value?: string }> {
-  const placeholderRow = options?.placeholderRow ?? true
-  if (!value) return normalizeKeyValueRows([], placeholderRow)
+/** 反序列化 Query / 请求头键值对；空值返回空数组，由页面自己的「添加」按钮创建行。 */
+export function parseKeyValueJson(value?: unknown): Array<{ enabled?: boolean; key?: string; value?: string }> {
+  if (!value) return []
 
-  if (Array.isArray(value)) return parseKeyValueArray(value, placeholderRow)
-  if (isRecord(value)) return parseKeyValueObject(value, placeholderRow)
+  if (Array.isArray(value)) return parseKeyValueArray(value)
+  if (isRecord(value)) return parseKeyValueObject(value)
 
   try {
-    const parsed = JSON.parse(String(value)) as unknown
-    return parseKeyValueJson(parsed, options)
+    return parseKeyValueJson(JSON.parse(String(value)) as unknown)
   } catch {
-    return normalizeKeyValueRows([], placeholderRow)
+    return []
   }
 }
 
@@ -162,7 +145,7 @@ export function buildCaseFormValues(apiCase: ApiCase): ApiCaseFormValues {
     method: apiCase.method ?? defaults.method,
     path: apiCase.urlTemplate ?? apiCase.url_template ?? defaults.path,
     description: apiCase.description ?? defaults.description,
-    headers: parseKeyValueJson(apiCase.headersJson ?? apiCase.headers_json ?? apiCase.headers, { placeholderRow: false }),
+    headers: parseKeyValueJson(apiCase.headersJson ?? apiCase.headers_json ?? apiCase.headers),
     query: parseKeyValueJson(apiCase.queryJson ?? apiCase.query_json ?? apiCase.query),
     bodyType: apiCase.bodyType ?? apiCase.body_type ?? defaults.bodyType,
     bodyJson: apiCase.bodyJson ?? apiCase.body_json ?? defaults.bodyJson,

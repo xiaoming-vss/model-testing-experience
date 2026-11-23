@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-import time
-
 
 class WorkerLifecycle:
     """worker 的轮询与心跳节奏配置对象。"""
@@ -23,11 +21,6 @@ class WorkerLifecycle:
         self.poll_interval_seconds = poll_interval_seconds
         self.heartbeat_interval_seconds = heartbeat_interval_seconds
         self.run_once = run_once
-
-    def sleep_when_idle(self) -> None:
-        """无任务时按轮询间隔休眠。"""
-
-        time.sleep(self.poll_interval_seconds)
 
     def heartbeat_interval_for(self, lease_seconds: int) -> int:
         """计算 heartbeat 间隔。

@@ -17,7 +17,6 @@ from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
-from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.repositories.base import BaseRepository
@@ -124,6 +123,7 @@ class SprintDailyMetricsRepository(BaseRepository):
                     .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
                     .where(
                         Requirement.sprint_id == sprint_id,
+                        ApiCase.invalidated_at.is_(None),
                     )
                     .order_by(ApiCase.id.asc())
                 )
@@ -158,21 +158,6 @@ class SprintDailyMetricsRepository(BaseRepository):
             latest_per_resource(statement, ApiCaseRun.case_id, ApiCaseRun.created_at, ApiCaseRun.id)
         )
         return {case_id: status for case_id, status in rows}
-
-    async def list_ui_case_ids_by_sprint(self, sprint_id: str) -> builtins.list[str]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(UiTestCase.case_id)
-                    .join(UiTestSuite, UiTestSuite.suite_id == UiTestCase.suite_id)
-                    .join(Requirement, Requirement.requirement_id == UiTestSuite.requirement_id)
-                    .where(
-                        Requirement.sprint_id == sprint_id,
-                    )
-                    .order_by(UiTestCase.id.asc())
-                )
-            ).all()
-        )
 
     async def list_latest_ui_suite_runs(self, sprint_id: str) -> builtins.list:
         statement = (

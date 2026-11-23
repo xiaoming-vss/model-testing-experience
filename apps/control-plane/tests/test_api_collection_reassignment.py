@@ -90,7 +90,7 @@ def test_reassignment_rejects_cross_project_and_missing_permission(api):  # noqa
     assert response.status_code == 403
 
 
-def test_reassignment_duplicate_name_preserves_original_requirement(api):  # noqa: F811
+def test_duplicate_project_name_preserves_original_requirement(api):  # noqa: F811
     _, owner = account(api, "owner")
     pid = project(api, owner)
     original = requirement(api, owner, pid)
@@ -101,14 +101,11 @@ def test_reassignment_duplicate_name_preserves_original_requirement(api):  # noq
     collection_id = api.post(
         f"/v1/requirements/{original}/api-collections", headers=owner, json={"name": "demo"}
     ).json()["data"]["collectionId"]
-    api.post(f"/v1/requirements/{target}/api-collections", headers=owner, json={"name": "demo"})
+    api.post(f"/v1/requirements/{target}/api-collections", headers=owner, json={"name": "other"})
     response = api.patch(
-        f"/v1/api-collections/{collection_id}", headers=owner, json={"requirementId": target}
+        f"/v1/api-collections/{collection_id}", headers=owner, json={"name": "other"}
     )
     assert response.status_code == 409
-    assert (
-        api.get(f"/v1/api-collections/{collection_id}", headers=owner).json()["data"][
-            "requirementId"
-        ]
-        == original
-    )
+    stored = api.get(f"/v1/api-collections/{collection_id}", headers=owner).json()["data"]
+    assert stored["requirementId"] == original
+    assert stored["name"] == "demo"

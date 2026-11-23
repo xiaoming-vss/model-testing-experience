@@ -1,4 +1,5 @@
 import { ActionButton } from '@/shared/components/ActionButton'
+import { CaseInvalidatedTag } from '@/shared/components/CaseInvalidatedTag'
 import {
   ArrowLeftOutlined,
   BugOutlined,
@@ -35,6 +36,9 @@ type Props = {
   saving: boolean
   canRun: boolean
   canDebug: boolean
+  canManageCases: boolean
+  invalidatedCount: number
+  caseInvalidatedAt?: string | null
   showDebug?: boolean
   /** 测试集级动作（运行记录 / 导入用例 / 运行测试集）只在测试集流程出现。 */
   showSuiteActions?: boolean
@@ -61,6 +65,7 @@ type Props = {
   onRunSuite: () => void
   onSave: () => void
   onImport: () => void
+  onOpenCaseStatus: () => void
 }
 
 const CRUMB_BASE = 'ui-wb-crumb inline-flex items-center gap-1.5 min-w-0 rounded-[6px] border-0 bg-transparent px-1.5 py-[3px] text-[13px] leading-5 whitespace-nowrap'
@@ -81,6 +86,9 @@ export function UiSuiteDetailToolbar({
   saving,
   canRun,
   canDebug,
+  canManageCases,
+  invalidatedCount,
+  caseInvalidatedAt,
   showDebug = true,
   showSuiteActions = true,
   canSave,
@@ -104,6 +112,7 @@ export function UiSuiteDetailToolbar({
   onRunSuite,
   onSave,
   onImport,
+  onOpenCaseStatus,
 }: Props) {
   const contextParts = [suiteName, requirementName, sprintName].filter((item) => item && item !== '-')
   const contextTitle = contextParts.join(' / ') || '测试集信息加载中'
@@ -180,6 +189,7 @@ export function UiSuiteDetailToolbar({
                 <Switch size="small" aria-label="启用当前用例" />
               </Form.Item>
               <span className={`ui-wb-case-status whitespace-nowrap text-[12px]${caseEnabled ? ' tone-green text-[var(--srf-tone-text)]' : ' text-[var(--srf-text-muted)]'}`}>{caseEnabled ? '● 已启用' : '已停用'}</span>
+              <CaseInvalidatedTag invalidatedAt={caseInvalidatedAt} className="flex-none" />
             </span>
             <span className="ui-wb-case-count whitespace-nowrap text-[12px] text-[var(--srf-text-muted)]">{caseStepCount} 个步骤</span>
           </div>
@@ -228,6 +238,15 @@ export function UiSuiteDetailToolbar({
         {showSuiteActions ? (
           <>
             <Button
+              className={`ui-wb-toolbar-compact ui-wb-toolbar-case-status ${COMPACT_BUTTON}`}
+              title="管理用例状态"
+              aria-label="管理用例状态"
+              disabled={!canManageCases}
+              onClick={onOpenCaseStatus}
+            >
+              <span className={`ui-wb-btn-label ${COMPACT_LABEL}`}>用例状态</span>
+            </Button>
+            <Button
               className={`ui-wb-toolbar-compact ui-wb-toolbar-history ${COMPACT_BUTTON}`}
               icon={<HistoryOutlined />}
               title={historyLabel}
@@ -270,6 +289,7 @@ export function UiSuiteDetailToolbar({
               operation="run"
               loading={runningSuite}
               disabled={!canRun}
+              title={invalidatedCount > 0 ? `运行将排除 ${invalidatedCount} 条失效用例` : undefined}
               onClick={onRunSuite}
             >
               运行测试集

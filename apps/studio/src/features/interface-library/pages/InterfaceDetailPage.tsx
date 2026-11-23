@@ -1,4 +1,5 @@
 import { Alert, Button, Empty, Spin } from 'antd'
+import '@/shared/styles/surface-tokens.css'
 import { InterfaceDetailTopbar } from '../components/InterfaceDetailTopbar'
 import { InterfaceDetailWorkspace } from '../components/InterfaceDetailWorkspace'
 import { InterfaceGroupModals } from '../components/InterfaceGroupModals'

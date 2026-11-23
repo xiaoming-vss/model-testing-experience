@@ -72,22 +72,6 @@ class RequirementSoftwareRepositoryRepository(BaseRepository):
         )
         return await self.session.scalar(statement)
 
-    async def list_for_requirement(
-        self, requirement_id: str
-    ) -> list[RequirementSoftwareRepository]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(RequirementSoftwareRepository)
-                    .where(RequirementSoftwareRepository.requirement_id == requirement_id)
-                    .order_by(
-                        RequirementSoftwareRepository.created_at.asc(),
-                        RequirementSoftwareRepository.id.asc(),
-                    )
-                )
-            ).all()
-        )
-
     async def list_for_requirement_with_repository(
         self, requirement_id: str
     ) -> list[RequirementRepositoryBinding]:

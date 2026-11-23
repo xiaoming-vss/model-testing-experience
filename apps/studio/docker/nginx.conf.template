@@ -9,6 +9,16 @@ server {
     # The backend remains responsible for enforcing the file-size contract.
     client_max_body_size 105m;
 
+    # Hashed build assets are large JS/CSS files; compress them on the fly so
+    # browsers do not download raw bundles. gzip_proxied keeps compression when
+    # an upstream gateway adds proxy headers.
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_min_length 1024;
+    gzip_comp_level 5;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
     location = /healthz {
         access_log off;
         default_type text/plain;

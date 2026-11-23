@@ -23,11 +23,9 @@ from support.code_risk_analysis import (  # noqa: F401
     worker_contract_authority,
 )
 
-from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services.code_risk_analysis import (
     parse_risk_report,
 )
-from testing_agent.services.worker import apply_ai_completion_to_run
 
 
 def test_parse_risk_report_reads_context_preview_receipt():
@@ -203,36 +201,3 @@ def test_dump_code_risk_analysis_run_includes_parsed_report():
     assert report["risks"][0]["level"] == "high"
     assert report["affectedCases"][0]["caseId"] == "ac-1"
     assert report["coverageGaps"][0]["gap"] == "登录失败路径无用例覆盖"
-
-
-def test_completion_callback_persists_report_readable_via_detail_dump():
-    run = make_run(status="success", result_yaml="")
-    body = WorkerTaskEventRequest(
-        workerId="worker-1",
-        taskId="task-1",
-        runId="run-1",
-        status="success",
-        resultYaml=RISK_REPORT_YAML,
-    )
-
-    apply_ai_completion_to_run(run, body)
-
-    assert run.result_yaml == RISK_REPORT_YAML
-    payload = dump_code_risk_analysis_run(run)
-    assert payload["status"] == "success"
-    assert payload["report"]["repositories"][0]["headCommit"] == "def456"
-    assert payload["report"]["analyzedAt"] == "2026-08-21T10:30:00Z"
-
-
-def test_completion_callback_reads_report_from_snapshot_fallback():
-    run = make_run(status="success", result_yaml="")
-    apply_ai_completion_to_run(
-        run,
-        WorkerTaskEventRequest(
-            workerId="worker-1",
-            status="success",
-            snapshotJson={"resultYaml": RISK_REPORT_YAML},
-        ),
-    )
-
-    assert dump_code_risk_analysis_run(run)["report"]["risks"][0]["level"] == "high"

@@ -9,7 +9,9 @@ import { UiGenerationCaseSelector } from './UiGenerationCaseSelector'
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks() })
 function mount(size = 2) {
+  const urls: string[] = []
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+    urls.push(String(input))
     const path = new URL(String(input), 'http://localhost').pathname
     const rows = path.endsWith('/function-test-suites') ? [{ suiteId: 'a', name: '检索用例集' }, { suiteId: 'b', name: '转换用例集' }]
       : path.includes('/a/cases') ? Array.from({ length: size }, (_, i) => ({ caseId: `a-${i + 1}`, title: `检索记录${i + 1}` }))
@@ -25,6 +27,7 @@ function mount(size = 2) {
       <output aria-label="已选编号">{ids?.join(',')}</output><button disabled={!ready}>提交生成</button></>
   }
   render(<TestThemeProvider><QueryClientProvider client={client}><Host /></QueryClientProvider></TestThemeProvider>)
+  return urls
 }
 async function filterSuite(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole('combobox', { name: '按用例集筛选' }))
@@ -52,6 +55,11 @@ it('提供复选框多选，按用例集和标题筛选且保留隐藏用例的�
   expect(screen.getByRole('checkbox', { name: '选择用例：检索记录2' })).toBeChecked()
   await user.click(screen.getByRole('button', { name: '清空选择' }))
   expect(screen.getByRole('button', { name: '提交生成' })).toBeDisabled()
+})
+it('只请求有效功能用例', async () => {
+  const urls = mount()
+  await waitFor(() => expect(screen.getByRole('button', { name: '提交生成' })).toBeEnabled())
+  expect(urls.some((url) => url.includes('/cases?invalidated=false'))).toBe(true)
 })
 it('分页选择不会丢掉其他页面的用例，表头只取消当前页', async () => {
   mount(25)

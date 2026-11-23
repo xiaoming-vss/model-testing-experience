@@ -16,10 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.agent.prompt import TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
@@ -97,7 +94,6 @@ class TestOrderGraphExecutor(TaskExecutor):
         skill_dir_checker: Callable[[Path, str], bool] | None = None,
     ) -> None:
         self.agent_config = agent_config
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.skill_name = skill_name
         self.skill_dir_checker = skill_dir_checker or _default_skill_dir_checker

@@ -6,7 +6,6 @@ from testing_agent.handlers.repository_profile_task import (
     create_repository_profile_task,
     get_repository_profile_run,
     list_repository_profile_task_runs,
-    list_repository_profile_task_versions,
     list_repository_profile_tasks,
     run_repository_profile_task,
 )
@@ -15,9 +14,8 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskListResponse,
     AiGenerateTaskResponse,
     RepositoryProfileRunResponse,
-    RepositoryProfileVersionResponse,
 )
-from testing_agent.schemas.common import ApiResponse, ListResponse
+from testing_agent.schemas.common import ApiResponse
 
 router = APIRouter()
 
@@ -37,10 +35,6 @@ router.get(
     "/repository-profile-tasks/{task_id}/runs",
     response_model=ApiResponse[AiGenerateRunHistoryResponse],
 )(list_repository_profile_task_runs)
-router.get(
-    "/repository-profile-tasks/{task_id}/versions",
-    response_model=ApiResponse[ListResponse[RepositoryProfileVersionResponse]],
-)(list_repository_profile_task_versions)
 router.get(
     "/repository-profile-runs/{run_id}",
     response_model=ApiResponse[RepositoryProfileRunResponse],

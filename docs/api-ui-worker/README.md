@@ -27,7 +27,7 @@
 | `contracts/parsing.py` | 控制面任务/快照的单一解析入口；只读取声明字段，未知字段忽略 |
 | `core/` | `config.py`、`logger.py` |
 
-`src/` 下残留 `mtx_api_ui_worker.egg-info/` 与 `testing_agent_api_ui_worker.egg-info/` 两个历史打包目录。
+`src/` 下残留 `mtx_api_ui_worker.egg-info/` 历史打包目录。
 
 ## 配置
 
@@ -38,8 +38,7 @@ mode = "poll"                 # poll 或 once
 
 [control_plane]               # base_url、worker_token
 [worker]                      # id、poll_interval_ms、request_timeout_ms、heartbeat_interval_ms
-[ui]                          # artifacts_dir（临时目录）、headless、slow_mo_ms、
-                              # trace_enabled、screenshot_on_failure
+[ui]                          # artifacts_dir（临时目录）、trace_enabled
 [once]                        # snapshot_file，once 模式读取本地快照调试用
 ```
 
@@ -76,6 +75,7 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 
+- 统一领取：`/internal/api-worker/tasks/claim-next` 按 API/UI 队列优先级返回下一个任务；控制面不支持时回退到下面的分域领取接口
 - UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`，文件授权与完成为 `/{task_id}/files/uploads`、`/{task_id}/files/{file_id}/complete`；控制面校验 Worker、租约、执行人和项目归属
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 

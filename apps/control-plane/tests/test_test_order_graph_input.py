@@ -6,7 +6,7 @@ from support.function_case_library import make_case, make_requirement, make_spri
 from support.order_api import make_order, seed_case
 from support.project_api import account, project
 from support.project_api import api as api
-from support.requirement_versions import approve_material, material_artifact
+from support.requirement_versions import adopt_material, material_artifact
 
 REQUIREMENT_CONTENT = "管理员可以在系统配置-服务配置中开启或关闭「启用本地清洗」开关。"
 
@@ -48,7 +48,7 @@ def test_graph_input_returns_order_cases_requirements_and_links(api):
     requirement_id = make_requirement_with_content(
         api, owner, sprint_id, "本地清洗开关", REQUIREMENT_CONTENT
     )
-    approve_material(api, requirement_id, project_id=pid, sprint_id=sprint_id)
+    adopt_material(api, requirement_id, headers=owner, project_id=pid, sprint_id=sprint_id)
     suite_id = make_suite(api, owner, requirement_id, "系统配置集")
     case_a = make_case(
         api,
@@ -111,7 +111,7 @@ def test_graph_input_keeps_unbound_cases_under_null_requirement(api):
     requirement_a = make_requirement(api, owner, sprint_a, "本迭代需求")
     requirement_b = make_requirement(api, owner, sprint_b, "别的迭代需求")
     requirement_c = make_requirement(api, owner, sprint_b, "别的迭代另一个需求")
-    approve_material(api, requirement_a, project_id=pid, sprint_id=sprint_a)
+    adopt_material(api, requirement_a, headers=owner, project_id=pid, sprint_id=sprint_a)
     case_a = seed_case(api, owner, requirement_a, title="本迭代用例")
     case_b = seed_case(api, owner, requirement_b, title="别的迭代用例")
     case_c = seed_case(api, owner, requirement_c, title="别的迭代另一个用例")
@@ -137,8 +137,8 @@ def test_graph_input_groups_cases_by_requirement(api):
     sprint_id = make_sprint(api, owner, pid, "迭代A")
     requirement_a = make_requirement(api, owner, sprint_id, "需求A")
     requirement_b = make_requirement(api, owner, sprint_id, "需求B")
-    approve_material(api, requirement_a, project_id=pid, sprint_id=sprint_id)
-    approve_material(api, requirement_b, project_id=pid, sprint_id=sprint_id)
+    adopt_material(api, requirement_a, headers=owner, project_id=pid, sprint_id=sprint_id)
+    adopt_material(api, requirement_b, headers=owner, project_id=pid, sprint_id=sprint_id)
     case_a1 = seed_case(api, owner, requirement_a, title="A1")
     case_a2 = seed_case(api, owner, requirement_a, title="A2")
     case_b1 = seed_case(api, owner, requirement_b, title="B1")
@@ -164,7 +164,7 @@ def test_graph_input_keeps_existing_step_numbering(api):
     pid = project(api, owner)
     sprint_id = make_sprint(api, owner, pid, "迭代A")
     requirement_id = make_requirement(api, owner, sprint_id, "需求")
-    approve_material(api, requirement_id, project_id=pid, sprint_id=sprint_id)
+    adopt_material(api, requirement_id, headers=owner, project_id=pid, sprint_id=sprint_id)
     suite_id = make_suite(api, owner, requirement_id, "用例集")
     case_id = make_case(
         api,
@@ -195,21 +195,21 @@ def test_graph_input_uses_latest_approved_understanding(api):
     first["title"] = "第一版理解"
     second = material_artifact()
     second["title"] = "第二版理解"
-    approve_material(
+    adopt_material(
         api,
         requirement_id,
+        headers=owner,
         project_id=pid,
         sprint_id=sprint_id,
         content=json.dumps(first, ensure_ascii=False),
-        version_no=1,
     )
-    approve_material(
+    adopt_material(
         api,
         requirement_id,
+        headers=owner,
         project_id=pid,
         sprint_id=sprint_id,
         content=json.dumps(second, ensure_ascii=False),
-        version_no=2,
     )
     case_id = seed_case(api, owner, requirement_id, title="用例")
     order = make_order(api, owner, sprint_id, name="V1.2 回归")

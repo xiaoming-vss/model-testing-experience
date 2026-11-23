@@ -95,8 +95,7 @@
   background: var(--app-accent);
 }
 
-.row :global(.ant-tag),
-.compactTags :global(.ant-tag) {
+.row :global(.ant-tag) {
   margin-inline-end: 0;
   padding-inline: 5px;
   font-size: 9px;

@@ -178,10 +178,20 @@ class StepSpec(WireModel):
     headers: dict[str, str] = Field(default_factory=dict)
     body: Any = None
     content_type: ContentType = ContentType.JSON
+    expected_statuses: list[Annotated[int, Field(strict=True, ge=100, le=599)]] | None = Field(
+        default=None, min_length=1
+    )
     checks: list[CheckSpec] = Field(default_factory=list)
     extract: list[ExtractSpec] = Field(default_factory=list)
     on_failure: FailurePolicy = FailurePolicy.ABORT_ITERATION
     think_time_ms: int = Field(default=0, ge=0)
+
+    @field_validator("expected_statuses")
+    @classmethod
+    def _unique_expected_statuses(cls, value: list[int] | None) -> list[int] | None:
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("预期状态码不能重复")
+        return value
 
     @field_validator("name", "path")
     @classmethod
@@ -471,6 +481,10 @@ class RunSpec(WireModel):
     spec_version: str
     run_id: str
     project_id: str = ""
+    sprint_id: str = ""
+    suite_id: str = ""
+    suite_run_id: str = ""
+    case_id: str = ""
     case: CaseSpec
     environment: EnvironmentSpec
     remote_write: RemoteWriteSpec

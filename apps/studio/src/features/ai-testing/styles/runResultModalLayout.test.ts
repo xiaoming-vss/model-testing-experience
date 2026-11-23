@@ -26,7 +26,6 @@ function unglobal(css: string) {
   return result
 }
 
-const revisionCss = unglobal(revisionModuleCss)
 
 // jsdom 的 getComputedStyle 不解析 var()，注入前先把已登记色板解析成实际值。
 const uiStageVisualTokenValues = new Map(
@@ -47,21 +46,6 @@ describe('运行结果弹框布局', () => {
     expect(revisionModuleCss).toContain('height: min(94dvh, 1200px)')
     expect(revisionModuleCss).not.toContain('height: min(820px')
     expect(revisionModuleCss).not.toMatch(/is-api-cases[\s\S]{0,200}height:\s*auto/)
-  })
-
-  it('继续优化保留横向工作区', () => {
-    document.head.innerHTML = `<style>${revisionCss}</style>`
-    document.body.innerHTML = `
-      <div class="scope">
-        <div class="revision-workspace is-revising">
-          <div class="revision-source"></div>
-          <div class="revision-divider"></div><aside class="revision-side-panel"></aside>
-        </div>
-      </div>`
-    const workspace = getComputedStyle(document.querySelector('.revision-workspace')!)
-    expect(workspace.display).toBe('flex')
-    expect(workspace.flexDirection || 'row').toBe('row')
-    expect(getComputedStyle(document.querySelector('.revision-side-panel')!).display).toBe('flex')
   })
 
 

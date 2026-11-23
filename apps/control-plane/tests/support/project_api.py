@@ -94,17 +94,79 @@ def requirement(api, headers, pid):
 
 
 def seed_requirement_source(api, requirement_id):
-    """Authorization tests need an original file reference; they do not download it."""
+    """Seed a verified document and isolated object storage for authorization tests."""
+    from datetime import UTC, datetime, timedelta
+    from hashlib import sha256
+    from types import SimpleNamespace
+    from uuid import uuid4
+
     from sqlalchemy import select
 
+    from testing_agent.api.deps_common import get_file_service
+    from testing_agent.models.project import Project
     from testing_agent.models.requirement import Requirement
+    from testing_agent.models.sprint import Sprint
+    from testing_agent.models.stored_file import StoredFile
+
+    content = b"isolated requirement source"
+    file_id = str(uuid4())
+    objects = getattr(api.app.state, "test_requirement_objects", None)
+    if objects is None:
+        objects = {}
+        api.app.state.test_requirement_objects = objects
+    objects[file_id] = content
+
+    class Body:
+        def __init__(self, data):
+            self.data = data
+
+        def iter_chunks(self, chunk_size):
+            yield self.data
+
+        def close(self):
+            pass
+
+    class Storage:
+        def get_object(self, key):
+            return {"Body": Body(objects[key])}
+
+    api.app.dependency_overrides[get_file_service] = lambda: SimpleNamespace(
+        settings=SimpleNamespace(bucket="test-bucket"), storage=Storage()
+    )
 
     async def provide_source_reference():
         async with api.app.state.test_sessions() as session:
             document = await session.scalar(
                 select(Requirement).where(Requirement.requirement_id == requirement_id)
             )
-            document.document_file_id = "source-file-for-authorization-test"
+            project = await session.scalar(
+                select(Project)
+                .join(Sprint, Sprint.project_id == Project.project_id)
+                .where(Sprint.sprint_id == document.sprint_id)
+            )
+            document.document_type = "docx"
+            document.document_file_id = file_id
+            document.document_filename = "requirement.docx"
+            document.document_hash = sha256(content).hexdigest()
+            session.add(
+                StoredFile(
+                    file_id=file_id,
+                    project_id=project.project_id,
+                    uploaded_by=project.user_id,
+                    filename="requirement.docx",
+                    content_type="application/octet-stream",
+                    size=len(content),
+                    sha256=document.document_hash,
+                    bucket="test-bucket",
+                    object_key=file_id,
+                    staging_key="",
+                    status="attached",
+                    purpose="requirement",
+                    resource_type="requirement",
+                    resource_id=requirement_id,
+                    expires_at=datetime.now(UTC) + timedelta(days=1),
+                )
+            )
             await session.commit()
 
     asyncio.run(provide_source_reference())

@@ -10,10 +10,7 @@ from threading import BoundedSemaphore
 from uuid import uuid4
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
@@ -114,7 +111,6 @@ class FunctionalCaseExecutor(TaskExecutor):
         self.agent_config = agent_config
         self.review_concurrency = review_concurrency
         self.review_limiter = review_limiter or BoundedSemaphore(4)
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.chain_runner = chain_runner
         self.skill_runner = skill_runner
         self.detailed_batch_runner = detailed_batch_runner

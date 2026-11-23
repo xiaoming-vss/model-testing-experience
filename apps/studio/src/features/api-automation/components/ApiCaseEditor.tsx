@@ -10,20 +10,41 @@ import { ApiCaseBodyPanel } from '@/features/api-automation/components/ApiCaseBo
 import { ApiCaseHeadersPanel } from '@/features/api-automation/components/ApiCaseHeadersPanel'
 import {
   buildApiCaseUpdatePayload,
+  buildCaseFormValues,
   formatOptionalValue,
   getCaseId,
+  stringifyKeyValuePairs,
   type ApiCaseFormValues
 } from '@/features/api-automation/utils/apiCaseEditor'
 import { Text } from '@/features/api-automation/utils/detailView'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import {
+  KV_BODY_CELL_CENTER_CLASS,
+  KV_BODY_CELL_CLASS,
+  KV_EMPTY_CLASS,
+  KV_EMPTY_HINT_CLASS,
+  KV_EMPTY_ICON_CLASS,
+  KV_EMPTY_TEXT_CLASS,
+  KV_EMPTY_TITLE_CLASS,
+  KV_HEAD_CELL_ACTION_CLASS,
+  KV_HEAD_CELL_CENTER_CLASS,
+  KV_HEAD_CELL_CLASS,
+  KV_SECTION_COUNT_CLASS,
+  KV_SECTION_HEAD_CLASS,
+  KV_SECTION_HINT_CLASS,
+  KV_TABLE_CLASS,
+  KV_TABLE_WRAP_CLASS,
+} from '@/shared/ui/keyValueTable'
 import { message } from '@/shared/utils/feedback'
 import {
+  formatTime,
   normalizeAssertRuleId,
   normalizeEnvironmentId,
   normalizeExtractRuleId
 } from '@/utils/format'
-import { CodeOutlined, DownOutlined, InfoCircleOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
+import titleStyles from '@/shared/styles/editor-title-input.module.css'
+import { ApiOutlined, CodeOutlined, CopyOutlined, DownOutlined, FileTextOutlined, InfoCircleOutlined, PlusOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons'
+import { Alert, Button, Checkbox, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Select, Switch, Tabs, Tag, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import styles from '../styles/api-detail-rules.module.css'
 
@@ -37,29 +58,92 @@ function countEnabledRows(rows?: Array<{ enabled?: boolean; key?: string; value?
   return (rows ?? []).filter((row) => row.enabled !== false && ((row.key ?? '').trim() || (row.value ?? '').trim())).length
 }
 
-export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, handleSendRequest, ensureQueryTrailingRow, environment, templates, rules }: ApiCaseEditorProps) {
+/** 比较表单值与用例持久化值；键值对按提交格式序列化，避免空行造成误判。 */
+function normalizeCaseFormValues(values?: Partial<ApiCaseFormValues>) {
+  return JSON.stringify({
+    name: values?.name ?? '',
+    method: values?.method ?? 'POST',
+    path: values?.path ?? '',
+    description: values?.description ?? '',
+    headers: stringifyKeyValuePairs(values?.headers),
+    query: stringifyKeyValuePairs(values?.query),
+    bodyType: values?.bodyType ?? 'none',
+    bodyJson: values?.bodyJson ?? '',
+    bodyText: values?.bodyText ?? '',
+    timeoutMs: values?.timeoutMs ?? 0,
+    enabled: values?.enabled ?? true,
+    continueOnFailure: values?.continueOnFailure ?? false,
+  })
+}
+
+export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, selectedCaseInvalidated, handleSendRequest, collectionName, environment, templates, rules }: ApiCaseEditorProps) {
   const { environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery } = environment
   const { setEnvVarInputRef, renderEnvVarPicker, insertTemplateText } = templates
   const { postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation } = rules
 
   const [activeTabKey, setActiveTabKey] = useState('query')
+  const [caseDirty, setCaseDirty] = useState(false)
+  const watchedName = Form.useWatch('name', caseForm)
   const watchedMethod = Form.useWatch('method', caseForm)
+  const watchedPath = Form.useWatch('path', caseForm)
   const watchedEnabled = Form.useWatch('enabled', caseForm)
   const watchedTimeoutMs = Form.useWatch('timeoutMs', caseForm)
   const watchedQuery = Form.useWatch('query', caseForm)
   const watchedHeaders = Form.useWatch('headers', caseForm)
   const watchedBodyType = Form.useWatch('bodyType', caseForm)
+  const watchedDescription = Form.useWatch('description', caseForm)
+  const watchedValues = Form.useWatch([], { form: caseForm, preserve: true })
   const queryCount = countFilledRows(watchedQuery)
+  const enabledQueryCount = countEnabledRows(watchedQuery)
   const headerCount = countFilledRows(watchedHeaders)
-  const enabledHeaderCount = countEnabledRows(watchedHeaders)
+  const saving = createCaseMutation.isPending || updateCaseMutation.isPending
+
+  /* 已有用例直接比较表单当前值与持久化值，避免 setFieldValue / 用例切换时的时序问题；
+     新建用例还没有持久化基线，沿用本地 dirty 标记。 */
+  const savedFormValues = editingCase ? buildCaseFormValues(editingCase) : undefined
+  const dirty = isCreatingCase
+    ? caseDirty
+    : savedFormValues && watchedValues
+      ? normalizeCaseFormValues(watchedValues) !== normalizeCaseFormValues(savedFormValues)
+      : false
+
+  /* 切换用例后表单会被整体替换；草稿的本地 dirty 标记随之复位。 */
+  useEffect(() => { setCaseDirty(false) }, [activeCaseId])
 
   /* `useWatch` 对没挂载的 Form.Item 返回 undefined：请求体与设置两个页签只有被打开时才挂载，
      所以首屏的请求体类型 / 超时 / 启用状态要回落到已加载的用例记录上。 */
-  useEffect(() => { ensureQueryTrailingRow(watchedQuery) }, [ensureQueryTrailingRow, watchedQuery])
-
   const bodyType = watchedBodyType ?? editingCase?.bodyType ?? editingCase?.body_type ?? 'none'
   const caseTimeoutMs = watchedTimeoutMs ?? editingCase?.timeoutMs ?? editingCase?.timeout_ms
   const caseEnabled = watchedEnabled ?? editingCase?.enabled ?? true
+  const caseName = watchedName ?? editingCase?.name ?? ''
+  const caseUpdatedAt = editingCase?.updatedAt ?? editingCase?.updated_at
+  const stateLabel = saving ? '保存中…' : isCreatingCase ? (dirty ? '有未保存的修改' : '新建用例') : dirty ? '有未保存的修改' : '已保存'
+  const stateDot = saving
+    ? 'bg-[var(--srf-accent)]'
+    : isCreatingCase && !dirty
+      ? 'bg-[var(--srf-text-muted)]'
+      : dirty
+        ? 'bg-[var(--app-status-warning-text)]'
+        : 'bg-[var(--srf-result-passed)]'
+
+  function markSaved() {
+    setCaseDirty(false)
+  }
+
+  async function copyRequestUrl() {
+    const path = String(watchedPath ?? editingCase?.urlTemplate ?? '')
+    const baseUrl = selectedEnvironment?.baseUrl ?? ''
+    const address = /^https?:\/\//i.test(path.trim()) || !baseUrl
+      ? path
+      : `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+
+    try {
+      await navigator.clipboard.writeText(address)
+      message.success('请求地址已复制')
+    } catch {
+      message.error('复制失败，请手动选择路径')
+    }
+  }
 
   return (
     <Form<ApiCaseFormValues>
@@ -67,6 +151,9 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
       layout="vertical"
       requiredMark={false}
       className="api-wb-form flex flex-col"
+      onFieldsChange={() => {
+        if (isCreatingCase) setCaseDirty(true)
+      }}
       onValuesChange={(_changedValues, allValues) => {
         if (isCreatingCase) {
           setDraftCaseValues(allValues as ApiCaseFormValues)
@@ -81,7 +168,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
         } satisfies ApiCaseFormValues
 
         if (isCreatingCase) {
-          createCaseMutation.mutate(completeValues)
+          createCaseMutation.mutate(completeValues, { onSuccess: markSaved })
           return
         }
 
@@ -92,37 +179,51 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
 
         const payload = buildApiCaseUpdatePayload(editingCase, completeValues)
         if (Object.keys(payload).length === 0) {
+          markSaved()
           message.info('当前没有需要保存的修改')
           return
         }
 
-        updateCaseMutation.mutate(completeValues)
+        updateCaseMutation.mutate(completeValues, { onSuccess: markSaved })
       }}
     >
-      <div className="api-wb-editor-head flex-none border-b border-[var(--srf-divider)]">
-        <div className="api-wb-case-head flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-          <div className="api-wb-case-name flex min-w-0 flex-[1_1_320px] items-center gap-2.5">
-            <Form.Item name="name" label="用例名称" className="api-wb-case-name-item" rules={[{ required: true, message: '请输入用例名称' }]}>
-              <Input maxLength={120} placeholder="请输入用例名称" />
-            </Form.Item>
-          </div>
-          <div className="api-wb-case-meta flex flex-wrap items-center gap-2.5 text-[11px] text-[var(--srf-text-muted)]">
-            <span className="api-wb-case-meta-item">
-              请求方式 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{watchedMethod ?? editingCase?.method ?? '-'}</strong>
+      {selectedCaseInvalidated ? (
+        <Alert
+          showIcon
+          type="warning"
+          className="mx-4 mt-3"
+          title="该用例已失效，不能运行"
+          description="恢复有效后可继续发送和执行；已有运行记录不受影响。"
+        />
+      ) : null}
+      <div className="api-wb-editor-head flex-none">
+        <div className="api-wb-case-head flex flex-col gap-1 px-4 pb-2 pt-3">
+          <div className="api-wb-case-title-row flex min-w-0 flex-wrap items-center gap-2">
+            <div className="min-w-0 max-w-full flex-none" style={{ width: `${Math.min(520, Math.max(240, caseName.length * 24 + 56))}px` }}>
+              <Form.Item name="name" noStyle rules={[{ required: true, message: '请输入用例名称' }]}>
+                <Input className={titleStyles.titleInput} maxLength={120} placeholder="请输入用例名称" aria-label="用例名称" />
+              </Form.Item>
+            </div>
+            <span className="api-wb-case-save-state inline-flex items-center gap-1.5 text-[11px] leading-[18px] text-[var(--srf-text-muted)]" role="status" aria-live="polite">
+              <i className={`h-1.5 w-1.5 flex-none rounded-full ${stateDot}`} aria-hidden />
+              {stateLabel}
             </span>
-            <span className="api-wb-case-meta-item">
-              超时 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{caseTimeoutMs ? `${caseTimeoutMs} ms` : '默认'}</strong>
-            </span>
-            <span className="api-wb-case-meta-item">
-              后置操作 <strong className="font-mono font-semibold text-[var(--srf-text-secondary)]">{postOperationCount}</strong>
-            </span>
-            <span className={`api-wb-case-state rounded-full border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-${caseEnabled ? 'green' : 'slate'}`}>
+            <span className={`api-wb-case-state tp-tone-tag tone-${caseEnabled ? 'green' : 'slate'}`}>
               {caseEnabled ? '启用中' : '已禁用'}
             </span>
+            {isCreatingCase ? <span className="tp-tone-tag tone-slate">草稿</span> : null}
+          </div>
+          <div className="api-wb-case-meta flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
+            {collectionName ? <><span>所属测试集 {collectionName}</span><span aria-hidden>·</span></> : null}
+            <span>{caseUpdatedAt ? `更新于 ${formatTime(caseUpdatedAt)}` : '尚未保存'}</span>
+            <span aria-hidden>·</span>
+            <span>超时 {caseTimeoutMs ? `${caseTimeoutMs} ms` : '默认'}</span>
+            <span aria-hidden>·</span>
+            <span>后置操作 {postOperationCount}</span>
           </div>
         </div>
 
-        <div className={`api-wb-request border-t border-[var(--srf-divider)] bg-[var(--srf-hover)] px-4 py-2.5 tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
+        <div className={`api-wb-request border-b border-[var(--srf-divider)] px-4 pb-[13px] pt-1 tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
           <div className="api-wb-request-bar flex flex-wrap items-center gap-2">
             <Form.Item name="method" className="api-wb-method w-[110px] flex-none" rules={[{ required: true, message: '请选择请求方式' }]}>
               <Select options={methodOptions} classNames={{ popup: { root: `api-method-dropdown ${styles.scope}` } }} />
@@ -177,7 +278,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
               >
                 <button
                   type="button"
-                  className={`api-wb-base-url inline-flex h-8 max-w-[240px] flex-none cursor-pointer items-center gap-1.5 border-0 border-r border-r-[var(--srf-card-border)] bg-[var(--srf-hover)] px-2.5 py-0 font-mono text-[11px] text-[var(--srf-text-secondary)] disabled:cursor-not-allowed disabled:opacity-70${environmentPopoverOpen ? ' open' : ''}`}
+                  className={`api-wb-base-url inline-flex h-8 max-w-[260px] flex-none cursor-pointer items-center gap-1.5 border-0 border-r border-r-[var(--srf-card-border)] bg-[var(--srf-hover)] px-2.5 py-0 font-mono text-[11px] text-[var(--srf-text-secondary)] disabled:cursor-not-allowed disabled:opacity-70${environmentPopoverOpen ? ' open' : ''}`}
                   disabled={!projectId || environments.length === 0}
                   title={selectedEnvironment?.baseUrl || '未选择环境'}
                 >
@@ -193,7 +294,17 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 <Input ref={pathInputRef} placeholder="/v1/example" maxLength={1024} />
               </Form.Item>
               <Tooltip title="路径不是 http:// 或 https:// 开头时，会自动拼接当前环境 Base URL。">
-                <InfoCircleOutlined className="api-wb-url-info flex-none cursor-help px-2.5 text-[var(--srf-text-muted)]" />
+                <InfoCircleOutlined className="api-wb-url-info flex-none cursor-help px-2 text-[var(--srf-text-muted)]" />
+              </Tooltip>
+              <Tooltip title="复制请求地址">
+                <Button
+                  type="text"
+                  size="small"
+                  className="api-wb-copy-url mr-1 flex-none self-center"
+                  aria-label="复制请求地址"
+                  icon={<CopyOutlined />}
+                  onClick={() => void copyRequestUrl()}
+                />
               </Tooltip>
             </div>
             <div className="api-wb-request-actions flex flex-wrap items-center gap-2">
@@ -201,7 +312,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 type="primary"
                 className="api-wb-send"
                 loading={runApiCaseMutation.isPending || isApiCaseRunInProgress}
-                disabled={!isSelectedCaseReady || isApiCaseRunInProgress}
+                disabled={!isSelectedCaseReady || isApiCaseRunInProgress || selectedCaseInvalidated}
                 onClick={handleSendRequest}
                 icon={<SendOutlined />}
               >
@@ -209,11 +320,12 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
               </Button>
               <ProjectActionButton operation="save" action="write"
                 className="api-wb-save"
-                loading={createCaseMutation.isPending || updateCaseMutation.isPending}
+                icon={<SaveOutlined />}
+                loading={saving}
                 disabled={!isSelectedCaseReady}
                 onClick={() => caseForm.submit()}
               >
-                保存
+                {dirty ? '保存更改' : '保存'}
               </ProjectActionButton>
             </div>
           </div>
@@ -221,14 +333,10 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
       </div>
 
       <Tabs
-        className="api-wb-tabs px-4 [&_.shared-tab-motion-indicator]:[clip-path:inset(7px_0_round_8px)]"
+        className="api-wb-tabs px-4 [&>.ant-tabs-nav_.shared-tab-motion-indicator]:[clip-path:inset(3px_0_round_8px)]"
         activeKey={activeTabKey}
         onChange={setActiveTabKey}
-        tabBarExtraContent={activeTabKey === 'headers' ? (
-          <span className="api-wb-tabs-extra">
-            已启用请求头: <strong className="font-mono text-[var(--srf-text)]">{enabledHeaderCount}</strong> / {headerCount}
-          </span>
-        ) : activeTabKey === 'body' ? (
+        tabBarExtraContent={activeTabKey === 'body' ? (
           <span className="api-wb-tabs-extra">
             Content-Type:{' '}
             <span className="api-wb-tabs-extra-code rounded-[4px] bg-[var(--srf-chip)] px-1.5 py-px font-mono text-[var(--srf-chip-text)]">
@@ -241,57 +349,116 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
             key: 'query',
             label: <TabLabel label="参数" count={queryCount} />,
             children: (
-              <>
-                <Form.List name="query">
-                  {(fields, { remove }) => (
-                    <div className="api-wb-kv-block flex flex-col gap-1.5">
-                      <div className="api-wb-kv-toolbar flex items-center justify-between text-[12px] text-[var(--srf-text)]">
-                        <Text strong>Query 参数</Text>
+              <Form.List name="query">
+                {(fields, { add, remove }) => (
+                  <div className="api-wb-query-panel flex flex-col gap-4">
+                    <section className="flex min-w-0 flex-col">
+                      <div className={KV_SECTION_HEAD_CLASS}>
+                        <div className="min-w-0">
+                          <Text strong>Query 参数</Text>
+                          <p className={KV_SECTION_HINT_CLASS}>
+                            发送请求时会把启用的参数拼到 URL 查询串。
+                          </p>
+                        </div>
+                        <span className={KV_SECTION_COUNT_CLASS}>
+                          {queryCount} 个参数 · {enabledQueryCount} 个启用
+                        </span>
                       </div>
-                      {fields.map((field) => {
-                        const { key: fieldKey, ...fieldProps } = field
 
-                        return (
-                          <div key={fieldKey} className="api-wb-kv-row grid grid-cols-[18px_minmax(0,1fr)_minmax(0,1fr)_32px] items-center gap-2">
-                            <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-wb-kv-check flex justify-center">
-                              <Checkbox aria-label="启用该参数" />
-                            </Form.Item>
-                            <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-wb-kv-item">
-                              <Input placeholder="参数名" />
-                            </Form.Item>
-                            <div className="api-wb-kv-item api-wb-kv-value">
-                              <Space.Compact style={{ width: '100%' }}>
-                                <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
-                                  <Input
-                                    ref={(node) => setEnvVarInputRef(`query:${field.key}:value`, node)}
-                                    placeholder="参数值"
-                                  />
-                                </Form.Item>
-                                {renderEnvVarPicker({
-                                  pickerKey: `query:${field.key}:value`,
-                                  onInsert: (templateText) => insertTemplateText(['query', field.name, 'value'], `query:${field.key}:value`, templateText),
-                                  trigger: <Button type="text" size="small" className="api-env-var-picker-trigger" style={{ width: 28, height: 28, padding: 0, borderRadius: 8 }} icon={<CodeOutlined />} />,
-                                })}
-                              </Space.Compact>
-                            </div>
-                            <Tooltip title="删除参数">
-                              <ProjectActionButton action="write"
-                                danger
-                                type="text"
-                                shape="circle"
-                                className="action-btn-delete"
-                                operation="delete" iconOnly
-                                aria-label="删除参数"
-                                onClick={() => remove(field.name)}
-                              />
-                            </Tooltip>
+                      {fields.length ? (
+                        <div className={KV_TABLE_WRAP_CLASS}>
+                          <table className={`api-wb-kv-table ${KV_TABLE_CLASS} max-[760.01px]:min-w-[620px]`}>
+                            <thead>
+                              <tr>
+                                <th className={`${KV_HEAD_CELL_CENTER_CLASS} w-12`}>启用</th>
+                                <th className={KV_HEAD_CELL_CLASS}>参数名</th>
+                                <th className={KV_HEAD_CELL_CLASS}>参数值</th>
+                                <th className={`${KV_HEAD_CELL_ACTION_CLASS} w-[52px]`} />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fields.map((field, index) => {
+                                const { key: fieldKey, ...fieldProps } = field
+
+                                return (
+                                  <tr key={fieldKey}>
+                                    <td className={KV_BODY_CELL_CENTER_CLASS}>
+                                      <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-wb-kv-check flex justify-center">
+                                        <Checkbox aria-label={`启用参数${index + 1}`} />
+                                      </Form.Item>
+                                    </td>
+                                    <td className={KV_BODY_CELL_CLASS}>
+                                      <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-wb-kv-item">
+                                        <Input placeholder="参数名" aria-label={`参数名${index + 1}`} />
+                                      </Form.Item>
+                                    </td>
+                                    <td className={KV_BODY_CELL_CLASS}>
+                                      <div className="api-wb-kv-item flex items-center gap-1">
+                                        <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
+                                          <Input
+                                            ref={(node) => setEnvVarInputRef(`query:${field.key}:value`, node)}
+                                            placeholder="参数值"
+                                            aria-label={`参数值${index + 1}`}
+                                          />
+                                        </Form.Item>
+                                        {renderEnvVarPicker({
+                                          pickerKey: `query:${field.key}:value`,
+                                          onInsert: (templateText) => insertTemplateText(['query', field.name, 'value'], `query:${field.key}:value`, templateText),
+                                          trigger: <Button type="text" size="small" className="api-env-var-picker-trigger" style={{ width: 28, height: 28, padding: 0, borderRadius: 8 }} aria-label="插入环境变量" icon={<CodeOutlined />} />,
+                                        })}
+                                      </div>
+                                    </td>
+                                    <td className={KV_BODY_CELL_CLASS}>
+                                      <Tooltip title="删除参数">
+                                        <ProjectActionButton action="write"
+                                          danger
+                                          type="text"
+                                          shape="circle"
+                                          className="action-btn-delete"
+                                          operation="delete" iconOnly
+                                          aria-label="删除参数"
+                                          onClick={() => remove(field.name)}
+                                        />
+                                      </Tooltip>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className={`api-wb-query-empty ${KV_EMPTY_CLASS}`}>
+                          <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
+                          <div className={KV_EMPTY_TEXT_CLASS}>
+                            <strong className={KV_EMPTY_TITLE_CLASS}>还没有 Query 参数</strong>
+                            <span className={KV_EMPTY_HINT_CLASS}>点击下方按钮添加，发送请求时会作为查询条件。</span>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </Form.List>
-              </>
+                        </div>
+                      )}
+
+                      <Button
+                        className="api-wb-add-query mt-2 w-full"
+                        type="dashed"
+                        icon={<PlusOutlined />}
+                        onClick={() => add({ enabled: true, key: '', value: '' })}
+                      >
+                        添加参数
+                      </Button>
+                    </section>
+
+                    <section className="api-wb-case-description rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[color-mix(in_srgb,var(--srf-hover)_42%,var(--srf-card))] px-3.5 py-3">
+                      <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-[var(--srf-text-secondary)]">
+                        <FileTextOutlined aria-hidden />
+                        用例说明
+                      </div>
+                      <p className="m-0 text-[12px] leading-5 text-[var(--srf-text-secondary)]">
+                        {watchedDescription || editingCase?.description || '暂无说明'}
+                      </p>
+                    </section>
+                  </div>
+                )}
+              </Form.List>
             ),
           },
           {
@@ -308,19 +475,22 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
             key: 'settings',
             label: '设置',
             children: (
-              <div className="api-case-settings-grid grid grid-cols-2 gap-x-4 max-narrow:grid-cols-1 max-narrow:border-l-0 max-narrow:border-t max-narrow:border-t-[var(--tp-border-soft)] max-narrow:pt-3">
-                <Form.Item name="timeoutMs" label="超时时间(ms)">
-                  <InputNumber min={0} step={1000} style={{ width: '100%' }} />
-                </Form.Item>
-                <Form.Item name="enabled" label="是否启用" valuePropName="checked">
-                  <Switch />
-                </Form.Item>
-                <Form.Item name="continueOnFailure" label="失败后继续" valuePropName="checked">
-                  <Switch />
-                </Form.Item>
-                <Form.Item name="description" label="用例描述" className="api-case-settings-description col-span-full">
-                  <Input.TextArea rows={6} maxLength={512} />
-                </Form.Item>
+              <div className="api-case-settings-card rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-4">
+                <div className="api-case-settings-grid grid grid-cols-2 gap-x-4 gap-y-3 max-narrow:grid-cols-1">
+                  <Form.Item name="timeoutMs" label="超时时间(ms)">
+                    <InputNumber min={0} step={1000} style={{ width: '100%' }} />
+                  </Form.Item>
+                  <Form.Item name="enabled" label="是否启用" valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                  <Form.Item name="continueOnFailure" label="失败后继续" valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                  <div />
+                  <Form.Item name="description" label="用例描述" className="api-case-settings-description col-span-full max-narrow:col-span-1">
+                    <Input.TextArea rows={6} maxLength={512} placeholder="补充这个用例验证的场景" />
+                  </Form.Item>
+                </div>
               </div>
             ),
           },
@@ -329,76 +499,62 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
             label: <TabLabel label="后置操作" count={postOperationCount} />,
             children: activeCaseId ? (
               <div className="api-post-ops-section flex flex-col gap-3">
-                <div className="api-post-ops-head flex items-start justify-between gap-3 max-narrow:flex-col">
+                <div className="api-post-ops-head flex flex-wrap items-start justify-between gap-2">
                   <div className="api-post-ops-head-main min-w-0">
                     <Text strong>后置操作</Text>
-                    <div className="api-post-ops-subtitle mt-1 text-[12px] leading-[18px] text-[var(--app-shell-text-muted)]">统一管理断言与提取变量，提取结果会写回当前所选环境变量。</div>
+                    <div className="api-post-ops-subtitle mt-1 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">统一管理断言与提取变量，提取结果会写回当前所选环境变量。</div>
                   </div>
-                </div>
-
-                <Dropdown
-                  disabled={!can('write')}
-                  trigger={['click']}
-                  menu={{
-                    items: [
-                      { key: 'assert', label: '新增断言' },
-                      { key: 'extract', label: '新增提取规则' },
-                    ],
-                    onClick: ({ key }) => {
-                      if (key === 'assert') {
-                        openCreateAssertRule()
-                        return
-                      }
-                      openCreateExtractRule()
-                    },
-                  }}
-                >
-                  <ProjectActionButton
-                    action="write"
-                    type="text"
-                    className="api-post-ops-add-trigger"
-                    style={{
-                      width: '100%',
-                      padding: '11px 14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      border: '1px dashed var(--app-request-upload-border)',
-                      borderRadius: 12,
-                      background: 'var(--app-surface-raised)',
-                      color: 'var(--app-request-upload-text)',
-                      fontSize: 13,
-                      lineHeight: '20px',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease',
+                  <Dropdown
+                    disabled={!can('write')}
+                    trigger={['click']}
+                    menu={{
+                      items: [
+                        { key: 'assert', label: '新增断言' },
+                        { key: 'extract', label: '新增提取规则' },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'assert') {
+                          openCreateAssertRule()
+                          return
+                        }
+                        openCreateExtractRule()
+                      },
                     }}
                   >
-                    <PlusOutlined />
-                    <span>添加后置操作</span>
-                    <DownOutlined />
-                  </ProjectActionButton>
-                </Dropdown>
+                    <ProjectActionButton
+                      action="write"
+                      type="dashed"
+                      className="api-post-ops-add-trigger"
+                      icon={<PlusOutlined />}
+                    >
+                      添加后置操作
+                    </ProjectActionButton>
+                  </Dropdown>
+                </div>
 
                 {assertRulesQuery.isLoading || extractRulesQuery.isLoading ? (
                   <Empty description="后置操作加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : postOperationCount === 0 ? (
-                  <Card size="small" className="api-rule-empty-card" style={{ borderRadius: 10 }}>
-                    <Empty description="还没有后置操作，点击上方添加断言或提取规则" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </Card>
+                  <div className={`api-rule-empty ${KV_EMPTY_CLASS}`}>
+                    <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
+                    <div className={KV_EMPTY_TEXT_CLASS}>
+                      <strong className={KV_EMPTY_TITLE_CLASS}>还没有后置操作</strong>
+                      <span className={KV_EMPTY_HINT_CLASS}>点击右上方按钮添加断言或提取规则。</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="api-post-ops-group-list flex flex-col gap-3.5">
-                    <div className="api-post-ops-group rounded-[12px] border border-[var(--app-request-card-border)] bg-[var(--app-surface)] p-3">
-                      <div className="api-post-ops-group-title mb-2.5 flex items-center gap-2 text-[13px] font-semibold leading-5 text-[var(--app-shell-text)]">
+                    <div className="api-post-ops-group rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3">
+                      <div className="api-post-ops-group-title mb-2.5 flex items-center gap-2 text-[13px] font-semibold leading-5 text-[var(--srf-text)]">
                         <span>断言</span>
                         <Tag>{assertRules.length}</Tag>
                       </div>
                       {assertRules.length === 0 ? (
-                        <div className="api-post-ops-empty px-0 pt-2 pb-0.5 text-[12px] leading-[18px] text-[var(--app-request-text-muted)]">暂无断言规则</div>
+                        <div className="api-post-ops-empty px-0 pt-2 pb-0.5 text-[12px] leading-[18px] text-[var(--srf-text-muted)]">暂无断言规则</div>
                       ) : (
                         <div className="api-post-ops-items flex flex-col gap-2">
                           {assertRules.map((rule) => (
-                            <div key={normalizeAssertRuleId(rule)} className="api-post-ops-item grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] border border-[var(--app-request-preview-border)] bg-[var(--app-request-field-bg)] p-2.5 px-3 max-narrow:grid-cols-1 max-narrow:items-start">
+                            <div key={normalizeAssertRuleId(rule)} className="api-post-ops-item grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-hover)] p-2.5 px-3 max-narrow:grid-cols-1 max-narrow:items-start">
                               <div className="api-post-ops-item-side flex items-center gap-2">
                                 <Tag color="error">断言</Tag>
                                 <Switch
@@ -414,11 +570,11 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                                 />
                               </div>
                               <div className="api-post-ops-item-main flex min-w-0 flex-col gap-1">
-                                <div className="api-post-ops-item-title flex min-w-0 items-center gap-2 text-[13px] leading-5 text-[var(--app-shell-text)]">
+                                <div className="api-post-ops-item-title flex min-w-0 items-center gap-2 text-[13px] leading-5 text-[var(--srf-text)]">
                                   <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{rule.name}</strong>
-                                  <span className="text-[12px] text-[var(--app-request-text-muted)]">#{rule.orderNo ?? '-'}</span>
+                                  <span className="text-[12px] text-[var(--srf-text-muted)]">#{rule.orderNo ?? '-'}</span>
                                 </div>
-                                <div className="api-post-ops-item-meta flex flex-wrap gap-x-3 gap-y-2 text-[12px] leading-[18px] text-[var(--app-control-text)]">
+                                <div className="api-post-ops-item-meta flex flex-wrap gap-x-3 gap-y-2 text-[12px] leading-[18px] text-[var(--srf-text-muted)]">
                                   <span>{assertSourceLabelMap[rule.assertSource]}</span>
                                   <span>{assertComparatorLabelMap[rule.comparator]}</span>
                                   <span>{formatOptionalValue(rule.targetExpr)}</span>
@@ -440,17 +596,17 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                       )}
                     </div>
 
-                    <div className="api-post-ops-group rounded-[12px] border border-[var(--app-request-card-border)] bg-[var(--app-surface)] p-3">
-                      <div className="api-post-ops-group-title mb-2.5 flex items-center gap-2 text-[13px] font-semibold leading-5 text-[var(--app-shell-text)]">
+                    <div className="api-post-ops-group rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3">
+                      <div className="api-post-ops-group-title mb-2.5 flex items-center gap-2 text-[13px] font-semibold leading-5 text-[var(--srf-text)]">
                         <span>提取规则</span>
                         <Tag>{extractRules.length}</Tag>
                       </div>
                       {extractRules.length === 0 ? (
-                        <div className="api-post-ops-empty px-0 pt-2 pb-0.5 text-[12px] leading-[18px] text-[var(--app-request-text-muted)]">暂无提取规则</div>
+                        <div className="api-post-ops-empty px-0 pt-2 pb-0.5 text-[12px] leading-[18px] text-[var(--srf-text-muted)]">暂无提取规则</div>
                       ) : (
                         <div className="api-post-ops-items flex flex-col gap-2">
                           {extractRules.map((rule) => (
-                            <div key={normalizeExtractRuleId(rule)} className="api-post-ops-item grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] border border-[var(--app-request-preview-border)] bg-[var(--app-request-field-bg)] p-2.5 px-3 max-narrow:grid-cols-1 max-narrow:items-start">
+                            <div key={normalizeExtractRuleId(rule)} className="api-post-ops-item grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-hover)] p-2.5 px-3 max-narrow:grid-cols-1 max-narrow:items-start">
                               <div className="api-post-ops-item-side flex items-center gap-2">
                                 <Tag color="processing">提取</Tag>
                                 <Switch
@@ -466,11 +622,11 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                                 />
                               </div>
                               <div className="api-post-ops-item-main flex min-w-0 flex-col gap-1">
-                                <div className="api-post-ops-item-title flex min-w-0 items-center gap-2 text-[13px] leading-5 text-[var(--app-shell-text)]">
+                                <div className="api-post-ops-item-title flex min-w-0 items-center gap-2 text-[13px] leading-5 text-[var(--srf-text)]">
                                   <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{rule.name}</strong>
-                                  <span className="text-[12px] text-[var(--app-request-text-muted)]">#{rule.orderNo ?? '-'}</span>
+                                  <span className="text-[12px] text-[var(--srf-text-muted)]">#{rule.orderNo ?? '-'}</span>
                                 </div>
-                                <div className="api-post-ops-item-meta flex flex-wrap gap-x-3 gap-y-2 text-[12px] leading-[18px] text-[var(--app-control-text)]">
+                                <div className="api-post-ops-item-meta flex flex-wrap gap-x-3 gap-y-2 text-[12px] leading-[18px] text-[var(--srf-text-muted)]">
                                   <span>{extractSourceLabelMap[rule.source]}</span>
                                   <span>{formatOptionalValue(rule.sourceExpr)}</span>
                                   <span>{formatOptionalValue(rule.varKey)}</span>
@@ -495,9 +651,13 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 )}
               </div>
             ) : (
-              <Card size="small" className="api-rule-empty-card" style={{ borderRadius: 10 }}>
-                <Empty description="请先保存当前用例后再配置后置操作" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              </Card>
+              <div className={`api-rule-empty ${KV_EMPTY_CLASS}`}>
+                <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
+                <div className={KV_EMPTY_TEXT_CLASS}>
+                  <strong className={KV_EMPTY_TITLE_CLASS}>请先保存当前用例</strong>
+                  <span className={KV_EMPTY_HINT_CLASS}>保存后才能为这条用例配置断言与提取规则。</span>
+                </div>
+              </div>
             ),
           },
         ]}

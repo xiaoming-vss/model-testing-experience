@@ -18,7 +18,8 @@ export function UiGenerationSourceTrace({ source, loading = false }: {
         <div><dt>仓库</dt><dd>{repository.pathWithNamespace}</dd></div>
         <div><dt>分支</dt><dd>{repository.branch || '未记录'}</dd></div>
         <div><dt>Commit</dt><dd><code>{repository.commit || '未记录'}</code>（{repository.commitMode === 'latest' ? '分支最新 HEAD' : '画像 commit'}）</dd></div>
-        <div><dt>画像版本</dt><dd>{repository.profileVersionNo ? `v${repository.profileVersionNo}` : repository.profileVersionId || '未记录'}</dd></div>
+        <div><dt>画像候选</dt><dd>{repository.profileCandidateId || '未记录'}</dd></div>
+        {source.sourceBatchId ? <div><dt>输入批次</dt><dd>{source.sourceBatchId}</dd></div> : null}
         <div><dt>源码根</dt><dd>整个仓库</dd></div>
       </dl> : <p>历史来源未记录仓库信息。</p>}
       <h4>功能用例 · {caseCount} 条</h4>

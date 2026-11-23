@@ -5,9 +5,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.mysql_initialization import mysql, seed_row  # noqa: F401
 
 from testing_agent.models.ai_execution import AiExecution
-from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
+from testing_agent.models.ai_generate_import import AiGenerateImport, AiGenerateImportRequest
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.function_test_case import FunctionTestCase
@@ -32,44 +31,24 @@ async def test_delete_task_preserves_formal_assets_and_provenance_semantics(mysq
                 "attempt_no": 1,
             },
         )
-        version = seed_row(
+        request = seed_row(connection, AiGenerateImportRequest.__table__)
+        source = seed_row(
             connection,
-            AiGenerateStageVersion.__table__,
+            AiGenerateImport.__table__,
             {
+                "request_id": request["request_id"],
+                "source_kind": "current",
                 "task_id": task["task_id"],
-                "attempt_id": attempt["id"],
+                "source_attempt_id": attempt["id"],
+                "changed_case_ids_json": [],
+                "target_case_count": 1,
             },
         )
-        version_source = seed_row(
-            connection,
-            AiGenerateVersionImport.__table__,
-            {
-                "task_id": task["task_id"],
-                "version_id": version["version_id"],
-                "attempt_id": None,
-            },
-        )
-        candidate_source = seed_row(
-            connection,
-            AiGenerateVersionImport.__table__,
-            {
-                "task_id": task["task_id"],
-                "version_id": None,
-                "attempt_id": attempt["id"],
-            },
-        )
-        version_suite = seed_row(
+        suite = seed_row(
             connection,
             FunctionTestSuite.__table__,
             {
-                "effective_import_id": version_source["import_id"],
-            },
-        )
-        candidate_suite = seed_row(
-            connection,
-            FunctionTestSuite.__table__,
-            {
-                "effective_import_id": candidate_source["import_id"],
+                "effective_import_id": source["import_id"],
             },
         )
         unrelated_suite = seed_row(
@@ -79,9 +58,7 @@ async def test_delete_task_preserves_formal_assets_and_provenance_semantics(mysq
                 "effective_import_id": "unrelated-source",
             },
         )
-        case = seed_row(
-            connection, FunctionTestCase.__table__, {"suite_id": version_suite["suite_id"]}
-        )
+        case = seed_row(connection, FunctionTestCase.__table__, {"suite_id": suite["suite_id"]})
         for domain in ("ai", "api"):
             seed_row(
                 connection,
@@ -108,16 +85,12 @@ async def test_delete_task_preserves_formal_assets_and_provenance_semantics(mysq
             )
             await delete_owned_data(session, obj)
             await session.commit()
-            for suite, expected in (
-                (version_suite, version_source["import_id"]),
-                (candidate_suite, None),
-            ):
-                target = await session.scalar(
-                    sa.select(FunctionTestSuite).where(
-                        FunctionTestSuite.suite_id == suite["suite_id"]
-                    )
-                )
-                assert target.effective_import_id == expected and target.name == suite["name"]
+            target = await session.scalar(
+                sa.select(FunctionTestSuite).where(FunctionTestSuite.suite_id == suite["suite_id"])
+            )
+            assert target.effective_import_id == source["import_id"]
+            assert target.name == suite["name"]
+            assert await session.get(AiGenerateImport, source["import_id"]) is not None
             target = await session.scalar(
                 sa.select(FunctionTestSuite).where(
                     FunctionTestSuite.suite_id == unrelated_suite["suite_id"]

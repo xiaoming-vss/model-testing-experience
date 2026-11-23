@@ -120,7 +120,7 @@ deploy/helm/charts/
 
 | key | 说明 |
 | --- | --- |
-| `config` | 结构化控制面配置，chart 渲染为 ConfigMap 的 `local.toml`；包含 `env`、`http`、`security`、`integration_execution`、`data.db.user`、`storage.s3`、`code_overview`、`asset_import` |
+| `config` | 结构化控制面配置，chart 渲染为 ConfigMap 的 `local.toml`；包含 `env`、`http`、`security`、`integration_execution`、`data.db.user`、`storage.s3`、`asset_import` |
 | `service.type` | Service 类型，默认 `ClusterIP` |
 | `service.port` | Service 端口，默认 `9000` |
 | `migration.enabled` | 是否在 pre-install/pre-upgrade 执行迁移 |

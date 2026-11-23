@@ -29,50 +29,48 @@ from support.project_api import (
 from support.project_api import (
     sqlite_longtext as sqlite_longtext,
 )
-from support.requirement_versions import material_artifact, scope_artifact
+from support.requirement_versions import material_artifact
 
 
-def seed_approved_understanding(api, rid, pid, user_id):
-    async def seed():
-        from sqlalchemy import select
+def seed_approved_understanding(api, rid, headers, connection_id):
+    from uuid import uuid4
 
-        from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
-        from testing_agent.models.ai_generate_task import AiGenerateTask
-        from testing_agent.models.requirement import Requirement
-
-        async with api.app.state.test_sessions() as session:
-            requirement_row = await session.scalar(
-                select(Requirement).where(Requirement.requirement_id == rid)
-            )
-            task = AiGenerateTask(
-                task_id=f"understanding-{rid}",
-                task_type="requirement_analysis",
-                name="需求分析",
-                project_id=pid,
-                sprint_id=requirement_row.sprint_id,
-                requirement_id=rid,
-                creator_user_id=user_id,
-                source_type="requirement",
-                source_content="",
-            )
-            session.add(task)
-            await session.flush()
-            session.add(
-                AiGenerateStageVersion(
-                    version_id=f"understanding-{rid}-v1",
-                    task_id=task.task_id,
-                    stage="extracting_text",
-                    version_no=1,
-                    attempt_id=f"understanding-attempt-{rid}-1",
-                    artifact_content=json.dumps(material_artifact(), ensure_ascii=False),
-                    artifact_format="json",
-                    upstream_versions_json={},
-                    reviewer_user_id=user_id,
-                )
-            )
-            await session.commit()
-
-    asyncio.run(seed())
+    base = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text"
+    launched = api.post(
+        base + "/candidate-run", headers=headers, json={"connectionId": connection_id}
+    )
+    assert launched.status_code == 200, launched.text
+    worker = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "material-worker"})
+    assert worker.status_code == 200, worker.text
+    done = api.post(
+        f"/internal/ai-worker/tasks/{worker.json()['taskId']}/completed",
+        json={
+            "workerId": "material-worker",
+            "status": "success",
+            "resultYaml": json.dumps(material_artifact(), ensure_ascii=False),
+        },
+    )
+    assert done.status_code == 204, done.text
+    candidates = api.get(base + "/candidates", headers=headers).json()["data"]["items"]
+    candidate = next(
+        item
+        for item in candidates
+        if item["currentAttemptId"] == launched.json()["data"]["attemptId"]
+    )
+    current = api.get(base + "/current", headers=headers).json()["data"]
+    adopted = api.post(
+        base + "/adoption",
+        headers=headers,
+        json={
+            "action": "adopt",
+            "candidateId": candidate["candidateId"],
+            "expectedCandidateToken": candidate["candidateToken"],
+            "expectedAttemptId": candidate["currentAttemptId"],
+            "expectedCurrentToken": current["currentToken"],
+            "requestId": str(uuid4()),
+        },
+    )
+    assert adopted.status_code == 200, adopted.text
 
 
 def seed_software_repository(
@@ -551,7 +549,10 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
         )
         assert response.status_code == 200, response.text
         ids.append(response.json()["data"]["connectionId"])
-    url = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run"
+    url = (
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/"
+        "candidate-run"
+    )
     assert api.post(url, headers=member, json={"connectionId": ids[0]}).status_code == 404
     response = api.post(url, headers=member, json={"connectionId": ids[1]})
     assert response.status_code == 200, response.text
@@ -590,7 +591,7 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
         },
     ).json()["data"]["connectionId"]
     response = api.post(
-        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/candidate-run",
         headers=member,
         json={"connectionId": cid},
     )
@@ -641,11 +642,11 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
     monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
     monkeypatch.setattr(GitLabResourceClient, "get_project", gitlab_project)
     monkeypatch.setattr(GitLabResourceClient, "resolve_commit", commit)
-    owner_user, owner = account(api, "owner")
+    _, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
-    seed_approved_understanding(api, rid, pid, owner_user["userId"])
+    seed_requirement_source(api, rid)
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
@@ -665,6 +666,7 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
             "baseUrl": "https://llm.example",
         },
     ).json()["data"]["connectionId"]
+    seed_approved_understanding(api, rid, member, cid)
     response = api.post(
         f"/v1/projects/{pid}/code-risk-analysis-tasks",
         headers=member,
@@ -699,11 +701,13 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
 
 @pytest.mark.parametrize("operation", ["stage-retry", "stage-revise"])
 @pytest.mark.parametrize("creator_role", ["owner", "member"])
-def test_function_stage_reexecution_uses_current_actor(api, operation, creator_role):
+def test_material_candidate_reexecution_uses_current_actor(api, operation, creator_role):
+    from uuid import uuid4
+
     from testing_agent.api.deps import verify_worker_token
 
     api.app.dependency_overrides[verify_worker_token] = lambda: None
-    owner_user, owner = account(api, "owner")
+    _, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
     api.post(
@@ -723,23 +727,18 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
         )
         assert response.status_code == 200, response.text
         credentials[role] = response.json()["data"]["connectionId"]
-    # Stage reexecution requires the same imported analysis as the initial run.
     rid = requirement(api, owner, pid)
-    response = api.patch(
-        f"/v1/requirements/{rid}",
-        headers=owner,
-        json={"documentContent": "已确认的需求分析：登录成功后进入首页。"},
-    )
-    assert response.status_code == 200, response.text
-    seed_approved_understanding(api, rid, pid, owner_user["userId"])
+    seed_requirement_source(api, rid)
     actors = {"owner": owner, "member": member}
     operator_role = "member" if creator_role == "owner" else "owner"
+    base = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text"
     response = api.post(
-        f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/run",
+        base + "/candidate-run",
         headers=actors[creator_role],
         json={"connectionId": credentials[creator_role]},
     )
     assert response.status_code == 200, response.text
+    attempt_id = response.json()["data"]["attemptId"]
     claim = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
     assert claim.status_code == 200, claim.text
     worker_id = claim.json()["taskId"]
@@ -749,21 +748,32 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
             json={"workerId": "worker", "status": "failed", "errorMessage": "retryable"},
         )
     else:
-        response = api.patch(
-            f"/internal/ai-worker/tasks/{worker_id}/progress",
+        response = api.post(
+            f"/internal/ai-worker/tasks/{worker_id}/completed",
             json={
                 "workerId": "worker",
-                "currentStage": "requirement_analysis",
-                "stageStatus": "waiting_review",
-                "configJson": {"requirementAnalysis": scope_artifact()},
+                "status": "success",
+                "resultYaml": json.dumps(material_artifact(), ensure_ascii=False),
             },
         )
     assert response.status_code == 204, response.text
-    suffix = "run" if operation == "stage-retry" else "revision"
     body = {"connectionId": credentials[operator_role]}
     if operation == "stage-revise":
-        body["instruction"] = "improve coverage"
-    url = f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/{suffix}"
+        candidates = api.get(base + "/candidates", headers=actors[creator_role]).json()["data"][
+            "items"
+        ]
+        candidate = next(item for item in candidates if item["currentAttemptId"] == attempt_id)
+        body.update(
+            {
+                "instruction": "improve coverage",
+                "expectedCandidateToken": candidate["candidateToken"],
+                "expectedAttemptId": attempt_id,
+                "requestId": str(uuid4()),
+            }
+        )
+        url = base + f"/candidates/{candidate['candidateId']}/revision"
+    else:
+        url = base + "/candidate-run"
     denied = api.post(
         url, headers=actors[operator_role], json={**body, "connectionId": credentials[creator_role]}
     )

@@ -92,15 +92,29 @@ def _case(api, headers, project_id, suite_id, name="case-a"):
 
 
 def _run_suite(api, headers, suite_id, environment_id, connection_id):
+    suite = api.get(f"/v1/perf-suites/{suite_id}", headers=headers).json()["data"]
+    sprint = api.post(
+        f"/v1/projects/{suite['projectId']}/sprints",
+        headers=headers,
+        json={
+            "name": "perf-sprint",
+            "startTime": "2026-10-01T00:00:00Z",
+            "endTime": "2026-11-01T00:00:00Z",
+        },
+    )
+    assert sprint.status_code == 200, sprint.text
+    sprint_id = sprint.json()["data"]["sprintId"]
     response = api.post(
         f"/v1/perf-suites/{suite_id}/runs",
         headers=headers,
         json={
             "environmentId": environment_id,
             "monitoringConnectionId": connection_id,
+            "sprintId": sprint_id,
         },
     )
     assert response.status_code == 200, response.text
+    assert response.json()["data"]["sprintId"] == sprint_id
     return response.json()["data"]
 
 
@@ -214,6 +228,26 @@ def test_perf_suite_crud_and_case_order(api):
     assert listed.json()["data"]["items"][0]["caseCount"] == 2
 
 
+def test_suite_run_requires_sprint_from_same_project(api):
+    headers, suite, _, _, environment_id, connection_id = _setup(api, "suite-sprint")
+    path = f"/v1/perf-suites/{suite['suiteId']}/runs"
+    body = {"environmentId": environment_id, "monitoringConnectionId": connection_id}
+    assert api.post(path, headers=headers, json=body).status_code == 400
+    other = project(api, headers, "other-project")
+    sprint = api.post(
+        f"/v1/projects/{other}/sprints",
+        headers=headers,
+        json={
+            "name": "other",
+            "startTime": "2026-10-01T00:00:00Z",
+            "endTime": "2026-11-01T00:00:00Z",
+        },
+    )
+    assert sprint.status_code == 200
+    body["sprintId"] = sprint.json()["data"]["sprintId"]
+    assert api.post(path, headers=headers, json=body).status_code == 400
+
+
 def test_perf_suite_runs_cases_serially(api):
     headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-serial")
 
@@ -227,6 +261,18 @@ def test_perf_suite_runs_cases_serially(api):
 
     first_task = _claim(api)
     assert first_task["runId"] == child_ids[0]
+    snapshot = api.get(
+        f"/internal/perf-worker/tasks/{first_task['taskId']}/snapshot",
+        headers=_WORKER_HEADERS,
+        params={"workerId": "worker-suite"},
+    )
+    assert snapshot.status_code == 200, snapshot.text
+    spec = snapshot.json()["runSpec"]
+    assert spec["projectId"] == suite["projectId"]
+    assert spec["sprintId"] == run["sprintId"]
+    assert spec["suiteId"] == suite["suiteId"]
+    assert spec["suiteRunId"] == suite_run_id
+    assert spec["caseId"] == _first["caseId"]
     _start(api, first_task["taskId"])
     _complete(api, first_task["taskId"], child_ids[0])
 

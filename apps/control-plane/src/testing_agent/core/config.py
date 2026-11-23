@@ -95,13 +95,10 @@ class Settings:
     http_host: str
     http_port: int
     jwt_key: str
-    jwt_expire_hours: int
     integration_key: str
     worker_key: str
     database_url: str
-    uploads_dir: str  # Deprecated configuration compatibility; no business file IO.
     s3: ObjectStorageSettings = ObjectStorageSettings()
-    code_overview_cache_ttl_seconds: int = 300
     integration_worker_key: str = ""
     perf_worker_key: str = ""
     integration_execution: IntegrationExecutionSettings = IntegrationExecutionSettings()
@@ -157,7 +154,6 @@ class Settings:
             http_host=data.get("http", {}).get("host", "127.0.0.1"),
             http_port=int(data.get("http", {}).get("port", 9000)),
             jwt_key=jwt.get("key", "change-me"),
-            jwt_expire_hours=int(jwt.get("expire_hours", 168)),
             jwt_user_expire_hours=int(jwt.get("user_expire_hours", 72)),
             jwt_super_admin_expire_hours=int(jwt.get("super_admin_expire_hours", 24)),
             super_admin=SuperAdminSettings(**security.get("super_admin", {})),
@@ -168,10 +164,6 @@ class Settings:
             database_url=db_user.get("dsn", ""),
             db_pool_size=db_user.get("pool_size", 20),
             db_max_overflow=db_user.get("max_overflow", 10),
-            uploads_dir=data.get("storage", {}).get("uploads_dir", ""),
-            code_overview_cache_ttl_seconds=int(
-                data.get("code_overview", {}).get("cache_ttl_seconds", 300)
-            ),
         )
 
 

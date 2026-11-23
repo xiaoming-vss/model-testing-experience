@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from testing_agent.handlers.perf_case import (
+    batch_invalidate_perf_cases,
     create_perf_case,
     delete_perf_case,
     get_perf_case,
@@ -29,6 +30,7 @@ from testing_agent.handlers.perf_suite_run import (
     list_perf_suite_runs,
     stop_perf_suite_run,
 )
+from testing_agent.schemas.case_lifecycle import CaseInvalidationResponse
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse, StatusData
 from testing_agent.schemas.perf_case import PerfCaseResponse, PerfCaseSummaryResponse
 from testing_agent.schemas.perf_run import PerfRunResponse, PerfRunSummaryResponse
@@ -48,6 +50,10 @@ router.get(
     "/projects/{project_id}/perf-cases",
     response_model=ApiResponse[ListResponse[PerfCaseSummaryResponse]],
 )(list_perf_cases)
+router.post(
+    "/projects/{project_id}/perf-cases/batch-invalidation",
+    response_model=ApiResponse[CaseInvalidationResponse],
+)(batch_invalidate_perf_cases)
 router.get(
     "/perf-cases/{case_id}",
     response_model=ApiResponse[PerfCaseResponse],

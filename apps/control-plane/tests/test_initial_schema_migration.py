@@ -42,6 +42,9 @@ def test_empty_database_initialization_and_roundtrip():
         config = migration_config(connection)
         command.upgrade(config, "head")
         assert_current_schema(connection)
+        tables = set(sa.inspect(connection).get_table_names())
+        assert {"ai_generate_imports", "ai_generate_import_requests"} <= tables
+        assert not {"ai_generate_stage_versions", "ai_generate_version_imports"} & tables
         assert connection.execute(sa.text("SELECT id, mode FROM auth_runtime")).one() == (
             1,
             "local",

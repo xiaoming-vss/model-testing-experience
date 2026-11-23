@@ -10,6 +10,7 @@ from testing_agent.core.errors import (
     ErrApiEnvironmentKindMismatch,
     ErrBadRequest,
     ErrNotFound,
+    dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.models.api_collection import ApiCollection
@@ -20,19 +21,18 @@ from testing_agent.models.sprint import Sprint
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
 from testing_agent.schemas.api_run import ApiCollectionRunResponse, RunApiCollectionRequest
-from testing_agent.services.api_run_scope import apply_run_scope, authorize_run
 from testing_agent.services.common import dump, paged_payload
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import protect_run
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import ProjectAction, require_project_id
 
 
 class ApiCollectionRunContext:
     def __init__(
         self,
         collection: ApiCollection,
-        requirement: Requirement,
-        sprint: Sprint,
+        requirement: Requirement | None,
+        sprint: Sprint | None,
         project: Project,
     ):
         self.collection = collection
@@ -67,29 +67,36 @@ class ApiCollectionRunService:
     def __init__(self, repository: ApiCollectionRunRepository):
         self.repository = repository
 
+    async def _resolve_requirement_scope(
+        self, collection: ApiCollection, project_id: str
+    ) -> tuple[Requirement | None, Sprint | None]:
+        if collection.requirement_id is None:
+            return None, None
+        requirement = await self.repository.get_requirement(collection.requirement_id)
+        if requirement is None:
+            raise ErrNotFound()
+        sprint = await self.repository.get_sprint(requirement.sprint_id)
+        if sprint is None or sprint.project_id != project_id:
+            raise ErrNotFound()
+        return requirement, sprint
+
     async def get_accessible_context(
         self, user_id: str, collection_id: str, *, action: ProjectAction = "read"
     ) -> ApiCollectionRunContext:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
             raise ErrNotFound()
-        requirement = await self.repository.get_requirement(collection.requirement_id)
-        if requirement is None:
-            raise ErrNotFound()
-        sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound()
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, action)
+        project = await require_project_id(
+            self.repository.session, user_id, collection.project_id, action=action
+        )
+        requirement, sprint = await self._resolve_requirement_scope(collection, project.project_id)
         return ApiCollectionRunContext(collection, requirement, sprint, project)
 
     async def ensure_owned_run(self, user_id: str, collection_run_id: str) -> ApiCollectionRun:
         run = await self.repository.get_run(collection_run_id)
         if run is None:
             raise ErrNotFound()
-        await authorize_run(self.repository, user_id, run)
+        await require_project_id(self.repository.session, user_id, run.project_id, action="read")
         return run
 
     async def run(self, user_id: str, collection_id: str, body: RunApiCollectionRequest) -> dict:
@@ -101,13 +108,32 @@ class ApiCollectionRunService:
             raise ErrApiCaseRunEnvironmentMismatch()
         if environment.kind != "api":
             raise ErrApiEnvironmentKindMismatch()
-        cases = await self.repository.list_cases(collection_id)
+        all_cases = await self.repository.list_cases(collection_id)
+        cases = [case for case in all_cases if case.invalidated_at is None]
+        if all_cases and not cases:
+            raise dynamic_error(ErrBadRequest, "API 测试集没有有效用例")
+        sprint = context.sprint
+        if body.sprint_id is not None:
+            requested_sprint = await self.repository.get_sprint(body.sprint_id)
+            if (
+                requested_sprint is None
+                or requested_sprint.project_id != context.project.project_id
+            ):
+                raise dynamic_error(ErrBadRequest, "迭代不属于当前项目")
+            sprint = requested_sprint
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id
         )
         run = ApiCollectionRun(
             collection_run_id=new_id(),
             collection_id=collection_id,
+            project_id=context.project.project_id,
+            requirement_id=(
+                context.requirement.requirement_id if context.requirement is not None else None
+            ),
+            requirement_name=(context.requirement.name if context.requirement is not None else ""),
+            sprint_id=sprint.sprint_id if sprint is not None else None,
+            sprint_name=sprint.name if sprint is not None else "",
             environment_id=environment.environment_id,
             trigger_user_id=user_id,
             trigger_type="manual",
@@ -147,7 +173,6 @@ class ApiCollectionRunService:
 
         await notify_task_available()
         await self.repository.refresh(run)
-        apply_run_scope(run, context)
         return dump_run(run)
 
     async def list(
@@ -155,10 +180,8 @@ class ApiCollectionRunService:
     ) -> dict[str, Any]:
         if page < 1 or not 1 <= page_size <= 100:
             raise ErrBadRequest()
-        context = await self.get_accessible_context(user_id, collection_id, action="read")
+        await self.get_accessible_context(user_id, collection_id, action="read")
         rows, total = await self.repository.page_runs(collection_id, page, page_size)
-        for row in rows:
-            apply_run_scope(row, context)
         return paged_payload([dump_run(row) for row in rows], total)
 
     async def get(self, user_id: str, collection_run_id: str) -> dict:

@@ -88,14 +88,6 @@ async def list_repository_profile_task_runs(
     )
 
 
-async def list_repository_profile_task_versions(
-    task_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationQueries = Depends(get_generation_queries),
-):
-    return success_payload(await service.list_profile_versions(task_id, user_id))
-
-
 async def get_repository_profile_run(
     run_id: str,
     user_id: str = Depends(get_current_user_id),

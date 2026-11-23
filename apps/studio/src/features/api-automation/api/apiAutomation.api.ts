@@ -14,6 +14,7 @@ import type {
   CreateApiCasePayload,
   CreateApiCollectionPayload,
   CreateApiEnvironmentPayload,
+  CreateProjectApiCollectionPayload,
   CreateApiEnvironmentVarPayload,
   CreateApiExtractRulePayload,
   RunApiCasePayload,
@@ -33,6 +34,11 @@ export const apiAutomationApi = {
     request<ListResponse<ApiCollection>>(`/v1/projects/${projectId}/api-collections`),
   createApiCollection: (requirementId: string, body: CreateApiCollectionPayload) =>
     request<ApiCollection>(`/v1/requirements/${requirementId}/api-collections`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  createProjectApiCollection: (projectId: string, body: CreateProjectApiCollectionPayload) =>
+    request<ApiCollection>(`/v1/projects/${projectId}/api-collections`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -74,7 +80,15 @@ export const apiAutomationApi = {
     }),
   deleteApiEnvironmentVar: (envVarId: string) =>
     request<Record<string, never>>(`/v1/api-environment-vars/${envVarId}`, { method: 'DELETE' }),
-  getApiCases: (collectionId: string) => request<ListResponse<ApiCase>>(`/v1/api-collections/${collectionId}/cases`),
+  getApiCases: (collectionId: string, filters: { invalidated?: boolean } = {}) =>
+    request<ListResponse<ApiCase>>(
+      `/v1/api-collections/${collectionId}/cases${buildQuery({ ...filters })}`,
+    ),
+  batchInvalidateApiCases: (projectId: string, caseIds: string[], invalidated: boolean) =>
+    request<{ caseIds: string[]; updatedCount: number }>(
+      `/v1/projects/${projectId}/api-cases/batch-invalidation`,
+      { method: 'POST', body: JSON.stringify({ caseIds, invalidated }) },
+    ),
   reorderApiCases: (collectionId: string, caseIds: string[]) =>
     request<ListResponse<ApiCase>>(`/v1/api-collections/${collectionId}/cases/reorder`, {
       method: 'PATCH',

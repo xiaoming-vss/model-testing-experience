@@ -22,7 +22,7 @@ export function ApiCaseEditorPanel({ page }: { page: ApiCollectionDetailPageMode
     isApiCaseRunInProgress,
     isSelectedCaseReady,
     handleSendRequest,
-    ensureQueryTrailingRow,
+    collectionQuery,
     environmentPopoverOpen,
     setEnvironmentPopoverOpen,
     environments,
@@ -58,11 +58,11 @@ export function ApiCaseEditorPanel({ page }: { page: ApiCollectionDetailPageMode
   } = page
 
   return (
-    <section className="api-wb-editor-panel flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
+    <section className="api-wb-editor-panel flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
       <div className="api-wb-editor-shell flex min-h-0 flex-auto flex-col" ref={editorLayoutRef}>
         <div className="api-wb-editor-main flex min-h-0 flex-auto flex-col" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
           <div className="api-wb-editor-main-scroll min-h-0 flex-auto overflow-auto [container-type:size]">
-            <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} ensureQueryTrailingRow={ensureQueryTrailingRow} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
+            <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} selectedCaseInvalidated={Boolean(editingCase?.invalidatedAt)} handleSendRequest={handleSendRequest} collectionName={collectionQuery.data?.name} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
           </div>
         </div>
         {runResult ? (

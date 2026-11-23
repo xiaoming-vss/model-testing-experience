@@ -25,7 +25,6 @@ DEFAULT_NANOBOT_RUNTIME_ROOT = Path(__file__).resolve().parents[3] / "runtime" /
 class AgentRuntimePaths:
     runtime_root: Path
     workspaces_dir: Path
-    skills_dir: Path
     temp_configs_dir: Path
 
 
@@ -40,7 +39,6 @@ def resolve_runtime_paths(agent_config: AgentBackendConfig) -> AgentRuntimePaths
     return AgentRuntimePaths(
         runtime_root=resolved_root,
         workspaces_dir=resolved_root / "workspaces",
-        skills_dir=resolved_root / "skills",
         # Per-invocation configuration lives under the private runtime root.
         temp_configs_dir=resolved_root,
     )

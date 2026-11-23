@@ -3,18 +3,17 @@ import { Background, BackgroundVariant, BaseEdge, getBezierPath, Handle, MarkerT
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useThemeStore } from '@/shared/theme/theme.store'
 import type { GenerationChain, GenerationChainKind, GenerationChainStage } from '../api/generationChain.api'
-import type { ChainFilter } from '../hooks/useRequirementGenerationChain'
 import '@xyflow/react/dist/style.css'
 
 import { generationStageClass, generationStageLabel } from '../utils/generationStageDisplay'
 
-type GroupData = { kind: GenerationChainKind; label: string; status: string; dim: boolean; active?: boolean; unconfigured?: boolean; readOnlyUnconfigured?: boolean; onConfigure?: () => void; onSelect?: () => void }
+type GroupData = { kind: GenerationChainKind; label: string; status: string; active?: boolean; unconfigured?: boolean; readOnlyUnconfigured?: boolean; onConfigure?: () => void; onSelect?: () => void }
 type CardActions = { onOpen: (origin?: HTMLElement) => void }
-type StageData = { stage: GenerationChainStage; active: boolean; dim: boolean } & CardActions
+type StageData = { stage: GenerationChainStage; active: boolean } & CardActions
 type SpecialData = { kind: 'content' | 'codeRisk'; active: boolean } & CardActions
 type ProfileCardData = { index: string; statusLabel: string; statusClass: string; running: boolean; versionLabel?: string; meta: string }
 type ProfileData = ProfileCardData & { active: boolean } & CardActions
-type RelationsData = { index: string; active: boolean; dim: boolean } & CardActions
+type RelationsData = { index: string; active: boolean } & CardActions
 type GroupNode = Node<GroupData, 'chainGroup'>
 type StageNode = Node<StageData, 'stage'>
 type SpecialNode = Node<SpecialData, 'special'>
@@ -26,7 +25,7 @@ type CanvasProps = {
   canWrite: boolean
   sourceSelected: 'ui' | 'api' | null
   onSelectSource: (kind: 'ui' | 'api') => void
-  chains: GenerationChain[]; filter: ChainFilter; selected?: { kind: GenerationChainKind; stage: string }; special: 'content' | 'codeRisk' | 'repositoryProfile' | 'relations' | null
+  chains: GenerationChain[]; selected?: { kind: GenerationChainKind; stage: string }; special: 'content' | 'codeRisk' | 'repositoryProfile' | 'relations' | null
   /** 仓库画像位于需求分析分组第二行，复用阶段卡片尺寸与状态动画。 */
   profile?: Omit<ProfileCardData, 'index'>
   /** 功能测试「完整用例」派生出的用例图谱入口；没有可用运行记录时不渲染。 */
@@ -59,7 +58,7 @@ function cardActions(data: CardActions) {
   }
 }
 function ChainGroup({ data }: NodeProps<GroupNode>) {
-  return <section className={`${GROUP_CLASS}${data.dim ? ' is-dim' : ''}${data.active ? ' is-selected' : ''}`} aria-label={data.label}
+  return <section className={`${GROUP_CLASS}${data.active ? ' is-selected' : ''}`} aria-label={data.label}
     onClick={event => { if (!(event.target as HTMLElement).closest('button')) data.onSelect?.() }}>
     <svg className="gc-flow-group-outline" aria-hidden="true"><rect x="0" y="0" rx="10" /></svg>
     <div className={GROUP_HEADER_CLASS}>{data.onSelect ? <button type="button" className={`${GROUP_SELECT_CLASS} nodrag`} aria-label={`选择${data.label}分组`} aria-pressed={Boolean(data.active)} onClick={data.onSelect}><strong>{data.label}</strong></button> : <strong>{data.label}</strong>}<small>{data.status}</small></div>
@@ -74,10 +73,11 @@ function StageCard({ data }: NodeProps<StageNode>) {
     ? stage.moduleGeneration.status === 'reviewing' ? '正在独立复核测试点'
       : stage.moduleGeneration.status === 'revising' ? '正在修订测试点'
         : `已完成 ${stage.moduleGeneration.modules.filter(module => module.status === 'completed').length}/${stage.moduleGeneration.modules.length} ${stage.moduleGeneration.stage === 'case_names' ? '个分组' : '个模块'}`
-    : running ? '等待本次结果' : stage.draft?.summary ?? stage.latestVersion?.summary ?? stage.blockedReason ?? '暂无产物'
-  return <div className={`gc-flow-stage relative w-full${data.dim ? ' is-dim' : ''}`}>{ports}<button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
+    : running ? '等待本次结果' : stage.blockedReason
+      || (stage.state === 'approved' ? '已有当前采用内容' : stage.state === 'draft' ? '已有候选内容' : stage.state === 'invalid' ? '当前内容需重新确认' : stage.state === 'failed' ? stage.errorMessage || '本次生成失败' : '暂无产物')
+  return <div className="gc-flow-stage relative w-full">{ports}<button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
     <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{String(stage.order + 1).padStart(2, '0')}</span><span className={NODE_STATE_CLASS}>{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
-    <span className={NODE_MAIN_CLASS}><Icon aria-hidden /><strong className={NODE_TITLE_CLASS}>{stage.label}</strong></span><span className={NODE_META_CLASS}>{!running && !stage.draft && stage.latestVersion ? <span className={NODE_VERSION_CLASS}>{stage.latestVersion.label}</span> : null}<span className={NODE_META_TEXT_CLASS}>{summary}</span></span>
+    <span className={NODE_MAIN_CLASS}><Icon aria-hidden /><strong className={NODE_TITLE_CLASS}>{stage.label}</strong></span><span className={NODE_META_CLASS}><span className={NODE_META_TEXT_CLASS}>{summary}</span></span>
   </button></div>
 }
 function SpecialCard({ data }: NodeProps<SpecialNode>) {
@@ -153,7 +153,7 @@ const staggeredGroupHeight = 280
 const compactGroupHeight = 144
 const isStaggered = (kind: GenerationChainKind) => staggeredKinds.has(kind)
 const isStaggeredGroup = (node: CanvasNode) => node.type === 'chainGroup' && isStaggered(node.data.kind)
-function buildCanvas({ chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab }: CanvasProps) {
+function buildCanvas({ chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab }: CanvasProps) {
   const nodes: CanvasNode[] = [
     { id: 'document', type: 'special', position: { x: 35, y: 275 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onOpen: (origin) => onOpenSpecial('content', origin) } },
     { id: 'risk', type: 'special', position: { x: 198, y: 674 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
@@ -161,9 +161,8 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
   const edges: Edge[] = []
   for (const chain of chains) {
     const layout = positions[chain.kind]
-    const dim = (filter === 'draft' && !chain.draftCount) || (filter === 'empty' && chain.configured)
     const groupId = `group:${chain.kind}`
-    const status = !chain.configured ? '未开始' : chain.draftCount ? `${chain.draftCount} 个待审核` : chain.stages.length > 0 && chain.stages.every(stage => ['approved', 'imported'].includes(stage.state)) ? '已通过' : '已配置'
+    const status = !chain.configured ? '未开始' : chain.pendingCandidateCount ? `${chain.pendingCandidateCount} 个候选待处理` : chain.stages.length > 0 && chain.stages.every(stage => ['approved', 'imported'].includes(stage.state)) ? '已全部采用' : '已配置'
     const profileCard = chain.kind === 'requirement_analysis' && chain.configured ? profile : undefined
     const hasProfileRow = Boolean(profileCard && chain.stages.length)
     const count = chain.stages.length
@@ -172,7 +171,7 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
     const groupWidth = (Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
       + (staggered ? staggeredExtraWidth : 0)) * groupScale
     const groupHeight = (staggered || hasProfileRow ? staggeredGroupHeight : compactGroupHeight) * groupScale
-    nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: groupHeight }, data: { kind: chain.kind, label: chain.label, status, dim, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, readOnlyUnconfigured: !canWrite && (chain.kind === 'requirement_analysis' || chain.kind === 'function'), onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
+    nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: groupHeight }, data: { kind: chain.kind, label: chain.label, status, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, readOnlyUnconfigured: !canWrite && (chain.kind === 'requirement_analysis' || chain.kind === 'function'), onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
     if (!chain.configured) continue
     chain.stages.forEach((entry, index) => {
       const id = `${chain.kind}:${entry.stage}`
@@ -180,7 +179,7 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
         x: stageInset + index * (groupWidth - stageInset * 2 - itemWidth) / Math.max(1, count - 1),
         y: staggered && index % 2 === 1 ? stageBottom : stageTop,
       } : { x: stageInset + index * (itemWidth + stageGap), y: stageTop }
-      nodes.push({ id, type: 'stage', parentId: groupId, extent: 'parent', position, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, dim, onOpen: (origin) => onOpenStage(chain.kind, entry, origin) } })
+      nodes.push({ id, type: 'stage', parentId: groupId, extent: 'parent', position, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, onOpen: (origin) => onOpenStage(chain.kind, entry, origin) } })
       if (index > 0) edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${chain.stages[index - 1].stage}`, target: id })
     })
     if (profileCard && chain.stages.length) {
@@ -207,7 +206,7 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
     // 作为泳道子节点固定在分组右侧，随分组一起缩放和平移。
     nodes.push({
       id: 'case-relations', type: 'relations', parentId: `group:function`, position: { x: groupWidth + stageGap, y: stageTop }, style: { width: itemWidth },
-      data: { index: String(count + 1).padStart(2, '0'), active: relations.active, dim: (filter === 'draft' && !functional.draftCount) || (filter === 'empty' && functional.configured), onOpen: relations.onOpen },
+      data: { index: String(count + 1).padStart(2, '0'), active: relations.active, onOpen: relations.onOpen },
     })
     const lastStage = functional.stages.at(-1)
     if (lastStage) edges.push({ id: 'function-to-relations', source: `function:${lastStage.stage}`, target: 'case-relations' })
@@ -233,8 +232,8 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
   return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { running: runningStages.has(edge.source), profileRoute: Boolean((edge.data as { profileRoute?: boolean } | undefined)?.profileRoute) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
 }
 function CanvasInner(props: CanvasProps) {
-  const { chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab } = props
-  const graph = useMemo(() => buildCanvas({ chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab }), [chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab])
+  const { chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab } = props
+  const graph = useMemo(() => buildCanvas({ chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab }), [chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab])
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const frameRef = useRef<HTMLDivElement>(null)

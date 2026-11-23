@@ -15,9 +15,7 @@ export function UiTestSuiteDrawer({
   loading,
   error,
   onClose,
-  sprintOptions,
   requirementOptions,
-  onSprintChange,
   onFinish,
 }: {
   title: string
@@ -26,9 +24,7 @@ export function UiTestSuiteDrawer({
   loading: boolean
   error: unknown
   onClose: () => void
-  sprintOptions?: Array<{ label: string; value: string }>
   requirementOptions?: Array<{ label: string; value: string }>
-  onSprintChange?: (value?: string) => void
   onFinish: (values: UiTestSuiteFormValues) => void
 }) {
   const watchedViewportWidth = Form.useWatch('viewportWidth', form)
@@ -59,14 +55,13 @@ export function UiTestSuiteDrawer({
         <div className="ui-test-suite-drawer-shell flex flex-col gap-0">
           <div className="ui-test-suite-drawer-section flex flex-col border-b border-[var(--tp-border-soft)] pb-4 pt-0.5">
             <div className="ui-test-suite-drawer-grid ui-test-suite-drawer-grid-2 grid grid-cols-2 gap-x-3 max-narrow:grid-cols-2 max-[720px]:grid-cols-1">
-              {sprintOptions ? (
-                <Form.Item name="sprintId" label="所属迭代" rules={[{ required: true, message: '请选择所属迭代' }]}>
-                  <Select placeholder="请选择迭代" options={sprintOptions} onChange={onSprintChange} />
-                </Form.Item>
-              ) : null}
               {requirementOptions ? (
-                <Form.Item name="requirementId" label="所属需求" rules={[{ required: true, message: '请选择所属需求' }]}>
-                  <Select placeholder="请选择需求" options={concreteRequirementOptions} />
+                <Form.Item name="requirementId" label="所属需求">
+                  <Select
+                    allowClear
+                    placeholder="不关联需求（项目级测试集）"
+                    options={concreteRequirementOptions}
+                  />
                 </Form.Item>
               ) : null}
             </div>

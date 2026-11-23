@@ -46,6 +46,17 @@ class UiTestSuiteRepository(ResourceRepository):
             ).all()
         )
 
+    async def list_by_project(self, project_id: str) -> list[UiTestSuite]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(UiTestSuite)
+                    .where(UiTestSuite.project_id == project_id)
+                    .order_by(UiTestSuite.created_at.desc(), UiTestSuite.id.desc())
+                )
+            ).all()
+        )
+
     def add(self, suite: UiTestSuite) -> None:
         self.session.add(suite)
 

@@ -3,13 +3,7 @@
 import json
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import Any, Protocol
-
-
-class StageLike(Protocol):
-    @property
-    def stage(self) -> str: ...
-
+from typing import Any
 
 FIELDS = {
     "requirement_review": "reviewOutput",
@@ -22,9 +16,6 @@ FIELDS = {
     "ui_surface": "uiSurface",
     "ui_design": "uiDesign",
 }
-
-
-TERMINAL = {"success", "failed", "error", "canceled"}
 
 
 NO_REVIEW_STAGES = {"relation_analysis"}
@@ -42,22 +33,6 @@ def mapping(value: Any) -> dict[str, Any]:
     return deepcopy(value) if isinstance(value, dict) else {}
 
 
-def content(value: Any) -> str | None:
-    if value is None:
-        return None
-    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
-
-
-def output_format(value: str | None) -> str:
-    if value is None:
-        return "text"
-    try:
-        json.loads(value)
-        return "json"
-    except (ValueError, TypeError):
-        return "text"
-
-
 def layout(kind: str) -> list[str]:
     if kind == "functional_case_generate":
         return [
@@ -69,15 +44,6 @@ def layout(kind: str) -> list[str]:
     if kind == "requirement_analysis":
         return ["requirement_review", "extracting_text"]
     return ["generate"]
-
-
-def final_stage[T: StageLike](stages: Sequence[T]) -> T:
-    """detailed_cases 携带 resultYaml 与运行级审核；relation_analysis 只是派生产物。"""
-
-    for stage in stages:
-        if stage.stage == "detailed_cases":
-            return stage
-    return stages[-1]
 
 
 def final_review_stage(kind: str, names: Sequence[str]) -> str:

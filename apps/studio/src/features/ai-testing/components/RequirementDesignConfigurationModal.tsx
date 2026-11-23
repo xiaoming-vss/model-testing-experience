@@ -133,7 +133,7 @@ export function RequirementDesignConfigurationModal({
             showIcon
             type="info"
             title="UI 生成来源由仓库画像提供"
-            description="请在需求生成全景的 UI 测试分组中选择画像版本、前端仓库和 commit 模式。"
+            description="请在需求生成全景的 UI 测试分组中查看当前画像并选择前端仓库和 commit 模式。"
           />
         ) : null}
       </Form>

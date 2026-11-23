@@ -15,7 +15,11 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.repositories.api_collection import ApiCollectionRepository
-from testing_agent.schemas.api_collection import ApiCollectionRequest, ApiCollectionResponse
+from testing_agent.schemas.api_collection import (
+    ApiCollectionRequest,
+    ApiCollectionResponse,
+    ProjectApiCollectionRequest,
+)
 from testing_agent.services.api_import_entities import (
     add_api_rules,
     apply_api_case,
@@ -85,7 +89,9 @@ from testing_agent.services.import_payload import (
 from testing_agent.services.project_access import (
     ProjectAction,
     require_project_access,
+    require_project_id,
     require_requirement_access,
+    require_requirement_in_project,
 )
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
@@ -108,19 +114,53 @@ class ApiCollectionService:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
             raise ErrNotFound()
-        await self.ensure_requirement_access(user_id, collection.requirement_id, action=action)
+        await require_project_id(
+            self.repository.session, user_id, collection.project_id, action=action
+        )
         return collection
 
     async def create(self, user_id: str, requirement_id: str, body: ApiCollectionRequest) -> dict:
-        await self.ensure_requirement_access(user_id, requirement_id, action="write")
+        requirement = await self.repository.get_requirement(requirement_id)
+        if requirement is None:
+            raise ErrNotFound()
+        sprint = await self.repository.get_sprint(requirement.sprint_id)
+        if sprint is None:
+            raise ErrNotFound()
+        project = await self.repository.get_project(sprint.project_id)
+        if project is None:
+            raise ErrNotFound()
+        await require_project_access(self.repository.session, user_id, project, "write")
+        return await self._create(project.project_id, requirement_id, body)
+
+    async def create_in_project(
+        self, user_id: str, project_id: str, body: ProjectApiCollectionRequest
+    ) -> dict:
+        await require_project_id(self.repository.session, user_id, project_id, action="write")
+        requirement_id = body.requirement_id
+        if requirement_id is not None:
+            await require_requirement_in_project(
+                self.repository, user_id, requirement_id, project_id, action="write"
+            )
+        return await self._create(project_id, requirement_id, body)
+
+    async def _create(
+        self, project_id: str, requirement_id: str | None, body: ApiCollectionRequest
+    ) -> dict:
         collection = ApiCollection(
             collection_id=new_id(),
+            project_id=project_id,
             requirement_id=requirement_id,
             name=body.name,
             description=body.description,
         )
         self.repository.add(collection)
-        await self.repository.commit()
+        try:
+            await self.repository.commit()
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            if _is_project_name_conflict(exc):
+                raise ErrApiCollectionNameAlreadyUse() from exc
+            raise
         await self.repository.refresh(collection)
         return dump(ApiCollectionResponse, collection)
 
@@ -130,16 +170,7 @@ class ApiCollectionService:
         return list_payload([dump(ApiCollectionResponse, row) for row in rows])
 
     async def list_by_project(self, user_id: str, project_id: str) -> dict[str, Any]:
-        """List every collection in a project in one read.
-
-        The Studio's "all requirements" scope otherwise fans out one request per
-        requirement; project access is checked once here and returned rows are
-        scoped by the requirement -> sprint -> project join.
-        """
-        project = await self.repository.get_project(project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, "read")
+        await require_project_id(self.repository.session, user_id, project_id, action="read")
         rows = await self.repository.list_by_project(project_id)
         return list_payload([dump(ApiCollectionResponse, row) for row in rows])
 
@@ -151,30 +182,29 @@ class ApiCollectionService:
 
     async def update(self, user_id: str, collection_id: str, body: dict[str, Any]) -> dict:
         collection = await self.get_accessible_entity(user_id, collection_id, action="write")
-        target_id = body.get("requirementId")
-        if target_id and target_id != collection.requirement_id:
-            await self.ensure_requirement_access(user_id, target_id, action="write")
-            source = await self.repository.get_requirement(collection.requirement_id)
-            target = await self.repository.get_requirement(target_id)
-            if source is None or target is None:
-                raise ErrNotFound()
-            source_sprint = await self.repository.get_sprint(source.sprint_id)
-            target_sprint = await self.repository.get_sprint(target.sprint_id)
-            if source_sprint is None or target_sprint is None:
-                raise ErrNotFound()
-            if source_sprint.project_id != target_sprint.project_id:
-                raise dynamic_error(ErrBadRequest, "API测试集只能调整到同一项目的需求")
-            collection.requirement_id = target_id
+        if "requirementId" in body:
+            target_id = body["requirementId"]
+            if target_id is not None:
+                await require_requirement_in_project(
+                    self.repository,
+                    user_id,
+                    target_id,
+                    collection.project_id,
+                    action="write",
+                )
+            if target_id != collection.requirement_id:
+                if collection.effective_import_id:
+                    raise dynamic_error(
+                        ErrBadRequest,
+                        "已接收生成导入的测试集不能更换或解除需求关联",
+                    )
+                collection.requirement_id = target_id
         apply_patch(collection, body, {"name", "description"})
         try:
             await self.repository.commit()
         except IntegrityError as exc:
             await self.repository.rollback()
-            detail = str(exc.orig)
-            if "uk_api_collection_requirement_name" in detail or (
-                "UNIQUE constraint failed: api_collections.requirement_id, api_collections.name"
-                in detail
-            ):
+            if _is_project_name_conflict(exc):
                 raise ErrApiCollectionNameAlreadyUse() from exc
             raise
         await self.repository.refresh(collection)
@@ -220,3 +250,10 @@ class ApiCollectionService:
             "importedExtractRuleCount": imported_extract_rule_count,
             "importedAssertRuleCount": imported_assert_rule_count,
         }
+
+
+def _is_project_name_conflict(exc: IntegrityError) -> bool:
+    detail = str(exc.orig)
+    return "uk_api_collection_project_name" in detail or (
+        "UNIQUE constraint failed: api_collections.project_id, api_collections.name" in detail
+    )

@@ -1,5 +1,7 @@
 # 前端（studio）
 
+历史验收：[候选工作区独立采用视觉验收](records/2026-11-22-independent-adoption-visual-check.md)、[候选侧栏视觉验收](records/2026-11-21-candidate-sidebar-visual-check.md)、[EntityCard 颜色回归](records/2026-11-20-entity-card-visual-check.md)。
+
 [UI 用例三阶段原文审核](../control-plane/ui-three-stage-generation.md)
 
 React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
@@ -47,9 +49,9 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 任务和执行详情的代码按职责维护：
 
-- 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`caseNameTree.ts` 负责树编辑与布局计算，三个结果展示组件分别负责需求分析、候选用例和测试点树。
+- 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`generatedCasesModel.ts` 与 `generatedCasesGraph.ts` 负责完整用例分组和布局，三个结果展示组件分别负责需求分析、完整用例图谱和测试点图谱。
 - AI 任务运行记录由 `ai-testing/components/RunHistoryTable.tsx` 展示；运行详情按状态刷新，历史与报告减少重复请求，统一策略见 [运行页面刷新策略](run-polling.md) 和 `domain/runs/`。删除失败不清空草稿，删除非当前记录不切换选中项。
-- 需求生成链的运行选择、草稿和查询刷新由 `ai-testing/hooks/useRequirementGenerationChain.ts` 维护；代码风险、测试报告等任务保留自己的执行参数、授权查询和审核业务。
+- 需求生成链的候选选择、当前内容和查询刷新由 `ai-testing/hooks/useRequirementGenerationChain.ts` 维护；代码风险、测试报告等任务保留自己的执行参数、授权查询和审核业务。
 - 代码风险、测试报告和测试单图谱按执行 ID 展示并逐条删除已结束历史，运行中禁用删除；正式测试资产不受影响。AI Worker 队列协议中的 `runId` 是该次派发尝试 ID，页面请求和执行详情使用执行 ID，两者不得在前端混用。
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
@@ -67,9 +69,10 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
 | `ai-task-detail.module.css` | AI 页面 token/表面、CodeMirror 折叠、任务卡与运行表、需求生成工作区、UI 生成与模型连接弹窗 |
-| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚与继续优化侧栏 |
+| `generation-chain.module.css` | 生成链弹窗、阶段卡片、候选工作区与继续优化侧栏 |
 | `generation-canvas.module.css` | 生成画布、阶段卡片、阅读态与阶段检查器 |
-| `artifact-cases.module.css` | 用例名称树、用例浏览器、生成用例审核字段与仓库画像 |
+| `candidate-workspace.module.css` | 候选工作区聚焦卡、当前采用入口、候选磁贴、生成／来源／最近生成卡片及阶段操作 |
+| `artifact-cases.module.css` | 用例名称树、用例浏览器、候选编辑字段与仓库画像 |
 | `ui-stage-visual.module.css` | UI 三阶段可视化的深色覆盖、CodeMirror 兜底与产物模式切换；浅色布局/排版在 `components/uiStageVisual/uiStageVisualClasses.ts` |
 | `shared/styles/case-relations.module.css` | 用例关系图谱的 React Flow 节点、阅读浮层与 JSON 页签皮肤；需求生成链与测试单图谱共用 |
 
@@ -109,7 +112,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - UI 测试集详情的顶栏、板面、React Flow 深层皮肤归 `ui-detail-shell.module.css`，右栏卡片原语归 `shared/components/RunCard.tsx`，步骤编辑器与测试集抽屉的 Ant Design 深层结构归 `ui-suite.module.css`；页面根挂 `ui-detail-shell` 与 `ui-suite` 两个 Module 的作用域。
 - Sprint 详情页与 Projects 概览共用 `sprint-overview.module.css`，只保留卡片/健康带表面、图表色块、状态色映射与报告 Markdown 在 `sprint-overview.module.css`；页面网格、工具栏、指标与断点由 `SprintDetailPage` / `ProjectsPage` utility 负责，报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。需求/迭代卡片排版由 `ProjectsPage`、`RequirementCards`、`SprintBoard` utility 负责。
 
-列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/components/GeneratedCasesReviewView.delete.test.tsx` 等页面回归验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
+列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/components/GeneratedCasesReviewView.test.tsx` 等页面回归验证。涉及按钮层优先级的变更需用浏览器核对；jsdom 不能模拟 CSS layer 的完整级联，`listPanelConsistency` / `listSurfaceConsistency` 在注入共享 CSS 前用 `src/test/unwrapCssLayer.ts` 解包 `components` layer。
 
 ### 共享数据工具
 
@@ -132,7 +135,7 @@ npm ci
 npm run dev           # 默认 127.0.0.1:5173
 ```
 
-检查、测试、构建和 feature 边界验证命令统一见[命令矩阵](../commands.md#studio)。`npm run verify` 不包含 `npm test`；迁移和发布前两者都要执行。
+检查、测试、构建和 feature 边界验证命令统一见[命令矩阵](../commands.md#studio)。`npm run verify` 已包含 `npm test`。
 
 测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。测试数量以后续输出为准。
 
@@ -140,7 +143,7 @@ npm run dev           # 默认 127.0.0.1:5173
 
 ## 与后端的交互
 
-迭代入口只读取迭代列表；需求入口通过项目级需求列表按当前迭代筛选、后端分页，选择“全部迭代”时省略 `sprintId`。列表的禅道绑定摘要直接使用响应中的 `zentaoBinding`，不按卡片或表格行逐条请求 `/bindings`。单条绑定在打开管理弹窗时查询；创建、重新绑定或解绑后使对应项目的迭代列表或需求分页缓存失效。
+迭代入口只读取迭代列表；需求入口通过项目级需求列表按页面选择的迭代筛选、后端分页，需求板默认进行中或最新迭代，范围写入 URL `?sprint=`。列表的禅道绑定摘要直接使用响应中的 `zentaoBinding`，不按卡片或表格行逐条请求 `/bindings`。单条绑定在打开管理弹窗时查询；创建、重新绑定或解绑后使对应项目的迭代列表或需求分页缓存失效。
 
 - 开发服务器代理 `/v1` 与 `/__document_preview_proxy`（后者重写去掉前缀）到 `VITE_API_PROXY_TARGET`
 - 容器内由 nginx 监听 80 端口并代理同样的两个前缀，`proxy_read_timeout` 与 `proxy_send_timeout` 为 120s，`client_max_body_size` 为 105m
@@ -164,7 +167,7 @@ npm run dev           # 默认 127.0.0.1:5173
 核对表单在同一个弹窗内展开；确认未写入仅对服务端确认的当前项目所有者开放，并要求理由和
 显式勾选。数据库恢复后的额外核对由后端按用例状态声明。接口和审计规则见
 [功能用例推送与未决写入核对](../control-plane/zentao-mcp-case-push.md)。
-- 编辑 API 测试集时可调整同一项目内的所属迭代和需求；保存会刷新原需求和目标需求的生成链导入目标。运行历史显示的需求和迭代跟随测试集当前归属。
+- API/UI 测试集属于项目，可关联同一项目内的需求或保持项目级；手工测试集可调整或解除关联，接收过生成导入的测试集不能解除或更换需求。运行历史使用创建时冻结的需求和迭代快照，不随测试集当前归属变化，见 [ADR 0027](../control-plane/adr/0027-project-owned-api-ui-test-suites.md)。
 
 API/UI 运行的实时更新、断线及临时调试结果见 [实时执行](../control-plane/realtime-test-execution.md)。
 

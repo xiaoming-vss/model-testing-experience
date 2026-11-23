@@ -14,6 +14,7 @@ class FunctionCaseQuery:
     module: str = ""
     priority: str = ""
     case_type: str = ""
+    invalidated: bool | None = None
     keyword: str = ""
     limit: int = 20
     offset: int = 0
@@ -31,6 +32,7 @@ class FunctionCaseQuery:
         module: str = "",
         priority: str = "",
         case_type: str = "",
+        invalidated: bool | None = None,
         keyword: str = "",
     ) -> FunctionCaseQuery:
         return cls(
@@ -41,6 +43,7 @@ class FunctionCaseQuery:
             module=module.strip(),
             priority=priority.strip(),
             case_type=case_type.strip(),
+            invalidated=invalidated,
             keyword=keyword.strip(),
             limit=page_size,
             offset=(page - 1) * page_size,

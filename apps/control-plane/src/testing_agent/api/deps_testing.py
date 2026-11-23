@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.api.deps_common import get_file_service
 from testing_agent.core.config import Settings, get_settings
 from testing_agent.db.session import get_session
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -209,11 +210,13 @@ def get_test_order_entry_service(
 
 def get_test_order_graph_service(
     session: AsyncSession = Depends(get_session),
+    files=Depends(get_file_service),
 ) -> TestOrderGraphService:
     return TestOrderGraphService(
         AiGenerateTaskRepository(session),
         build_test_order_service(session),
         TestOrderEntryRepository(session),
+        files=files,
     )
 
 

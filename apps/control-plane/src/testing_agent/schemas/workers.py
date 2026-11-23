@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 from testing_agent.schemas.common import StrictRequest
+from testing_agent.schemas.generation_candidates import FrozenCandidateInput
 from testing_agent.schemas.project_skill_space import ProjectSkillSpaceResponse
 
 
@@ -64,6 +65,18 @@ class WorkerClaimPayload(BaseModel):
 
 class WorkerSnapshotResponse(BaseModel):
     task_type: str | None = Field(default=None)
+    candidate_protocol: Literal["single-current/1"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    candidate_input: FrozenCandidateInput | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def validate_candidate_protocol(self) -> WorkerSnapshotResponse:
+        if (self.candidate_protocol is None) != (self.candidate_input is None):
+            raise ValueError("candidate protocol and frozen input must occur together")
+        return self
 
     model_config = ConfigDict(
         populate_by_name=True,

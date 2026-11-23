@@ -3,19 +3,39 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import Response
 
+from testing_agent.handlers.generation_candidate_workflow import (
+    adopt_candidate,
+    get_current_stage,
+    import_current_stage,
+    initialize_candidate_chain,
+    preview_candidate_adoption,
+    preview_current_import,
+    revise_candidate_stage,
+    run_candidate_stage,
+)
+from testing_agent.handlers.generation_candidates import (
+    check_ui_candidate_source,
+    derive_generation_candidate,
+    dispose_generation_candidate,
+    edit_generation_candidate,
+    get_current_candidate_relations,
+    get_generation_candidate,
+    list_generation_candidates,
+    run_current_candidate_relations,
+)
 from testing_agent.handlers.generation_chain import (
     check_ui_generation_source,
-    delete_generation_chain_version,
-    get_generation_chain_import_options,
-    get_generation_chain_version,
     get_generation_chain_view,
     get_generation_chains,
     get_ui_generation_source_options,
-    import_generation_chain_version,
-    review_generation_chain_stage,
-    revise_generation_chain_stage,
-    run_generation_chain_stage,
-    save_generation_chain_stage_draft,
+)
+from testing_agent.handlers.repository_profile_candidates import (
+    adopt_profile_candidate,
+    clear_current_profile,
+    dispose_profile_candidate,
+    get_current_profile,
+    get_profile_candidate,
+    list_profile_candidates,
 )
 from testing_agent.handlers.requirement import (
     create_requirement,
@@ -41,12 +61,24 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRunResponse,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.generation_candidates import (
+    AdoptionCheck,
+    CandidateAdoptResult,
+    CandidateChainInitializeResult,
+    CandidateDeriveResult,
+    CandidateDetailView,
+    CandidateDispositionResult,
+    CandidateListView,
+    CandidateRelationsRunResult,
+    CandidateRelationsView,
+    CandidateRunResult,
+    CurrentClearResult,
+    CurrentImportPreviewResult,
+    CurrentImportResult,
+    CurrentStageView,
+)
 from testing_agent.schemas.generation_chain import (
-    GenerationChainDeleteVersionResponse,
-    GenerationChainImportOptions,
-    GenerationChainImportResponse,
     GenerationChainOverview,
-    GenerationChainVersionDetail,
     GenerationChainView,
     UiGenerationSourceCheck,
     UiGenerationSourceOptions,
@@ -114,6 +146,31 @@ router.post(
 )(start_requirement_design)
 
 router.get(
+    "/requirements/{requirement_id}/repository-profile/candidates",
+    response_model=ApiResponse[CandidateListView],
+)(list_profile_candidates)
+router.get(
+    "/requirements/{requirement_id}/repository-profile/candidates/{candidate_id}",
+    response_model=ApiResponse[CandidateDetailView],
+)(get_profile_candidate)
+router.post(
+    "/requirements/{requirement_id}/repository-profile/candidates/{candidate_id}/disposition",
+    response_model=ApiResponse[CandidateDispositionResult],
+)(dispose_profile_candidate)
+router.get(
+    "/requirements/{requirement_id}/repository-profile/current",
+    response_model=ApiResponse[CurrentStageView],
+)(get_current_profile)
+router.post(
+    "/requirements/{requirement_id}/repository-profile/current/adopt",
+    response_model=ApiResponse[CandidateAdoptResult],
+)(adopt_profile_candidate)
+router.post(
+    "/requirements/{requirement_id}/repository-profile/current/clear",
+    response_model=ApiResponse[CurrentClearResult],
+)(clear_current_profile)
+
+router.get(
     "/requirements/{requirement_id}/generation",
     response_model=ApiResponse[GenerationChainOverview],
 )(get_generation_chains)
@@ -129,35 +186,67 @@ router.get(
     "/requirements/{requirement_id}/generation/{kind}",
     response_model=ApiResponse[GenerationChainView],
 )(get_generation_chain_view)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/candidate-chain",
+    response_model=ApiResponse[CandidateChainInitializeResult],
+)(initialize_candidate_chain)
 router.get(
-    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}",
-    response_model=ApiResponse[GenerationChainVersionDetail],
-)(get_generation_chain_version)
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/current",
+    response_model=ApiResponse[CurrentStageView],
+)(get_current_stage)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidate-run",
+    response_model=ApiResponse[CandidateRunResult],
+)(run_candidate_stage)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/adoption/check",
+    response_model=ApiResponse[AdoptionCheck],
+)(preview_candidate_adoption)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/adoption",
+    response_model=ApiResponse[CandidateAdoptResult],
+)(adopt_candidate)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/current/import-preview",
+    response_model=ApiResponse[CurrentImportPreviewResult],
+)(preview_current_import)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/current/import",
+    response_model=ApiResponse[CurrentImportResult],
+)(import_current_stage)
 router.get(
-    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}/import-options",
-    response_model=ApiResponse[GenerationChainImportOptions],
-)(get_generation_chain_import_options)
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates",
+    response_model=ApiResponse[CandidateListView],
+)(list_generation_candidates)
+router.get(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates/{candidate_id}",
+    response_model=ApiResponse[CandidateDetailView],
+)(get_generation_candidate)
 router.post(
-    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}/import",
-    response_model=ApiResponse[GenerationChainImportResponse],
-)(import_generation_chain_version)
+    "/requirements/{requirement_id}/generation/ui/stages/{stage}/candidates/{candidate_id}/source-check",
+    response_model=ApiResponse[UiGenerationSourceCheck],
+)(check_ui_candidate_source)
+router.get(
+    "/requirements/{requirement_id}/generation/function/relations/current",
+    response_model=ApiResponse[CandidateRelationsView],
+)(get_current_candidate_relations)
 router.post(
-    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/run",
-    response_model=ApiResponse[GenerationChainView],
-)(run_generation_chain_stage)
+    "/requirements/{requirement_id}/generation/function/relations/current/run",
+    response_model=ApiResponse[CandidateRelationsRunResult],
+)(run_current_candidate_relations)
 router.post(
-    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/revision",
-    response_model=ApiResponse[GenerationChainView],
-)(revise_generation_chain_stage)
-router.post(
-    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/review",
-    response_model=ApiResponse[GenerationChainView],
-)(review_generation_chain_stage)
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates/{candidate_id}/disposition",
+    response_model=ApiResponse[CandidateDispositionResult],
+)(dispose_generation_candidate)
 router.put(
-    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/draft",
-    response_model=ApiResponse[GenerationChainView],
-)(save_generation_chain_stage_draft)
-router.delete(
-    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}",
-    response_model=ApiResponse[GenerationChainDeleteVersionResponse],
-)(delete_generation_chain_version)
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates/{candidate_id}",
+    response_model=ApiResponse[CandidateDetailView],
+)(edit_generation_candidate)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates/{candidate_id}/derive",
+    response_model=ApiResponse[CandidateDeriveResult],
+)(derive_generation_candidate)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/candidates/{candidate_id}/revision",
+    response_model=ApiResponse[CandidateRunResult],
+)(revise_candidate_stage)

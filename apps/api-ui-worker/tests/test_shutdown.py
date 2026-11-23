@@ -98,10 +98,7 @@ def test_canceling_claimed_task_reports_shutdown_canceled() -> None:
             request_timeout_ms=1000,
             heartbeat_interval_ms=1000,
             artifacts_root_dir="artifacts",
-            default_headless=True,
-            default_slow_mo_ms=0,
             trace_enabled=False,
-            screenshot_on_failure=True,
             snapshot_file="",
         )
         client = FakeControlPlaneClient()

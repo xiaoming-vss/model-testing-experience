@@ -10,6 +10,8 @@
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：默认技能按任务从控制面技能库获取并校验；轮询无锁并行，收到 SIGTERM 立即退出。
 
+历史验收：[用例可视化技能独立试跑记录](records/2026-11-14-case-visualization-skill-trial.md)。
+
 ## 运行时与依赖
 
 - Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
@@ -26,7 +28,7 @@
 | `nanobot`（默认） | `agent/nanobot.py` | Python 进程内调用 `nanobot-ai` SDK |
 | `pi` | `agent/pi.py` | 每次模型调用启动固定版本 Pi CLI 的 RPC 子进程 |
 
-选择方式、Pi 的会话/超时/进程回收语义和容器验收见 [Pi 后端](pi-backend.md)；收敛决策见 [ADR 0001](adr/0001-unified-agent-backend.md)。两个底座的任务类型、技能下载、阶段检查点、产物校验和控制面协议完全一致；切换前处理在途任务和人工检查点，会话历史不跨底座迁移。
+选择方式、Pi 的会话/超时/进程回收语义和容器验收见 [Pi 后端](pi-backend.md)；收敛决策见 [ADR 0001](adr/0001-unified-agent-backend.md)。两个底座共用的技能下载、阶段检查点、产物校验和控制面协议保持一致；代码风险分析与仓库画像仅支持 Pi。切换前处理在途任务和人工检查点，会话历史不跨底座迁移。
 
 ## 源码结构
 
@@ -37,7 +39,7 @@
 | `main.py`、`__main__.py` | 入口：加载配置、校验后端运行时、初始化日志、进入 `run_worker` |
 | `agent/` | 后端门面与适配器：`base.py`（契约）、`nanobot.py`、`pi.py`、`prompt.py`、`paths.py`、`config_builder.py` |
 | `app/bootstrap.py` | 构建 poller 与 runner，提供 `run_worker` 与 `run_poll_once` |
-| `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`executor.py`、`lifecycle.py` |
+| `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`lifecycle.py`、`outbox.py` |
 | `tasks/` | 九类任务各自的实现，另有共享 `git_workspace.py` 与 `result_summary.py`；`test_order_case_visualization` 为单阶段辅助阅读任务，不进入候选审核或正式资产导入 |
 | `platform/` | 与控制面通信：`http_client.py`、`task_source.py`、`result_sink.py`、`schemas.py`、`errors.py` |
 | `config/`、`logging/` | 配置加载与日志设置 |
@@ -79,7 +81,6 @@ Nanobot 后端启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT
 
 ```toml
 [code_risk_analysis]
-gitlab_timeout_seconds = 120
 git_timeout_seconds = 300
 workspace_retention_hours = 24
 max_diff_chars = 1000000

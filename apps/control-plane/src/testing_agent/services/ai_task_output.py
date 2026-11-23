@@ -16,11 +16,10 @@ from testing_agent.core.errors import (
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.api_generation_snapshot import project_api_generation_snapshot
 from testing_agent.repositories.api_interface import ApiInterfaceRepository
-from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.functional_requirement_source import functional_requirement_source
 from testing_agent.services.import_payload import import_items, parse_import_payload
 from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_test_case import ui_import_cases
@@ -127,12 +126,6 @@ def worker_requirement_document_download_url(worker_task_id: str) -> str:
     return f"/internal/ai-worker/tasks/{worker_task_id}/requirement-document"
 
 
-def _full_path(base_path: str, path: str) -> str:
-    base = str(base_path or "").rstrip("/")
-    normalized = path if path.startswith("/") else f"/{path}"
-    return f"{base}{normalized}" if base else normalized
-
-
 async def _api_interface_snapshot(
     repository: AiGenerateTaskRepository, task: AiGenerateTask
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -140,73 +133,11 @@ async def _api_interface_snapshot(
     if not interface_ids:
         raise dynamic_error(ErrBadRequest, "API 用例生成任务尚未选择接口")
     interfaces = await ApiInterfaceRepository(repository.session).list_by_ids(interface_ids)
-    by_id = {interface.interface_id: interface for interface in interfaces}
-    missing = [interface_id for interface_id in interface_ids if interface_id not in by_id]
-    if missing:
-        raise dynamic_error(ErrBadRequest, f"选中的接口已删除：{', '.join(missing)}")
     software_repository_ids = sorted({interface.software_repository_id for interface in interfaces})
     repositories = await SoftwareRepositoryRepository(repository.session).get_many(
         software_repository_ids
     )
-    repository_by_id = {
-        software_repository.software_repository_id: software_repository
-        for software_repository in repositories
-    }
-    missing_repositories = [
-        software_repository_id
-        for software_repository_id in software_repository_ids
-        if software_repository_id not in repository_by_id
-    ]
-    if missing_repositories:
-        raise dynamic_error(
-            ErrBadRequest,
-            f"接口所属软件仓库已删除：{', '.join(missing_repositories)}",
-        )
-    return (
-        [
-            {
-                "softwareRepositoryId": software_repository.software_repository_id,
-                "name": software_repository.name,
-                "basePath": software_repository.base_path,
-                "gitRepository": {
-                    "instanceUrl": software_repository.repository_instance_url,
-                    "pathWithNamespace": software_repository.repository_path,
-                },
-            }
-            for software_repository in repositories
-        ],
-        [
-            {
-                "interfaceId": interface.interface_id,
-                "softwareRepositoryId": interface.software_repository_id,
-                "softwareRepositoryName": repository_by_id[interface.software_repository_id].name,
-                "name": interface.name,
-                "method": interface.method,
-                "path": interface.path,
-                "fullPath": _full_path(
-                    repository_by_id[interface.software_repository_id].base_path,
-                    interface.path,
-                ),
-                "description": interface.description,
-                "tags": interface.tags_json or [],
-                "headers": interface.headers_json or [],
-                "pathParams": interface.path_params_json or [],
-                "query": interface.query_params_json or [],
-                "bodyType": interface.body_type,
-                "bodySchema": interface.body_schema_json,
-                "bodyExample": interface.body_example_json,
-                "bodyText": interface.body_text,
-                "responseStatus": interface.response_status,
-                "responseDescription": interface.response_description,
-                "responseSchema": interface.response_schema_json,
-                "responseExample": interface.response_example_json,
-                "security": interface.security_json,
-                "securitySchemes": interface.security_schemes_json,
-            }
-            for interface_id in interface_ids
-            for interface in [by_id[interface_id]]
-        ],
-    )
+    return project_api_generation_snapshot(interface_ids, interfaces, repositories)
 
 
 async def build_generate_run_snapshot(
@@ -216,21 +147,14 @@ async def build_generate_run_snapshot(
     run_id: str,
     instruction: str | None = None,
     worker_task_id: str | None = None,
-    material_version_id: str = "",
 ) -> dict[str, Any]:
     source_content = task.source_content
     document_type = ""
     document_download_url = ""
     uses_requirement_document = False
-    functional_source: dict[str, Any] = {}
     if kind == "function" and task.requirement_id:
-        functional_source = await functional_requirement_source(
-            GenerationChainRepository(repository.session),
-            task.requirement_id,
-            material_version_id,
-        )
-        source_content = functional_source["sourceContent"]
-    elif kind == "requirement_analysis":
+        raise dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段")
+    if kind == "requirement_analysis":
         requirement = await repository.get_requirement(task.requirement_id)
         if requirement is not None:
             uses_requirement_document = True
@@ -264,7 +188,6 @@ async def build_generate_run_snapshot(
         snapshot["documentHash"] = str(getattr(requirement, "document_hash", "") or "")
     else:
         snapshot["sourceType"] = task.source_type
-    snapshot.update(functional_source)
     if kind == "api":
         software_repositories, interfaces = await _api_interface_snapshot(repository, task)
         # API runs read the selected interfaces; no OpenAPI/Swagger body is frozen.
@@ -405,18 +328,6 @@ def normalize_config_json(value: Any) -> dict[str, Any]:
         if isinstance(parsed, dict):
             return parsed
     raise ErrBadRequest()
-
-
-def normalize_function_stage_config(stage: str, value: Any) -> dict[str, Any]:
-    config = dict(normalize_config_json(value))
-    if stage == "requirement_analysis" and "requirementAnalysis" not in config:
-        return {"requirementAnalysis": config}
-    if stage == "case_names" and "categories" in config:
-        case_names = config.get("caseNames")
-        if not isinstance(case_names, dict):
-            case_names = {}
-        config["caseNames"] = {**case_names, "categories": config.pop("categories")}
-    return config
 
 
 def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any]]:

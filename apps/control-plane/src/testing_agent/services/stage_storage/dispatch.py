@@ -1,7 +1,7 @@
 """transactional dispatch for a directly owned stage attempt.
 
 The caller must lock and authorize the task, validate inputs, lock the selected
-upstream versions, attach any revision files to the supplied attempt ID, then
+upstream candidate sources, attach any revision files to the supplied attempt ID, then
 commit this operation together with any UI source-batch changes.
 """
 
@@ -134,6 +134,7 @@ async def _dispatch_stage_attempt(
     execution_id: str | None = None,
     new_execution_id: str | None = None,
     review_required: bool = True,
+    allow_multiple_candidates: bool = False,
     reserved_worker: WorkerTask | None = None,
 ) -> tuple[AiGenerationAttempt, bool]:
     """Reserve one stage and enqueue once; return attempt and whether it was reused."""
@@ -202,6 +203,7 @@ async def _dispatch_stage_attempt(
         execution_id=execution_id,
         new_execution_id=new_execution_id,
         review_required=review_required,
+        allow_multiple_candidates=allow_multiple_candidates,
     )
     worker.run_id = attempt.id
     await session.flush()
@@ -224,6 +226,7 @@ async def dispatch_stage_attempt(
     execution_id: str | None = None,
     new_execution_id: str | None = None,
     review_required: bool = True,
+    allow_multiple_candidates: bool = False,
     reserved_worker: WorkerTask | None = None,
 ) -> tuple[AiGenerationAttempt, bool]:
     """Atomically reserve and enqueue, even when callers catch validation errors."""
@@ -244,5 +247,6 @@ async def dispatch_stage_attempt(
             execution_id=execution_id,
             new_execution_id=new_execution_id,
             review_required=review_required,
+            allow_multiple_candidates=allow_multiple_candidates,
             reserved_worker=reserved_worker,
         )

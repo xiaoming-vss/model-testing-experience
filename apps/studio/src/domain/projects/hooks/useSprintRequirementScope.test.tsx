@@ -7,67 +7,73 @@ import { useSprintRequirementScope } from './useSprintRequirementScope'
 
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-it('顶部迭代变化时不沿用旧需求筛选，并查询新迭代', async () => {
-  vi.spyOn(api, 'getSprints').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
-  const requirements = vi.spyOn(api, 'getRequirements').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
+const sprints = [
+  { sprintId: 'sprint-1', name: '迭代一', status: 'completed' as const, createdAt: '2026-01-01T00:00:00Z' },
+  { sprintId: 'sprint-2', name: '迭代二', status: 'running' as const, createdAt: '2026-02-01T00:00:00Z' },
+]
+const requirementOptions = [
+  { requirementId: 'r1', name: '需求一', sprintId: 'sprint-1', sprintName: '迭代一', createdAt: '2026-01-01T00:00:00Z' },
+  { requirementId: 'r2', name: '需求二', sprintId: 'sprint-2', sprintName: '迭代二', createdAt: '2026-02-01T00:00:00Z' },
+]
+
+function createWrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  const { result, rerender, unmount } = renderHook(({ sprintId }: { sprintId?: string }) => useSprintRequirementScope({
-    activeProjectId: 'project', includeAllRequirementOption: true, defaultToAllWhenIncluded: true,
-    sprintScope: { value: sprintId },
-  }), { wrapper, initialProps: { sprintId: 'first' as string | undefined } })
-  act(() => result.current.selectRequirement('old-requirement'))
-  expect(result.current.resolvedSelectedRequirementId).toBe('old-requirement')
-  rerender({ sprintId: 'second' })
-  expect(result.current.resolvedSelectedRequirementId).toBeUndefined()
-  expect(result.current.resolvedSelectedSprintId).toBe('second')
-  await waitFor(() =>
-    expect(requirements).toHaveBeenCalledWith('second', { page: 1, pageSize: 100 }),
-  )
-  act(() => result.current.selectRequirement('second-requirement'))
-  rerender({ sprintId: undefined })
-  expect(result.current.resolvedSelectedRequirementId).toBeUndefined()
-  expect(result.current.resolvedSelectedSprintId).toBeUndefined()
-  unmount(); client.clear()
-})
+  return { client, wrapper }
+}
 
-
-it('传入项目级摘要时按迭代本地过滤，不再请求 sprint 全量列表', async () => {
-  vi.spyOn(api, 'getSprints').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
-  const sprintRequirements = vi.spyOn(api, 'getRequirements').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+it('默认选择进行中的最新迭代，并按该迭代查询需求', async () => {
+  const { client, wrapper } = createWrapper()
+  vi.spyOn(api, 'getSprints').mockResolvedValue(Object.assign([...sprints], { total: 2, items: sprints }))
+  const requirements = vi.spyOn(api, 'getRequirements').mockResolvedValue(Object.assign([], { total: 0, items: [] }))
   const { result } = renderHook(() => useSprintRequirementScope({
     activeProjectId: 'project',
     includeAllRequirementOption: true,
-    sprintScope: { value: 'sprint-2' },
-    requirementOptions: [
-      { requirementId: 'r1', name: '需求一', sprintId: 'sprint-1', sprintName: '迭代一', createdAt: '2026-01-01T00:00:00Z' },
-      { requirementId: 'r2', name: '需求二', sprintId: 'sprint-2', sprintName: '迭代二', createdAt: '2026-02-01T00:00:00Z' },
-    ],
   }), { wrapper })
 
-  expect(result.current.requirements.map((requirement) => requirement.name)).toEqual(['需求二'])
-  expect(result.current.requirementFilterOptions.map((option) => option.label)).toEqual(['全部需求', '需求二'])
-  expect(result.current.resolvedSelectedRequirementId).toBe('r2')
-  expect(sprintRequirements).not.toHaveBeenCalled()
+  await waitFor(() => expect(result.current.resolvedSelectedSprintId).toBe('sprint-2'))
+  await waitFor(() => expect(requirements).toHaveBeenCalledWith('sprint-2', { page: 1, pageSize: 100 }))
   client.clear()
 })
 
+it('切换迭代时清除旧需求选择，并在项目摘要上本地过滤', async () => {
+  const { client, wrapper } = createWrapper()
+  vi.spyOn(api, 'getSprints').mockResolvedValue(Object.assign([...sprints], { total: 2, items: sprints }))
+  const { result } = renderHook(() => useSprintRequirementScope({
+    activeProjectId: 'project',
+    includeAllRequirementOption: true,
+    defaultRequirementSelection: 'all',
+    requirementOptions,
+  }), { wrapper })
 
-it('全部迭代时保留全部项目摘要', () => {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  await waitFor(() => expect(result.current.resolvedSelectedSprintId).toBe('sprint-2'))
+  expect(result.current.requirements.map((requirement) => requirement.name)).toEqual(['需求二'])
+  expect(result.current.resolvedSelectedRequirementId).toBeUndefined()
+  act(() => result.current.selectRequirement('r2'))
+  expect(result.current.resolvedSelectedRequirementId).toBe('r2')
+
+  act(() => result.current.selectSprint('sprint-1'))
+  expect(result.current.resolvedSelectedSprintId).toBe('sprint-1')
+  expect(result.current.resolvedSelectedRequirementId).toBeUndefined()
+  expect(result.current.requirements.map((requirement) => requirement.name)).toEqual(['需求一'])
+  act(() => result.current.selectRequirement('r1'))
+  expect(result.current.resolvedSelectedRequirementId).toBe('r1')
+  client.clear()
+})
+
+it('选择全部迭代时保留全部项目摘要', async () => {
+  const { client, wrapper } = createWrapper()
+  vi.spyOn(api, 'getSprints').mockResolvedValue(Object.assign([...sprints], { total: 2, items: sprints }))
   const { result } = renderHook(() => useSprintRequirementScope({
     activeProjectId: 'project',
     includeAllSprintOption: true,
-    sprintScope: { value: null },
-    requirementOptions: [
-      { requirementId: 'r1', name: '需求一', sprintId: 'sprint-1', sprintName: '迭代一' },
-      { requirementId: 'r2', name: '需求二', sprintId: 'sprint-2', sprintName: '迭代二' },
-    ],
+    requirementOptions,
   }), { wrapper })
 
+  await waitFor(() => expect(result.current.resolvedSelectedSprintId).toBe('sprint-2'))
+  act(() => result.current.selectSprint('all'))
+  expect(result.current.resolvedSelectedSprintId).toBeUndefined()
   expect(result.current.requirements.map((requirement) => requirement.name)).toEqual(['需求一', '需求二'])
+  expect(result.current.sprintFilterOptions.map((option) => option.label)).toEqual(['全部迭代', '迭代一', '迭代二'])
   client.clear()
 })

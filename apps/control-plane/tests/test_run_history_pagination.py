@@ -10,7 +10,7 @@ from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 
 
-def _seed_runs(api, collection_id: str, suite_id: str) -> None:
+def _seed_runs(api, project_id: str, collection_id: str, suite_id: str) -> None:
     async def seed():
         async with api.app.state.test_sessions() as session:
             session.add_all(
@@ -18,6 +18,7 @@ def _seed_runs(api, collection_id: str, suite_id: str) -> None:
                     ApiCollectionRun(
                         collection_run_id=f"collection-run-{index}",
                         collection_id=collection_id,
+                        project_id=project_id,
                         environment_id="environment",
                         trigger_user_id="user",
                         status="success",
@@ -31,6 +32,7 @@ def _seed_runs(api, collection_id: str, suite_id: str) -> None:
                     UiTestSuiteRun(
                         suite_run_id=f"suite-run-{index}",
                         suite_id=suite_id,
+                        project_id=project_id,
                         trigger_user_id="user",
                         status="success",
                         created_at=NOW,
@@ -57,8 +59,8 @@ def _resources(api, owner):
 
 def test_api_collection_run_history_paginates(api):  # noqa: F811
     _, owner = account(api, "owner")
-    _, suite_id, collection_id = _resources(api, owner)
-    _seed_runs(api, collection_id, suite_id)
+    pid, suite_id, collection_id = _resources(api, owner)
+    _seed_runs(api, pid, collection_id, suite_id)
 
     first = api.get(f"/v1/api-collections/{collection_id}/runs?page=1&pageSize=20", headers=owner)
     assert first.status_code == 200, first.text
@@ -93,8 +95,8 @@ def test_api_collection_run_history_paginates(api):  # noqa: F811
 
 def test_ui_suite_run_history_paginates(api):  # noqa: F811
     _, owner = account(api, "owner")
-    _, suite_id, collection_id = _resources(api, owner)
-    _seed_runs(api, collection_id, suite_id)
+    pid, suite_id, collection_id = _resources(api, owner)
+    _seed_runs(api, pid, collection_id, suite_id)
 
     first = api.get(f"/v1/ui-test-suites/{suite_id}/runs?page=1&pageSize=20", headers=owner)
     assert first.status_code == 200, first.text

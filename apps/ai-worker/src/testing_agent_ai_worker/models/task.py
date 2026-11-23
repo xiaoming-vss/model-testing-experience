@@ -217,17 +217,13 @@ class Task(BaseModel):
     checkpoint_enabled: bool = False
     current_stage: str = ""
     config_json: str = ""
+    candidate_input: dict[str, Any] | None = None
     payload: TaskPayload
     credential_error: str | None = None
     requirement_input: RequirementInput | None = None
     bindings: list[RepositoryBinding] = Field(default_factory=list)
     existing_tests: ExistingTestCases = Field(default_factory=ExistingTestCases)
     gitlab_credentials_url: str = ""
-    raw: dict[str, Any] = Field(default_factory=dict)
-
-    @property
-    def has_credentials(self) -> bool:
-        return self.payload.llm_credentials is not None
 
     @property
     def session_key(self) -> str:

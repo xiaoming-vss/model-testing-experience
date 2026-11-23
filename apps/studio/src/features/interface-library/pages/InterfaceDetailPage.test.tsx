@@ -176,6 +176,7 @@ describe('InterfaceDetailPage', () => {
     expect(screen.queryByRole('tab', { name: '接口库' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '软件仓库' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /参数/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('已保存')
     expect(await screen.findByRole('button', { name: /^订单服务/ })).toBeInTheDocument()
     expect(
       await screen.findByRole('button', { name: /GET.*查询订单/ }),
@@ -186,9 +187,12 @@ describe('InterfaceDetailPage', () => {
 
     await user.clear(nameInput)
     await user.type(nameInput, '订单详情')
+    expect(screen.getByRole('status')).toHaveTextContent('有未保存的修改')
+    expect(screen.getByRole('button', { name: '保存接口' })).toHaveTextContent('保存更改')
     await user.click(screen.getByRole('button', { name: /保\s*存/ }))
 
     await waitFor(() => expect(interfaceLibraryApi.updateApiInterface).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('已保存'))
     expect(interfaceLibraryApi.updateApiInterface).toHaveBeenCalledWith(
       'api-1',
       expect.objectContaining({
@@ -264,7 +268,9 @@ describe('InterfaceDetailPage', () => {
     renderPage('/asset-library/interfaces/new?softwareRepositoryId=app-1')
 
     const nameInput = await screen.findByLabelText('接口名称')
+    expect(screen.getByRole('status')).toHaveTextContent('新建接口')
     await user.type(nameInput, '创建订单')
+    expect(screen.getByRole('status')).toHaveTextContent('有未保存的修改')
     await user.type(screen.getByLabelText('接口路径'), '/orders/{{orderId}')
     await user.click(screen.getByRole('button', { name: '创建接口' }))
 

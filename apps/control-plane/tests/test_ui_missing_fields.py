@@ -69,11 +69,15 @@ def test_malformed_missing_metadata_is_rejected(invalid):
 @pytest.mark.parametrize("suite", [False, True])
 async def test_run_rejects_before_enqueue_or_commit(suite):
     repository = Mock()
-    repository.list_cases = AsyncMock(return_value=[SimpleNamespace(steps_json=[pending_step()])])
+    repository.list_cases = AsyncMock(
+        return_value=[SimpleNamespace(steps_json=[pending_step()], invalidated_at=None)]
+    )
     repository.commit = AsyncMock()
     service = UiTestCaseRunService(repository)
     service.get_accessible_case = AsyncMock(
-        return_value=SimpleNamespace(case=SimpleNamespace(steps_json=[pending_step()]))
+        return_value=SimpleNamespace(
+            case=SimpleNamespace(steps_json=[pending_step()], invalidated_at=None)
+        )
     )
     service.get_accessible_suite = AsyncMock(return_value=SimpleNamespace())
     with pytest.raises(AppError, match="待补充"):

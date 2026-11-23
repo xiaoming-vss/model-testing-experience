@@ -4,21 +4,17 @@ import { Alert } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useProjectRequirementOptions } from '@/domain/projects/hooks/useProjectRequirementOptions'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
-import { useSprintRequirementScope } from '@/domain/projects/hooks/useSprintRequirementScope'
 import { EnvironmentDrawer } from '@/domain/projects/components/EnvironmentDrawer'
 import { UiSuiteListToolbar } from '@/features/ui-automation/components/UiSuiteListToolbar'
 import { UiTestSuiteSection, type UiTestSuiteSectionRef } from '@/features/ui-automation/components/UiTestSuiteSection'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { api, listItems } from '@/services/api'
-import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
+import { getErrorMessage, normalizeRequirementId } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
 
 type UiAutomationPageScope = {
   projectId?: string
-  sprintId?: string
-  sprintName?: string
   requirementId?: string
   requirementName?: string
 }
@@ -31,52 +27,22 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   // 刷新按钮的加载态由持有查询的 UiTestSuiteSection 回传，页面只负责显示。
   const [refreshing, setRefreshing] = useState(false)
   const isRequirementLocked = Boolean(scope?.requirementId)
-  const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
-  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
+  const { allRequirements, allRequirementsQuery, requirementNameMap } =
     useProjectRequirementOptions({ activeProjectId })
-  const {
-    currentRequirementSelection,
-    requirementFilterOptions,
-    requirementsLoading,
-    resolvedSelectedRequirementId,
-    resolvedSelectedSprintId,
-    selectRequirement,
-    selectSprint,
-    sprints,
-    sprintsQuery,
-  } = useSprintRequirementScope({
-    activeProjectId,
-    includeAllRequirementOption: true,
-    includeAllSprintOption: true,
-    defaultToAllWhenIncluded: true,
-    sprintScope: scope ? undefined : { value: globalSprintId, onChange: selectGlobalSprint },
-    requirementOptions: allRequirements,
-    requirementOptionsLoading: allRequirementsQuery.isLoading,
-  })
-  const selectedSprintId = scope?.sprintId ?? resolvedSelectedSprintId
-  const selectedRequirementId = scope?.requirementId ?? resolvedSelectedRequirementId
-  const displayRequirementFilterOptions = useMemo(() => {
-    if (selectedSprintId) return requirementFilterOptions
-    return [
+  const [requirementFilterId, setRequirementFilterId] = useState<string | undefined>(scope?.requirementId)
+  const selectedRequirementId = scope?.requirementId ?? requirementFilterId
+  const requirementFilterOptions = useMemo(
+    () => [
       { label: '全部需求', value: 'all' },
       ...allRequirements.map((requirement) => ({
         label: requirement.name,
         value: normalizeRequirementId(requirement),
       })),
-    ]
-  }, [allRequirements, requirementFilterOptions, selectedSprintId])
-  const drawerSprintOptions = useMemo(
-    () => sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
-    [sprints],
+    ],
+    [allRequirements],
   )
-  const visibleRequirementIds = useMemo(() => {
-    if (selectedRequirementId) return [selectedRequirementId]
-    const targetRequirements = selectedSprintId
-      ? allRequirements.filter((item) => item.sprintId === selectedSprintId)
-      : allRequirements
-    return targetRequirements.map(normalizeRequirementId)
-  }, [allRequirements, selectedRequirementId, selectedSprintId])
-  const canCreateSuite = Boolean(activeProjectId) && sprints.length > 0
+  const requirementsLoading = allRequirementsQuery.isLoading
+  const canCreateSuite = Boolean(activeProjectId)
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', activeProjectId, 'ui'],
     queryFn: () => api.getApiEnvironments(activeProjectId!, 'ui'),
@@ -108,11 +74,13 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
 
           <UiSuiteListToolbar
             showScopeFilters={!isRequirementLocked}
-            requirementValue={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
-            requirementOptions={displayRequirementFilterOptions}
-            requirementLoading={requirementsLoading || allRequirementsQuery.isLoading}
-            requirementDisabled={!selectedSprintId && allRequirements.length === 0}
-            onRequirementChange={(value: string) => selectRequirement(value === 'all' ? null : value)}
+            requirementValue={selectedRequirementId ?? 'all'}
+            requirementOptions={requirementFilterOptions}
+            requirementLoading={requirementsLoading}
+            requirementDisabled={!activeProjectId || allRequirements.length === 0}
+            onRequirementChange={(value: string) =>
+              setRequirementFilterId(value === 'all' ? undefined : value)
+            }
             keyword={keyword}
             onKeywordChange={setKeyword}
             createDisabled={!canCreateSuite}
@@ -126,34 +94,22 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
             onOpenEnvironments={() => setEnvironmentDrawerOpen(true)}
           />
 
-          {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
 
           {!activeProjectId ? (
             <ListEmptyState description="请先选择项目" />
-          ) : !isRequirementLocked && !sprintsQuery.isLoading && sprints.length === 0 ? (
-            <ListEmptyState description="当前项目下暂无迭代" />
           ) : (
             <UiTestSuiteSection
               ref={uiTestSuiteSectionRef}
+              projectId={activeProjectId}
               requirementId={selectedRequirementId}
-              requirementIds={selectedRequirementId ? undefined : visibleRequirementIds}
-              selectedSprintId={selectedSprintId}
-              sprintOptions={isRequirementLocked ? undefined : drawerSprintOptions}
-              requirementOptions={isRequirementLocked ? undefined : displayRequirementFilterOptions}
-              sprintName={scope?.sprintName}
+              requirementOptions={isRequirementLocked ? undefined : requirementFilterOptions}
               requirementName={scope?.requirementName}
-              sprintNameResolver={(suite) => {
-                const requirementId = suite.requirementId ?? suite.requirement_id
-                const sprintId = requirementId ? requirementSprintMap.get(requirementId) : undefined
-                return scope?.sprintName || (sprintId ? sprintNameMap.get(sprintId) ?? sprintId : '-')
-              }}
               requirementNameResolver={(suite) => {
                 const requirementId = suite.requirementId ?? suite.requirement_id
-                return scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '-')
+                return scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '项目级')
               }}
-              onCreateSprintChange={selectSprint}
               keyword={keyword}
               onClearKeyword={() => setKeyword('')}
               onRefreshingChange={setRefreshing}

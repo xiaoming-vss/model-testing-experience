@@ -52,9 +52,7 @@ class ApiCollectionRepository(ResourceRepository):
             (
                 await self.session.scalars(
                     select(ApiCollection)
-                    .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
-                    .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-                    .where(Sprint.project_id == project_id)
+                    .where(ApiCollection.project_id == project_id)
                     .order_by(ApiCollection.created_at.desc(), ApiCollection.id.desc())
                 )
             ).all()

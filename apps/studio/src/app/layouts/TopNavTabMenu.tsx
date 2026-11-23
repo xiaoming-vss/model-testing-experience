@@ -178,7 +178,7 @@ export function TopNavTabMenu<Key extends string>({
     styles={{ container: { padding: 8, border: '1px solid var(--app-glass-border-strong)', borderRadius: 12 } }}
   >
     <Link ref={triggerRef} to={resolvedTriggerHref}
-      className={`sidebar-link top-nav-menu-trigger group relative z-[1] inline-flex min-h-9 flex-none items-center gap-1.5 whitespace-nowrap rounded-lg px-3 pr-2 text-[13px] text-[var(--mac-glass-text)] hover:bg-[var(--button-quiet-hover-bg)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--mac-glass-blue)] max-[540px]:px-[9px]${activeKey ? ' is-active font-semibold text-[var(--app-accent)]' : ''}`}
+      className={`sidebar-link top-nav-menu-trigger group relative z-[1] inline-flex h-8 flex-none items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[13px] text-[var(--mac-glass-text)] hover:bg-[var(--button-quiet-hover-bg)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--mac-glass-blue)] max-[540px]:px-1.5${activeKey ? ' is-active font-semibold text-[var(--app-accent)]' : ''}`}
       aria-current={activeKey ? 'page' : undefined}
       aria-expanded={open}
       title={label}

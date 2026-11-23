@@ -31,7 +31,9 @@ class UiImportRepository:
         self.commits = 0
 
     async def get_suite(self, suite_id):
-        return SimpleNamespace(suite_id=suite_id, requirement_id="requirement-1")
+        return SimpleNamespace(
+            suite_id=suite_id, project_id="project-1", requirement_id="requirement-1"
+        )
 
     async def get_requirement(self, requirement_id):
         return SimpleNamespace(requirement_id=requirement_id, sprint_id="sprint-1")

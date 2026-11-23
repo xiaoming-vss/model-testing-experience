@@ -10,11 +10,9 @@ def strong_settings(**overrides):
         "http_host": "127.0.0.1",
         "http_port": 8000,
         "jwt_key": "j" * 32,
-        "jwt_expire_hours": 1,
         "integration_key": "i" * 32,
         "worker_key": "w" * 32,
         "database_url": "sqlite+aiosqlite:///:memory:",
-        "uploads_dir": "",
     }
     values.update(overrides)
     return Settings(**values)

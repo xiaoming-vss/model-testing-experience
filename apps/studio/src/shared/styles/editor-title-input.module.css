@@ -1,0 +1,20 @@
+/* 编辑器标题输入：接口库与 API 用例详情共用同一套无边框标题皮肤。 */
+.titleInput:global(.ant-input) {
+  height: 36px;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--srf-text);
+  font-size: 19px;
+  font-weight: 650;
+}
+
+.titleInput:global(.ant-input:hover),
+.titleInput:global(.ant-input:focus) {
+  border-bottom-color: var(--srf-card-border);
+  background: transparent;
+  box-shadow: none;
+}

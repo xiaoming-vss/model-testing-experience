@@ -39,6 +39,7 @@ export function useInterfaceDetailPage() {
   const [jsonTexts, setJsonTexts] = useState<JsonTexts>(EMPTY_JSON_TEXTS)
   const [activeTab, setActiveTab] = useState<InterfaceDetailTab>('params')
   const [importOpen, setImportOpen] = useState(false)
+  const [dirty, setDirty] = useState(false)
 
   const groupActions = useInterfaceGroupActions({
     draft,
@@ -60,6 +61,7 @@ export function useInterfaceDetailPage() {
     setTagsText('')
     setJsonTexts(EMPTY_JSON_TEXTS)
     setActiveTab('params')
+    setDirty(false)
   }, [routeKey])
   useEffect(() => {
     if (!interfaceQuery.data) return
@@ -67,6 +69,7 @@ export function useInterfaceDetailPage() {
     setDraft(data)
     setTagsText(data.tags.join(', '))
     setJsonTexts(jsonTextsOf(data))
+    setDirty(false)
   }, [interfaceQuery.data])
 
   useEffect(() => {
@@ -80,6 +83,7 @@ export function useInterfaceDetailPage() {
     const next = blankInterface(repository.softwareRepositoryId)
     next.softwareRepositoryName = repository.name
     setDraft(next)
+    setDirty(false)
   }, [repositories, repositoriesQuery.isLoading, draft, isCreate, searchParams])
 
   const selectedRepository = repositories.find(
@@ -109,6 +113,7 @@ export function useInterfaceDetailPage() {
       setDraft(data)
       setTagsText(data.tags.join(', '))
       setJsonTexts(jsonTextsOf(data))
+      setDirty(false)
       message.success(isCreate ? '接口已创建' : '接口已保存')
       queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
       queryClient.invalidateQueries({ queryKey: ['apiInterface', projectId, data.interfaceId] })
@@ -132,14 +137,17 @@ export function useInterfaceDetailPage() {
 
   function patch(patchValue: Partial<ApiInterface>) {
     setDraft(previous => (previous ? { ...previous, ...patchValue } : previous))
+    setDirty(true)
   }
 
   function changePath(path: string) {
+    if (draft?.path === path) return
     setDraft(previous =>
       previous
         ? { ...previous, path, pathParams: syncPathParams(path, previous.pathParams) }
         : previous,
     )
+    setDirty(true)
   }
 
   function changeRepository(softwareRepositoryId: string) {
@@ -155,6 +163,17 @@ export function useInterfaceDetailPage() {
           }
         : previous,
     )
+    setDirty(true)
+  }
+
+  const updateTagsText: typeof setTagsText = value => {
+    setTagsText(value)
+    setDirty(true)
+  }
+
+  const updateJsonTexts: typeof setJsonTexts = value => {
+    setJsonTexts(value)
+    setDirty(true)
   }
 
   function confirmDelete() {
@@ -193,10 +212,11 @@ export function useInterfaceDetailPage() {
     repositories,
     repositoriesQuery,
     draft,
+    dirty,
     tagsText,
-    setTagsText,
+    setTagsText: updateTagsText,
     jsonTexts,
-    setJsonTexts,
+    setJsonTexts: updateJsonTexts,
     activeTab,
     setActiveTab,
     importOpen,

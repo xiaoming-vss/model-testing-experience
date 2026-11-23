@@ -41,6 +41,30 @@ from testing_agent.services.code_risk_analysis import (
     FUNCTION_CASE_NO_RUN_NOTE,
     dump_last_run,
 )
+from testing_agent.services.generation_current_material import CurrentMaterial
+
+
+async def test_code_risk_snapshot_uses_verified_current_material():
+    service, _ = make_ready_service()
+    material = CurrentMaterial(
+        candidate_id="candidate",
+        snapshot_id="snapshot",
+        candidate_token="candidate-token",
+        current_token="current-token",
+        task_id="material-task",
+        attempt_id="attempt",
+        content=json.dumps(material_artifact()),
+        content_hash="content-hash",
+        basis_hash="basis-hash",
+        lineage_hash="lineage-hash",
+        document_root_hash="document-hash",
+    )
+    snapshot = await service.build_snapshot(
+        make_task(), "run-1", "worker-task-1", user_id="user-1", current_material=material
+    )
+    assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
+    assert snapshot["requirementMaterialCurrent"]["snapshotId"] == "snapshot"
+    assert "requirementMaterialVersion" not in snapshot
 
 
 def test_bindings_to_the_same_git_repository_are_deduplicated():
@@ -122,12 +146,8 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     assert snapshot["requirement"]["documentType"] == "richtext"
     # 需求内容来自已审核的需求理解版本，不读取需求正文。
     assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
-    assert snapshot["requirementMaterialVersion"] == {
-        "versionId": "sv-understanding-1",
-        "versionNo": 1,
-        "taskId": "understanding-task",
-        "runId": "understanding-attempt",
-    }
+    assert snapshot["requirementMaterialCurrent"]["candidateId"] == "candidate"
+    assert "requirementMaterialVersion" not in snapshot
     entry = snapshot["bindings"][0]
     assert entry["bindingId"] == "binding-1"
     assert entry["softwareRepositoryId"] == "binding-1"
@@ -195,39 +215,12 @@ async def test_snapshot_rejects_when_requirement_has_no_repository_binding():
 
 
 @pytest.mark.asyncio
-async def test_missing_approved_understanding_rejects_the_run(monkeypatch):
-    from testing_agent.services import code_risk_analysis as module
-
-    async def missing(repository, requirement_id, version_id=""):
-        return None
-
-    monkeypatch.setattr(module, "approved_material", missing)
+async def test_missing_approved_understanding_rejects_the_run():
     service, _ = make_service()
-
-    with pytest.raises(AppError) as error:
-        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
-
-    assert "请先审核通过材料整理" in str(error.value)
-
-
-@pytest.mark.asyncio
-async def test_explicit_understanding_version_is_forwarded(monkeypatch):
-    from testing_agent.services import code_risk_analysis as module
-
-    requested = {}
-
-    async def resolve(repository, requirement_id, version_id=""):
-        requested["version_id"] = version_id
-        return understanding_version()
-
-    monkeypatch.setattr(module, "approved_material", resolve)
-    service, _ = make_ready_service()
-
-    await service.build_snapshot(
-        make_task(), "run-1", "worker-task-1", user_id="user-1", material_version_id="sv-old"
-    )
-
-    assert requested["version_id"] == "sv-old"
+    with pytest.raises(AppError, match="材料整理"):
+        await service.build_snapshot(
+            make_task(), "run-1", "worker-task-1", user_id="user-1", current_material=None
+        )
 
 
 @pytest.mark.asyncio

@@ -81,6 +81,51 @@ class FakePlatformHttpClient:
 
 
 class TaskSourceTests(unittest.TestCase):
+    def test_auxiliary_tasks_consume_current_material_from_control_plane(self) -> None:
+        for kind in ("repository_profile", "code_risk_analysis"):
+            with self.subTest(kind=kind):
+
+                class AuxiliaryClient(FakePlatformHttpClient):
+                    def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+                        payload = super().post(path, json_body)
+                        assert payload is not None
+                        payload["taskType"] = kind
+                        return payload
+
+                    def get(
+                        self, path: str, params: dict[str, Any] | None = None
+                    ) -> dict[str, Any] | None:
+                        return {
+                            "taskType": kind,
+                            "run": {
+                                "taskId": "worker-task-1",
+                                "attemptId": "run-1",
+                                "taskType": kind,
+                                "requirement": {
+                                    "requirementId": "req-1",
+                                    "documentContent": '{"title":"current material"}',
+                                },
+                                "requirementMaterialCurrent": {
+                                    "candidateId": "candidate-a",
+                                    "snapshotId": "snapshot-a",
+                                },
+                            },
+                        }
+
+                task = HttpClaimTaskSource(
+                    client=AuxiliaryClient(),
+                    claim_path="/claim",
+                    snapshot_path_template="/snapshot/{task_id}",
+                    llm_credentials_path_template="/credentials/{task_id}",
+                    worker_id="worker-local",
+                ).poll_task()
+                self.assertIsNotNone(task)
+                assert task is not None and task.requirement_input is not None
+                self.assertEqual(task.task_type, kind)
+                self.assertEqual(
+                    task.requirement_input.document_content, '{"title":"current material"}'
+                )
+
     def test_task_session_key_uses_run_id_directly(self) -> None:
         payload = TaskPayload(openapi_content="{}")
 
@@ -164,15 +209,12 @@ class TaskSourceTests(unittest.TestCase):
         self.assertTrue(task.checkpoint_enabled)
         self.assertEqual("case_names", task.current_stage)
         self.assertEqual('{"enhancedText":"审核后文本"}', task.config_json)
-        self.assertEqual("api_case_generate", task.raw["claim"]["taskType"])
-        self.assertEqual("OpenAPI 用例生成", task.raw["snapshot"]["run"]["name"])
         self.assertIsNotNone(task.payload.llm_credentials)
         assert task.payload.llm_credentials is not None
         self.assertEqual("gpt-4o", task.payload.llm_credentials.model)
         self.assertEqual("sk-test", task.payload.llm_credentials.api_key)
         self.assertEqual("https://test-llm.example.com/v1", task.payload.llm_credentials.base_url)
         self.assertIsNone(task.credential_error)
-        self.assertTrue(task.has_credentials)
 
     def test_poll_task_uses_task_type_fallback_order(self) -> None:
         class FallbackTaskTypeClient(FakePlatformHttpClient):
@@ -313,7 +355,6 @@ class TaskSourceTests(unittest.TestCase):
         self.assertEqual("worker-task-1", task.task_id)
         self.assertIsNotNone(task.credential_error)
         self.assertIn("凭证接口不可用", task.credential_error)
-        self.assertFalse(task.has_credentials)
 
     def test_poll_task_does_not_expose_raw_credential_exception_text(self) -> None:
         class SecretCredentialClient(FakePlatformHttpClient):

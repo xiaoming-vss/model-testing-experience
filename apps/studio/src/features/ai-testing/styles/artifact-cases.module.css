@@ -1,13 +1,6 @@
-/* 功能测试产物：用例名称树、用例浏览器与生成用例审核字段。
- * 页面骨架、阅读区与字段排版已迁到组件 utility；这里保留 React Flow 节点、
- * 选中动效、悬停关联入口以及产物 API 视图的 AntD 深层规则。 */
-
-
-/* 测试点树：节点、连线和编辑状态。 */
-.scope :global(.ai-case-name-tree-stats .ant-tag) {
-  margin-inline-end: 0;
-  border-radius: 999px;
-}
+/* 功能测试产物：测试点与用例图谱共用的节点皮肤。
+ * 页面骨架、阅读区、图内卡片和字段排版由组件 utility 与页面 CSS Module 承担；
+ * 这里只保留树的根/模块/用例类型/用例节点表面。 */
 
 .scope :global(.ai-case-name-tree-root),
 .scope :global(.ai-case-name-tree-node) {
@@ -69,144 +62,6 @@
   font-weight: 500;
 }
 
-/* 可编辑候选用例的测试点：末尾悬停显示删除操作。 */
-.scope :global(.ai-case-flow-node-shell.has-delete .ai-case-name-tree-node.point) {
-  padding-right: 38px;
-}
-
-.scope :global(.ai-case-name-tree-node-delete.ant-btn) {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0;
-  color: var(--ai-text-secondary);
-  opacity: 0;
-  transform: translateY(-50%);
-  transition: opacity 0.16s ease, color 0.16s ease, background 0.16s ease;
-}
-
-.scope :global(.ai-case-flow-node-shell:hover .ai-case-name-tree-node-delete.ant-btn),
-.scope :global(.ai-case-flow-node-shell:focus-within .ai-case-name-tree-node-delete.ant-btn) {
-  opacity: 1;
-}
-
-.scope :global(.ai-case-flow-node-shell .ai-case-name-tree-node-delete.ant-btn:hover) {
-  color: var(--app-request-error-text);
-  background: var(--ant-color-error-bg);
-}
-
-/* React Flow keeps the existing tree cards while providing the graph viewport. */
-.scope :global(.ai-case-flow-canvas) { position: relative; flex: 1 1 auto; min-width: 0; min-height: 220px; }
-.scope :global(.ai-case-flow-canvas > .react-flow) { position: absolute; inset: 0; background: transparent; }
-.scope :global(.ai-case-flow-canvas .react-flow__node) { width: max-content; max-width: 360px; font: inherit; pointer-events: all; }
-.scope :global(.ai-case-flow-canvas .ai-case-name-tree-root),
-.scope :global(.ai-case-flow-canvas .ai-case-name-tree-node) { width: max-content; }
-.scope :global(.ai-case-flow-canvas .ai-case-flow-handle) { width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
-.scope :global(.ai-case-flow-canvas .react-flow__edge-path) { stroke-linecap: round; vector-effect: non-scaling-stroke; }
-
-/* 选中测试点时轻微回弹浮起，并在停留态保持放大和强调边框。
-   同一节点重复点选也要重播：用两个等价动画名按点选次数交替切换。 */
-@keyframes ai-case-point-select-a {
-  0% { transform: scale(1); }
-  38% { transform: scale(1.045); }
-  62% { transform: scale(0.995); }
-  82% { transform: scale(1.025); }
-  100% { transform: scale(1.02); }
-}
-
-@keyframes ai-case-point-select-b {
-  0% { transform: scale(1); }
-  38% { transform: scale(1.045); }
-  62% { transform: scale(0.995); }
-  82% { transform: scale(1.025); }
-  100% { transform: scale(1.02); }
-}
-
-.scope :global(.ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected) {
-  border-color: var(--app-graph-node-selected-border);
-  background: var(--ai-accent-soft);
-  box-shadow: 0 12px 30px var(--app-graph-node-selected-shadow);
-  transform-origin: center;
-  animation: ai-case-point-select-a 380ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
-}
-
-.scope :global(.ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected.motion-1) {
-  animation-name: ai-case-point-select-b;
-}
-
-/* 审查页定位到测试点时，用警示色标出关联节点，与普通选中区分。 */
-.scope :global(.ai-case-flow-canvas .ai-case-name-tree-node.is-related) {
-  border-color: var(--app-status-warning-border);
-  box-shadow: 0 10px 24px var(--app-graph-node-selected-shadow);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scope :global(.ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected) {
-    animation: none;
-  }
-}
-
-.scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.point) { padding-right: 88px; }
-.scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.model),
-.scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.test-model),
-.scope :global(.ai-case-flow-node-shell.has-relation .ai-case-name-tree-root) { padding-right: 34px; }
-
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node[role='button']) { cursor: pointer; text-align: left; }
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node.is-selected),
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node[role='button']:focus-visible) {
-  outline: 2px solid var(--ai-blue); outline-offset: 2px; background: var(--ai-accent-soft);
-}
-
-.scope :global(.ai-generated-case-map .ai-case-name-tree-root) { max-width: 160px; }
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node.model) { max-width: 180px; }
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node.test-model) { max-width: 120px; }
-.scope :global(.ai-generated-case-map .ai-case-name-tree-node.point) { width: 280px; max-width: 280px; }
-
-/* The tree fills the space previously occupied by the toolbar. */
-.scope :global(.ai-generated-case-map .ai-case-tree-shell > .ai-case-name-tree) {
-  flex: 1; min-height: 0; border: 0; border-radius: 0;
-  overflow-anchor: none;
-}
-
-/* 候选用例展示：标签与字段排版。 */
-.scope :global(.ai-generated-cases-review-tag.is-id) {
-  color: var(--ai-text-secondary);
-  background: var(--ai-panel-soft);
-  border-color: var(--ai-border);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.scope :global(.ai-generated-cases-review-fields ol li::before) {
-  content: counter(ai-case-field) '.';
-  flex: 0 0 auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  color: var(--ai-text-muted);
-}
-
-/* ===== 产物 API 视图：AntD Tag 间距与折叠摘要 ===== */
-
-.scope :global(.api-config-visual-variable-row .ant-tag),
-.scope :global(.api-config-visual-method-line .ant-tag),
-.scope :global(.api-config-visual-rule-title .ant-tag),
-.scope :global(.api-design-visual-patches li .ant-tag) {
-  margin-inline-end: 0;
-}
-
-.scope :global(.api-design-visual-case-head > :last-child) {
-  margin-left: auto;
-}
-
-.scope :global(.api-design-visual-case.is-collapsed .api-design-visual-intent) {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
-
 /* ===== 仓库画像与运行进度：AntD 表格深层规则 ===== */
 
 .scope :global(.repository-profile-table .ant-table-expanded-row > td) {
@@ -233,15 +88,4 @@
   padding: 0;
   border-top: 0;
   overflow: hidden;
-}
-
-.scope :global(.gc-artifact-scroll.is-requirement-analysis:has(> .testScopeRoot)) {
-  overflow: hidden;
-  padding: 0;
-}
-
-@media (max-width: 760px) {
-  .scope :global(.gc-artifact-scroll.is-requirement-analysis:has(> .testScopeRoot)) {
-    overflow: auto;
-  }
 }

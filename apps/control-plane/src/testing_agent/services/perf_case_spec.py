@@ -122,6 +122,15 @@ def _validate_steps(steps: Any) -> list[dict[str, Any]]:
             raise _invalid(f"case.steps[{index}].method 必须是非空字符串")
         if not isinstance(step.get("path"), str) or not step["path"].strip():
             raise _invalid(f"case.steps[{index}].path 必须是非空字符串")
+        if "expectedStatuses" in step:
+            statuses = step["expectedStatuses"]
+            if (
+                not isinstance(statuses, list)
+                or not statuses
+                or any(type(value) is not int or not 100 <= value <= 599 for value in statuses)
+                or len(set(statuses)) != len(statuses)
+            ):
+                raise _invalid(f"case.steps[{index}].expectedStatuses 必须是不重复的状态码列表")
     return steps
 
 

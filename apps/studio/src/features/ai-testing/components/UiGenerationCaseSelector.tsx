@@ -26,7 +26,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
     queryKey: ['uiGenerationSourceCases', requirementId],
     queryFn: async () => {
       const suites = listItems(await api.getFunctionTestSuites(requirementId!))
-      return (await Promise.all(suites.map(async suite => listItems(await api.getFunctionTestCases(suite.suiteId!))
+      return (await Promise.all(suites.map(async suite => listItems(await api.getFunctionTestCases(suite.suiteId!, { invalidated: false }))
         .filter(item => Boolean(item.caseId)).map(item => ({ caseId: item.caseId!, title: item.title ?? '', suiteId: suite.suiteId!, suiteName: suite.name ?? '' }))))).flat()
     },
     enabled: open && Boolean(requirementId), retry: false,
@@ -45,7 +45,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
   const busy = query.isFetching || query.isError
   return <section className="ui-generation-case-selector mb-5 flex min-w-0 flex-col gap-2.5" aria-label="来源功能用例">
     {showIntro ? <><Typography.Text strong>来源功能用例</Typography.Text>
-    <Typography.Text type="secondary">默认选中当前需求全部正式功能用例。筛选不改变已选内容，生成时依次审核 JSON、JSON 和 YAML。</Typography.Text></> : null}
+    <Typography.Text type="secondary">默认选中当前需求全部正式功能用例。筛选不改变已选内容，生成时依次产出元素控件清单、用例设计和 YAML 候选。</Typography.Text></> : null}
     <div className="ui-generation-case-filters grid grid-cols-2 gap-2.5 max-[600.01px]:grid-cols-1 [&>*]:w-full [&>*]:min-w-0">
       <Select mode="multiple" allowClear maxTagCount={1} aria-label="按用例集筛选" placeholder="全部用例集" options={suites}
         value={suiteIds} onChange={ids => { setSuiteIds(ids); setPage(1) }} optionFilterProp="label" />
@@ -77,6 +77,6 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
     {query.isSuccess && value?.some(id => !query.data.some(item => item.caseId === id)) ? <Alert showIcon type="warning"
       title="部分已选用例已删除或移出当前需求，请清空后重新选择" /> : null}
     {query.isSuccess && !query.data.length ? <Alert type="info" title="请先在当前需求下准备正式功能用例"
-      description="请先在“功能测试”中审核用例并导入正式测试集，再返回生成 UI 用例。" /> : null}
+      description="请先在“功能测试”中采用完整用例并导入正式测试集，再返回生成 UI 用例。" /> : null}
   </section>
 }

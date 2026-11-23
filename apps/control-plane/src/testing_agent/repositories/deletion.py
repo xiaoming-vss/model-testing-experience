@@ -13,6 +13,8 @@ from testing_agent import models as m
 from testing_agent.core.errors import ErrNotFound
 from testing_agent.db.base import Base
 from testing_agent.domain.resource_deletion import AUXILIARY_TASK_TYPES
+from testing_agent.repositories.generation_current_chain import delete_chain_storage_for_task
+from testing_agent.repositories.generation_schema import candidate_schema_installed
 
 
 async def _erase(session, model, *conditions):
@@ -166,23 +168,22 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
         await _entry_visualizations(session, m.TestOrderEntry.case_id == obj.case_id)
         # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
-    elif isinstance(obj, m.AiGenerateTask):
-        # Candidate pointers clear; version pointers retain the "source deleted" state.
-        independent_import_ids = list(
-            await session.scalars(
-                select(m.AiGenerateVersionImport.import_id).where(
-                    m.AiGenerateVersionImport.task_id == obj.task_id,
-                    m.AiGenerateVersionImport.attempt_id.is_not(None),
-                )
-            )
+    elif isinstance(obj, m.Requirement):
+        # API/UI 测试集是项目级资产；需求删除只解除关联，不删除资产。
+        # 显式更新同时覆盖未启用 SQLite 外键的历史测试库。
+        await session.execute(
+            update(m.ApiCollection)
+            .where(m.ApiCollection.requirement_id == obj.requirement_id)
+            .values(requirement_id=None)
         )
-        if independent_import_ids:
-            for target in (m.FunctionTestSuite, m.ApiCollection, m.UiTestSuite):
-                await session.execute(
-                    update(target)
-                    .where(target.effective_import_id.in_(independent_import_ids))
-                    .values(effective_import_id=None)
-                )
+        await session.execute(
+            update(m.UiTestSuite)
+            .where(m.UiTestSuite.requirement_id == obj.requirement_id)
+            .values(requirement_id=None)
+        )
+    elif isinstance(obj, m.AiGenerateTask):
+        if await candidate_schema_installed(session):
+            await delete_chain_storage_for_task(session, task_id=obj.task_id)
         attempt_ids = list(
             await session.scalars(
                 select(m.AiGenerationAttempt.id)

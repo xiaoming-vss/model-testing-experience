@@ -14,6 +14,13 @@ class ApiCollectionRun(Base):
     __tablename__ = "api_collection_runs"
     __table_args__ = (
         Index("idx_api_collection_run_latest", "collection_id", "created_at", "id"),
+        Index(
+            "idx_api_collection_run_project_sprint",
+            "project_id",
+            "sprint_id",
+            "created_at",
+            "id",
+        ),
         {"comment": "API 集合单次运行及结果汇总"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
@@ -31,9 +38,21 @@ class ApiCollectionRun(Base):
         nullable=False,
         comment="API 集合业务标识",
     )
-    requirement_id = ""  # Response-only; resolved through current collection ownership.
-    sprint_id = ""  # Response-only; resolved through current collection ownership.
-    project_id = ""  # Response-only; resolved through current collection ownership.
+    project_id: Mapped[str] = mapped_column(
+        String(64), index=True, nullable=False, comment="运行创建时冻结的项目业务标识"
+    )
+    requirement_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="运行创建时冻结的需求业务标识；空值表示未关联"
+    )
+    requirement_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="", comment="运行创建时冻结的需求名称；空值表示未关联"
+    )
+    sprint_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="运行创建时冻结的迭代业务标识；空值表示未关联"
+    )
+    sprint_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="", comment="运行创建时冻结的迭代名称；空值表示未关联"
+    )
     environment_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="API 环境业务标识"
     )

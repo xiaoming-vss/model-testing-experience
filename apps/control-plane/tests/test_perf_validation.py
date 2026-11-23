@@ -3,15 +3,18 @@ import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from sqlalchemy import select
 from support.project_api import account, project
 from support.project_api import api as api
 
 from testing_agent.core.config import get_settings
+from testing_agent.core.errors import AppError
 from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+from testing_agent.services.perf_case_spec import parse_case_yaml
 from testing_agent.services.worker_task import WorkerTaskService
 
 _YAML = """
@@ -61,6 +64,22 @@ case:
     criteria:
       http_req_failed: ["rate<0.01"]
 """
+
+
+@pytest.mark.parametrize("statuses", ["[]", "[200, 200]", "[true]", "[99]", "[600]"])
+def test_expected_statuses_reject_invalid_values(statuses):
+    source = _YAML.replace(
+        "      path: /ping", f"      path: /ping\n      expectedStatuses: {statuses}"
+    )
+    with pytest.raises(AppError):
+        parse_case_yaml(source)
+
+
+def test_expected_statuses_accept_multiple_codes():
+    source = _YAML.replace(
+        "      path: /ping", "      path: /ping\n      expectedStatuses: [200, 404]"
+    )
+    assert parse_case_yaml(source)["case"]["steps"][0]["expectedStatuses"] == [200, 404]
 
 
 def _settings(api):

@@ -88,8 +88,10 @@ export function buildRequirementMetadataUpdatePayload(
 
 export function buildApiCollectionUpdatePayload(collection: ApiCollection, values: CollectionFormValues) {
   const payload: Partial<Pick<ApiCollection, 'name' | 'description' | 'requirementId'>> = {}
+  const currentRequirementId = collection.requirementId ?? collection.requirement_id ?? null
+  const nextRequirementId = values.requirementId ?? null
 
-  if (values.requirementId) setValueIfChanged(payload, 'requirementId', collection.requirementId ?? collection.requirement_id, values.requirementId)
+  if (nextRequirementId !== currentRequirementId) payload.requirementId = nextRequirementId
   setValueIfChanged(payload, 'name', collection.name, values.name)
   setNormalizedTextIfChanged(payload, 'description', collection.description, values.summary)
 
@@ -108,9 +110,13 @@ export function buildUiTestSuiteUpdatePayload(suite: UiTestSuite, values: UiTest
       | 'viewportHeight'
       | 'defaultStepTimeoutMs'
       | 'screenshotPolicy'
+      | 'requirementId'
     >
   > = {}
+  const currentRequirementId = suite.requirementId ?? suite.requirement_id ?? null
+  const nextRequirementId = values.requirementId ?? null
 
+  if (nextRequirementId !== currentRequirementId) payload.requirementId = nextRequirementId
   setValueIfChanged(payload, 'name', suite.name, values.name)
   setNormalizedTextIfChanged(payload, 'description', suite.description, values.description)
   setDefinedValueIfChanged(payload, 'headless', suite.headless, values.headless)

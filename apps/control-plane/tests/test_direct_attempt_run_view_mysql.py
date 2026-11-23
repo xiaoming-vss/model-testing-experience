@@ -9,6 +9,7 @@ from support.mysql_initialization import mysql, seed_row  # noqa: F401
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
+from testing_agent.models.generation_candidates import RequirementGenerationChain
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -36,6 +37,15 @@ async def test_direct_detail_resolves_stage_attempt_without_old_run_table(mysql)
                 "project_id": sprint["project_id"],
                 "sprint_id": sprint["sprint_id"],
                 "requirement_id": requirement["requirement_id"],
+            },
+        )
+        seed_row(
+            connection,
+            RequirementGenerationChain.__table__,
+            {
+                "requirement_id": requirement["requirement_id"],
+                "kind": "api",
+                "task_id": task["task_id"],
             },
         )
         stage = seed_row(
@@ -111,6 +121,11 @@ async def test_direct_detail_resolves_stage_attempt_without_old_run_table(mysql)
     finally:
         await engine.dispose()
         with mysql.begin() as connection:
+            connection.execute(
+                sa.delete(RequirementGenerationChain).where(
+                    RequirementGenerationChain.task_id == task["task_id"]
+                )
+            )
             # The generic seeder creates extra parent stages for foreign-key defaults.
             connection.execute(sa.delete(AiGenerationStage))
             connection.execute(

@@ -91,7 +91,7 @@ class GenerationAccess:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
             raise ErrNotFound()
-        await self.ensure_requirement_access(user_id, collection.requirement_id, action=action)
+        await self.ensure_project_access(user_id, collection.project_id, action=action)
 
     async def validate_task_scope(
         self, task: TaskScope, resources: ScopeResources | None = None

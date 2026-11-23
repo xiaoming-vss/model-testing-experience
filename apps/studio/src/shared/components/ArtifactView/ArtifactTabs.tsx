@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { cx } from '@/shared/utils/cx'
 import styles from '@/shared/styles/run-view.module.css'
 
-export type ArtifactTabTone = 'neutral' | 'ok' | 'warn' | 'danger'
+type ArtifactTabTone = 'neutral' | 'ok' | 'warn' | 'danger'
 
-export type ArtifactTabItem<T extends string = string> = {
+type ArtifactTabItem<T extends string = string> = {
   key: T
   label: ReactNode
   count?: ReactNode

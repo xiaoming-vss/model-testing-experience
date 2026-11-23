@@ -10,23 +10,33 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select
-
 from testing_agent.core.errors import (
     ErrBadRequest,
     ErrNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
-from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
+from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
+from testing_agent.domain.generation_source_closure import SourceClosureError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.services.ai_task_access import RunLaunchAccess
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot,
     dump_run,
     normalize_config_json,
 )
+from testing_agent.services.generation_current_material import (
+    CurrentMaterial,
+    lock_current_material,
+)
+from testing_agent.services.generation_document_preparation import (
+    PreparedRequirementDocument,
+    lock_prepared_requirement_root,
+    prepare_requirement_document,
+)
+from testing_agent.services.generation_source_errors import closure_error, source_error
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
@@ -34,6 +44,7 @@ from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsServic
 if TYPE_CHECKING:
     from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
     from testing_agent.services.repository_profile import RepositoryProfileService
+    from testing_agent.services.stored_file import StoredFileService
 
 
 class GenerationRunLauncher:
@@ -46,6 +57,7 @@ class GenerationRunLauncher:
         sprint_daily_metrics_service: SprintDailyMetricsService | None = None,
         code_risk_analysis_service: CodeRiskAnalysisService | None = None,
         repository_profile_service: RepositoryProfileService | None = None,
+        files: StoredFileService | None = None,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
@@ -53,7 +65,54 @@ class GenerationRunLauncher:
         self.sprint_daily_metrics_service = sprint_daily_metrics_service
         self.code_risk_analysis_service = code_risk_analysis_service
         self.repository_profile_service = repository_profile_service
+        self.files = files
         self.id_factory = id_factory
+
+    async def _prepare_current_material(
+        self, *, task: AiGenerateTask, bound_task_id: str, actor_id: str
+    ) -> tuple[PreparedRequirementDocument, CurrentMaterial]:
+        """Prepare outside locks, then inspect the current material under locks."""
+        if self.files is None:
+            raise dynamic_error(ErrBadRequest, "需求文件存储不可用")
+        try:
+            document = await prepare_requirement_document(
+                self.repository.session, requirement_id=task.requirement_id, files=self.files
+            )
+            await self.repository.commit()
+            await self.access.ensure_project_access(actor_id, task.project_id, action="execute")
+            if task.sprint_id:
+                await self.access.ensure_sprint_access(actor_id, task.sprint_id, action="execute")
+            await self.access.ensure_requirement_access(
+                actor_id, task.requirement_id, action="execute"
+            )
+            chain = GenerationChainRepository(self.repository.session)
+            if (
+                await chain.candidate_chain_task(task.requirement_id, "requirement_analysis")
+                != bound_task_id
+            ):
+                raise SourceClosureError("concurrent_change")
+            bound = await self.repository.get_task_for_update(bound_task_id)
+            if bound is None or bound.requirement_id != task.requirement_id:
+                raise SourceClosureError("source_unknown")
+            await self.access.validate_task_scope(bound)
+            root = await lock_prepared_requirement_root(self.repository.session, prepared=document)
+            material = await lock_current_material(
+                self.repository.session,
+                requirement_id=task.requirement_id,
+                document_root=root,
+                freeze=False,
+            )
+            await self.repository.commit()
+            return document, material
+        except IncompleteRootInput as exc:
+            await self.repository.session.rollback()
+            raise source_error("source_unknown") from exc
+        except SourceClosureError as exc:
+            await self.repository.session.rollback()
+            raise closure_error(exc) from exc
+        except Exception:
+            await self.repository.session.rollback()
+            raise
 
     async def launch(
         self,
@@ -94,13 +153,11 @@ class GenerationRunLauncher:
         run_instruction = body.get("instruction")
         config = normalize_config_json(body.get("configJson")) or {}
         trigger_type = str(body.get("triggerType") or "manual")
-        material_version_id = str(
-            body.get("requirementMaterialVersionId")
-            or body.get("requirementUnderstandingVersionId")
-            or ""
-        )
         auxiliary_request_id = worker_task_id
         auxiliary_signature = ""
+        candidate_material_task_id: str | None = None
+        prepared_document: PreparedRequirementDocument | None = None
+        current_material: CurrentMaterial | None = None
         if kind in {"code_risk_analysis", "repository_profile"}:
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
             from testing_agent.services.auxiliary_request import (
@@ -120,7 +177,6 @@ class GenerationRunLauncher:
                     "instruction": run_instruction,
                     "config": config,
                     "triggerType": trigger_type,
-                    "requirementMaterialVersionId": material_version_id,
                 },
             )
             if body.get("requestId") is not None:
@@ -136,6 +192,16 @@ class GenerationRunLauncher:
                         raise ErrNotFound()
                     return await auxiliary_detail(self.repository.session, replay.execution_id)
             await self.repository.commit()
+            if task.requirement_id:
+                candidate_material_task_id = await GenerationChainRepository(
+                    self.repository.session
+                ).candidate_chain_task(task.requirement_id, "requirement_analysis")
+                await self.repository.commit()
+            if not candidate_material_task_id:
+                raise dynamic_error(ErrBadRequest, "请先采用当前材料整理结果")
+            prepared_document, current_material = await self._prepare_current_material(
+                task=task, bound_task_id=candidate_material_task_id, actor_id=user_id
+            )
             if kind == "code_risk_analysis":
                 if self.code_risk_analysis_service is None:
                     raise ErrBadRequest()
@@ -146,7 +212,7 @@ class GenerationRunLauncher:
                     None if run_instruction is None else str(run_instruction),
                     user_id=user_id,
                     connection_ids=body.get("gitlabConnectionIds") or {},
-                    material_version_id=material_version_id,
+                    current_material=current_material,
                 )
             else:
                 if self.repository_profile_service is None:
@@ -158,7 +224,7 @@ class GenerationRunLauncher:
                     None if run_instruction is None else str(run_instruction),
                     user_id=user_id,
                     connection_ids=body.get("gitlabConnectionIds") or {},
-                    material_version_id=material_version_id,
+                    current_material=current_material,
                 )
         else:
             snapshot = await build_generate_run_snapshot(
@@ -168,7 +234,6 @@ class GenerationRunLauncher:
                 run_id,
                 None if run_instruction is None else str(run_instruction),
                 worker_task_id=worker_task_id,
-                material_version_id=material_version_id,
             )
         if kind == "api" and body.get("apiWorkflowVersion") == "api_three_stage/1.0":
             snapshot["apiWorkflowVersion"] = "api_three_stage/1.0"
@@ -190,6 +255,17 @@ class GenerationRunLauncher:
             await self.access.ensure_requirement_access(
                 user_id, task.requirement_id, action="execute"
             )
+        if kind in {"code_risk_analysis", "repository_profile"} and task.requirement_id:
+            final_bound_task_id = await GenerationChainRepository(
+                self.repository.session
+            ).candidate_chain_task(task.requirement_id, "requirement_analysis")
+            if final_bound_task_id != candidate_material_task_id:
+                raise dynamic_error(ErrBadRequest, "材料生成链已变化，请重新发起分析")
+            if final_bound_task_id:
+                bound = await self.repository.get_task_for_update(final_bound_task_id)
+                if bound is None or bound.requirement_id != task.requirement_id:
+                    raise ErrNotFound()
+                await self.access.validate_task_scope(bound)
         current_task = await getattr(
             self.repository, "get_task_for_update", self.repository.get_task
         )(task.task_id)
@@ -210,22 +286,25 @@ class GenerationRunLauncher:
             from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
 
-            material = snapshot.get("requirementMaterialVersion") or {}
-            material_id = material.get("versionId") if isinstance(material, dict) else None
-            locked_material = await self.repository.session.scalar(
-                select(AiGenerateStageVersion)
-                .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerateStageVersion.task_id)
-                .where(
-                    AiGenerateStageVersion.version_id == material_id,
-                    AiGenerateStageVersion.stage == "extracting_text",
-                    AiGenerateTask.task_type == "requirement_analysis",
-                    AiGenerateTask.requirement_id == task.requirement_id,
-                )
-                .with_for_update()
-                .execution_options(populate_existing=True)
-            )
-            if locked_material is None:
-                raise dynamic_error(ErrBadRequest, "材料整理版本已删除，请重新选择")
+            if current_material is not None:
+                assert prepared_document is not None
+                try:
+                    root = await lock_prepared_requirement_root(
+                        self.repository.session, prepared=prepared_document
+                    )
+                    await lock_current_material(
+                        self.repository.session,
+                        requirement_id=task.requirement_id,
+                        document_root=root,
+                        freeze=True,
+                        expected=current_material,
+                    )
+                except IncompleteRootInput as exc:
+                    raise source_error("source_unknown") from exc
+                except SourceClosureError as exc:
+                    raise closure_error(exc) from exc
+            else:
+                raise dynamic_error(ErrBadRequest, "请先采用当前材料整理结果")
             stage = await lock_or_create_stage(self.repository.session, current_task.task_id)
             if body.get("requestId") is not None:
                 replay = await find_replay(
@@ -249,6 +328,14 @@ class GenerationRunLauncher:
                     else "代码风险正在生成中，请等待完成后再试"
                 )
                 raise dynamic_error(ErrBadRequest, running_message)
+            if kind == "repository_profile" and current_material is not None:
+                from testing_agent.services.repository_profile_candidates import (
+                    ensure_profile_candidate_chain,
+                )
+
+                await ensure_profile_candidate_chain(
+                    self.repository.session, task=current_task, stage=stage
+                )
             attempt, _ = await dispatch_auxiliary_execution(
                 self.repository.session,
                 task=current_task,

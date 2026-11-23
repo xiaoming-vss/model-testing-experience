@@ -184,7 +184,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
                         <span className={serviceCardLabelClass}>最近更新</span>
                         <span className={serviceCardValueClass}>{formatTime(skill.updatedAt ?? skill.createdAt)}</span>
                       </div>
-                      <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
+                      <div className={cx('base-services-connection-actions', serviceCardActionsClass)}>
                         <Tooltip title="下载">
                           <ActionButton
                             type="text"

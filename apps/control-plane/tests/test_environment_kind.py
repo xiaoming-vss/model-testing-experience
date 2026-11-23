@@ -44,9 +44,11 @@ class FakeEnvironmentRepository:
             body_json=None,
             body_text="",
             timeout_ms=1000,
+            invalidated_at=None,
         )
         self.collection = SimpleNamespace(
             collection_id="collection-1",
+            project_id="project-1",
             requirement_id="requirement-1",
         )
         self.requirement = SimpleNamespace(requirement_id="requirement-1", sprint_id="sprint-1")

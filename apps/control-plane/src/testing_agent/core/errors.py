@@ -73,10 +73,13 @@ ErrApiCaseRunEnvironmentMismatch = AppError(
     2403, "API用例与环境不属于同一项目", HTTPStatus.BAD_REQUEST
 )
 ErrApiCaseRunNotFound = AppError(2404, "API用例运行记录不存在", HTTPStatus.NOT_FOUND)
+ErrApiCaseInvalidated = AppError(2405, "API用例已失效，不能执行", HTTPStatus.CONFLICT)
 ErrApiEnvironmentKindMismatch = AppError(
     2503, "环境类型与当前测试类型不匹配", HTTPStatus.BAD_REQUEST
 )
 ErrUiTestSuiteImportInvalid = AppError(2903, "UI测试集导入内容不合法", HTTPStatus.BAD_REQUEST)
+ErrUiCaseInvalidated = AppError(2904, "UI用例已失效，不能执行", HTTPStatus.CONFLICT)
+ErrUiTestSuiteNameAlreadyUse = AppError(2905, "该UI测试集名称已存在", HTTPStatus.CONFLICT)
 ErrUiRunEnvironmentMismatch = AppError(3007, "UI运行与环境不属于同一项目", HTTPStatus.BAD_REQUEST)
 ErrUiRunVariableMissing = AppError(3008, "运行前变量校验未通过", HTTPStatus.BAD_REQUEST)
 ErrAiGenerateTaskRunReviewed = AppError(3104, "该运行记录已审核", HTTPStatus.BAD_REQUEST)
@@ -86,6 +89,7 @@ ErrFunctionTestCaseNotFound = AppError(3301, "功能测试用例不存在", HTTP
 ErrFunctionTestCaseImportInvalid = AppError(
     3303, "功能测试用例导入内容不合法", HTTPStatus.BAD_REQUEST
 )
+ErrFunctionTestCaseInvalidated = AppError(3304, "功能测试用例已失效，不能执行", HTTPStatus.CONFLICT)
 ErrIntegrationConnectionNotFound = AppError(3401, "集成连接不存在", HTTPStatus.NOT_FOUND)
 ErrIntegrationConnectionAuthFailed = AppError(3403, "集成连接鉴权失败", HTTPStatus.BAD_REQUEST)
 ErrGitLabRemoteResourceUnavailable = AppError(3405, "GitLab 远端资源不可用", HTTPStatus.BAD_REQUEST)
@@ -162,6 +166,7 @@ ErrApiInterfaceGroupNotFound = AppError(3818, "接口分组不存在", HTTPStatu
 ErrApiInterfaceGroupNameAlreadyUse = AppError(3819, "目标接口分组已存在", HTTPStatus.CONFLICT)
 ErrPerfCaseNotFound = AppError(3901, "性能用例不存在", HTTPStatus.NOT_FOUND)
 ErrPerfCaseNameAlreadyUse = AppError(3902, "该性能用例名称已存在", HTTPStatus.CONFLICT)
+ErrPerfCaseInvalidated = AppError(3903, "性能用例已失效，不能执行", HTTPStatus.CONFLICT)
 ErrPerfRunNotFound = AppError(3904, "性能运行记录不存在", HTTPStatus.NOT_FOUND)
 ErrPerfRunEnvironmentMismatch = AppError(
     3905, "性能运行与环境不属于同一项目或环境类型不匹配", HTTPStatus.BAD_REQUEST

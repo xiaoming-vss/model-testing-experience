@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -46,6 +47,12 @@ class FunctionTestCase(Base):
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")
+    invalidated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+        comment="用例标记失效时间（UTC）；空值表示有效",
+    )
 
     content_json: Mapped[dict[str, Any]] = mapped_column(
         JSON,

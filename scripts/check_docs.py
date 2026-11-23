@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import argparse
 import re
+import html
+import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,6 +75,10 @@ def markdown_files(root: Path) -> list[Path]:
     return files
 
 
+def skill_markdown_files(root: Path) -> list[Path]:
+    return sorted((root / ".agents" / "skills").rglob("*.md"))
+
+
 def is_adr(path: Path) -> bool:
     return len(path.parts) >= 2 and path.parent.name == "adr"
 
@@ -88,8 +95,42 @@ def doc_project(path: Path, root: Path) -> Path | None:
     return None
 
 
+def markdown_anchors(path: Path) -> set[str]:
+    """Collect GitHub-style heading anchors and explicit HTML ids outside fences."""
+    anchors: set[str] = set()
+    counts: dict[str, int] = {}
+    heading_slugs: set[str] = set()
+    in_fence = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        anchors.update(re.findall(r'''\bid\s*=\s*["']([^"']+)["']''', line))
+        heading = re.match(r"^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$", line)
+        if not heading:
+            continue
+        title = LINK_RE.sub(lambda match: match.group(0).split("](", 1)[0][1:], heading.group(1))
+        title = html.unescape(re.sub(r"<[^>]+>", "", title)).lower()
+        slug = "".join(
+            char for char in title
+            if char in "-_ " or not unicodedata.category(char).startswith(("P", "S", "C"))
+        ).replace(" ", "-")
+        count = counts.get(slug, 0)
+        candidate = f"{slug}-{count}" if count else slug
+        while candidate in heading_slugs:
+            count += 1
+            candidate = f"{slug}-{count}"
+        counts[slug] = count + 1
+        heading_slugs.add(candidate)
+        anchors.add(candidate)
+    return anchors
+
+
 def check_links(root: Path, files: list[Path]) -> list[Issue]:
     issues: list[Issue] = []
+    anchor_cache: dict[Path, set[str]] = {}
     for path in files:
         rel = display_path(path, root)
         in_fence = False
@@ -102,16 +143,22 @@ def check_links(root: Path, files: list[Path]) -> list[Issue]:
                 continue
             for match in LINK_RE.finditer(line):
                 target = match.group(1).strip()
-                if target.startswith(("http://", "https://", "mailto:", "data:", "#")):
+                if target.startswith(("http://", "https://", "mailto:", "data:")):
                     continue
-                target = target.split("#", 1)[0]
-                if not target or ".scratch/" in target:
+                target, separator, fragment = target.partition("#")
+                if ".scratch/" in target:
                     continue
                 if any(char in target for char in "<>{}"):
                     continue
-                destination = (path.parent / target).resolve()
+                destination = (path.parent / target).resolve() if target else path
                 if not destination.exists():
                     issues.append(Issue(rel, lineno, f"相对链接不存在: {target}"))
+                elif separator and fragment and destination.is_file() and destination.suffix.lower() == ".md":
+                    if destination not in anchor_cache:
+                        anchor_cache[destination] = markdown_anchors(destination)
+                    anchor = urllib.parse.unquote(fragment)
+                    if anchor not in anchor_cache[destination]:
+                        issues.append(Issue(rel, lineno, f"文档锚点不存在: {target}#{fragment}"))
     return issues
 
 
@@ -259,9 +306,10 @@ def run_checks(
     check_urls: bool = False,
 ) -> list[Issue]:
     files = markdown_files(root)
+    skill_docs = skill_markdown_files(root)
     issues: list[Issue] = []
     if check_relative_links:
-        issues.extend(check_links(root, files))
+        issues.extend(check_links(root, [*files, *skill_docs]))
     if check_source_paths:
         issues.extend(check_paths(root, files))
     if check_migration_revisions:
@@ -269,7 +317,7 @@ def run_checks(
     if check_adr_metadata:
         issues.extend(check_adrs(root))
     if check_urls:
-        issues.extend(check_external_links(files))
+        issues.extend(check_external_links([*files, *skill_docs]))
     return issues
 
 
@@ -312,7 +360,11 @@ def main(argv: list[str] | None = None) -> int:
     if issues:
         print(f"documentation check failed: {len(issues)} issue(s)")
         return 1
-    print(f"documentation check passed: {len(markdown_files(args.root.resolve()))} Markdown files")
+    root = args.root.resolve()
+    print(
+        f"documentation check passed: {len(markdown_files(root))} Markdown files, "
+        f"{len(skill_markdown_files(root))} skill files (links)"
+    )
     return 0
 
 

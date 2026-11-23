@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from testing_agent.handlers.function_test_case import (
     batch_delete_function_cases,
+    batch_invalidate_function_cases,
     create_function_case,
     delete_function_case,
     function_case_push_status,
@@ -26,6 +27,7 @@ from testing_agent.handlers.function_test_suite import (
     list_project_function_suites,
     update_function_suite,
 )
+from testing_agent.schemas.case_lifecycle import CaseInvalidationResponse
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.function_test_case import (
     CasePushPreview,
@@ -108,6 +110,10 @@ router.get(
     "/projects/{project_id}/function-test-cases",
     response_model=ApiResponse[ListResponse[FunctionCaseLibraryItem]],
 )(list_project_function_cases)
+router.post(
+    "/projects/{project_id}/function-test-cases/batch-invalidation",
+    response_model=ApiResponse[CaseInvalidationResponse],
+)(batch_invalidate_function_cases)
 
 
 router.post(

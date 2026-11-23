@@ -27,7 +27,7 @@ function step() {
   })
 }
 
-function renderEditor(onChange = vi.fn()) {
+function renderEditor(onChange = vi.fn(), canWrite = true) {
   render(<ThemeProvider>
     <PerfStepEditor
       step={step()}
@@ -37,7 +37,7 @@ function renderEditor(onChange = vi.fn()) {
       projectId="project-1"
       environmentName="预发环境"
       environmentBaseUrl="https://pre-api.example.com"
-      canWrite
+      canWrite={canWrite}
       dirty={false}
       saving={false}
       errors={[]}
@@ -100,7 +100,30 @@ it('formats a valid JSON body from the body tab', async () => {
   await user.click(screen.getByRole('tab', { name: /请求体/ }))
   expect(screen.getByText('JSON 合法')).toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: '格式化' }))
+  await user.click(screen.getByRole('button', { name: '格式化代码' }))
 
   expect(onChange).toHaveBeenCalledWith({ bodyText: '{\n  "ok": true\n}' })
+})
+
+
+it('批量编辑请求头保留冒号后的完整值', async () => {
+  const user = userEvent.setup()
+  const onChange = renderEditor()
+  await user.click(screen.getByRole('button', { name: /批量编辑/ }))
+  const editor = await screen.findByLabelText('请求头批量编辑内容')
+  await user.clear(editor)
+  await user.type(editor, 'Authorization: Bearer token:part')
+  await user.click(screen.getByRole('button', { name: /应\s*用/ }))
+  expect(onChange).toHaveBeenCalledWith({ headers: [expect.objectContaining({ name: 'Authorization', value: 'Bearer token:part' })] })
+})
+
+it('只读时请求头和请求体的编辑操作均不可用', async () => {
+  const user = userEvent.setup()
+  renderEditor(vi.fn(), false)
+  expect(screen.getByRole('button', { name: /批量编辑/ })).toBeDisabled()
+  expect(screen.getByLabelText('步骤 1 请求头 1 值')).toBeDisabled()
+  await user.click(screen.getByRole('tab', { name: /请求体/ }))
+  expect(screen.getByRole('tab', { name: 'raw' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '格式化代码' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /插入变量/ })).toBeDisabled()
 })

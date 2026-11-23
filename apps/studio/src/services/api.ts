@@ -14,7 +14,6 @@ import { uiAutomationApi } from '@/features/ui-automation/api/uiAutomation.api'
 export type { User } from '@/features/auth/types'
 export type {
   AiSkillLibraryItem,
-  CodeRiskTaskRun,
   UploadAiSkillPayload,
 } from '@/features/ai-testing/types'
 export type {
@@ -54,8 +53,6 @@ export type {
   RequirementUpdatePayload,
 } from '@/features/requirements/types'
 export type {
-  GitlabGroup,
-  GitlabRepository,
   ZentaoBindingTargetType,
   ZentaoBinding,
   ZentaoRemoteOption,
@@ -84,7 +81,6 @@ export type {
   TestOrder,
 } from '@/features/test-orders/types'
 
-export type { ListResponse } from '@/shared/api/request'
 export { ApiError, listItems, listTotal } from '@/shared/api/request'
 
 export const api = {

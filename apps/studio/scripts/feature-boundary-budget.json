@@ -1,18 +1,24 @@
 {
-  "total": 20,
-  "files": {
-    "src/features/admin/pages/AccountManagementPage.tsx": 1,
-    "src/features/ai-testing/hooks/useRequirementCodeRiskWorkspace.tsx": 1,
-    "src/features/ai-testing/hooks/useRequirementRepositoryProfileWorkspace.ts": 1,
-    "src/features/base-services/pages/BaseServicesPage.tsx": 1,
-    "src/features/profile/pages/ProfilePage.tsx": 1,
-    "src/features/projects/components/RequirementCards.tsx": 1,
-    "src/features/projects/pages/ProjectsPage.tsx": 4,
-    "src/features/requirements/components/RequirementDocumentPreviewModal.tsx": 1,
-    "src/features/test-orders/components/AddCasesFromLibraryModal.tsx": 2,
-    "src/features/test-orders/components/TestOrderGraphViewer.tsx": 4,
-    "src/features/test-orders/components/visualization/CaseVisualizationPanel.tsx": 1,
-    "src/features/test-orders/components/visualization/VisualizationBatchButton.tsx": 1,
-    "src/features/test-orders/pages/TestOrderWorkspacePage.tsx": 1
+  "violations": {
+    "src/features/admin/pages/AccountManagementPage.tsx -> auth/hooks/useCurrentUser": 1,
+    "src/features/ai-testing/hooks/useRequirementCodeRiskWorkspace.tsx -> base-services/components/usePersonalConnectionChoice": 1,
+    "src/features/ai-testing/hooks/useRequirementRepositoryProfileWorkspace.ts -> base-services/components/usePersonalConnectionChoice": 1,
+    "src/features/base-services/pages/BaseServicesPage.tsx -> performance/components/PerfMonitoringPanel": 1,
+    "src/features/profile/pages/ProfilePage.tsx -> auth/store/auth.store": 1,
+    "src/features/projects/components/RequirementCards.tsx -> requirements/utils/requirementDocument": 1,
+    "src/features/projects/pages/ProjectsPage.tsx -> base-services/components/RequirementCodeBindingModal": 1,
+    "src/features/projects/pages/ProjectsPage.tsx -> base-services/components/ZentaoBindingPanel": 1,
+    "src/features/projects/pages/ProjectsPage.tsx -> requirements/components/RequirementDrawer": 1,
+    "src/features/projects/pages/ProjectsPage.tsx -> requirements/utils/requirementDocument": 1,
+    "src/features/requirements/components/RequirementDocumentPreviewModal.tsx -> auth/store/auth.store": 1,
+    "src/features/test-orders/components/AddCasesFromLibraryModal.tsx -> test-cases/utils/caseForm": 1,
+    "src/features/test-orders/components/AddCasesFromLibraryModal.tsx -> test-cases/utils/casePriority": 1,
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> ai-testing/components/FunctionalCaseRelationsGraph": 1,
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> ai-testing/hooks/usePersonalLlmChoice": 1,
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> ai-testing/utils/caseRelationsGraph": 1,
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> ai-testing/utils/taskStatus": 1,
+    "src/features/test-orders/components/visualization/CaseVisualizationPanel.tsx -> ai-testing/hooks/usePersonalLlmChoice": 1,
+    "src/features/test-orders/components/visualization/VisualizationBatchButton.tsx -> ai-testing/hooks/usePersonalLlmChoice": 1,
+    "src/features/test-orders/pages/TestOrderWorkspacePage.tsx -> auth/store/auth.store": 1
   }
 }

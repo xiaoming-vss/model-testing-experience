@@ -81,12 +81,7 @@ def load_config() -> WorkerConfig:
             toml_config, "worker", "heartbeat_interval_ms", 10000
         ),
         artifacts_root_dir=artifacts_root_dir,
-        default_headless=_config_bool(toml_config, "ui", "headless", True),
-        default_slow_mo_ms=_config_int(toml_config, "ui", "slow_mo_ms", 0),
         trace_enabled=_config_bool(toml_config, "ui", "trace_enabled", True),
-        screenshot_on_failure=_config_bool(
-            toml_config, "ui", "screenshot_on_failure", True
-        ),
         snapshot_file=_config_string(toml_config, "once", "snapshot_file"),
         redis_url=_config_string(toml_config, "notifications", "redis_url"),
     )

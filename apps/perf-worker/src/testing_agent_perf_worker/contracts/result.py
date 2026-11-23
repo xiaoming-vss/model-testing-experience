@@ -28,6 +28,7 @@ class RunOutcome(StrEnum):
 class ResultFlag(StrEnum):
     SUMMARY_MISSING = "summary_missing"
     LOG_TRUNCATED = "log_truncated"
+    REMOTE_WRITE_ERROR = "remote_write_error"
 
 
 class RunnerInfo(WireModel):

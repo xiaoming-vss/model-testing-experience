@@ -114,7 +114,7 @@ def test_openapi_does_not_emit_additional_properties_placeholders():
 def test_generation_chain_run_request_exposes_shared_protocol_fields():
     schema = openapi_schema()
     request_schema = schema["paths"][
-        "/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/run"
+        "/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/candidate-run"
     ]["post"]["requestBody"]["content"]["application/json"]["schema"]
     _, _, schema_name = request_schema["$ref"].rpartition("/")
     properties = schema["components"]["schemas"][schema_name]["properties"]

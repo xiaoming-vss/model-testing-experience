@@ -1,13 +1,27 @@
-import { RichTextEditor } from '@/shared/components/RichTextEditor'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { UploadOutlined } from '@ant-design/icons'
-import { Alert, Drawer, Form, Input, Progress, Select, Upload } from 'antd'
+import { Alert, Drawer, Form, Input, Progress, Select, Spin, Upload } from 'antd'
 import type { FormInstance, UploadFile } from 'antd'
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState, type ComponentProps } from 'react'
 import { getRequirementDocumentDisplayName } from '@/features/requirements/utils/requirementDocument'
 import type { RequirementCreatePayload, RequirementDocumentType } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { serviceCardLoadingClass } from '@/shared/utils/surfaceClasses'
 import { getErrorMessage } from '@/utils/format'
+
+// tiptap 体积较大，只在真正渲染富文本编辑器时加载；抽屉本身保持同步挂载，
+// 避免把整个 RequirementDrawer 变成异步组件后丢失开合动画和表单即时校验。
+const RichTextEditor = lazy(() =>
+  import('@/shared/components/RichTextEditor').then(module => ({ default: module.RichTextEditor })),
+)
+
+function DeferredRichTextEditor(props: ComponentProps<typeof RichTextEditor>) {
+  return (
+    <Suspense fallback={<div className={serviceCardLoadingClass}><Spin aria-label="编辑器加载中" /></div>}>
+      <RichTextEditor {...props} />
+    </Suspense>
+  )
+}
 
 export type RequirementFormValues = RequirementCreatePayload & {
     sprintId?: string
@@ -212,7 +226,7 @@ export function RequirementDrawer({
           ]}
         >
           {documentType === 'richtext' ? (
-            <RichTextEditor
+            <DeferredRichTextEditor
               key={open ? 'open' : 'closed'}
               projectId={projectId}
               disabled={documentLoading || loading || !!documentError}

@@ -37,8 +37,9 @@ import { useSearchParams } from 'react-router-dom'
 import { type BindingDepth, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
 import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
 import { useSprintBoundaryRefresh } from '@/domain/projects/hooks/useSprintBoundaryRefresh'
+import { useSprintFilter } from '@/domain/projects/hooks/useSprintFilter'
+import { SprintFilterSelect } from '@/domain/projects/components/SprintFilterSelect'
 import { RequirementDrawer, type RequirementFormValues } from '@/features/requirements/components/RequirementDrawer'
 import {
   normalizeRequirementDocumentType,
@@ -126,12 +127,24 @@ export function ProjectsPage() {
     setSearchParams(next, { replace: true })
   }
 
-  const { activeSprintId } = useActiveSprint()
+  const sprintParam = searchParams.get('sprint') ?? undefined
+  const sprintFilter = useSprintFilter(activeProjectId, {
+    controller: {
+      value: sprintParam,
+      onChange: (sprintId) => {
+        const next = new URLSearchParams(searchParams)
+        if (sprintId) next.set('sprint', sprintId)
+        else next.delete('sprint')
+        setSearchParams(next)
+      },
+    },
+  })
+  const { sprints, sprintsQuery } = sprintFilter
   const activeProject = useMemo(
     () => projects.find((project) => normalizeProjectId(project) === activeProjectId),
     [activeProjectId, projects],
   )
-  const selectedRequirementSprintId = activeSprintId
+  const selectedRequirementSprintId = sprintFilter.selectedSprintId
   const requirementPage = requirementView.projectId === activeProjectId && requirementView.sprintId === selectedRequirementSprintId ? requirementView.page : 1
 
   useEffect(() => {
@@ -144,12 +157,6 @@ export function ProjectsPage() {
     }
   }, [editingProject, projectForm, projectModalOpen])
 
-  const sprintsQuery = useQuery({
-    queryKey: ['sprints', activeProjectId],
-    queryFn: () => api.getSprints(activeProjectId!),
-    enabled: Boolean(activeProjectId),
-  })
-  const sprints = listItems(sprintsQuery.data)
   useSprintBoundaryRefresh({ sprints, enabled: Boolean(activeProjectId), refresh: sprintsQuery.refetch })
   const sprintOptions = sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) }))
 
@@ -403,6 +410,8 @@ export function ProjectsPage() {
                   <span className="requirements-list-title-accent h-[14px] w-[3px] flex-none rounded-[2px] bg-[var(--srf-accent)]" aria-hidden="true"></span>
                   <h1 className="tp-list-title">需求</h1>
                   <span className="requirements-list-count whitespace-nowrap text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">共 {listTotal(requirementsQuery.data)} 条</span>
+                  <SprintFilterSelect value={sprintFilter.selectValue} options={sprintFilter.filterOptions}
+                    loading={sprintFilter.loading} onChange={sprintFilter.selectSprint} />
                 </div>}
                 actions={<div className="requirements-list-tools tp-refresh-actions ml-auto">
                   <ActionButton operation="refresh" loading={requirementsQuery.isFetching || sprintsQuery.isFetching} onClick={refreshRequirements}>刷新</ActionButton>

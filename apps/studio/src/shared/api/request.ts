@@ -24,7 +24,7 @@ export type RequestConfig = {
 }
 
 /** 把筛选条件拼成查询串，跳过 undefined 与空字符串。 */
-export function buildQuery(params: Record<string, string | number | undefined>) {
+export function buildQuery(params: Record<string, string | number | boolean | undefined>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === '') return

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from authorization_database import AuthorizationDatabase, AuthorizedRepositoryFixture
+from authorization_database import AuthorizationDatabase
 from support import generation as ai_tasks
 from support.generation import generation_services
 from support.remaining_control_plane import (
@@ -12,7 +12,6 @@ from testing_agent.core.errors import (
     ErrBadRequest,
 )
 from testing_agent.domain.ai_tasks import task_type_for as _generation_task_type_for
-from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot as _generation_build_generate_run_snapshot,
@@ -91,75 +90,6 @@ async def test_update_llm_connection_model_id_replaces_json_payload_for_persiste
     assert connection.extra_json == {"modelId": "new-model"}
     assert connection.extra_json is not original_extra
     assert original_extra == {"modelId": "old-model"}
-
-
-def test_apply_ai_completion_to_run_persists_result_fields():
-    run = SimpleNamespace(
-        status="running",
-        current_stage="generating",
-        stage_status="running",
-        snapshot_json={},
-        error_message="",
-        result_yaml="",
-        result_summary_json={},
-        duration_ms=0,
-        finished_at=None,
-    )
-    body = WorkerTaskEventRequest(
-        workerId="worker-1",
-        status="success",
-        snapshotJson={
-            "currentStage": "completed",
-            "stageStatus": "completed",
-            "resultYaml": "cases: []",
-            "resultSummaryJson": {"total": 0},
-        },
-        durationMs=123,
-    )
-
-    worker.apply_ai_completion_to_run(run, body)
-
-    assert run.status == "success"
-    assert run.current_stage == "completed"
-    assert run.stage_status == "completed"
-    assert run.result_yaml == "cases: []"
-    assert run.result_summary_json == {"total": 0}
-    assert run.duration_ms == 123
-    assert run.finished_at is not None
-
-
-@pytest.mark.asyncio
-async def test_ai_review_rejects_non_terminal_runs_like_go():
-    class FakeRepository(AuthorizedRepositoryFixture):
-        def __init__(self):
-            self.run = SimpleNamespace(
-                run_id="run-1",
-                task_id="task-1",
-                project_id="project-1",
-                status="running",
-                review_status="pending",
-            )
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return self.run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="api_case_generate",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def commit(self):
-            raise AssertionError("non-terminal runs should be rejected before commit")
-
-    service = generation_services(FakeRepository())
-
-    with pytest.raises(type(ErrBadRequest)):
-        await service.review.review("api", "run-1", {"action": "reject"}, "user-1")
 
 
 def test_requirement_analysis_kind_maps_to_requirement_analysis_task_type():

@@ -81,23 +81,53 @@
       "selectors": 52,
       "layoutDeclarations": 44
     },
+    "src/features/ai-testing/styles/api-config.module.css": {
+      "rules": 5,
+      "declarations": 6,
+      "selectors": 5,
+      "layoutDeclarations": 0
+    },
+    "src/features/ai-testing/styles/api-design.module.css": {
+      "rules": 6,
+      "declarations": 8,
+      "selectors": 7,
+      "layoutDeclarations": 4
+    },
     "src/features/ai-testing/styles/artifact-cases.module.css": {
-      "rules": 42,
-      "declarations": 131,
-      "selectors": 51,
-      "layoutDeclarations": 59
+      "rules": 36,
+      "declarations": 119,
+      "selectors": 42,
+      "layoutDeclarations": 51
+    },
+    "src/features/ai-testing/styles/candidate-workspace.module.css": {
+      "rules": 81,
+      "declarations": 326,
+      "selectors": 84,
+      "layoutDeclarations": 157
     },
     "src/features/ai-testing/styles/generation-canvas.module.css": {
-      "rules": 147,
-      "declarations": 417,
-      "selectors": 173,
-      "layoutDeclarations": 208
+      "rules": 106,
+      "declarations": 303,
+      "selectors": 124,
+      "layoutDeclarations": 144
     },
     "src/features/ai-testing/styles/generation-chain.module.css": {
-      "rules": 93,
-      "declarations": 262,
-      "selectors": 95,
-      "layoutDeclarations": 148
+      "rules": 69,
+      "declarations": 196,
+      "selectors": 70,
+      "layoutDeclarations": 97
+    },
+    "src/features/ai-testing/styles/test-scope.module.css": {
+      "rules": 4,
+      "declarations": 13,
+      "selectors": 4,
+      "layoutDeclarations": 3
+    },
+    "src/features/ai-testing/styles/traceable-points.module.css": {
+      "rules": 28,
+      "declarations": 115,
+      "selectors": 31,
+      "layoutDeclarations": 57
     },
     "src/features/ai-testing/styles/ui-stage-visual.module.css": {
       "rules": 96,
@@ -112,10 +142,10 @@
       "layoutDeclarations": 3
     },
     "src/features/api-automation/styles/api-detail-shell.module.css": {
-      "rules": 37,
-      "declarations": 90,
-      "selectors": 42,
-      "layoutDeclarations": 21
+      "rules": 22,
+      "declarations": 49,
+      "selectors": 25,
+      "layoutDeclarations": 15
     },
     "src/features/bugs/styles/bugs.module.css": {
       "rules": 49,
@@ -183,6 +213,12 @@
       "selectors": 53,
       "layoutDeclarations": 35
     },
+    "src/shared/components/request-editor/request-editor.module.css": {
+      "rules": 14,
+      "declarations": 40,
+      "selectors": 16,
+      "layoutDeclarations": 5
+    },
     "src/shared/styles/account.module.css": {
       "rules": 22,
       "declarations": 60,
@@ -237,6 +273,12 @@
       "selectors": 33,
       "layoutDeclarations": 12
     },
+    "src/shared/styles/notify.module.css": {
+      "rules": 20,
+      "declarations": 78,
+      "selectors": 20,
+      "layoutDeclarations": 33
+    },
     "src/shared/styles/pagination.css": {
       "rules": 13,
       "declarations": 37,
@@ -246,7 +288,7 @@
     "src/shared/styles/run-view.module.css": {
       "rules": 18,
       "declarations": 55,
-      "selectors": 19,
+      "selectors": 18,
       "layoutDeclarations": 35
     },
     "src/shared/styles/scrollbars.css": {
@@ -293,9 +335,17 @@
       "count": 2,
       "sample": "height: 100%;min-height: 0;display: flex;flex-direction: column;overflow: hidden"
     },
+    "ab29a1ab2c6d20ba": {
+      "count": 2,
+      "sample": "width: 1px;height: 1px;border: 0;opacity: 0;pointer-events: none"
+    },
     "c3a767a35bba8500": {
-      "count": 3,
+      "count": 2,
       "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
+    },
+    "ca62359c8a710883": {
+      "count": 2,
+      "sample": "width: max-content;max-width: 360px;font: inherit"
     },
     "e38e5eb24a0f8a06": {
       "count": 2,

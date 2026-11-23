@@ -33,7 +33,12 @@ def seed(db):
     )
     Base.metadata.create_all(db.get_bind(), tables=[m.__table__ for m in models])
     for item in [
-        row(ApiCollection, collection_id="collection", requirement_id="req"),
+        row(
+            ApiCollection,
+            collection_id="collection",
+            project_id="p1",
+            requirement_id="req",
+        ),
         row(
             ApiCase,
             case_id="api-case",

@@ -1,5 +1,4 @@
 import type { CreateUiTestCasePayload, UiStepSaveRule, UiTestCase } from '@/services/api'
-import { moveArrayItem } from '@/shared/utils/array'
 import { compareByOrderNo } from '@/shared/utils/order'
 import { formatOptionalValue, prettyPrintValue } from '@/shared/utils/value'
 import { normalizeUiTestCaseId, pickCreatedAt } from '@/utils/format'
@@ -198,7 +197,7 @@ export function moveExpandedStepIndex(index: number, fromIndex: number, toIndex:
   return index
 }
 
-export { formatOptionalValue, moveArrayItem, prettyPrintValue }
+export { formatOptionalValue, prettyPrintValue }
 
 export function formatViewportText(width?: number, height?: number) {
   if (!width || !height) return '-'

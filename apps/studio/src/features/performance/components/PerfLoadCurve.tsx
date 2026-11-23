@@ -1,5 +1,37 @@
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import type { PerfLoadCurvePoint } from '../utils/perfLoadModel'
 import { formatPerfLoadDuration } from '../utils/perfLoadModel'
+
+const formatAxisTime = (value: number) => value === 0 ? '0' : formatPerfLoadDuration(value)
+
+/** 在保持折线形状不变的前提下补采样点，让悬停提示沿曲线连续取值。 */
+function buildCurveData(points: PerfLoadCurvePoint[], totalSeconds: number) {
+  if (points.length === 0) return [{ t: 0, v: 0 }]
+  if (points.length === 1) return points
+  const total = Math.max(1, totalSeconds)
+  const step = Math.max(1, total / 240)
+  const data: PerfLoadCurvePoint[] = []
+  let segment = 0
+  for (let t = 0; t <= total; t += step) {
+    while (segment < points.length - 2 && points[segment + 1].t < t) segment += 1
+    const from = points[segment]
+    const to = points[Math.min(segment + 1, points.length - 1)]
+    const span = to.t - from.t
+    const ratio = span > 0 ? Math.min(1, Math.max(0, (t - from.t) / span)) : 0
+    data.push({ t, v: from.v + (to.v - from.v) * ratio })
+  }
+  const last = points[points.length - 1]
+  if (!data.length || data[data.length - 1].t < total) data.push({ t: total, v: last.v })
+  return data
+}
 
 export function PerfLoadCurve({
   points,
@@ -10,51 +42,55 @@ export function PerfLoadCurve({
   totalSeconds: number
   maxVus: number
 }) {
-  const width = 680
-  const height = 150
-  const padL = 38
-  const padR = 18
-  const padT = 18
-  const padB = 26
   const totalX = Math.max(1, totalSeconds)
   const maxY = Math.max(1, maxVus)
-  const px = (t: number) => padL + (t / totalX) * (width - padL - padR)
-  const py = (v: number) => height - padB - (v / maxY) * (height - padT - padB)
-  const safePoints = points.length > 0 ? points : [{ t: 0, v: 0 }]
-  const line = safePoints
-    .map((point, index) => `${index ? 'L' : 'M'}${px(point.t).toFixed(1)} ${py(point.v).toFixed(1)}`)
-    .join(' ')
-  const area = `${line} L ${px(totalX).toFixed(1)} ${height - padB} L ${px(0).toFixed(1)} ${height - padB} Z`
-  const grid = [0, 0.25, 0.5, 0.75, 1].map(ratio => {
-    const y = padT + ratio * (height - padT - padB)
-    return <line
-      key={ratio}
-      x1={padL}
-      y1={y}
-      x2={width - padR}
-      y2={y}
-      className="stroke-app-surface-border"
-      strokeWidth={1}
-      strokeDasharray="3 5"
-      opacity={0.65}
-    />
-  })
+  const data = buildCurveData(points, totalX)
+  const yTicks = [...new Set([0, 0.25, 0.5, 0.75, 1].map(ratio => Math.round(maxY * ratio)))]
 
-  return <div className="rounded-lg border border-app-surface-border bg-app-surface-hover px-2 pt-1.5">
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="负载曲线预览" className="block h-auto w-full">
-      <g>{grid}</g>
-      <path d={area} className="fill-app-accent/10" />
-      <path
-        d={line}
-        className="fill-none stroke-app-accent"
-        strokeWidth={2.2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      <text x={padL} y={padT - 4} className="fill-app-surface-text-muted" fontSize={10}>{maxVus} VU</text>
-      <text x={padL - 6} y={height - padB + 4} className="fill-app-surface-text-muted" fontSize={10} textAnchor="end">0</text>
-      <text x={padL} y={height - 8} className="fill-app-surface-text-muted" fontSize={10}>0</text>
-      <text x={width - padR} y={height - 8} className="fill-app-surface-text-muted" fontSize={10} textAnchor="end">{formatPerfLoadDuration(totalSeconds)}</text>
-    </svg>
+  return <div className="rounded-lg border border-app-surface-border bg-app-surface-hover px-2 pt-2" role="img" aria-label="负载曲线预览">
+    <ResponsiveContainer width="100%" aspect={680 / 150}>
+      <AreaChart data={data} margin={{ top: 14, right: 18, left: 0, bottom: 4 }}>
+        <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 5" vertical={false} />
+        <XAxis
+          dataKey="t"
+          type="number"
+          domain={[0, totalX]}
+          ticks={[0, totalX]}
+          axisLine={{ stroke: 'var(--chart-axis)', strokeWidth: 1 }}
+          tickLine={false}
+          tick={{ fill: 'var(--chart-axis)', fontSize: 10 }}
+          tickFormatter={formatAxisTime}
+        />
+        <YAxis
+          domain={[0, maxY]}
+          ticks={yTicks}
+          width={40}
+          axisLine={{ stroke: 'var(--chart-axis)', strokeWidth: 1 }}
+          tickLine={false}
+          tick={{ fill: 'var(--chart-axis)', fontSize: 10 }}
+          tickFormatter={(value: number) => value === 0 ? '0' : value === maxY ? `${maxY} VU` : ''}
+        />
+        <RechartsTooltip
+          cursor={{ stroke: 'var(--app-accent)', strokeWidth: 1, strokeDasharray: '3 3' }}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            return <div className="rounded-lg border border-[var(--chart-tooltip-border)] bg-[var(--chart-tooltip-bg)] px-2.5 py-1.5 text-[11px] leading-4 shadow-[0_6px_16px_var(--app-glass-shadow-card)]">
+              <div className="font-semibold text-[var(--chart-tooltip-text)]">时间 {formatPerfLoadDuration(Number(label))}</div>
+              <div className="text-[var(--chart-axis)]">负载 {Math.round(Number(payload[0].value))} VU</div>
+            </div>
+          }}
+        />
+        <Area
+          type="linear"
+          dataKey="v"
+          stroke="var(--app-accent)"
+          strokeWidth={1.6}
+          fill="var(--app-accent)"
+          fillOpacity={0.1}
+          dot={false}
+          activeDot={{ r: 3, strokeWidth: 1.5 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   </div>
 }

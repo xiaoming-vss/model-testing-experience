@@ -20,7 +20,6 @@ type Props = {
   footerContainer?: HTMLElement | null
   projectId?: string
   value: string
-  sourceEditable?: boolean
   onChange: (value: string) => void
   /** 不支持图片附件的修订流程省略这三个属性，侧栏只保留指令和模型选择。 */
   attachments?: RevisionAttachment[]
@@ -31,7 +30,7 @@ type Props = {
   loading: boolean
 }
 
-export function RevisionSidePanel({ footerContainer, projectId, value, sourceEditable = true, onChange, attachments, onAddAttachment, onRemoveAttachment, onSubmit, onCancel, loading }: Props) {
+export function RevisionSidePanel({ footerContainer, projectId, value, onChange, attachments, onAddAttachment, onRemoveAttachment, onSubmit, onCancel, loading }: Props) {
   const [selectedId, setSelectedId] = useState<string>()
   const [uploading, setUploading] = useState(0)
   const [questionIndex, setQuestionIndex] = useState(0)
@@ -45,7 +44,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
   const busy = loading || uploading > 0
   const imageAttachments = attachments ?? []
   const attachmentsEnabled = Boolean(onAddAttachment && onRemoveAttachment)
-  const sourceHint = sourceEditable ? '包含左侧尚未保存的修改，优化完成后仍需审核确认。' : '基于当前待审核产物重新生成，优化完成后仍需审核确认。'
+  const sourceHint = '基于所选候选派生新候选，原候选和当前内容会保留。'
   const canAdd = attachmentsEnabled && Boolean(projectId) && !loading && imageAttachments.length + uploading < MAX_ATTACHMENTS
   const actions = <div className="revision-footer-actions flex justify-end gap-2"><Button disabled={loading} onClick={onCancel}>取消优化</Button><ProjectActionButton action="execute" type="primary" loading={loading} disabled={busy || !connectionId || !revisionInstructionText(value)} onClick={() => connectionId && onSubmit(connectionId)}>提交优化</ProjectActionButton></div>
 
@@ -107,7 +106,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
       <details className="revision-question-extra border-t border-[var(--ai-border,var(--app-revision-border))] pt-3 [&>summary]:cursor-pointer [&>textarea]:mt-2.5"><summary>补充其他优化要求（可选）</summary><Input.TextArea aria-label="优化指令" rows={3} disabled={loading} value={draft.instruction} placeholder="填写其他优化要求" onChange={event => onChange(updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }))} /></details>
     </div> : <>
     <label htmlFor="revision-side-instruction">优化指令</label>
-    <Input.TextArea id="revision-side-instruction" className="min-h-40 flex-1 resize-none leading-[1.8]" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
+    <Input.TextArea id="revision-side-instruction" className="min-h-40 flex-1 resize-none leading-[1.8]" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={draft ? '请填写待确认问题的答复，或补充其他优化要求' : '请输入优化要求，将基于所选候选派生新候选'} />
     </>}
     {attachmentsEnabled ? <>
       <div className="revision-attachments flex flex-wrap items-center gap-2" role="group" aria-label="优化图片">
@@ -130,27 +129,4 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     {footerContainer === undefined ? actions : footerContainer ? createPortal(actions, footerContainer) : null}
 
   </aside>
-}
-
-export function RevisionDivider() {
-  const resize = (handle: HTMLElement, width: number) => {
-    const workspace = handle.parentElement
-    const source = workspace?.querySelector<HTMLElement>(':scope > .revision-source')
-    if (!workspace || !source) return
-    source.style.setProperty('--revision-source-width', `${Math.max(35, Math.min(75, width / workspace.clientWidth * 100))}%`)
-  }
-  return <div className="revision-divider relative flex-[0_0_20px] cursor-col-resize touch-none" role="separator" aria-label="调整原内容与优化面板宽度" aria-orientation="vertical" tabIndex={0}
-    onPointerDown={event => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId) }}
-    onPointerMove={event => {
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
-      const left = event.currentTarget.parentElement?.getBoundingClientRect().left ?? 0
-      resize(event.currentTarget, event.clientX - left)
-    }}
-    onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
-    onKeyDown={event => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-      event.preventDefault()
-      const source = event.currentTarget.parentElement?.querySelector<HTMLElement>(':scope > .revision-source')
-      if (source) resize(event.currentTarget, source.clientWidth + (event.key === 'ArrowLeft' ? -30 : 30))
-    }} />
 }

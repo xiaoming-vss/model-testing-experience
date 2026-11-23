@@ -1,9 +1,9 @@
-import { Alert, Button, Spin, Tag, Tooltip } from 'antd'
+import { Alert, Button, Pagination, Popconfirm, Spin, Tag, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { getErrorMessage } from '@/utils/format'
 import type { RequirementRepositoryProfileWorkspace } from '../hooks/useRequirementRepositoryProfileWorkspace'
 
-/** 仓库画像阶段侧栏：查看版本和上游追溯；进入阅读区后在同一侧栏提供运行操作。 */
+/** 仓库画像阶段侧栏：查看候选和上游追溯；进入阅读区后在同一侧栏提供运行操作。 */
 export function RequirementRepositoryProfileInspector({
   workspace,
   showRun = false,
@@ -11,14 +11,13 @@ export function RequirementRepositoryProfileInspector({
   workspace: RequirementRepositoryProfileWorkspace
   showRun?: boolean
 }) {
-  const selectedVersion = workspace.selectedVersion
-  const selectedInputVersion = workspace.materialVersions.find(
-    version => version.versionId === workspace.materialVersionId,
-  )
-  const frozenMaterial = selectedVersion?.requirementMaterialVersion
-  const materialLabel = frozenMaterial?.versionNo
-    ? `v${frozenMaterial.versionNo}`
-    : selectedInputVersion?.label ?? '未记录'
+  const selectedProfileView = workspace.selectedProfileView
+  const frozenCurrent = selectedProfileView?.requirementMaterialCurrent
+  const materialLabel = frozenCurrent
+    ? `候选 ${frozenCurrent.candidateId.slice(0, 8)}`
+    : workspace.profileCandidateMode && selectedProfileView
+      ? '已冻结，采用时核对'
+      : selectedProfileView ? '未记录' : workspace.currentMaterialAvailable ? '当前已采用' : '未记录'
 
   return (
     <div className="gc-profile-inspector flex flex-col gap-[18px]">
@@ -26,34 +25,49 @@ export function RequirementRepositoryProfileInspector({
       {workspace.personalGitlab.dialog}
 
       <section className="gc-inspector-section">
-        <h3>画像版本</h3>
-        {workspace.versionsError ? (
+        <h3>画像候选</h3>
+        {<div>
+          {workspace.currentProfileError ? <Alert showIcon type="error" title={`当前画像读取失败：${getErrorMessage(workspace.currentProfileError)}`} />
+            : workspace.currentProfile?.candidateId ? <><Tag color="success">已采用</Tag><Button size="small" onClick={() => workspace.setSelectedCandidateId(workspace.currentProfile!.candidateId!)}>查看当前画像</Button></>
+              : <Tag>尚未采用</Tag>}
+        </div>}
+        {workspace.candidateViewsError ? (
           <Alert
             showIcon
             type="error"
-            title={getErrorMessage(workspace.versionsError)}
+            title={getErrorMessage(workspace.candidateViewsError)}
             action={<Button size="small" onClick={workspace.refresh}>重试</Button>}
           />
-        ) : workspace.versionsLoading ? (
+        ) : workspace.candidateViewsLoading ? (
           <Spin size="small" />
-        ) : workspace.versions.length ? (
-          <div className="gc-inspector-versions" role="group" aria-label="选择仓库画像版本">
-            {workspace.versions.map(version => (
+        ) : workspace.candidateViews.length ? (
+          <div className="gc-inspector-versions" role="group" aria-label="选择仓库画像候选">
+            {workspace.candidateViews.map(version => (
               <button
                 type="button"
-                key={version.versionId}
-                className={`gc-version-button${workspace.selectedVersionId === version.versionId ? ' is-active' : ''}`}
-                aria-pressed={workspace.selectedVersionId === version.versionId}
-                onClick={() => workspace.setSelectedVersionId(version.versionId)}
+                key={version.candidateId}
+                className={`gc-version-button${workspace.selectedCandidateId === version.candidateId ? ' is-active' : ''}`}
+                aria-pressed={workspace.selectedCandidateId === version.candidateId}
+                onClick={() => workspace.setSelectedCandidateId(version.candidateId)}
               >
                 {version.label}
-                {version.versionId === workspace.latestVersion?.versionId ? '（最新）' : ''}
+                {version.candidateId === workspace.currentProfile?.candidateId ? '（当前）'
+                    : workspace.candidateSummaries.find(item => item.candidateId === version.candidateId)?.disposition === 'rejected' ? '（已拒绝）'
+                      : workspace.candidateSummaries.find(item => item.candidateId === version.candidateId)?.disposition === 'discarded' ? '（已丢弃）' : ''}
               </button>
             ))}
           </div>
         ) : (
-          <p className="gc-inspector-hint m-0 text-[12px] leading-[1.7] text-[var(--app-surface-text-muted)]">尚无画像版本。</p>
+          <p className="gc-inspector-hint m-0 text-[12px] leading-[1.7] text-[var(--app-surface-text-muted)]">尚无画像候选。</p>
         )}
+        {workspace.candidateTotal > workspace.candidatePageSize ? <Pagination size="small" current={workspace.candidatePage} pageSize={workspace.candidatePageSize} total={workspace.candidateTotal} showSizeChanger={false} onChange={workspace.setCandidatePage} /> : null}
+        {workspace.selectedCandidate ? <div className="flex flex-wrap gap-2">
+          {workspace.selectedCandidate.disposition === 'available' && !workspace.selectedCandidate.isCurrent ? <>
+            <ProjectActionButton action="review" size="small" type="primary" loading={workspace.adopt.isPending} disabled={workspace.busy || !workspace.currentProfile || workspace.currentProfileLoading} onClick={() => workspace.adopt.mutate()}>采用此画像</ProjectActionButton>
+            <Popconfirm title="拒绝这个画像候选？" onConfirm={() => workspace.dispose.mutate('reject')}><ProjectActionButton action="write" size="small" disabled={workspace.busy}>拒绝</ProjectActionButton></Popconfirm>
+          </> : null}
+          {workspace.currentProfile?.candidateId ? <Popconfirm title="清空当前画像？" description="候选和已冻结的 UI 输入会保留。" onConfirm={() => workspace.clearCurrent.mutate()}><ProjectActionButton action="review" size="small" disabled={workspace.busy}>清空当前</ProjectActionButton></Popconfirm> : null}
+        </div> : null}
       </section>
 
       <section className="gc-inspector-section">

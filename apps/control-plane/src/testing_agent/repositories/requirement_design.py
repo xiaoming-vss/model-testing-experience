@@ -41,17 +41,6 @@ class RequirementDesignRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def configuration_task_id(self, requirement_id: str, kind: DesignKind) -> str | None:
-        # Current read after the parent lock: a REPEATABLE READ snapshot opened
-        # during authorization must not hide a concurrent request's new task.
-        return await self.session.scalar(
-            select(Task.task_id)
-            .where(*requirement_scope(requirement_id), Task.task_type == task_type_for(kind))
-            .order_by(Task.created_at.desc(), Task.id.desc())
-            .limit(1)
-            .with_for_update()
-        )
-
     async def task_summaries(self, requirement_id: str) -> list[dict[str, Any]]:
         rows = await self.session.execute(
             select(
@@ -121,9 +110,9 @@ class RequirementDesignRepository:
         pipeline_filter: str,
     ) -> dict[str, Any]:
         from testing_agent.domain.direct_history_projection import project_direct_history
-        from testing_agent.repositories.direct_attempt_history import direct_history_rows
+        from testing_agent.repositories.generation_candidate_history import candidate_history_rows
 
-        rows = await direct_history_rows(
+        rows = await candidate_history_rows(
             self.session,
             None,
             page,

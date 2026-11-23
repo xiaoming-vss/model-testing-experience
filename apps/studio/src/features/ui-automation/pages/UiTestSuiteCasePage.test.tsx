@@ -25,6 +25,7 @@ const list = <T,>(items: T[]) => Object.assign([...items], { items, total: items
 
 const suite = {
   suiteId: 'suite-1',
+  projectId: 'project-1',
   requirementId: 'requirement-1',
   name: 'xiaoming',
   description: '登录链路回放',
@@ -631,5 +632,70 @@ it('保存时检查未选中步骤，并切换到有错误的步骤', async () =
   await waitFor(() => expect(second).toBeVisible())
   expect(within(second).getByText('请输入步骤名称')).toBeInTheDocument()
   expect(save).not.toHaveBeenCalled()
+  client.clear()
+})
+
+it('失效用例在流程中标记，状态胶囊只显示失效，调试入口禁用', async () => {
+  vi.mocked(api.getUiTestCases).mockResolvedValue(
+    list([{ ...cases[0], invalidatedAt: '2026-11-22T02:30:00Z' }, cases[1]]),
+  )
+  const { container, client } = renderPage()
+
+  await screen.findByText('UI测试集详情')
+  const canvas = () => container.querySelector('.ui-flow-canvas') as HTMLElement
+  await waitFor(() => expect(within(canvas()).getByText('● 已失效')).toBeInTheDocument())
+  const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  expect(container.querySelector('.ui-wb-toolbar-run')).toHaveAttribute(
+    'title',
+    '运行将排除 1 条失效用例',
+  )
+
+  const chips = within(container.querySelector('.ui-wb-case-status-filter') as HTMLElement)
+  await userEvent.click(chips.getByRole('button', { name: '已失效' }))
+  await waitFor(() => expect(within(canvas()).queryByText('登录失败-密码为空')).toBeNull())
+
+  await userEvent.click(chips.getByRole('button', { name: '全部' }))
+  await waitFor(() => expect(within(canvas()).getByText('登录成功-跳转工作台')).toBeInTheDocument())
+  fireEvent.click(within(canvas()).getByText('登录成功-跳转工作台'))
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
+  expect(toolbar.getByRole('button', { name: /调试运行/ })).toBeDisabled()
+  client.clear()
+})
+
+it('从「用例状态」弹窗批量恢复失效用例', async () => {
+  vi.mocked(api.getUiTestCases).mockResolvedValue(
+    list([{ ...cases[0], invalidatedAt: '2026-11-22T02:30:00Z' }, cases[1]]),
+  )
+  const batch = vi
+    .spyOn(api, 'batchInvalidateUiCases')
+    .mockResolvedValue({ caseIds: ['case-1'], updatedCount: 1 })
+  const { client } = renderPage()
+
+  await screen.findByText('UI测试集详情')
+  await waitFor(() => expect(document.querySelector('.ui-wb-case-status-filter')).toBeTruthy())
+  const statusButton = screen.getByRole('button', { name: '管理用例状态' })
+  await waitFor(() => expect(statusButton).toBeEnabled())
+  await userEvent.click(statusButton)
+
+  const checkboxes = [...document.querySelectorAll<HTMLInputElement>('.ant-modal input[type="checkbox"]')]
+  await userEvent.click(checkboxes[1])
+  await userEvent.click(screen.getByRole('button', { name: '恢复有效' }))
+
+  await waitFor(() =>
+    expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], false),
+  )
+  client.clear()
+})
+
+it('项目级测试集直接按项目加载用例，不查询需求与迭代', async () => {
+  vi.mocked(api.getUiTestSuite).mockResolvedValue({ ...suite, requirementId: null })
+  const requirement = vi.mocked(api.getRequirement)
+  const sprint = vi.mocked(api.getSprint)
+  const { client } = renderPage()
+
+  await screen.findByText('UI测试集详情')
+  await waitFor(() => expect(document.querySelector('.ui-flow-canvas')).toBeTruthy())
+  expect(requirement).not.toHaveBeenCalled()
+  expect(sprint).not.toHaveBeenCalled()
   client.clear()
 })

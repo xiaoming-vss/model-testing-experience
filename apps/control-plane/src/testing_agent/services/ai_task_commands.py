@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from testing_agent.core.enums import RUN_ACTIVE_STATUSES
 from testing_agent.core.errors import (
@@ -15,9 +15,16 @@ from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_tasks import (
     task_type_for,
 )
+from testing_agent.domain.generation_chain import stage_names
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_interface import ApiInterfaceRepository
+from testing_agent.repositories.generation_current_chain import (
+    bind_current_chain,
+    ensure_empty_slot,
+)
+from testing_agent.repositories.standalone_execution import lock_or_create_stage
+from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.ai_task_output import (
     dump_task,
 )
@@ -51,6 +58,7 @@ class GenerationTaskCommands:
         user_id: str,
         *,
         task_id: str | None = None,
+        initialize_candidate_chain: bool = False,
     ) -> dict:
         await self.access.ensure_project_access(user_id, project_id, action="write")
         self._reject_document_source(kind, body)
@@ -141,6 +149,23 @@ class GenerationTaskCommands:
             instruction=str(body.get("instruction") or ""),
         )
         self.repository.add(task)
+        if initialize_candidate_chain:
+            if not requirement_id or kind not in {"requirement_analysis", "function", "api", "ui"}:
+                raise ErrBadRequest()
+            await self.repository.flush()
+            chain = await bind_current_chain(
+                self.repository.session,
+                requirement_id=requirement_id,
+                kind=cast(DesignKind, kind),
+                task_id=task.task_id,
+            )
+            for stage_name in stage_names(kind):
+                stage, _ = await lock_or_create_stage(
+                    self.repository.session, task.task_id, stage_name
+                )
+                await ensure_empty_slot(
+                    self.repository.session, chain_id=chain.chain_id, stage_id=stage.id
+                )
         await self.repository.commit()
         await self.repository.refresh(task)
         return dump_task(task)

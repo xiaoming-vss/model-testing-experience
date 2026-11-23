@@ -11,6 +11,7 @@ from testing_agent.schemas.perf_case import PerfDataFile
 class PerfRunCreate(BaseModel):
     environment_id: str = Field(min_length=1, max_length=64)
     monitoring_connection_id: str = Field(min_length=1, max_length=64)
+    sprint_id: str | None = Field(default=None, min_length=1, max_length=64)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
@@ -27,6 +28,8 @@ class PerfRunSummaryResponse(BaseModel):
     run_id: str
     case_id: str
     project_id: str
+    sprint_id: str | None = None
+    sprint_name: str = ""
     case_version: int
     case_name: str
     environment_id: str

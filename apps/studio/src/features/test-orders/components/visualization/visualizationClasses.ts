@@ -57,7 +57,6 @@ export const vizBlockLastClass = 'pb-0'
 export const vizFocusTitleClass = 'test-order-viz-focus-title m-0 text-[14px] leading-[1.6]'
 export const vizFocusTitleCurrentClass = 'text-[var(--srf-accent)]'
 export const vizFocusClass = 'test-order-viz-focus mb-5 mt-3.5 text-[var(--srf-text-secondary)]'
-export const vizFocusHeadingClass = 'm-0 mb-1.5 text-[12px] text-[var(--srf-accent)]'
 export const vizFocusParagraphClass = 'm-0 whitespace-pre-wrap leading-[1.8] [overflow-wrap:anywhere]'
 
 export const vizEntityClass = 'test-order-viz-entity relative flex min-w-0 max-w-full flex-col items-start gap-2 rounded-[6px] border border-[var(--srf-card-border)] bg-[var(--srf-hover)] p-3.5 text-left font-[inherit] leading-[1.65] text-[var(--srf-text)] [overflow-wrap:anywhere]'

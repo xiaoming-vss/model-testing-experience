@@ -13,6 +13,10 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.models.requirement import Requirement
+from testing_agent.repositories.generation_document_invalidation import (
+    invalidate_document_dependents,
+)
+from testing_agent.repositories.generation_schema import candidate_schema_installed
 from testing_agent.repositories.requirement import RequirementRepository
 from testing_agent.schemas.requirement import (
     CreateRequirementRequest,
@@ -72,6 +76,12 @@ class RequirementService:
         existing = await self.requirements.get_active_by_sprint_and_name(sprint_id, body.name)
         if existing is not None:
             raise ErrRequirementNameAlreadyUse()
+        if (
+            self.initialize_generation is not None
+            and self.requirements.session is not None
+            and not await candidate_schema_installed(self.requirements.session)
+        ):
+            raise AppError(400, "请先升级候选数据表", 400)
         requirement = Requirement(
             requirement_id=new_id(),
             sprint_id=sprint_id,
@@ -156,6 +166,10 @@ class RequirementService:
         body: UpdateRequirementRequest,
     ) -> dict:
         requirement = await self.get_accessible_entity(user_id, requirement_id, action="write")
+        before_document = tuple(
+            getattr(requirement, field, "")
+            for field in ("document_type", "document_file_id", "document_filename", "document_hash")
+        )
         fields = body.model_fields_set
         if "name" in fields:
             if body.name is None:
@@ -174,6 +188,12 @@ class RequirementService:
                 requirement.document_content = requirement_content(body.document_content)
             except ValueError as exc:
                 raise AppError(400, str(exc), 400) from exc
+        after_document = tuple(
+            getattr(requirement, field, "")
+            for field in ("document_type", "document_file_id", "document_filename", "document_hash")
+        )
+        if before_document != after_document and self.requirements.session is not None:
+            await invalidate_document_dependents(self.requirements.session, requirement_id)
         await self.requirements.commit()
         await self.requirements.refresh(requirement)
         return dump_requirement(requirement)

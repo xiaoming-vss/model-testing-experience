@@ -4,11 +4,13 @@ import { Alert, Button, Form, Modal, Select, Space, Typography } from 'antd'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage, normalizeEnvironmentId } from '@/utils/format'
+import { pickDefaultSprintId } from '@/domain/projects/hooks/useSprintFilter'
 import type { PerfSuite, PerfSuiteRun } from '../types'
 
 type RunFormValues = {
   environmentId: string
   monitoringConnectionId: string
+  sprintId: string
 }
 
 export function StartPerfSuiteRunModal({
@@ -42,6 +44,12 @@ export function StartPerfSuiteRunModal({
     queryFn: () => api.listMonitoringConnections(projectId!),
     enabled: open && Boolean(projectId),
   })
+  const sprintsQuery = useQuery({
+    queryKey: ['sprints', projectId],
+    queryFn: () => api.getSprints(projectId!),
+    enabled: open && Boolean(projectId),
+  })
+  const sprints = listItems(sprintsQuery.data)
   const environments = useMemo(() => listItems(environmentsQuery.data), [environmentsQuery.data])
   const connections = useMemo(
     () => listItems(connectionsQuery.data).filter((connection) => connection.enabled),
@@ -55,14 +63,16 @@ export function StartPerfSuiteRunModal({
     label: connection.name,
     value: connection.connectionId,
   }))
-  const cases = suite?.cases ?? []
+  const allCases = suite?.cases ?? []
+  const cases = allCases.filter((item) => !item.invalidatedAt)
+  const invalidatedCount = allCases.length - cases.length
 
   useEffect(() => {
     if (!open) {
       seededOpenRef.current = false
       return
     }
-    if (seededOpenRef.current || environmentsQuery.isLoading || connectionsQuery.isLoading) return
+    if (seededOpenRef.current || environmentsQuery.isLoading || connectionsQuery.isLoading || sprintsQuery.isLoading) return
     seededOpenRef.current = true
     const preferred = environments.find((environment) => normalizeEnvironmentId(environment) === defaultEnvironmentId)
     const defaultEnvironment = preferred
@@ -71,8 +81,9 @@ export function StartPerfSuiteRunModal({
     form.setFieldsValue({
       environmentId: defaultEnvironment ? normalizeEnvironmentId(defaultEnvironment) : undefined,
       monitoringConnectionId: connections[0]?.connectionId,
+      sprintId: pickDefaultSprintId(sprints),
     })
-  }, [connections, connectionsQuery.isLoading, defaultEnvironmentId, environments, environmentsQuery.isLoading, form, open])
+  }, [connections, connectionsQuery.isLoading, defaultEnvironmentId, environments, environmentsQuery.isLoading, form, open, projectId, sprints, sprintsQuery.isLoading])
 
   const runMutation = useMutation({
     mutationFn: (values: RunFormValues) => api.startPerfSuiteRun(suite!.suiteId, values),
@@ -83,7 +94,7 @@ export function StartPerfSuiteRunModal({
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const unavailable = environments.length === 0 || connections.length === 0 || cases.length === 0
+  const unavailable = environments.length === 0 || connections.length === 0 || cases.length === 0 || sprints.length === 0
 
   return <Modal
     title="运行测试集"
@@ -104,7 +115,8 @@ export function StartPerfSuiteRunModal({
     <div className="mb-4 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2.5">
       <Typography.Text strong>{suite?.name}</Typography.Text>
       <div className="mt-1 text-xs text-app-surface-text-muted">
-        {cases.length} 条用例 · 串行执行 · 前一条结束后才启动下一条
+        {cases.length} 条有效用例 · 串行执行 · 前一条结束后才启动下一条
+        {invalidatedCount > 0 ? ` · 已排除 ${invalidatedCount} 条失效用例` : ''}
       </div>
       <div className="mt-2 grid gap-1">
         {cases.map((item, index) => <div key={item.caseId} className="flex items-center gap-2 text-xs">
@@ -113,11 +125,17 @@ export function StartPerfSuiteRunModal({
         </div>)}
       </div>
     </div>
-    {cases.length === 0 ? <Alert
+    {allCases.length === 0 ? <Alert
       type="warning"
       showIcon
       title="测试集没有用例"
       description="先添加用例，再发起运行。"
+      className="mb-4"
+    /> : cases.length === 0 ? <Alert
+      type="warning"
+      showIcon
+      title="测试集没有有效用例"
+      description="所有用例都已失效，恢复有效后才能发起运行。"
       className="mb-4"
     /> : null}
     {environments.length === 0 ? <Alert
@@ -136,7 +154,12 @@ export function StartPerfSuiteRunModal({
       className="mb-4"
       action={<Button size="small" onClick={onManageMonitoring}>去配置</Button>}
     /> : null}
+    {sprintsQuery.isError ? <Alert type="error" showIcon title="迭代加载失败" description={getErrorMessage(sprintsQuery.error)} className="mb-4" /> : null}
+    {!sprintsQuery.isLoading && !sprintsQuery.isError && sprints.length === 0 ? <Alert type="warning" showIcon title="当前项目没有迭代" description="请先创建迭代，再发起测试集运行。" className="mb-4" /> : null}
     <Form form={form} layout="vertical" onFinish={(values) => runMutation.mutate(values)}>
+      <Form.Item label="迭代" name="sprintId" rules={[{ required: true, message: '请选择迭代' }]}>
+        <Select options={sprints.map((sprint) => ({ label: sprint.name, value: sprint.sprintId }))} placeholder="选择迭代" loading={sprintsQuery.isLoading} />
+      </Form.Item>
       <Form.Item label="运行环境" name="environmentId" rules={[{ required: true, message: '请选择运行环境' }]}>
         <Select options={environmentOptions} placeholder="选择性能环境" loading={environmentsQuery.isLoading} />
       </Form.Item>

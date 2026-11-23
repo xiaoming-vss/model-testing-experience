@@ -17,10 +17,7 @@ heartbeat_interval_ms = 10000
 [ui]
 artifacts_dir = "./artifacts"
 # 仅用于生成截图和 Trace 的临时目录；平台接受 S3 文件引用后清理已上传文件。
-headless = true
-slow_mo_ms = 0
 trace_enabled = true
-screenshot_on_failure = true
 
 [once]
 snapshot_file = ""

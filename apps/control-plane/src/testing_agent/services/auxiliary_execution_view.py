@@ -7,13 +7,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
+from testing_agent.domain.repository_profile import parse_repository_profile
 from testing_agent.repositories.auxiliary_execution import (
     detail_row,
     history_rows,
     latest_rows_for_project,
 )
 from testing_agent.services.code_risk_analysis import parse_risk_report
-from testing_agent.services.repository_profile import parse_repository_profile
 
 
 def _duration(started: datetime | None, finished: datetime | None) -> int:

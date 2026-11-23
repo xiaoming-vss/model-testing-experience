@@ -11,7 +11,7 @@ import { UiStepResultBadge } from './UiStepResultBadge'
 // 画布深层皮肤由详情页引入的 ui-detail-shell.module.css 作用域提供。
 
 export type FlowItemAction = { key: string; label: string; danger?: boolean; onSelect: () => void }
-export type FlowItem = { id: string; title: string; caption: string; serial: string; enabled: boolean; result?: UiTestCaseRunStepResult; actions?: FlowItemAction[] }
+export type FlowItem = { id: string; title: string; caption: string; serial: string; enabled: boolean; invalidated?: boolean; result?: UiTestCaseRunStepResult; actions?: FlowItemAction[] }
 type FlowNodeData = FlowItem & { sourceSide: FlowHandleSide; targetSide: FlowHandleSide; revealDelay: number }
 type AddFlowNodeData = { label: string; targetSide: FlowHandleSide; revealDelay: number }
 type FlowNode = Node<FlowNodeData, 'execution'>
@@ -29,7 +29,7 @@ function ExecutionNode({ data }: NodeProps<FlowNode>) {
   const actions = data.actions ?? []
   return <div className={`ui-flow-node group relative w-[180px] min-h-[86px] rounded-[8px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-2.5 px-3 text-[var(--srf-text)]${actions.length ? ' has-actions' : ''}`} style={{ animationDelay: `${data.revealDelay}ms` }}>
     <Handle type="target" position={HANDLE_POSITION[data.targetSide]} />
-    <div className={`ui-flow-node-head flex items-center justify-between gap-2${actions.length ? ' pr-5' : ''}`}><span className="ui-flow-node-serial rounded-[4px] bg-[var(--srf-accent-soft)] px-1.5 py-0.5 text-[11px] text-[var(--srf-accent)]">{data.serial}</span><span className={`ui-flow-node-status text-[12px]${data.enabled ? ' tone-green text-[var(--srf-tone-text)]' : ' text-[var(--srf-text-secondary)]'}`}>{data.enabled ? '● 已启用' : '已禁用'}</span></div>
+    <div className={`ui-flow-node-head flex items-center justify-between gap-2${actions.length ? ' pr-5' : ''}`}><span className="ui-flow-node-serial rounded-[4px] bg-[var(--srf-accent-soft)] px-1.5 py-0.5 text-[11px] text-[var(--srf-accent)]">{data.serial}</span><span className={`ui-flow-node-status text-[12px]${data.invalidated ? ' tone-orange text-[var(--srf-tone-text)]' : data.enabled ? ' tone-green text-[var(--srf-tone-text)]' : ' text-[var(--srf-text-secondary)]'}`}>{data.invalidated ? '● 已失效' : data.enabled ? '● 已启用' : '已禁用'}</span></div>
     <strong className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap" title={data.title}>{data.title}</strong><span className="ui-flow-node-caption mt-1.5 block text-[12px] text-[var(--srf-text-secondary)] [overflow-wrap:anywhere]">{data.caption}</span>{data.result ? <UiStepResultBadge stepResult={data.result} /> : null}
     {actions.length ? <div className="ui-flow-node-actions nodrag nopan absolute right-[5px] top-[5px] opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-within:opacity-100 max-[700px]:opacity-100 [@media(pointer:coarse)]:opacity-100" onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
       <Dropdown

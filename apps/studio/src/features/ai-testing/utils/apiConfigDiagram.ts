@@ -14,8 +14,10 @@ export type ApiConfigCaseView = {
   method: string
   path: string
   headers?: unknown
+  pathParams?: unknown
   query?: unknown
   body?: unknown
+  bodyLabel?: 'Body' | 'Form'
   response?: unknown
   extractRules: ApiConfigRule[]
   assertRules: ApiConfigRule[]
@@ -136,8 +138,12 @@ export function normalizeApiConfigCases(content?: string): ApiConfigDiagramData 
         const method = pickText(record, ['method', 'httpMethod']).toUpperCase() || 'API'
         const path = pickText(record, ['path', 'urlTemplate', 'url', 'endpoint']) || '-'
         const headers = parseJsonLikeValue(pickValue(record, ['headers', 'headersJson', 'requestHeaders']))
+        const pathParams = parseJsonLikeValue(pickValue(record, ['pathParams', 'path_params']))
         const query = parseJsonLikeValue(pickValue(record, ['query', 'queryJson', 'params', 'queryParams']))
-        const body = parseJsonLikeValue(pickValue(record, ['json', 'bodyJson', 'body', 'bodyText', 'requestBody']))
+        const jsonBody = pickValue(record, ['json', 'bodyJson', 'body', 'bodyText', 'requestBody'])
+        const formBody = pickValue(record, ['data'])
+        const body = parseJsonLikeValue(jsonBody !== undefined ? jsonBody : formBody)
+        const bodyLabel = jsonBody !== undefined ? 'Body' : formBody !== undefined ? 'Form' : undefined
         const response = parseJsonLikeValue(pickValue(record, ['response', 'responseJson', 'responseBody']))
         const extractRules = toRecordArray(pickValue(record, ['extractRules', 'extract_rules', 'extractors', 'extractions']))
           .map((rule, index) => formatRule(rule, `提取规则 ${index + 1}`))
@@ -149,6 +155,7 @@ export function normalizeApiConfigCases(content?: string): ApiConfigDiagramData 
         const usedVariables = [
           ...collectTemplateVariables(path),
           ...collectTemplateVariables(headers),
+          ...collectTemplateVariables(pathParams),
           ...collectTemplateVariables(query),
           ...collectTemplateVariables(body),
         ]
@@ -162,8 +169,10 @@ export function normalizeApiConfigCases(content?: string): ApiConfigDiagramData 
           method,
           path,
           ...(headers !== undefined && headers !== null && headers !== '' ? { headers } : {}),
+          ...(pathParams !== undefined && pathParams !== null && pathParams !== '' ? { pathParams } : {}),
           ...(query !== undefined && query !== null && query !== '' ? { query } : {}),
           ...(body !== undefined && body !== null && body !== '' ? { body } : {}),
+          ...(bodyLabel ? { bodyLabel } : {}),
           ...(response !== undefined && response !== null && response !== '' ? { response } : {}),
           extractRules,
           assertRules,

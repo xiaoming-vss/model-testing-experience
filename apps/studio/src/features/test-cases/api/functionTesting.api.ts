@@ -44,8 +44,10 @@ export const functionTestingApi = {
     }),
   deleteFunctionTestSuite: (suiteId: string) =>
     request<Record<string, never>>(`/v1/function-test-suites/${suiteId}`, { method: 'DELETE' }),
-  getFunctionTestCases: (suiteId: string) =>
-    request<ListResponse<FunctionTestCase>>(`/v1/function-test-suites/${suiteId}/cases`),
+  getFunctionTestCases: (suiteId: string, filters: { invalidated?: boolean } = {}) =>
+    request<ListResponse<FunctionTestCase>>(
+      `/v1/function-test-suites/${suiteId}/cases${buildQuery({ ...filters })}`,
+    ),
   importFunctionTestCases: (suiteId: string, file: Blob, filename = 'import.json') => {
     const formData = new FormData()
     formData.append('file', file, filename)
@@ -82,6 +84,11 @@ export const functionTestingApi = {
       method: 'POST',
       body: JSON.stringify({ caseIds }),
     }),
+  batchInvalidateFunctionTestCases: (projectId: string, caseIds: string[], invalidated: boolean) =>
+    request<{ caseIds: string[]; updatedCount: number }>(
+      `/v1/projects/${projectId}/function-test-cases/batch-invalidation`,
+      { method: 'POST', body: JSON.stringify({ caseIds, invalidated }) },
+    ),
   deleteFunctionTestCase: (caseId: string) =>
     request<Record<string, never>>(`/v1/function-test-cases/${caseId}`, { method: 'DELETE' }),
 }

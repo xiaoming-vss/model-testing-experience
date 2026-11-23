@@ -13,10 +13,8 @@ export function CollectionDrawer({
   loading,
   error,
   onClose,
-  sprintOptions,
   requirementOptions,
   showScopeFields = true,
-  onSprintChange,
   onFinish,
 }: {
   title: string
@@ -25,10 +23,8 @@ export function CollectionDrawer({
   loading: boolean
   error: unknown
   onClose: () => void
-  sprintOptions: Array<{ label: string; value: string }>
   requirementOptions: Array<{ label: string; value: string }>
   showScopeFields?: boolean
-  onSprintChange?: (value?: string) => void
   onFinish: (values: CollectionFormValues) => void
 }) {
   return (
@@ -46,14 +42,9 @@ export function CollectionDrawer({
       {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}
       <Form<CollectionFormValues> form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
         {showScopeFields ? (
-          <>
-            <Form.Item name="sprintId" label="所属迭代" rules={[{ required: true, message: '请选择所属迭代' }]}>
-              <Select placeholder="请选择迭代" options={sprintOptions} onChange={onSprintChange} />
-            </Form.Item>
-            <Form.Item name="requirementId" label="所属需求" rules={[{ required: true, message: '请选择所属需求' }]}>
-              <Select placeholder="请选择需求" options={requirementOptions} />
-            </Form.Item>
-          </>
+          <Form.Item name="requirementId" label="所属需求">
+            <Select allowClear placeholder="不关联需求（项目级测试集）" options={requirementOptions} />
+          </Form.Item>
         ) : null}
         <Form.Item name="name" label="API测试集名称" rules={[{ required: true, message: '请输入API测试集名称' }]}>
           <Input maxLength={64} />

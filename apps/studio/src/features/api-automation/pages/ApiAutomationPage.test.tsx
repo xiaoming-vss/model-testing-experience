@@ -10,36 +10,6 @@ import { formatTime } from '@/utils/format'
 import { ApiAutomationPage } from './ApiAutomationPage'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
-  useActiveSprint: () => ({
-    activeSprintId: 'sprint-1',
-    sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
-    sprintsQuery: { isLoading: false, error: null },
-    selectSprint: vi.fn(),
-    sprintSelectorOptions: [
-      { label: '全部迭代', value: 'all' },
-      { label: 'V1.0.0 迭代', value: 'sprint-1' },
-    ],
-  }),
-}))
-vi.mock('@/domain/projects/hooks/useSprintRequirementScope', () => ({
-  useSprintRequirementScope: () => ({
-    currentSprintSelection: null,
-    currentRequirementSelection: null,
-    resolvedSelectedSprintId: 'sprint-1',
-    resolvedSelectedRequirementId: undefined,
-    sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
-    sprintsQuery: { isLoading: false, error: null },
-    requirementsQuery: { data: [], isLoading: false, error: null },
-    sprintFilterOptions: [
-      { label: '全部迭代', value: 'all' },
-      { label: 'V1.0.0 迭代', value: 'sprint-1' },
-    ],
-    requirementFilterOptions: [{ label: '全部需求', value: 'all' }],
-    selectRequirement: vi.fn(),
-    selectSprint: vi.fn(),
-  }),
-}))
 vi.mock('@/domain/projects/hooks/useProjectRequirementOptions', () => ({
   useProjectRequirementOptions: () => ({
     allRequirements: [
@@ -104,7 +74,7 @@ function iconButton(label: string, scope: ParentNode = document) {
 }
 
 beforeEach(() => {
-  useWorkbenchStore.setState({ activeProjectId: 'project-1', activeSprintId: 'sprint-1' })
+  useWorkbenchStore.setState({ activeProjectId: 'project-1' })
 })
 
 afterEach(() => {
@@ -125,8 +95,8 @@ it('列出测试集，并在头部卡片里展示当前环境信息', async () =
   renderPage(client)
 
   await screen.findByText('dev-a')
-  expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()
   expect(screen.getByText('安装部署')).toBeInTheDocument()
+  expect(screen.getByText('需求关联')).toBeInTheDocument()
   expect(screen.getByText('转换链路接口集')).toBeInTheDocument()
   // 卡片 footer 保留最近更新；描述与归属不再占用表格列。
   expect(screen.getByText(`最近更新 ${formatTime(collection.updatedAt)}`)).toBeInTheDocument()
@@ -202,7 +172,9 @@ it('有环境时行内运行按钮提交当前环境，没有环境时不可用'
   await userEvent.setup().click(iconButton('运行API测试集', container))
 
   await waitFor(() =>
-    expect(run).toHaveBeenCalledWith('collection-1', { environmentId: 'environment-1' }),
+    expect(run).toHaveBeenCalledWith('collection-1', {
+      environmentId: 'environment-1',
+    }),
   )
   client.clear()
 
@@ -238,5 +210,21 @@ it('编辑所属需求后提交归属并刷新导入目标', async () => {
   await waitFor(() => expect(update).toHaveBeenCalledWith('collection-1', { requirementId: 'req-2' }))
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['generationChain', 'req-1', 'api', 'importOptions'] })
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['generationChain', 'req-2', 'api', 'importOptions'] })
+  client.clear()
+})
+
+it('未关联需求的项目级测试集在卡片上显示项目级归属', async () => {
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () =>
+    listResponse([{ ...collection, requirementId: null }]),
+  )
+  vi.spyOn(api, 'getApiEnvironments').mockImplementation(async () => listResponse([environment]))
+  vi.spyOn(api, 'getApiEnvironmentVars').mockImplementation(async () => listResponse(envVars))
+  const client = buildClient()
+  renderPage(client)
+
+  await screen.findByText('dev-a')
+  expect(screen.getByText('所属需求')).toBeInTheDocument()
+  // 需求列和范围列都显示项目级，表示没有需求关联。
+  expect(screen.getAllByText('项目级')).toHaveLength(2)
   client.clear()
 })

@@ -48,7 +48,7 @@ Pi 子进程环境由 `agent/pi.py::pi_subprocess_env` 白名单构造：只继�
 
 每次模型调用最多委派 8 个子任务，同一调用最多并发 2 个；子任务最长 180 秒（也不超过父调用总超时）。子任务复用任务的模型配置和冻结输入，使用独立 Pi 进程及无持久会话，只开放 `read/grep/find/ls`，不加载扩展，不能再次委派。它们共享任务工作区且工具白名单不构成文件系统沙箱。图片只传给主 Agent，子 Agent 不直接接收图片。任一子任务失败会使该次生成失败，不发布部分结果；子任务明确返回 `CLARIFICATION_REQUIRED:` 时，完整用例阶段按现有澄清流程失败。取消或超时由父进程组统一回收。日志记录子任务数量和可用 token 用量，不记录提示词或产物。并发限制按每次模型调用计算，不是跨 Worker 的全局配额。部署代码前须先发布同一版本的两个 Skill，包含各自的 `references/subagent.md`。
 
-本地切换期间保留旧的 `agent/subagent.mjs` 给已运行的旧 Worker；新代码加载 `agent/subagent_skill.mjs`。确认所有 Worker 均已切换、没有旧进程后再移除旧扩展。
+新代码加载 `agent/subagent_skill.mjs`。
 
 [Pi RPC 官方协议](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md)
 

@@ -9,9 +9,9 @@ import shellStyles from '@/features/ui-automation/styles/ui-detail-shell.module.
 
 export function UiTestSuiteCasePage() {
   const page = useUiTestSuiteCasePage()
-  const { sprintQuery, suiteQuery } = page
+  const { suiteQuery } = page
 
-  return <ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>
+  return <ProjectAccessScope projectId={page.projectId}>
     <div className={`workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface ${suiteStyles.scope} ${shellStyles.scope}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board ui-suite-detail-board">

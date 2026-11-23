@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from testing_agent.core.errors import (
@@ -16,9 +17,10 @@ from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.repositories.ui_test_case import UiTestCaseRepository
 from testing_agent.schemas.ui_test_case import UiCaseRequest, UiCaseResponse
+from testing_agent.services.case_lifecycle import set_case_invalidated
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.import_payload import read_import_payload
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import ProjectAction, require_project_id
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 UI_IMPORT_CASE_FIELDS = {"name", "enabled", "stepsJson", "orderNo"}
@@ -268,16 +270,7 @@ class UiTestCaseService:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
             raise ErrNotFound()
-        requirement = await self.repository.get_requirement(suite.requirement_id)
-        if requirement is None:
-            raise ErrNotFound()
-        sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound()
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, action)
+        await require_project_id(self.repository.session, user_id, suite.project_id, action=action)
         return suite
 
     async def get_accessible_entity(
@@ -325,10 +318,27 @@ class UiTestCaseService:
             "imported_step_count": sum(len(item["stepsJson"]) for item in cases),
         }
 
-    async def list(self, user_id: str, suite_id: str) -> dict[str, Any]:
+    async def list(
+        self, user_id: str, suite_id: str, *, invalidated: bool | None = None
+    ) -> dict[str, Any]:
         await self.get_accessible_suite(user_id, suite_id, action="read")
-        rows = await self.repository.list_by_suite(suite_id)
+        rows = await self.repository.list_by_suite(suite_id, invalidated=invalidated)
         return list_payload([dump(UiCaseResponse, row) for row in rows])
+
+    async def batch_set_invalidated(
+        self, user_id: str, project_id: str, case_ids: Sequence[str], invalidated: bool
+    ) -> dict:
+        await require_project_id(self.repository.session, user_id, project_id, action="write")
+        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
+        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
+            raise ErrNotFound()
+        changed = set_case_invalidated(rows, invalidated)
+        try:
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        return {"caseIds": case_ids, "updatedCount": changed}
 
     async def get(self, user_id: str, case_id: str) -> dict:
         return dump(

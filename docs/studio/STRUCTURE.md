@@ -38,7 +38,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S3 的 feature 边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查、S16 的 CSS 结构与 TSX className 门禁，以及首屏 bundle gzip 预算已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify`（含 `npm test`）依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
+> **当前状态：S1/S3 的依赖边界检查、S8 的 CSS 裸色值检查、S15 的 CSS 预算检查、S16 的 CSS 结构与 TSX className 门禁，以及首屏 bundle gzip 预算已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify`（含 `npm test`）依赖人工执行。完整命令、前置条件和单项检查入口统一见[命令矩阵](../commands.md#studio)；其它规则的自动化状态见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -72,14 +72,14 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S1 | `shared/`、`src/utils/`、`src/services/`、`src/domain/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts` 的 auth store 反向依赖已改为 `shared/api/authBridge` 注入；`utils/updatePayload.ts` 的 feature 表单类型已下沉到 `shared/types/forms.ts`。`src/services/api.ts` 仍是显式聚合出口，只允许 re-export 各 feature 的 `api/` 与 `types` | ESLint `no-restricted-imports`（**待强制**） |
+| S1 | `shared/`、`src/utils/`、`src/services/`、`src/domain/` **不得** import `features/`。需要 feature 提供的东西时，改为参数注入或把实现下沉 | `shared/api/request.ts` 的 auth store 反向依赖已改为 `shared/api/authBridge` 注入；`utils/updatePayload.ts` 的 feature 表单类型已下沉到 `shared/types/forms.ts`。`src/services/api.ts` 仍是显式聚合出口，只允许引用各 feature 的 `api/` 与 `types` | `npm run check:boundaries`（接入 `verify`），覆盖 TS、JS 与 JSX 的静态及动态导入 |
 | S2 | `app/` 可以 import `features/`、`domain/` 与 `shared/`；`features/` 可以 import `domain/` 与 `shared/`，`features/` 之间只允许经 `api/` 与 `types.ts` 通信 | 见第二节 S3 | ESLint + `npm run check:boundaries`（**已实现**，与 S3 使用同一规则块） |
 
 ## 二、feature 边界
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint + `npm run check:boundaries`（**已实现**，接入 `verify`）：按 feature 生成规则块，各自忽略自身目录；存量违规按文件记入 `scripts/feature-boundary-budget.json`，只减不增 |
+| S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint + `npm run check:boundaries`：检查别名和相对路径，拒绝非字面量模块导入；存量违规按文件与目标记录，删除违规后须同步收紧基线 |
 | S4 | **归属判定（一句话）：被 2 个以上 feature 使用的代码必须上提。** 无业务语义 → `shared/`；有业务语义 → 提到 `app/` 或 `domain/` 领域模块 | 用例关系图谱 `ai-testing/utils/caseRelationsGraph.ts`（483 行）被 test-orders 引用却留在 ai-testing；`projects` 的平台能力已上提到 `src/domain/projects/`（项目/权限/迭代/环境），普通 feature 不再引用其 hooks/components/store 内部路径 | 评审 + 定期依赖图核对（**待强制**） |
 | S5 | `shared/` 准入两条：**无业务语义** + **全站唯一实现**。「全站唯一实现」必须列成显式清单，新增条目需评审 | 文件下载已统一到 `shared/utils/download.ts` 的 `saveBlob`；对象解析已统一到 `shared/utils/value.ts` 的 `toRecord` / `toRecordArray` | 清单见本节末（**待强制**） |
 
@@ -94,6 +94,8 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 - 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正；`compact` 模式供窄侧栏把分页放进表头，只渲染控件不渲染范围句）；默认条数和可选值集中在 `shared/utils/pagination.ts`
 - 远端选项搜索和分页 —— `shared/components/PagedSelect`；查询键、读取函数和业务选项由调用方注入，测试单重测来源与 Bug 关联表单共用。默认每页 20 项，支持 PageUp/PageDown、加载失败重试，不预取完整集合。
 - 产物视图布局 —— `shared/components/ArtifactView`（页签、统计条、左右分栏、列表行、详情字段与证据）；需求评审、测试点、测试范围分析、材料整理共用，页面只保留业务特有内容。
+- 用例失效展示 —— `shared/components/CaseInvalidatedTag.tsx` 与 `shared/utils/caseInvalidation.ts`；状态判断、`invalidated` 查询参数转换、失效时间文案和标签只在这里实现，四类用例页面共用。
+- 用例状态批量管理 —— `shared/components/CaseInvalidationModal.tsx`；API/UI/性能页面共用「管理用例状态」弹窗，只负责勾选、搜索和提交失效/恢复，不承载编辑或删除。
 
 ## 三、样式归属与主题
 
@@ -237,7 +239,7 @@ section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/ui-suit
 
 ### API 测试集详情页（`api-detail-shell.module.css` / `api-detail-rules.module.css`）
 
-API 测试列表点测试集名称进来的页面：顶栏（返回 / 测试集名 + 需求 + 迭代 / 当前环境 / 运行记录 /
+API 测试列表点测试集名称进来的页面：顶栏（返回 / 测试集名 + 需求（未关联时显示「项目级」）+ 迭代（未记录时不显示） / 当前环境 / 运行记录 /
 运行测试集）+ 两栏（左栏用例列表卡片、右栏请求编辑与运行结果卡片）。阶段 30 后页面布局与可迁移皮肤全部在
 组件 utility；`api-detail-shell.module.css` 只留用例名称行、方法 Select、路径输入、Tabs、键值输入、请求头表
 与请求体 CodeMirror 的 AntD 深层规则，`api-detail-rules.module.css` 只留环境弹层、后置操作 hover 与
@@ -299,7 +301,7 @@ JSON 编辑器玻璃外壳；规则/表单/卡片的尺寸与底色改为组件�
 
 ### UI 测试集详情页（`ui-detail-shell.module.css` / `ui-suite.module.css`）
 
-UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求 / 迭代 + 环境选择 + 保存；
+UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求（未关联时省略） / 迭代（可选） + 环境选择 + 保存；
 测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
 右：执行回放 / 执行日志 / 运行变量）。顶栏、板面、步骤配置表单的 Ant Design 深层规则与 React Flow 节点/连线/光束集中在
 `ui-detail-shell.module.css`；右栏卡片原语在 `shared/components/RunCard.tsx`；测试集抽屉与步骤编辑器的 Ant Design 表单规则在
@@ -362,7 +364,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | 控制条上的「运行环境: Chrome 122 (Headless)」 | Playwright 版本在前端拿不到（见 UI 测试列表页那一节），改为测试集的执行模式、视口、慢放与步骤超时 |
 | 步骤行的「插入前置公共模板」 | 没有公共模板接口；「批量启用/禁用」保留为「全部启用 / 全部禁用」 |
 | 用例信息条上的「前置通过率: 100%」 | 用例没有前置通过与率的模型，第二行只留真实的步骤数 |
-| 顶栏副标题里的「当前项目 / 当前迭代 / 测试阶段」 | 这三段面包屑是工作台外壳顶栏的内容，页面里不再重复；路径只写测试集 / 需求 / 迭代 |
+| 顶栏副标题里的「当前项目 / 当前迭代 / 测试阶段」 | 这三段面包屑原属工作台外壳；页面路径只写测试集 / 需求 / 迭代，迭代从测试集关联需求推导，不读取全局状态 |
 | 路径末端的版本色块 `v1.0.0` | 测试集没有版本字段；路径只到迭代 |
 | 序列化编号 `CASE-##` 之外的用例版本 | 用例没有版本字段 |
 
@@ -476,13 +478,13 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 - **没有真实部署环境的端到端验收。** 自动化覆盖的是 jsdom 下的单元与组件测试；浏览器端到端、以及真实部署后的验收均未做。
 - **静态引用图不能证明所有动态业务路径可达。** 本文的孤儿检查与依赖方向检查都基于静态 import 分析，动态拼接的路径不在覆盖内。
-- **构建体积只约束首屏预算。** 2026-11-19 完成路由级 `React.lazy` 分割后，`dist/index.html` 首屏引用实测 JS gzip 约 192 KB、CSS gzip 约 41 KB；`npm run check:bundle` 将上限固定为 JS 260 KB、CSS 60 KB，超过即失败。该预算不限制异步路由 chunk 的总量，部分明细页 chunk 仍超过 500 KB（例如需求详情约 169 KB gzip），需要继续按页面拆分依赖。
+- **构建体积预算。** `npm run check:bundle` 校验 HTML 初始资源（JS gzip ≤260 KiB、CSS ≤60 KiB），并通过 Vite manifest 计入登录页、默认项目页及需求详情、测试单工作区、UI 套件、接口集合、Bug 详情、性能运行详情六个路由的懒加载入口及其静态依赖（登录页 JS ≤280 KiB、CSS ≤50 KiB；项目页 JS ≤530 KiB、CSS ≤55 KiB；其余路由阈值见 `scripts/check-bundle-budget.mjs`）。按文件去重后计算 gzip；未列入预算的路由与进一步按需加载的 chunk 仍需按页面观察。
 
 ## 待办：把规则变成约束
 
 以下为尚未落地的自动检查；已接入 `npm run verify` 的 S3、S8、S15、S16 见各条「检查」列。
 
-1. **S1 上 ESLint** —— `shared/`、`src/utils/`、`src/services/` 反向引用 feature 仍需人工发现；存量豁免按文件显式列名。S3 已由 `check:boundaries` 覆盖。
+1. **收敛 S3 存量依赖** —— `check:boundaries` 已覆盖 S1 和 S3；现存豁免按文件与目标登记，需随迁移逐项删除。
 2. **C1、C3、C4、C8 上 ESLint `max-lines`** —— 现状违规按当前行数冻结在豁免名单里，新文件直接受 400/300/600 上限约束。
 3. **S6–S13 的剩余扫描** —— 位置、前缀、token 和孤儿文件尚未全部机械化；CSS 结构与预算已由 `check:css:all` 覆盖可判定部分。
 4. **把检查挂到会自动跑的地方** —— 没有 CI 和 hook 的话，上面几条依然只是文档。

@@ -62,6 +62,14 @@ case:
 const SUMMARY = { name: '登录并校验' }
 
 describe('performance case form', () => {
+  it('round trips expected statuses and rejects duplicates', () => {
+    const form = readPerfCaseForm(SOURCE_YAML, SUMMARY)!
+    form.steps[0].expectedStatuses = [200, 404]
+    const roundTrip = readPerfCaseForm(updatePerfCaseInYaml(SOURCE_YAML, form), SUMMARY)!
+    expect(roundTrip.steps[0].expectedStatuses).toEqual([200, 404])
+    form.steps[0].expectedStatuses = [404, 404]
+    expect(perfCaseFormErrors(form).some((message) => message.includes('预期状态码'))).toBe(true)
+  })
   it('reads steps, headers, body, checks, extract, data, and load', () => {
     const form = readPerfCaseForm(SOURCE_YAML, SUMMARY)
     expect(form).not.toBeNull()

@@ -133,7 +133,7 @@ async def test_download_data_file_rejects_hash_mismatch(tmp_path: Path):
         await client.close()
 
 
-@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+@pytest.mark.parametrize("status", [429, 500, 501, 502, 503, 504, 505, 599])
 @pytest.mark.asyncio
 async def test_download_data_file_retries_retryable_status(tmp_path: Path, status: int):
     content = b"username,password\nu1,p1\n"

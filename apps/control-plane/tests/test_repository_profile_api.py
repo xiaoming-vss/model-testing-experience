@@ -10,6 +10,7 @@ from support.project_api import api as api
 
 from testing_agent.api.deps import verify_worker_token
 from testing_agent.services.repository_profile import RepositoryProfileService
+from testing_agent.services.requirement_material_source import material_reference_fields
 
 PROFILE_JSON = json.dumps(
     {
@@ -44,9 +45,9 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         == 200
     )
     requirement_id = requirement(api, owner, pid)
-    from support.requirement_versions import approve_material
+    from support.requirement_versions import adopt_material
 
-    material_id = approve_material(api, requirement_id)
+    material_id = adopt_material(api, requirement_id, headers=owner)
     connection = api.post(
         f"/v1/projects/{pid}/integrations/llm/connections",
         headers=owner,
@@ -76,13 +77,9 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             "taskId": task.task_id,
             "runId": run_id,
             "taskType": "repository_profile",
-            "requirement": {"name": "需求"},
-            "requirementMaterialVersion": {
-                "versionId": material_id,
-                "versionNo": 1,
-                "taskId": "understanding-task",
-                "runId": "understanding-run",
-            },
+            "requirementId": requirement_id,
+            "requirement": {"name": "需求", "documentContent": kwargs["current_material"].content},
+            **material_reference_fields(kwargs["current_material"]),
             "bindings": [
                 {
                     "bindingId": "binding-1",
@@ -109,11 +106,10 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request",
-                "requirementUnderstandingVersionId": material_id,
             },
         )
         assert run.status_code == 200, run.text
-        assert build_snapshot.await_args.kwargs["material_version_id"] == material_id
+        assert build_snapshot.await_args.kwargs["current_material"].candidate_id == material_id
         run_id = run.json()["data"]["runId"]
         assert run.json()["data"]["status"] == "pending"
 
@@ -123,7 +119,6 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request-2",
-                "requirementMaterialVersionId": material_id,
             },
         )
         assert active.status_code == 400
@@ -183,7 +178,7 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         assert detail.json()["data"]["profile"]["overallSummary"] == "当前需求主要涉及后端仓库"
         assert detail.json()["data"]["profile"]["repositories"][0]["role"] == "backend"
         assert (
-            detail.json()["data"]["snapshotJson"]["requirementMaterialVersion"]["versionId"]
+            detail.json()["data"]["snapshotJson"]["requirementMaterialCurrent"]["candidateId"]
             == material_id
         )
         assert api.get(f"/v1/repository-profile-runs/{run_id}", headers=viewer).status_code == 200
@@ -193,19 +188,18 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         assert [item["runId"] for item in history.json()["data"]["items"]] == [run_id]
         assert history.json()["data"]["items"][0]["reviewStatus"] == "not_required"
 
-        versions = api.get(f"/v1/repository-profile-tasks/{task_id}/versions", headers=owner)
-        assert versions.status_code == 200, versions.text
-        version_items = versions.json()["data"]["items"]
-        assert len(version_items) == 1
-        assert version_items[0]["versionNo"] == 1
-        assert version_items[0]["label"] == "v1"
-        assert version_items[0]["sourceRunId"] == run_id
-        assert version_items[0]["profile"]["overallSummary"] == "当前需求主要涉及后端仓库"
-        assert version_items[0]["requirementMaterialVersion"]["versionId"] == material_id
+        candidate_url = f"/v1/requirements/{requirement_id}/repository-profile/candidates"
+        candidates = api.get(candidate_url, headers=owner)
+        assert candidates.status_code == 200, candidates.text
+        candidate_items = candidates.json()["data"]["items"]
+        assert len(candidate_items) == 1 and candidate_items[0]["currentAttemptId"] == attempt_id
+        candidate_id = candidate_items[0]["candidateId"]
+        candidate = api.get(candidate_url + f"/{candidate_id}", headers=owner)
         assert (
-            api.get(f"/v1/repository-profile-tasks/{task_id}/versions", headers=viewer).status_code
-            == 200
+            json.loads(candidate.json()["data"]["content"])["overallSummary"]
+            == "当前需求主要涉及后端仓库"
         )
+        assert api.get(candidate_url, headers=viewer).status_code == 200
 
         failed_run = api.post(
             f"/v1/repository-profile-tasks/{task_id}/run",
@@ -213,7 +207,6 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request-failed",
-                "requirementMaterialVersionId": material_id,
             },
         )
         assert failed_run.status_code == 200, failed_run.text
@@ -246,13 +239,11 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             ).status_code
             == 204
         )
-        versions_after_failure = api.get(
-            f"/v1/repository-profile-tasks/{task_id}/versions", headers=owner
-        )
-        assert versions_after_failure.status_code == 200, versions_after_failure.text
-        assert [item["versionId"] for item in versions_after_failure.json()["data"]["items"]] == [
-            run_id
-        ]
+        candidates_after_failure = api.get(candidate_url, headers=owner)
+        assert candidates_after_failure.status_code == 200, candidates_after_failure.text
+        assert [
+            item["candidateId"] for item in candidates_after_failure.json()["data"]["items"]
+        ] == [candidate_id]
 
         tasks = api.get(f"/v1/projects/{pid}/repository-profile-tasks", headers=owner)
         assert tasks.status_code == 200, tasks.text

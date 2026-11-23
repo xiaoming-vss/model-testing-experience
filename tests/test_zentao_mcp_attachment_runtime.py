@@ -15,7 +15,7 @@ import time
 import unittest
 from uuid import uuid4
 
-from test_zentao_mcp_runtime import MetadataClient
+from tests.test_zentao_mcp_runtime import MetadataClient
 
 
 @unittest.skipUnless(

@@ -131,8 +131,7 @@
 }
 
 @media (max-width: 540px) {
-  .app-shell .project-select,
-  .app-shell .sprint-select {
+  .app-shell .project-select {
     flex: 1 1 80px;
     min-width: 0;
     max-width: none;
@@ -158,7 +157,7 @@
   .app-shell-macos .project-selector-wrap { width: auto; }
 }
 
-/* Project and sprint form a compact path before global navigation. */
+/* Project selector before global navigation. */
 .app-shell-macos .project-selector-wrap {
   width: fit-content;
   min-height: 34px;
@@ -170,11 +169,10 @@
 }
 .app-shell .project-select .ant-select-selector { font-weight: 600; }
 
-/* Size the scope controls to their labels instead of reserving fixed columns. */
+/* Size the project selector to its label instead of reserving fixed columns. */
 .app-shell-macos .project-selector-wrap .project-select {
   flex: 0 1 auto;
   width: max-content;
   min-width: 0;
   max-width: 200px;
 }
-.app-shell-macos .project-selector-wrap .sprint-select { max-width: 140px; }

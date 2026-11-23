@@ -8,7 +8,6 @@
 export const uisvPillClass = 'uisv-pill inline-flex h-[22px] items-center gap-1 whitespace-nowrap rounded-[5px] px-[7px] text-[11.5px] font-semibold'
 export const uisvPillGreenClass = 'green bg-[var(--uisv-f0fdf4)] text-[var(--uisv-15803d)]'
 export const uisvPillAmberClass = 'amber bg-[var(--uisv-fff8eb)] text-[var(--uisv-b45309)]'
-export const uisvPillBlueClass = 'blue bg-[var(--uisv-eff6ff)] text-[var(--uisv-1d4ed8)]'
 export const uisvPillSlateClass = 'slate bg-[var(--uisv-f1f5f9)] text-[var(--uisv-475569)]'
 export const uisvPillCompactClass = 'h-[19px] text-[10.5px]'
 
@@ -18,7 +17,6 @@ export const uisvInspectorHeadCompactClass = 'compact items-start'
 export const uisvInspectorHeadBodyClass = 'min-w-0 flex-1'
 export const uisvInspectorHeadTitleClass = 'm-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-bold text-[var(--uisv-0f172a)]'
 export const uisvInspectorHeadCodeClass = 'mt-0.5 block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--uisv-94a3b8)]'
-export const uisvInspectorTagsClass = 'uisv-inspector-tags mt-[7px] flex flex-wrap gap-1 [&_.ant-tag]:m-0 [&_.ant-tag]:text-[11px]'
 
 export const uisvInspectorSectionClass = 'uisv-inspector-section mt-2.5'
 export const uisvInspectorSectionTitleClass = 'm-0 mb-[5px] flex items-center gap-[5px] text-[12px] font-bold text-[var(--uisv-475569)]'

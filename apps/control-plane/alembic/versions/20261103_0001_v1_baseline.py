@@ -2131,98 +2131,12 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "ai_generate_stage_versions",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
-        sa.Column("version_id", sa.String(length=64), nullable=False, comment="阶段版本业务标识"),
-        sa.Column(
-            "task_id",
-            sa.String(length=64),
-            nullable=False,
-            comment="阶段版本所属生成链任务业务标识",
-        ),
-        sa.Column(
-            "stage", sa.String(length=40), nullable=False, comment="阶段版本对应的 AI 阶段标识"
-        ),
-        sa.Column(
-            "version_no",
-            sa.Integer(),
-            nullable=False,
-            comment="同一生成链同一阶段内从 1 开始递增的版本号",
-        ),
-        sa.Column(
-            "attempt_id",
-            sa.String(length=64),
-            nullable=False,
-            comment="产生该版本的阶段尝试主键标识",
-        ),
-        sa.Column(
-            "artifact_content",
-            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
-            nullable=False,
-            comment="审核通过时的阶段产物正文快照",
-        ),
-        sa.Column(
-            "artifact_format", sa.String(length=20), nullable=False, comment="产物格式：json/text"
-        ),
-        sa.Column(
-            "artifact_context_json",
-            sa.JSON(),
-            nullable=True,
-            comment="审核通过时的阶段产物上下文 JSON",
-        ),
-        sa.Column(
-            "upstream_versions_json",
-            sa.JSON(),
-            nullable=True,
-            comment="生成该版本时读取的上游阶段及版本业务标识映射 JSON",
-        ),
-        sa.Column(
-            "reviewer_user_id",
-            sa.String(length=64),
-            nullable=False,
-            comment="阶段审核人用户业务标识",
-        ),
-        sa.Column(
-            "reviewed_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="阶段审核通过时间（UTC）",
-        ),
-        sa.Column("review_comment", sa.Text(), nullable=False, comment="阶段审核意见"),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
-        ),
-        sa.ForeignKeyConstraint(
-            ["task_id"],
-            ["ai_generate_tasks.task_id"],
-            name="fk_ai_stage_versions_task",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_ai_generate_stage_versions")),
-        sa.UniqueConstraint("task_id", "stage", "attempt_id", name="uq_ai_stage_version_attempt"),
-        sa.UniqueConstraint("task_id", "stage", "version_no", name="uq_ai_stage_version_number"),
-        sa.UniqueConstraint("version_id", name="uq_ai_stage_version_id"),
-        comment="AI 生成链各阶段审核通过后形成的不可变版本及来源尝试快照",
-    )
-    op.create_index(
-        "idx_ai_stage_version_chain",
-        "ai_generate_stage_versions",
-        ["task_id", "stage", "version_no"],
-        unique=False,
-    )
-    op.create_table(
         "ai_generation_stages",
         sa.Column("id", sa.String(length=64), nullable=False, comment="生成链阶段业务标识"),
         sa.Column(
             "task_id", sa.String(length=64), nullable=False, comment="所属生成链任务业务标识"
         ),
         sa.Column("stage", sa.String(length=40), nullable=False, comment="生成链阶段标识"),
-        sa.Column(
-            "next_version_no",
-            sa.Integer(),
-            nullable=False,
-            comment="本阶段下次审核通过时分配的版本号",
-        ),
         sa.Column(
             "review_status",
             sa.String(length=20),
@@ -2243,18 +2157,6 @@ def upgrade() -> None:
             comment="当前正在执行的尝试业务标识",
         ),
         sa.Column(
-            "source_batch_id",
-            sa.String(length=64),
-            nullable=True,
-            comment="UI 当前冻结输入批次标识；其他阶段为空",
-        ),
-        sa.Column(
-            "source_snapshot_json",
-            sa.JSON(none_as_null=True),
-            nullable=True,
-            comment="UI 当前输入批次来源快照；其他阶段为空",
-        ),
-        sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
         ),
         sa.ForeignKeyConstraint(
@@ -2265,7 +2167,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_ai_generation_stages")),
         sa.UniqueConstraint("task_id", "stage", name="uq_ai_generation_stage_task_stage"),
-        comment="需求生成链中稳定的阶段身份及下一个版本号",
+        comment="需求生成链中稳定的阶段身份和执行状态",
     )
     op.create_table(
         "api_environment_vars",
@@ -2891,7 +2793,12 @@ def upgrade() -> None:
             comment="本次生成或编辑的冻结输入快照",
         ),
         sa.Column("revision_instruction", sa.Text(), nullable=True, comment="本次修订指令"),
-        sa.Column("status", sa.String(length=20), nullable=False, comment="AI 执行尝试状态：pending/claimed/running/success/failed/error/canceled"),
+        sa.Column(
+            "status",
+            sa.String(length=20),
+            nullable=False,
+            comment="AI 执行尝试状态：pending/claimed/running/success/failed/error/canceled",
+        ),
         sa.Column(
             "output_content",
             sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
@@ -2992,7 +2899,18 @@ def upgrade() -> None:
         sa.Column(
             "collection_id", sa.String(length=64), nullable=False, comment="API 集合业务标识"
         ),
-        sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
+        sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="所属项目业务标识，决定权限、生命周期和名称唯一性",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="可选关联的来源需求业务标识；空值表示项目级测试集",
+        ),
         sa.Column("name", sa.String(length=100), nullable=False, comment="API 测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
@@ -3011,14 +2929,26 @@ def upgrade() -> None:
             comment="记录最后更新时间（UTC）",
         ),
         sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["projects.project_id"],
+            name="fk_api_collections_project",
+        ),
+        sa.ForeignKeyConstraint(
             ["requirement_id"],
             ["requirements.requirement_id"],
             name="fk_api_collections_requirement",
+            ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_api_collections")),
         sa.UniqueConstraint("collection_id", name=op.f("uq_api_collections_collection_id")),
-        sa.UniqueConstraint("requirement_id", "name", name="uk_api_collection_requirement_name"),
-        comment="需求下的 API 测试集合",
+        sa.UniqueConstraint("project_id", "name", name="uk_api_collection_project_name"),
+        comment="项目级 API 测试集，可选关联来源需求",
+    )
+    op.create_index(
+        "idx_api_collections_project_updated",
+        "api_collections",
+        ["project_id", "updated_at"],
+        unique=False,
     )
     op.create_index(
         "idx_api_collections_effective_import",
@@ -3317,7 +3247,18 @@ def upgrade() -> None:
         "ui_test_suites",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("suite_id", sa.String(length=64), nullable=False, comment="UI 测试套件业务标识"),
-        sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
+        sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="所属项目业务标识，决定权限、生命周期和名称唯一性",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="可选关联的来源需求业务标识；空值表示项目级测试集",
+        ),
         sa.Column("name", sa.String(length=100), nullable=False, comment="UI 测试集名称"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
         sa.Column(
@@ -3367,151 +3308,32 @@ def upgrade() -> None:
             comment="记录最后更新时间（UTC）",
         ),
         sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["projects.project_id"],
+            name="fk_ui_test_suites_project",
+        ),
+        sa.ForeignKeyConstraint(
             ["requirement_id"],
             ["requirements.requirement_id"],
             name="fk_ui_test_suites_requirement",
+            ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_ui_test_suites")),
-        sa.UniqueConstraint("requirement_id", "name", name="uk_ui_suite_requirement_name"),
+        sa.UniqueConstraint("project_id", "name", name="uk_ui_suite_project_name"),
         sa.UniqueConstraint("suite_id", name=op.f("uq_ui_test_suites_suite_id")),
-        comment="需求下的 UI 测试套件及浏览器执行配置",
+        comment="项目级 UI 测试集、浏览器执行配置及可选来源需求",
+    )
+    op.create_index(
+        "idx_ui_test_suites_project_updated",
+        "ui_test_suites",
+        ["project_id", "updated_at"],
+        unique=False,
     )
     op.create_index(
         "idx_ui_test_suites_effective_import",
         "ui_test_suites",
         ["effective_import_id"],
         unique=False,
-    )
-    op.create_table(
-        "ai_generate_version_imports",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
-        sa.Column("import_id", sa.String(length=64), nullable=False, comment="导入记录业务标识"),
-        sa.Column(
-            "task_id",
-            sa.String(length=64),
-            nullable=False,
-            comment="来源版本或独立候选所属 AI 任务业务标识",
-        ),
-        sa.Column(
-            "version_id",
-            sa.String(length=64),
-            nullable=True,
-            comment="被导入的叶子阶段版本业务标识；独立候选导入时为空",
-        ),
-        sa.Column(
-            "attempt_id",
-            sa.String(length=64),
-            nullable=True,
-            comment="被导入的独立候选阶段尝试业务标识；版本导入时为空",
-        ),
-        sa.Column(
-            "leaf_stage",
-            sa.String(length=40),
-            nullable=False,
-            comment="被导入版本或独立候选对应的阶段标识",
-        ),
-        sa.Column(
-            "target_type",
-            sa.String(length=30),
-            nullable=False,
-            comment="正式目标类型：function_suite/api_collection/ui_suite",
-        ),
-        sa.Column("target_id", sa.String(length=64), nullable=False, comment="正式目标业务标识"),
-        sa.Column(
-            "parent_versions_json",
-            sa.JSON(),
-            nullable=True,
-            comment="叶子版本的完整上游阶段与版本标识映射 JSON",
-        ),
-        sa.Column(
-            "changed_case_ids_json",
-            sa.JSON(),
-            nullable=True,
-            comment="本次导入新增或覆盖的正式用例业务标识列表 JSON",
-        ),
-        sa.Column(
-            "target_case_count",
-            sa.Integer(),
-            nullable=False,
-            comment="导入完成后正式目标内的用例总数",
-        ),
-        sa.Column(
-            "mixed_source",
-            sa.Boolean(),
-            nullable=False,
-            comment="正式目标是否仍有本次导入未覆盖的旧来源用例",
-        ),
-        sa.Column(
-            "reviewer_user_id",
-            sa.String(length=64),
-            nullable=False,
-            comment="来源版本或独立候选的审核人用户业务标识",
-        ),
-        sa.Column(
-            "reviewed_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="来源版本或独立候选的审核通过时间（UTC）",
-        ),
-        sa.Column(
-            "review_comment", sa.Text(), nullable=False, comment="来源版本或独立候选的审核意见"
-        ),
-        sa.Column(
-            "imported_by", sa.String(length=64), nullable=False, comment="执行导入的用户业务标识"
-        ),
-        sa.Column(
-            "imported_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            comment="正式资产导入时间（UTC）",
-        ),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
-        ),
-        sa.CheckConstraint(
-            "(version_id IS NOT NULL AND attempt_id IS NULL) OR "
-            "(version_id IS NULL AND attempt_id IS NOT NULL)",
-            name=op.f("ck_ai_generate_version_imports_ck_ai_version_import_source"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["attempt_id"],
-            ["ai_generation_attempts.id"],
-            name="fk_ai_version_import_attempt",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["task_id"],
-            ["ai_generate_tasks.task_id"],
-            name="fk_ai_version_import_task",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["version_id"],
-            ["ai_generate_stage_versions.version_id"],
-            name="fk_ai_version_import_version",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_ai_generate_version_imports")),
-        sa.UniqueConstraint("import_id", name="uq_ai_version_import_id"),
-        comment="已审核版本或独立候选导入正式资产的来源及变更用例记录",
-    )
-    op.create_index(
-        "idx_ai_version_import_attempt", "ai_generate_version_imports", ["attempt_id"], unique=False
-    )
-    op.create_index(
-        "idx_ai_version_import_leaf",
-        "ai_generate_version_imports",
-        ["task_id", "version_id"],
-        unique=False,
-    )
-    op.create_index(
-        "idx_ai_version_import_target",
-        "ai_generate_version_imports",
-        ["target_type", "target_id", "imported_at"],
-        unique=False,
-    )
-    op.create_index(
-        "idx_ai_version_import_task_fk", "ai_generate_version_imports", ["task_id"], unique=False
     )
     op.create_table(
         "api_cases",
@@ -3552,6 +3374,12 @@ def upgrade() -> None:
             nullable=False,
             comment="记录最后更新时间（UTC）",
         ),
+        sa.Column(
+            "invalidated_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="用例标记失效时间（UTC）；空值表示有效",
+        ),
         sa.ForeignKeyConstraint(
             ["collection_id"], ["api_collections.collection_id"], name="fk_api_cases_collection"
         ),
@@ -3561,6 +3389,9 @@ def upgrade() -> None:
     )
     op.create_index(
         "idx_api_case_collection_order", "api_cases", ["collection_id", "order_no"], unique=False
+    )
+    op.create_index(
+        op.f("ix_api_cases_invalidated_at"), "api_cases", ["invalidated_at"], unique=False
     )
     op.create_table(
         "api_collection_runs",
@@ -3573,6 +3404,36 @@ def upgrade() -> None:
         ),
         sa.Column(
             "collection_id", sa.String(length=64), nullable=False, comment="API 集合业务标识"
+        ),
+        sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="运行创建时冻结的项目业务标识",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的需求业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "requirement_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的需求名称；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的迭代业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示未关联",
         ),
         sa.Column(
             "environment_id", sa.String(length=64), nullable=False, comment="API 环境业务标识"
@@ -3640,9 +3501,21 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
+        "idx_api_collection_run_project_sprint",
+        "api_collection_runs",
+        ["project_id", "sprint_id", "created_at", "id"],
+        unique=False,
+    )
+    op.create_index(
         op.f("ix_api_collection_runs_collection_id"),
         "api_collection_runs",
         ["collection_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_api_collection_runs_project_id"),
+        "api_collection_runs",
+        ["project_id"],
         unique=False,
     )
     op.create_index(
@@ -3687,6 +3560,12 @@ def upgrade() -> None:
             comment="记录最后更新时间（UTC）",
         ),
         sa.Column(
+            "invalidated_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="用例标记失效时间（UTC）；空值表示有效",
+        ),
+        sa.Column(
             "content_json",
             mysql.JSON(),
             nullable=False,
@@ -3707,6 +3586,12 @@ def upgrade() -> None:
         "idx_function_case_suite_order",
         "function_test_cases",
         ["suite_id", "order_no"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_function_test_cases_invalidated_at"),
+        "function_test_cases",
+        ["invalidated_at"],
         unique=False,
     )
     op.create_table(
@@ -3784,6 +3669,12 @@ def upgrade() -> None:
             nullable=False,
             comment="记录最后更新时间（UTC）",
         ),
+        sa.Column(
+            "invalidated_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="用例标记失效时间（UTC）；空值表示有效",
+        ),
         sa.ForeignKeyConstraint(
             ["suite_id"],
             ["ui_test_suites.suite_id"],
@@ -3798,6 +3689,9 @@ def upgrade() -> None:
     op.create_index(
         "idx_ui_test_cases_suite_order", "ui_test_cases", ["suite_id", "order_no"], unique=False
     )
+    op.create_index(
+        op.f("ix_ui_test_cases_invalidated_at"), "ui_test_cases", ["invalidated_at"], unique=False
+    )
     op.create_table(
         "ui_test_suite_runs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
@@ -3805,6 +3699,36 @@ def upgrade() -> None:
             "suite_run_id", sa.String(length=64), nullable=False, comment="UI 套件运行业务标识"
         ),
         sa.Column("suite_id", sa.String(length=64), nullable=False, comment="测试集或套件业务标识"),
+        sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="运行创建时冻结的项目业务标识",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的需求业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "requirement_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的需求名称；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的迭代业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示未关联",
+        ),
         sa.Column(
             "environment_id",
             sa.String(length=64),
@@ -3893,9 +3817,21 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
+        "idx_ui_suite_run_project_sprint",
+        "ui_test_suite_runs",
+        ["project_id", "sprint_id", "created_at", "id"],
+        unique=False,
+    )
+    op.create_index(
         op.f("ix_ui_test_suite_runs_environment_id"),
         "ui_test_suite_runs",
         ["environment_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_ui_test_suite_runs_project_id"),
+        "ui_test_suite_runs",
+        ["project_id"],
         unique=False,
     )
     op.create_index(
@@ -3961,6 +3897,36 @@ def upgrade() -> None:
             "collection_id", sa.String(length=64), nullable=False, comment="API 集合业务标识"
         ),
         sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="运行创建时冻结的项目业务标识",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的需求业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "requirement_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的需求名称；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的迭代业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示未关联",
+        ),
+        sa.Column(
             "environment_id", sa.String(length=64), nullable=False, comment="API 环境业务标识"
         ),
         sa.Column(
@@ -4022,7 +3988,14 @@ def upgrade() -> None:
     op.create_index(
         "idx_api_case_run_latest", "api_case_runs", ["case_id", "created_at", "id"], unique=False
     )
+    op.create_index(
+        "idx_api_case_run_project_sprint",
+        "api_case_runs",
+        ["project_id", "sprint_id", "created_at", "id"],
+        unique=False,
+    )
     op.create_index(op.f("ix_api_case_runs_case_id"), "api_case_runs", ["case_id"], unique=False)
+    op.create_index(op.f("ix_api_case_runs_project_id"), "api_case_runs", ["project_id"], unique=False)
     op.create_index(
         op.f("ix_api_case_runs_collection_id"), "api_case_runs", ["collection_id"], unique=False
     )
@@ -4108,6 +4081,12 @@ def upgrade() -> None:
             nullable=False,
             comment="记录最后更新时间（UTC）",
         ),
+        sa.Column(
+            "invalidated_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="用例标记失效时间（UTC）；空值表示有效",
+        ),
         sa.ForeignKeyConstraint(
             ["project_id"],
             ["projects.project_id"],
@@ -4130,9 +4109,24 @@ def upgrade() -> None:
     op.create_index(
         "idx_perf_cases_suite_order", "perf_cases", ["suite_id", "order_no"], unique=False
     )
+    op.create_index(
+        op.f("ix_perf_cases_invalidated_at"), "perf_cases", ["invalidated_at"], unique=False
+    )
     op.create_table(
         "perf_suite_runs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行关联的迭代业务标识；空值表示历史运行未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示历史运行未关联",
+        ),
         sa.Column(
             "suite_run_id", sa.String(length=64), nullable=False, comment="性能测试集运行业务标识"
         ),
@@ -4399,6 +4393,18 @@ def upgrade() -> None:
     op.create_table(
         "perf_runs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行关联的迭代业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示未关联",
+        ),
         sa.Column("run_id", sa.String(length=64), nullable=False, comment="运行业务标识"),
         sa.Column("case_id", sa.String(length=64), nullable=False, comment="性能用例业务标识"),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
@@ -4588,6 +4594,36 @@ def upgrade() -> None:
         sa.Column("case_id", sa.String(length=64), nullable=False, comment="测试用例业务标识"),
         sa.Column("suite_id", sa.String(length=64), nullable=False, comment="测试集或套件业务标识"),
         sa.Column(
+            "project_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="运行创建时冻结的项目业务标识",
+        ),
+        sa.Column(
+            "requirement_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的需求业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "requirement_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的需求名称；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="运行创建时冻结的迭代业务标识；空值表示未关联",
+        ),
+        sa.Column(
+            "sprint_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="运行创建时冻结的迭代名称；空值表示未关联",
+        ),
+        sa.Column(
             "environment_id",
             sa.String(length=64),
             nullable=False,
@@ -4668,7 +4704,16 @@ def upgrade() -> None:
         "idx_ui_case_run_latest", "ui_test_case_runs", ["case_id", "created_at", "id"], unique=False
     )
     op.create_index(
+        "idx_ui_case_run_project_sprint",
+        "ui_test_case_runs",
+        ["project_id", "sprint_id", "created_at", "id"],
+        unique=False,
+    )
+    op.create_index(
         op.f("ix_ui_test_case_runs_case_id"), "ui_test_case_runs", ["case_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_ui_test_case_runs_project_id"), "ui_test_case_runs", ["project_id"], unique=False
     )
     op.create_index(
         op.f("ix_ui_test_case_runs_environment_id"),
@@ -4863,6 +4908,533 @@ def upgrade() -> None:
         ["status"],
         unique=False,
     )
+    op.create_table(
+        "requirement_generation_chains",
+        sa.Column("chain_id", sa.String(length=64), nullable=False, comment="需求生成链业务标识"),
+        sa.Column(
+            "requirement_id", sa.String(length=64), nullable=False, comment="所属需求业务标识"
+        ),
+        sa.Column("kind", sa.String(length=40), nullable=False, comment="需求生成链类型"),
+        sa.Column(
+            "task_id", sa.String(length=64), nullable=False, comment="当前链绑定的生成任务业务标识"
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="生成链创建时间（UTC）",
+        ),
+        sa.ForeignKeyConstraint(
+            ["requirement_id"],
+            ["requirements.requirement_id"],
+            name=op.f("fk_requirement_generation_chains_requirement_id_requirements"),
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["task_id"],
+            ["ai_generate_tasks.task_id"],
+            name=op.f("fk_requirement_generation_chains_task_id_ai_generate_tasks"),
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("chain_id", name=op.f("pk_requirement_generation_chains")),
+        sa.UniqueConstraint("requirement_id", "kind", name="uq_req_generation_chain_kind"),
+        sa.UniqueConstraint("task_id", name="uq_req_generation_chain_task"),
+        comment="需求各类生成流程的唯一当前任务容器",
+    )
+    op.create_table(
+        "ai_generation_candidates",
+        sa.Column("candidate_id", sa.String(length=64), nullable=False, comment="阶段候选业务标识"),
+        sa.Column(
+            "snapshot_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="候选正文及来源快照固定标识",
+        ),
+        sa.Column(
+            "chain_id", sa.String(length=64), nullable=False, comment="所属需求生成链业务标识"
+        ),
+        sa.Column("stage_id", sa.String(length=64), nullable=False, comment="所属稳定阶段业务标识"),
+        sa.Column(
+            "origin_attempt_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="产生候选的尝试审计标识",
+        ),
+        sa.Column(
+            "current_attempt_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="最近编辑候选的尝试审计标识",
+        ),
+        sa.Column(
+            "derived_from_candidate_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="派生候选的原候选业务标识",
+        ),
+        sa.Column(
+            "content",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=False,
+            comment="候选产物正文快照",
+        ),
+        sa.Column("format", sa.String(length=20), nullable=False, comment="候选产物正文格式"),
+        sa.Column(
+            "context_json", sa.JSON(none_as_null=True), nullable=True, comment="候选产物上下文"
+        ),
+        sa.Column(
+            "candidate_token", sa.String(length=64), nullable=False, comment="候选并发修改令牌"
+        ),
+        sa.Column("disposition", sa.String(length=20), nullable=False, comment="候选处置状态"),
+        sa.Column("generation_mode", sa.String(length=20), nullable=False, comment="候选生成模式"),
+        sa.Column(
+            "source_manifest_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="候选冻结来源清单",
+        ),
+        sa.Column(
+            "source_snapshot_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="候选实际输入及来源快照",
+        ),
+        sa.Column("lineage_hash", sa.String(length=128), nullable=True, comment="完整来源闭包指纹"),
+        sa.Column("content_hash", sa.String(length=128), nullable=True, comment="候选正文内容指纹"),
+        sa.Column(
+            "basis_hash", sa.String(length=128), nullable=True, comment="候选实际输入依据指纹"
+        ),
+        sa.Column(
+            "frozen_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="候选因采用或被引用而冻结的时间（UTC）",
+        ),
+        sa.Column(
+            "created_by",
+            sa.String(length=64),
+            nullable=False,
+            comment="创建候选的用户业务标识；空字符串表示历史来源未知",
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="候选创建时间（UTC）"
+        ),
+        sa.ForeignKeyConstraint(
+            ["chain_id"],
+            ["requirement_generation_chains.chain_id"],
+            name=op.f("fk_ai_generation_candidates_chain_id_requirement_generation_chains"),
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["derived_from_candidate_id"],
+            ["ai_generation_candidates.candidate_id"],
+            name=op.f(
+                "fk_ai_generation_candidates_derived_from_candidate_id_ai_generation_candidates"
+            ),
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["stage_id"],
+            ["ai_generation_stages.id"],
+            name=op.f("fk_ai_generation_candidates_stage_id_ai_generation_stages"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("candidate_id", name=op.f("pk_ai_generation_candidates")),
+        sa.UniqueConstraint("snapshot_id", name="uq_ai_candidate_snapshot"),
+        sa.UniqueConstraint("stage_id", "origin_attempt_id", name="uq_ai_candidate_stage_origin"),
+        comment="需求生成链阶段候选内容及冻结来源",
+    )
+    op.create_index(
+        "idx_ai_candidate_chain_stage",
+        "ai_generation_candidates",
+        ["chain_id", "stage_id", "created_at"],
+        unique=False,
+    )
+    op.create_table(
+        "ai_generation_stage_contents",
+        sa.Column(
+            "stage_id", sa.String(length=64), nullable=False, comment="当前内容所属稳定阶段业务标识"
+        ),
+        sa.Column(
+            "chain_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="当前内容所属需求生成链业务标识",
+        ),
+        sa.Column("stage", sa.String(length=40), nullable=False, comment="当前内容所属阶段类型"),
+        sa.Column(
+            "content",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=True,
+            comment="当前确认正文；空槽时为空",
+        ),
+        sa.Column("format", sa.String(length=20), nullable=True, comment="当前确认正文格式"),
+        sa.Column(
+            "context_json", sa.JSON(none_as_null=True), nullable=True, comment="当前确认正文上下文"
+        ),
+        sa.Column(
+            "content_hash", sa.String(length=128), nullable=True, comment="当前确认正文内容指纹"
+        ),
+        sa.Column(
+            "basis_hash", sa.String(length=128), nullable=True, comment="当前确认内容的输入依据指纹"
+        ),
+        sa.Column(
+            "content_token",
+            sa.String(length=64),
+            nullable=False,
+            comment="当前内容或空槽并发修改令牌",
+        ),
+        sa.Column(
+            "source_manifest_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="当前确认内容冻结来源清单",
+        ),
+        sa.Column(
+            "source_snapshot_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="当前确认内容的实际输入及来源快照",
+        ),
+        sa.Column(
+            "lineage_hash",
+            sa.String(length=128),
+            nullable=True,
+            comment="确认时核验的完整来源闭包指纹",
+        ),
+        sa.Column(
+            "source_attempt_id", sa.String(length=64), nullable=True, comment="来源尝试审计标识"
+        ),
+        sa.Column(
+            "source_candidate_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="当前采用的候选业务标识；空槽时为空",
+        ),
+        sa.Column(
+            "confirmed_by",
+            sa.String(length=64),
+            nullable=True,
+            comment="确认当前内容的用户业务标识",
+        ),
+        sa.Column(
+            "confirmed_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="当前内容确认时间（UTC）",
+        ),
+        sa.Column("comment", sa.Text(), nullable=True, comment="当前内容确认意见"),
+        sa.Column(
+            "invalidated_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="当前内容标记待更新时间（UTC）",
+        ),
+        sa.Column(
+            "invalidated_reason",
+            sa.String(length=512),
+            nullable=True,
+            comment="当前内容标记待更新原因",
+        ),
+        sa.ForeignKeyConstraint(
+            ["chain_id"],
+            ["requirement_generation_chains.chain_id"],
+            name=op.f("fk_ai_generation_stage_contents_chain_id_requirement_generation_chains"),
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_candidate_id"],
+            ["ai_generation_candidates.candidate_id"],
+            name=op.f(
+                "fk_ai_generation_stage_contents_source_candidate_id_ai_generation_candidates"
+            ),
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["stage_id"],
+            ["ai_generation_stages.id"],
+            name=op.f("fk_ai_generation_stage_contents_stage_id_ai_generation_stages"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("stage_id", name=op.f("pk_ai_generation_stage_contents")),
+        sa.UniqueConstraint("chain_id", "stage", name="uq_ai_stage_content_chain_stage"),
+        comment="需求生成链阶段唯一采用内容及空槽令牌",
+    )
+    op.create_table(
+        "ai_generation_review_receipts",
+        sa.Column(
+            "receipt_id", sa.String(length=64), nullable=False, comment="阶段审核回执业务标识"
+        ),
+        sa.Column(
+            "request_id", sa.String(length=64), nullable=False, comment="审核操作幂等请求标识"
+        ),
+        sa.Column(
+            "request_fingerprint", sa.String(length=128), nullable=False, comment="审核请求内容指纹"
+        ),
+        sa.Column("stage_id", sa.String(length=64), nullable=False, comment="审核所属稳定阶段标识"),
+        sa.Column(
+            "candidate_id", sa.String(length=64), nullable=True, comment="审核目标候选审计标识"
+        ),
+        sa.Column(
+            "attempt_id", sa.String(length=64), nullable=True, comment="审核来源尝试审计标识"
+        ),
+        sa.Column("decision", sa.String(length=20), nullable=False, comment="本次审核操作结论"),
+        sa.Column(
+            "result_content_token",
+            sa.String(length=64),
+            nullable=True,
+            comment="审核完成时当前内容令牌",
+        ),
+        sa.Column(
+            "result_candidate_token",
+            sa.String(length=64),
+            nullable=True,
+            comment="候选操作完成时的结果候选令牌",
+        ),
+        sa.Column(
+            "result_candidate_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="候选派生操作生成的候选标识",
+        ),
+        sa.Column(
+            "result_snapshot_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="候选派生操作生成的快照标识",
+        ),
+        sa.Column("comment", sa.Text(), nullable=True, comment="审核或候选处置意见"),
+        sa.Column(
+            "actor_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="审核操作者用户业务标识；空字符串表示历史审核人未知",
+        ),
+        sa.Column(
+            "continuation_request_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="审核后继续生成的请求标识",
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="审核回执创建时间（UTC）",
+        ),
+        sa.ForeignKeyConstraint(
+            ["stage_id"],
+            ["ai_generation_stages.id"],
+            name=op.f("fk_ai_generation_review_receipts_stage_id_ai_generation_stages"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("receipt_id", name=op.f("pk_ai_generation_review_receipts")),
+        sa.UniqueConstraint("request_id", name="uq_ai_generation_review_request"),
+        comment="阶段候选审核操作的幂等回执与审计信息",
+    )
+    op.create_table(
+        "ai_generate_import_requests",
+        sa.Column(
+            "request_id", sa.String(length=64), nullable=False, comment="导入幂等请求业务标识"
+        ),
+        sa.Column(
+            "request_fingerprint",
+            sa.String(length=128),
+            nullable=False,
+            comment="导入请求及预览前提的指纹",
+        ),
+        sa.Column(
+            "requirement_id", sa.String(length=64), nullable=False, comment="导入目标需求审计标识；历史目标已缺失时为空字符串"
+        ),
+        sa.Column(
+            "actor_id", sa.String(length=64), nullable=False, comment="执行导入的用户审计标识"
+        ),
+        sa.Column(
+            "result_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="导入完成后的回执标识与结果摘要",
+        ),
+        sa.Column(
+            "completed_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="导入操作完成时间（UTC）",
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="导入请求创建时间（UTC）",
+        ),
+        sa.PrimaryKeyConstraint("request_id", name=op.f("pk_ai_generate_import_requests")),
+        comment="正式用例导入操作的幂等身份及结果",
+    )
+    op.create_table(
+        "ai_generate_imports",
+        sa.Column(
+            "import_id", sa.String(length=64), nullable=False, comment="正式资产导入回执业务标识"
+        ),
+        sa.Column(
+            "request_id", sa.String(length=64), nullable=False, comment="本次导入的幂等请求业务标识"
+        ),
+        sa.Column(
+            "source_kind",
+            sa.String(length=20),
+            nullable=False,
+            comment="来源类型：current、standalone 或 legacy 历史证据",
+        ),
+        sa.Column(
+            "requirement_id", sa.String(length=64), nullable=False, comment="导入目标需求审计标识；历史目标已缺失时为空字符串"
+        ),
+        sa.Column("task_id", sa.String(length=64), nullable=False, comment="来源生成任务审计标识"),
+        sa.Column("kind", sa.String(length=40), nullable=False, comment="来源生成链或独立任务类型"),
+        sa.Column("stage", sa.String(length=40), nullable=False, comment="被导入内容所属阶段"),
+        sa.Column(
+            "source_attempt_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="来源尝试审计标识，不作为存活依赖",
+        ),
+        sa.Column(
+            "source_candidate_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="来源候选审计标识，不作为存活依赖",
+        ),
+        sa.Column(
+            "source_snapshot_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="来源候选快照审计标识",
+        ),
+        sa.Column(
+            "source_content_token",
+            sa.String(length=64),
+            nullable=True,
+            comment="导入时当前内容并发令牌",
+        ),
+        sa.Column(
+            "content",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=False,
+            comment="实际导入的生成产物正文快照",
+        ),
+        sa.Column("format", sa.String(length=20), nullable=False, comment="实际导入产物正文格式"),
+        sa.Column(
+            "content_hash",
+            sa.String(length=128),
+            nullable=True,
+            comment="导入产物正文指纹；未知时为空",
+        ),
+        sa.Column(
+            "basis_hash",
+            sa.String(length=128),
+            nullable=True,
+            comment="来源实际输入依据指纹；未知时为空",
+        ),
+        sa.Column(
+            "lineage_hash",
+            sa.String(length=128),
+            nullable=True,
+            comment="导入时完整来源闭包指纹；未知时为空",
+        ),
+        sa.Column(
+            "source_manifest_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="导入时冻结的来源清单；未知时为空",
+        ),
+        sa.Column(
+            "source_snapshot_json",
+            sa.JSON(none_as_null=True),
+            nullable=True,
+            comment="导入时上游产物及脱敏输入摘要快照",
+        ),
+        sa.Column(
+            "reviewer_user_id",
+            sa.String(length=64),
+            nullable=True,
+            comment="采用或审核操作者审计标识",
+        ),
+        sa.Column(
+            "reviewed_at",
+            sa.DateTime(timezone=True),
+            nullable=True,
+            comment="采用或审核时间（UTC）",
+        ),
+        sa.Column("review_comment", sa.Text(), nullable=True, comment="采用或审核意见"),
+        sa.Column(
+            "target_type",
+            sa.String(length=30),
+            nullable=False,
+            comment="正式目标类型：function_suite/api_collection/ui_suite",
+        ),
+        sa.Column("target_id", sa.String(length=64), nullable=False, comment="正式目标审计标识"),
+        sa.Column(
+            "changed_case_ids_json",
+            sa.JSON(),
+            nullable=False,
+            comment="本次导入变更的正式用例标识列表",
+        ),
+        sa.Column(
+            "target_case_count", sa.Integer(), nullable=False, comment="导入后正式目标的用例总数"
+        ),
+        sa.Column(
+            "mixed_source", sa.Boolean(), nullable=False, comment="正式目标是否仍有本次未覆盖的用例"
+        ),
+        sa.Column(
+            "imported_by", sa.String(length=64), nullable=False, comment="执行导入的用户审计标识"
+        ),
+        sa.Column(
+            "imported_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="正式资产导入时间（UTC）",
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="导入回执创建时间（UTC）",
+        ),
+        sa.CheckConstraint(
+            "source_kind IN ('current', 'standalone', 'legacy')",
+            name=op.f("ck_ai_generate_imports_ck_ai_import_source_kind"),
+        ),
+        sa.CheckConstraint(
+            "target_case_count >= 0", name=op.f("ck_ai_generate_imports_ck_ai_import_target_count")
+        ),
+        sa.ForeignKeyConstraint(
+            ["request_id"],
+            ["ai_generate_import_requests.request_id"],
+            name=op.f("fk_ai_generate_imports_request_id_ai_generate_import_requests"),
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("import_id", name=op.f("pk_ai_generate_imports")),
+        sa.UniqueConstraint(
+            "request_id", "target_type", "target_id", name="uq_ai_import_request_target"
+        ),
+        comment="正式测试资产导入的自包含来源与变更回执",
+    )
+    op.create_index(
+        "idx_ai_import_candidate_snapshot",
+        "ai_generate_imports",
+        ["source_candidate_id", "source_snapshot_id"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_ai_import_requirement_stage",
+        "ai_generate_imports",
+        ["requirement_id", "kind", "stage"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_ai_import_target",
+        "ai_generate_imports",
+        ["target_type", "target_id", "imported_at"],
+        unique=False,
+    )
     # The application requires the authentication runtime singleton before serving.
     op.execute(
         sa.text(
@@ -4876,6 +5448,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("ai_generate_imports")
+    op.drop_table("ai_generate_import_requests")
+    op.drop_table("ai_generation_review_receipts")
+    op.drop_table("ai_generation_stage_contents")
+    op.drop_table("ai_generation_candidates")
+    op.drop_table("requirement_generation_chains")
     op.drop_table("api_collection_run_items")
     op.drop_table("ui_test_suite_run_items")
     op.drop_table("ui_test_case_runs")
@@ -4894,7 +5472,6 @@ def downgrade() -> None:
     op.drop_table("function_test_cases")
     op.drop_table("api_collection_runs")
     op.drop_table("api_cases")
-    op.drop_table("ai_generate_version_imports")
     op.drop_table("ui_test_suites")
     op.drop_table("test_order_visualization_batches")
     op.drop_table("test_order_entries")
@@ -4913,7 +5490,6 @@ def downgrade() -> None:
     op.drop_table("api_interfaces")
     op.drop_table("api_environment_vars")
     op.drop_table("ai_generation_stages")
-    op.drop_table("ai_generate_stage_versions")
     op.drop_table("ai_executions")
     op.drop_table("sprints")
     op.drop_table("software_repositories")

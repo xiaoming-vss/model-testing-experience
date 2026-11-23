@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  countPerfStepsFromYaml,
   formatPerfLoadSummary,
   parsePerfDurationSeconds,
   perfLoadFormError,
@@ -8,7 +7,6 @@ import {
   stagedLoadPeakVus,
   stagedLoadPoints,
   stagedLoadTotalSeconds,
-  updatePerfLoadInYaml,
 } from './perfLoadModel'
 
 const SOURCE_YAML = `specVersion: "1.0"
@@ -61,48 +59,12 @@ describe('performance load model form', () => {
       rampUpSeconds: 10,
       rampDownSeconds: 5,
     })
-    expect(countPerfStepsFromYaml(SOURCE_YAML)).toBe(2)
   })
 
   it('parses compound and millisecond durations', () => {
     expect(parsePerfDurationSeconds('1m30s')).toBe(90)
     expect(parsePerfDurationSeconds('500ms')).toBe(0.5)
     expect(parsePerfDurationSeconds('abc')).toBeNull()
-  })
-
-  it('updates only the load node and preserves the rest of the case', () => {
-    const load = readPerfLoadFromYaml(SOURCE_YAML)
-    expect(load).not.toBeNull()
-    const updated = updatePerfLoadInYaml(SOURCE_YAML, {
-      ...load!,
-      model: 'arrival_rate',
-      rate: 15,
-      timeUnit: '1m',
-      durationSeconds: 120,
-      preAllocatedVUs: 3,
-      maxVUs: 30,
-    })
-    expect(readPerfLoadFromYaml(updated)).toMatchObject({
-      model: 'arrival_rate',
-      rate: 15,
-      timeUnit: '1m',
-      durationSeconds: 120,
-      preAllocatedVUs: 3,
-      maxVUs: 30,
-    })
-    expect(countPerfStepsFromYaml(updated)).toBe(2)
-    expect(updated).toContain('name: 登录并校验')
-  })
-
-  it('removes ramp fields when both ramp values are zero', () => {
-    const load = readPerfLoadFromYaml(SOURCE_YAML)
-    const updated = updatePerfLoadInYaml(SOURCE_YAML, {
-      ...load!,
-      rampUpSeconds: 0,
-      rampDownSeconds: 0,
-    })
-    expect(updated).not.toContain('rampUp')
-    expect(readPerfLoadFromYaml(updated)).toMatchObject({ rampUpSeconds: 0, rampDownSeconds: 0 })
   })
 
   it('formats the current load summary and reports invalid combinations', () => {
@@ -140,27 +102,9 @@ describe('performance load model form', () => {
     expect(formatPerfLoadSummary(load!)).toBe('尖峰 · 3 个阶段，峰值 50 个 VU，总时长 1m20s')
   })
 
-  it('round-trips staged load stages through YAML and reports stage errors', () => {
+  it('reports staged load stage errors', () => {
     const load = readPerfLoadFromYaml(STAGED_YAML)!
-    const updated = updatePerfLoadInYaml(STAGED_YAML, {
-      ...load,
-      profile: 'step',
-      stages: [
-        { target: 10, rampSeconds: 5, holdSeconds: 30 },
-        { target: 30, rampSeconds: 5, holdSeconds: 30 },
-      ],
-      finalDownSeconds: 10,
-    })
 
-    expect(readPerfLoadFromYaml(updated)).toMatchObject({
-      model: 'staged_vus',
-      profile: 'step',
-      finalDownSeconds: 10,
-      stages: [
-        { target: 10, rampSeconds: 5, holdSeconds: 30 },
-        { target: 30, rampSeconds: 5, holdSeconds: 30 },
-      ],
-    })
     expect(perfLoadFormError(load, 1)).toBe('')
     expect(perfLoadFormError({ ...load, stages: [] }, 1)).toBe('至少添加一个阶段')
     expect(perfLoadFormError({

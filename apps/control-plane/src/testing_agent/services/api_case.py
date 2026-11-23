@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import (
+    ErrApiCaseInvalidated,
     ErrApiCaseNameAlreadyUse,
     ErrApiCaseRunEnvironmentMismatch,
     ErrApiCaseRunNotFound,
@@ -28,11 +29,11 @@ from testing_agent.schemas.api_case import ApiCaseRequest, ApiCaseResponse
 from testing_agent.schemas.api_run import ApiCaseRunResponse, RunApiCaseRequest
 from testing_agent.services.api_import_payload import normalize_json_value as normalize_json_value
 from testing_agent.services.api_request_render import render_api_case_request
-from testing_agent.services.api_run_scope import apply_run_scope, authorize_run
+from testing_agent.services.case_lifecycle import set_case_invalidated
 from testing_agent.services.common import list_payload
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import protect_run
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import ProjectAction, require_project_id
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
@@ -83,8 +84,8 @@ class ApiCaseContext:
         self,
         api_case: ApiCase,
         collection: ApiCollection,
-        requirement: Requirement,
-        sprint: Sprint,
+        requirement: Requirement | None,
+        sprint: Sprint | None,
         project: Project,
     ):
         self.api_case = api_case
@@ -107,17 +108,23 @@ class ApiCaseService:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
             raise ErrNotFound()
+        await require_project_id(
+            self.repository.session, user_id, collection.project_id, action=action
+        )
+        return collection
+
+    async def _resolve_requirement_scope(
+        self, collection: ApiCollection, project_id: str
+    ) -> tuple[Requirement | None, Sprint | None]:
+        if collection.requirement_id is None:
+            return None, None
         requirement = await self.repository.get_requirement(collection.requirement_id)
         if requirement is None:
             raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
+        if sprint is None or sprint.project_id != project_id:
             raise ErrNotFound()
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, action)
-        return collection
+        return requirement, sprint
 
     async def get_accessible_context(
         self, user_id: str, case_id: str, *, action: ProjectAction = "read"
@@ -128,16 +135,10 @@ class ApiCaseService:
         collection = await self.repository.get_collection(api_case.collection_id)
         if collection is None:
             raise ErrNotFound()
-        requirement = await self.repository.get_requirement(collection.requirement_id)
-        if requirement is None:
-            raise ErrNotFound()
-        sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound()
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, action)
+        project = await require_project_id(
+            self.repository.session, user_id, collection.project_id, action=action
+        )
+        requirement, sprint = await self._resolve_requirement_scope(collection, project.project_id)
         return ApiCaseContext(api_case, collection, requirement, sprint, project)
 
     async def create(self, user_id: str, collection_id: str, body: ApiCaseRequest) -> dict:
@@ -155,10 +156,27 @@ class ApiCaseService:
         await self.repository.refresh(api_case)
         return dump(ApiCaseResponse, api_case)
 
-    async def list_by_collection(self, user_id: str, collection_id: str) -> dict[str, Any]:
+    async def list_by_collection(
+        self, user_id: str, collection_id: str, *, invalidated: bool | None = None
+    ) -> dict[str, Any]:
         await self.get_accessible_collection(user_id, collection_id, action="read")
-        rows = await self.repository.list_cases(collection_id)
+        rows = await self.repository.list_cases(collection_id, invalidated=invalidated)
         return list_payload([dump(ApiCaseResponse, row) for row in rows])
+
+    async def batch_set_invalidated(
+        self, user_id: str, project_id: str, case_ids: list[str], invalidated: bool
+    ) -> dict:
+        await require_project_id(self.repository.session, user_id, project_id, action="write")
+        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
+        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
+            raise ErrNotFound()
+        changed = set_case_invalidated(rows, invalidated)
+        try:
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        return {"caseIds": case_ids, "updatedCount": changed}
 
     async def get(self, user_id: str, case_id: str) -> dict:
         context = await self.get_accessible_context(user_id, case_id, action="read")
@@ -210,11 +228,16 @@ class ApiCaseService:
             if rows is None:
                 raise ErrNotFound()
             context = ApiCaseContext(*rows)
-            await require_project_access(
-                self.repository.session, user_id, context.project, "execute"
+            await require_project_id(
+                self.repository.session,
+                user_id,
+                context.project.project_id,
+                action="execute",
             )
         else:
             context = await self.get_accessible_context(user_id, case_id, action="execute")
+        if context.api_case.invalidated_at is not None:
+            raise ErrApiCaseInvalidated()
         environment = await self.repository.get_environment(body.environment_id)
         if environment is None:
             raise ErrNotFound()
@@ -222,6 +245,15 @@ class ApiCaseService:
             raise ErrApiCaseRunEnvironmentMismatch()
         if environment.kind != "api":
             raise ErrApiEnvironmentKindMismatch()
+        sprint = context.sprint
+        if body.sprint_id is not None:
+            requested_sprint = await self.repository.get_sprint(body.sprint_id)
+            if (
+                requested_sprint is None
+                or requested_sprint.project_id != context.project.project_id
+            ):
+                raise dynamic_error(ErrBadRequest, "迭代不属于当前项目")
+            sprint = requested_sprint
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id
         )
@@ -230,6 +262,13 @@ class ApiCaseService:
             run_id=run_id or new_id(),
             case_id=context.api_case.case_id,
             collection_id=context.collection.collection_id,
+            project_id=context.project.project_id,
+            requirement_id=(
+                context.requirement.requirement_id if context.requirement is not None else None
+            ),
+            requirement_name=(context.requirement.name if context.requirement is not None else ""),
+            sprint_id=sprint.sprint_id if sprint is not None else None,
+            sprint_name=sprint.name if sprint is not None else "",
             environment_id=environment.environment_id,
             trigger_user_id=user_id,
             trigger_type="live_debug" if live_debug or body.live_debug else "manual",
@@ -252,7 +291,6 @@ class ApiCaseService:
         )
         self.repository.add_all([run, task])
         await self.repository.commit()
-        apply_run_scope(run, context)
         initial = dump(ApiCaseRunResponse, run)
         from testing_agent.services.test_run_notifications import notify_task_available
 
@@ -263,7 +301,7 @@ class ApiCaseService:
         run = await self.repository.get_run(run_id)
         if run is None:
             raise ErrApiCaseRunNotFound()
-        await authorize_run(self.repository, user_id, run)
+        await require_project_id(self.repository.session, user_id, run.project_id, action="read")
         if run.trigger_type == "live_debug" and run.trigger_user_id != user_id:
             raise ErrForbidden()
         return dump(ApiCaseRunResponse, run)

@@ -16,8 +16,7 @@ function source(overrides: Partial<UiGenerationSourceInputs['repository']> = {})
       branch: 'main',
       commit: 'a1b2c3d4',
       commitMode: 'latest',
-      profileVersionId: 'profile-v3',
-      profileVersionNo: 3,
+      profileCandidateId: 'profile-v3',
       resolvedAt: '2026-11-09T10:00:00Z',
       ...overrides,
     },
@@ -50,6 +49,16 @@ it('历史运行没有仓库快照时不冒充来源', () => {
   render(<TestThemeProvider><UiGenerationSourceTrace /></TestThemeProvider>)
   expect(screen.getByText(/历史来源未记录/)).toBeInTheDocument()
   expect(screen.queryByText('需求材料')).not.toBeInTheDocument()
+})
+
+it('候选来源展示画像候选与冻结输入批次', async () => {
+  const value = { ...source({ profileCandidateId: 'profile-a' }), sourceBatchId: 'batch-a' }
+  render(<TestThemeProvider><UiGenerationSourceTrace source={value} /></TestThemeProvider>)
+  await userEvent.setup().click(screen.getByRole('button', { name: '查看仓库和功能用例快照' }))
+  const region = await screen.findByRole('region', { name: '生成输入快照' })
+  expect(region).toHaveTextContent('画像候选')
+  expect(region).toHaveTextContent('profile-a')
+  expect(region).toHaveTextContent('batch-a')
 })
 
 it('旧快照缺少仓库字段时只展示历史提示', async () => {

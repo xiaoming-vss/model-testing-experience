@@ -41,16 +41,6 @@ class ProjectSkillSpaceRepository(ResourceRepository):
             )
         )
 
-    async def get_active_by_project_and_filename(
-        self, project_id: str, filename: str
-    ) -> ProjectSkillSpace | None:
-        return await self.session.scalar(
-            select(ProjectSkillSpace).where(
-                ProjectSkillSpace.project_id == project_id,
-                ProjectSkillSpace.filename == filename,
-            )
-        )
-
     def add(self, skill: ProjectSkillSpace) -> None:
         self.session.add(skill)
 

@@ -26,6 +26,7 @@ const list = <T,>(items: T[]) => Object.assign([...items], { items, total: items
 
 const collection = {
   collectionId: 'collection-1',
+  projectId: 'project-1',
   requirementId: 'requirement-1',
   name: 'xiaoming',
   description: '登录与项目相关的接口集',
@@ -119,7 +120,9 @@ it('顶栏给出测试集、需求、迭代与当前环境，运行测试集提�
 
   await userEvent.setup().click(screen.getByRole('button', { name: /运行测试集/ }))
   await waitFor(() =>
-    expect(run).toHaveBeenCalledWith('collection-1', { environmentId: 'environment-1' }),
+    expect(run).toHaveBeenCalledWith('collection-1', {
+      environmentId: 'environment-1',
+    }),
   )
   expect(container.querySelector('.api-wb-cols')).toBeTruthy()
   client.clear()
@@ -225,5 +228,72 @@ it('新建用例先落成草稿，左栏标出草稿并可从草稿丢弃回到�
   fireEvent.change(screen.getByLabelText('用例名称'), { target: { value: '未保存的 API 用例' } })
   expect(screen.getByLabelText('用例名称')).toHaveValue('未保存的 API 用例')
   expect(create).not.toHaveBeenCalled()
+  client.clear()
+})
+
+it('失效用例显示标签、排除在运行之外，状态胶囊可以只看失效', async () => {
+  vi.mocked(api.getApiCases).mockResolvedValue(
+    list([
+      { ...cases[0], invalidatedAt: '2026-11-22T02:30:00Z' },
+      cases[1],
+    ]),
+  )
+  const run = vi.spyOn(api, 'runApiCollection').mockResolvedValue({ status: 'success' })
+  const { container, client } = renderPage()
+
+  await screen.findByText('xiaoming')
+  await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(2))
+  expect(screen.getByText(/已失效/, { selector: '.tp-tone-tag' })).toBeInTheDocument()
+  expect(screen.getByText('运行将排除 1 条失效用例')).toBeInTheDocument()
+  expect(screen.getByText('该用例已失效，不能运行')).toBeInTheDocument()
+  expect(container.querySelector('.api-wb-send')).toBeDisabled()
+
+  const chips = within(container.querySelector('.api-wb-explorer-search') as HTMLElement)
+  await userEvent.setup().click(chips.getByRole('button', { name: '已失效' }))
+  await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(1))
+  expect(screen.queryByText('list_projects')).toBeNull()
+
+  // 只剩一条有效用例时测试集仍可运行
+  await userEvent.setup().click(screen.getByRole('button', { name: /运行测试集/ }))
+  await waitFor(() =>
+    expect(run).toHaveBeenCalledWith('collection-1', {
+      environmentId: 'environment-1',
+    }),
+  )
+  client.clear()
+})
+
+it('从「用例状态」弹窗批量标记失效', async () => {
+  const batch = vi
+    .spyOn(api, 'batchInvalidateApiCases')
+    .mockResolvedValue({ caseIds: ['case-1'], updatedCount: 1 })
+  const { client } = renderPage()
+
+  await screen.findByText('xiaoming')
+  await userEvent.setup().click(screen.getByRole('button', { name: '用例状态' }))
+
+  const modal = await screen.findByText('管理用例状态')
+  expect(modal).toBeInTheDocument()
+  const checkboxes = [...document.querySelectorAll<HTMLInputElement>('.ant-modal input[type="checkbox"]')]
+  await userEvent.setup().click(checkboxes[1])
+  await userEvent.setup().click(screen.getByRole('button', { name: '标记失效' }))
+
+  await waitFor(() =>
+    expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], true),
+  )
+  client.clear()
+})
+
+it('项目级测试集直接按项目加载用例，不查询需求与迭代', async () => {
+  vi.mocked(api.getApiCollection).mockResolvedValue({ ...collection, requirementId: null })
+  const requirement = vi.mocked(api.getRequirement)
+  const sprint = vi.mocked(api.getSprint)
+  const { container, client } = renderPage()
+
+  await screen.findByText('xiaoming')
+  await screen.findByText('/ 项目级')
+  await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(2))
+  expect(requirement).not.toHaveBeenCalled()
+  expect(sprint).not.toHaveBeenCalled()
   client.clear()
 })

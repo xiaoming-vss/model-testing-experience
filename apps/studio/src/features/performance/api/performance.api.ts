@@ -20,8 +20,15 @@ import type {
 } from '../types'
 
 export const performanceApi = {
-  listPerfCases: (projectId: string) =>
-    request<ListResponse<PerfCaseSummary>>(`/v1/projects/${projectId}/perf-cases`),
+  listPerfCases: (projectId: string, filters: { invalidated?: boolean } = {}) =>
+    request<ListResponse<PerfCaseSummary>>(
+      `/v1/projects/${projectId}/perf-cases${buildQuery({ ...filters })}`,
+    ),
+  batchInvalidatePerfCases: (projectId: string, caseIds: string[], invalidated: boolean) =>
+    request<{ caseIds: string[]; updatedCount: number }>(
+      `/v1/projects/${projectId}/perf-cases/batch-invalidation`,
+      { method: 'POST', body: JSON.stringify({ caseIds, invalidated }) },
+    ),
   getPerfCase: (caseId: string) => request<PerfCase>(`/v1/perf-cases/${caseId}`),
   createPerfCase: (projectId: string, body: CreatePerfCasePayload) =>
     request<PerfCase>(`/v1/projects/${projectId}/perf-cases`, {

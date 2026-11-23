@@ -189,7 +189,7 @@ def test_downgrade_to_developer_revokes_worker_access_even_after_repromotion(api
         },
     ).json()["data"]["connectionId"]
     launched = api.post(
-        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/candidate-run",
         headers=member,
         json={"connectionId": cid},
     )

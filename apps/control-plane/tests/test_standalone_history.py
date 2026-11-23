@@ -6,8 +6,8 @@ from sqlalchemy import select
 from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
 from support.ai_execution import db as db
 
+from testing_agent.models.ai_generate_import import AiGenerateImport, AiGenerateImportRequest
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.schemas.ai_generate_task import AiGenerateRunHistoryResponse
@@ -51,14 +51,29 @@ async def test_paginated_history_filters_and_does_not_mix_candidates(db):  # noq
         attempts.append(attempt)
     db.get(AiGenerationStage, attempts[0].stage_id).stage = "detailed_cases"
     db.add(
-        AiGenerateVersionImport(
+        AiGenerateImportRequest(
+            request_id="source-request",
+            request_fingerprint="fingerprint",
+            requirement_id="",
+            actor_id="user",
+        )
+    )
+    db.flush()
+    db.add(
+        AiGenerateImport(
             import_id="source",
+            request_id="source-request",
+            source_kind="standalone",
+            requirement_id="",
             task_id="task",
-            version_id=None,
-            attempt_id=attempts[1].id,
-            leaf_stage="detailed_cases",
+            kind="function",
+            source_attempt_id=attempts[1].id,
+            stage="detailed_cases",
+            content="result-2",
+            format="text",
             target_type="function_suite",
             target_id="target",
+            changed_case_ids_json=[],
             target_case_count=1,
             mixed_source=False,
             reviewer_user_id="reviewer",

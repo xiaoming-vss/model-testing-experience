@@ -70,7 +70,6 @@ config:
       thinking_level: off
 
   code_risk_analysis:
-    gitlab_timeout_seconds: 120
     git_timeout_seconds: 300
     workspace_retention_hours: 24
     max_diff_chars: 1000000

@@ -24,9 +24,11 @@ export function PagedSelect({ id, 'aria-label': ariaLabel, value, onChange, plac
   const [keyword, setKeyword] = useState('')
   const [selectedLabel, setSelectedLabel] = useState<Option | null>(null)
   useEffect(() => {
-    const timer = setTimeout(() => { setKeyword(search.trim()); setPage(1) }, 250)
+    const nextKeyword = search.trim()
+    if (nextKeyword === keyword) return
+    const timer = setTimeout(() => { setKeyword(nextKeyword); setPage(1) }, 250)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [search, keyword])
   useEffect(() => { setSearch(''); setKeyword(''); setPage(1); setSelectedLabel(null) }, [scopeKey])
   useEffect(() => { if (disabled) setOpen(false) }, [disabled])
   const query = useQuery({

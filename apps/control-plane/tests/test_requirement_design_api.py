@@ -107,7 +107,7 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
         == 404
     )
     assert api.post(base + "/api/run", headers=owner, json=run).status_code == 400
-    stage_url = "/v1/requirements/req/generation/api/stages/interface_extract/run"
+    stage_url = "/v1/requirements/req/generation/api/stages/interface_extract/candidate-run"
     stage_request = {"requestId": run["requestId"], "connectionId": "mine"}
     assert api.post(stage_url, headers=viewer, json=stage_request).status_code == 403
     assert api.post(stage_url, headers=member, json=stage_request).status_code == 404
@@ -115,12 +115,12 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
     assert first_run.status_code == 200, first_run.text
     second_run = api.post(stage_url, headers=owner, json=stage_request)
     assert second_run.status_code == 200, second_run.text
-    first_stage = first_run.json()["data"]["stages"][0]
-    second_stage = second_run.json()["data"]["stages"][0]
-    assert first_stage["activeRunId"] == second_stage["activeRunId"]
+    first_stage = first_run.json()["data"]
+    second_stage = second_run.json()["data"]
+    assert first_stage["attemptId"] == second_stage["attemptId"]
     history = api.get(base + "/api/runs", headers=owner).json()["data"]
     assert history["total"] == 1
-    assert history["items"][0]["runId"] == first_stage["activeRunId"]
+    assert history["items"][0]["runId"] == first_stage["attemptId"]
     overview = api.get(base, headers=owner).json()["data"]
     assert overview["runCounts"] == {"api": 1, "ui": 0, "function": 0, "requirement_analysis": 0}
     assert overview["activeTaskIds"] == [task_id]

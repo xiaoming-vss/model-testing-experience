@@ -135,12 +135,6 @@ class GenerationQueries:
             return await auxiliary_history(self.repository.session, task_id, page, page_size)
         raise ErrBadRequest()
 
-    async def list_profile_versions(self, task_id: str, user_id: str) -> dict[str, Any]:
-        task = await self.access.owned_task(user_id, task_id, "repository_profile", action="read")
-        from testing_agent.services.repository_profile_versions import list_profile_versions
-
-        return list_payload(await list_profile_versions(self.repository.session, task.task_id))
-
     async def list_project_latest_runs(
         self, kind: str, project_id: str, user_id: str
     ) -> dict[str, Any]:
@@ -188,15 +182,6 @@ class GenerationQueries:
         }
 
     async def get_run(self, kind: str, run_id: str, user_id: str) -> dict[str, Any]:
-        if kind == "function":
-            from testing_agent.services.stage_storage.relations import find_leaf, graph_view
-
-            session = self.repository.session
-            found = await find_leaf(session, run_id)
-            if found is not None:
-                leaf, task = found
-                await self.access.owned_task(user_id, task.task_id, "function", action="read")
-                return await graph_view(session, task, leaf)
         if kind in {"requirement_analysis", "function", "api", "ui"}:
             from testing_agent.repositories.direct_attempt_view import direct_attempt_task_id
             from testing_agent.services.stage_storage.run_view import direct_attempt_view

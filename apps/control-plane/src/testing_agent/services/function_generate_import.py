@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from testing_agent.core.errors import (
     ErrBadRequest,
     ErrFunctionTestSuiteNameAlreadyUse,
-    ErrNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
@@ -23,7 +22,6 @@ from testing_agent.services.ai_task_output import (
     generated_function_cases,
     validate_function_candidate_cases,
 )
-from testing_agent.services.standalone_run import StandaloneRun
 
 if TYPE_CHECKING:
     from testing_agent.services.ai_task_access import CandidateImportContext
@@ -61,6 +59,7 @@ def stored_case_comparison(case: FunctionTestCase) -> dict[str, Any]:
         "expectedResults": text["expected_results"],
         "priority": case.priority,
         "caseType": case.case_type,
+        "invalidatedAt": case.invalidated_at,
     }
 
 
@@ -70,6 +69,7 @@ def apply_generated_case(case: FunctionTestCase, item: dict[str, Any]) -> None:
     set_legacy_content(case, item["preconditions"], item["steps"], item["expected_results"])
     case.priority = item["priority"]
     case.case_type = item["case_type"]
+    case.invalidated_at = None
 
 
 async def import_function_run(
@@ -81,22 +81,11 @@ async def import_function_run(
     artifact_content: str | None = None,
     allow_reimport: bool = False,
     approved_source: Any | None = None,
-    target_requirement_id: str | None = None,
+    preview_only: bool = False,
+    locking_reads: bool = False,
 ) -> dict[str, Any]:
     if approved_source is None:
-        run = await service.owned_run(user_id, run_id, "function", action="execute")
-        if not isinstance(run, StandaloneRun):
-            raise ErrNotFound()
-        from testing_agent.services.standalone_function_import import import_standalone_function
-
-        return await import_standalone_function(
-            service,
-            run,
-            target_requirement_id=target_requirement_id,
-            confirm_overwrite=confirm_overwrite,
-            user_id=user_id,
-            apply_import=import_function_run,
-        )
+        raise ErrBadRequest()
     run = approved_source
     if artifact_content is None and (
         run.status != "success"
@@ -147,9 +136,9 @@ async def import_function_run(
                 }
             )
 
-    if conflicts and not confirm_overwrite:
+    if preview_only or (conflicts and not confirm_overwrite):
         return {
-            "requiresConfirmation": True,
+            "requiresConfirmation": bool(conflicts),
             "conflicts": conflicts,
             "importChanges": [],
             "run": {},
@@ -171,6 +160,11 @@ async def import_function_run(
                 suites_by_module[module] = suite
             target_ids.append(suite.suite_id)
 
+        if locking_reads:
+            # New suites must exist before their cases: the current-read path
+            # no longer issues a query that would otherwise trigger autoflush.
+            await service.repository.flush()
+
         for item in generated_cases:
             module = item["module"]
             suite = suites_by_module[module]
@@ -184,13 +178,17 @@ async def import_function_run(
 
             max_order = max_order_by_suite.get(suite.suite_id)
             if max_order is None:
-                max_order = await service.repository.max_function_case_order_by_suite(
-                    suite.suite_id
+                max_order = (
+                    max((case.order_no for case in existing_by_module[module].values()), default=0)
+                    if locking_reads
+                    else await service.repository.max_function_case_order_by_suite(suite.suite_id)
                 )
             max_order += 1
             max_order_by_suite[suite.suite_id] = max_order
             new_case = FunctionTestCase(
-                case_id=await pinned_case_id(service.repository, item["case_id"]),
+                case_id=await pinned_case_id(service.repository, item["case_id"], for_update=True)
+                if locking_reads
+                else await pinned_case_id(service.repository, item["case_id"]),
                 suite_id=suite.suite_id,
                 order_no=max_order,
             )

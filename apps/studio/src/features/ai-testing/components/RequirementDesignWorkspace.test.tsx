@@ -18,8 +18,7 @@ vi.mock('../hooks/usePersonalLlmChoice', () => ({
 vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 vi.mock('../api/generationChain.api', () => ({
   generationChainApi: {
-    overview: vi.fn(), chain: vi.fn(), version: vi.fn(), run: vi.fn(),
-    revise: vi.fn(), review: vi.fn(), deleteVersion: vi.fn(), importOptions: vi.fn(), importVersion: vi.fn(),
+    overview: vi.fn(), chain: vi.fn(),
   },
 }))
 
@@ -30,17 +29,10 @@ function listPayload<T>(items: T[]): ListResponse<T> {
 function chainWith(kind: GenerationChain['kind'], label: string, configured: boolean): GenerationChain {
   return {
     kind, label, configured, taskId: configured ? `task-${kind}` : undefined, runId: configured ? `run-${kind}` : undefined,
-    active: false, busy: false, sourceChanged: false, draftCount: configured ? 1 : 0,
+    active: false, busy: false, sourceChanged: false, pendingCandidateCount: configured ? 1 : 0,
     stages: configured ? [{
-      stage: 'extracting_text', label: '材料整理', order: 0, state: 'draft', latestVersion: null,
-      draft: {
-        attemptId: 'draft', runId: 'run', status: 'draft', summary: '1 个材料来源', artifactFormat: 'json',
-        content: JSON.stringify({ schemaVersion: '1.0', artifactType: 'document_extraction', documentTitle: '材料', sources: [], contentBlocks: [], extractedFacts: [], questions: [] }),
-        revision: 1, createdAt: '2026-10-30T09:00:00Z',
-      },
-      versions: [], upstreamStages: [],
-    }] : [{ stage: 'generate', label: '首阶段', order: 0, state: 'not_started', latestVersion: null, draft: null, versions: [], upstreamStages: [] }],
-    leaf: {},
+      stage: 'extracting_text', label: '材料整理', order: 0, state: 'draft', upstreamStages: [],
+    }] : [{ stage: 'generate', label: '首阶段', order: 0, state: 'not_started', upstreamStages: [] }],
   }
 }
 
@@ -84,7 +76,7 @@ function mount(onOpenDocument = vi.fn(), canWrite = true) {
 
 it('需求详情正文只渲染生成全景，不再包含页签、页头、汇总和运行记录', async () => {
   mount()
-  expect(await screen.findByRole('button', { name: '材料整理 · 待审核' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '材料整理 · 有候选' })).toBeInTheDocument()
   expect(screen.queryByRole('group', { name: '筛选生成链' })).not.toBeInTheDocument()
   expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
@@ -96,7 +88,7 @@ it('需求详情正文只渲染生成全景，不再包含页签、页头、汇�
 it('文档与代码风险从泳道入口打开，未配置链打开生成设置', async () => {
   const { onOpenDocument } = mount()
   const user = userEvent.setup()
-  await screen.findByRole('button', { name: '材料整理 · 待审核' })
+  await screen.findByRole('button', { name: '材料整理 · 有候选' })
 
   // 泳道卡片单击打开：需求文档直接打开阅读弹窗，不经过侧栏；代码风险也直接打开。
   await user.click(screen.getByRole('button', { name: /查看需求文档/ }))
@@ -123,7 +115,7 @@ it('历史需求自动补齐需求分析和功能测试，不打开设置弹窗'
   await waitFor(() => expect(configure).toHaveBeenCalledTimes(2))
   expect(configure).toHaveBeenCalledWith('req', 'requirement_analysis', { newConfiguration: false })
   expect(configure).toHaveBeenCalledWith('req', 'function', { newConfiguration: false })
-  expect(await screen.findAllByRole('button', { name: '材料整理 · 待审核' })).toHaveLength(2)
+  expect(await screen.findAllByRole('button', { name: '材料整理 · 有候选' })).toHaveLength(2)
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
@@ -137,7 +129,7 @@ it('历史需求补建失败时显示错误并允许重试', async () => {
   mount()
   expect(await screen.findByText(/初始化生成流程失败/)).toBeInTheDocument()
   await userEvent.setup().click(screen.getByRole('button', { name: /重\s*试/ }))
-  expect(await screen.findByRole('button', { name: '材料整理 · 待审核' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '材料整理 · 有候选' })).toBeInTheDocument()
   expect(configure).toHaveBeenCalledTimes(2)
 })
 

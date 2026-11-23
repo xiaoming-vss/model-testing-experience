@@ -55,14 +55,6 @@ class UserRepository(BaseRepository):
     async def get_super_admin(self) -> User | None:
         return await self.session.scalar(select(User).where(User.is_super_admin.is_(True)))
 
-    async def count_super_admins(self) -> int:
-        return int(
-            await self.session.scalar(
-                select(func.count()).select_from(User).where(User.is_super_admin.is_(True))
-            )
-            or 0
-        )
-
     async def list_admin(
         self, *, search: str = "", status: str = "", page: int = 1, page_size: int = 20
     ) -> tuple[list[User], int]:

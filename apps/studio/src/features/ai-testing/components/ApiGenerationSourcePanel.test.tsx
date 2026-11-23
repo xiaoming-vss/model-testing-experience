@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { aiTestingApi } from '../api/aiTesting.api'
-import type { RepositoryProfileVersion } from '../types'
+import type { RepositoryProfileCandidateView } from '../types'
 import { ApiGenerationSourcePanel } from './ApiGenerationSourcePanel'
 
 vi.mock('../api/aiTesting.api', () => ({
@@ -33,10 +33,9 @@ function listResponse<T>(items: T[]) {
   return Object.assign([...items], { items, total: items.length })
 }
 
-function profileVersion(): RepositoryProfileVersion {
+function profileCandidate(): RepositoryProfileCandidateView {
   return {
-    versionId: 'profile-v1',
-    versionNo: 1,
+    candidateId: 'profile-v1',
     label: 'v1',
     resultYaml: '',
     sourceRunId: 'run',
@@ -82,7 +81,7 @@ function mount() {
           projectId="project-1"
           canWrite
           busy={false}
-          profileVersion={profileVersion()}
+          profileCandidate={profileCandidate()}
           onSaved={vi.fn()}
         />
       </QueryClientProvider>

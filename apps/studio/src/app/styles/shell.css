@@ -25,10 +25,6 @@
   flex: 0 1 auto;
 }
 
-.compact-header .sprint-select {
-  max-width: 160px;
-}
-
 .compact-header .project-select .ant-select-selector {
   padding-inline: 0 !important;
 }
@@ -219,11 +215,6 @@ body,
   background: transparent;
 }
 
-.app-shell .sprint-select {
-  min-width: 120px;
-  width: 120px;
-  max-width: 200px;
-}
 
 .app-shell .project-select .ant-select-selector {
   color: var(--app-glass-text) !important;

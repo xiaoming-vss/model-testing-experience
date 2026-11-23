@@ -4,16 +4,13 @@ import builtins
 from collections.abc import Callable
 from typing import Any
 
-from testing_agent.core.errors import (
-    ErrBadRequest,
-    ErrNotFound,
-)
+from testing_agent.core.errors import ErrBadRequest
 from testing_agent.core.sid import new_id
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.services.ai_task_access import OwnedRun, RequireCollectionAccess
+from testing_agent.services.ai_task_access import RequireCollectionAccess
 from testing_agent.services.ai_task_output import generated_payload
 from testing_agent.services.api_import_entities import (
     add_api_rules,
@@ -23,7 +20,6 @@ from testing_agent.services.api_import_entities import (
 from testing_agent.services.api_import_payload import (
     validate_api_collection_import_payload,
 )
-from testing_agent.services.standalone_run import StandaloneRun
 
 
 class ApiCandidateImporter:
@@ -31,12 +27,10 @@ class ApiCandidateImporter:
         self,
         *,
         repository: AiGenerateTaskRepository,
-        owned_run: OwnedRun,
         ensure_collection_access: RequireCollectionAccess,
         id_factory: Callable[[], str] = new_id,
     ):
         self.repository = repository
-        self.owned_run = owned_run
         self.ensure_collection_access = ensure_collection_access
         self.new_id = id_factory
 
@@ -44,9 +38,19 @@ class ApiCandidateImporter:
     def _normalized_api_case_name(name: Any) -> str:
         return str(name or "").strip().casefold()
 
-    async def _stored_api_case(self, case: ApiCase) -> dict[str, Any]:
-        extract_rules = await self.repository.list_api_extract_rules(case.case_id)
-        assert_rules = await self.repository.list_api_assert_rules(case.case_id)
+    async def _stored_api_case(
+        self, case: ApiCase, *, locking_reads: bool = False
+    ) -> dict[str, Any]:
+        extract_rules = (
+            await self.repository.list_api_extract_rules(case.case_id, for_update=True)
+            if locking_reads
+            else await self.repository.list_api_extract_rules(case.case_id)
+        )
+        assert_rules = (
+            await self.repository.list_api_assert_rules(case.case_id, for_update=True)
+            if locking_reads
+            else await self.repository.list_api_assert_rules(case.case_id)
+        )
         return {
             "name": case.name,
             "description": case.description,
@@ -61,6 +65,7 @@ class ApiCandidateImporter:
             "bodyText": case.body_text,
             "timeoutMs": case.timeout_ms,
             "continueOnFailure": case.continue_on_failure,
+            "invalidatedAt": case.invalidated_at,
             "extractRules": [
                 {
                     "name": rule.name,
@@ -87,13 +92,21 @@ class ApiCandidateImporter:
             ],
         }
 
-    async def _replace_api_rules(self, case_id: str, item: dict[str, Any]) -> None:
-        existing_extract = {
-            rule.var_key: rule for rule in await self.repository.list_api_extract_rules(case_id)
-        }
-        existing_assert = {
-            rule.name: rule for rule in await self.repository.list_api_assert_rules(case_id)
-        }
+    async def _replace_api_rules(
+        self, case_id: str, item: dict[str, Any], *, locking_reads: bool = False
+    ) -> None:
+        extract_rows = (
+            await self.repository.list_api_extract_rules(case_id, for_update=True)
+            if locking_reads
+            else await self.repository.list_api_extract_rules(case_id)
+        )
+        assert_rows = (
+            await self.repository.list_api_assert_rules(case_id, for_update=True)
+            if locking_reads
+            else await self.repository.list_api_assert_rules(case_id)
+        )
+        existing_extract = {rule.var_key: rule for rule in extract_rows}
+        existing_assert = {rule.name: rule for rule in assert_rows}
         generated_extract = {rule["varKey"]: rule for rule in item["extractRules"]}
         generated_assert = {rule["name"]: rule for rule in item["assertRules"]}
         for extract_key, extract_rule in list(existing_extract.items()):
@@ -160,20 +173,11 @@ class ApiCandidateImporter:
         artifact_content: str | None = None,
         allow_reimport: bool = False,
         approved_source: Any | None = None,
+        preview_only: bool = False,
+        locking_reads: bool = False,
     ) -> dict[str, Any]:
         if approved_source is None:
-            run = await self.owned_run(user_id, run_id, "api", action="execute")
-            if not isinstance(run, StandaloneRun):
-                raise ErrNotFound()
-            from testing_agent.services.standalone_api_import import import_standalone_api
-
-            return await import_standalone_api(
-                self,
-                run,
-                collection_id=collection_id,
-                confirm_overwrite=confirm_overwrite,
-                user_id=user_id,
-            )
+            raise ErrBadRequest()
         run = approved_source
         if artifact_content is None and (
             run.status != "success"
@@ -189,7 +193,11 @@ class ApiCandidateImporter:
             check_existing=False,
         )
         generated_cases = [normalize_api_case(item, index) for index, item in enumerate(raw_cases)]
-        existing_cases = await self.repository.list_api_cases(collection_id)
+        existing_cases = (
+            await self.repository.list_api_cases(collection_id, for_update=True)
+            if locking_reads
+            else await self.repository.list_api_cases(collection_id)
+        )
         existing_by_name: dict[str, ApiCase] = {}
         for case in existing_cases:
             normalized_name = self._normalized_api_case_name(case.name)
@@ -204,13 +212,15 @@ class ApiCandidateImporter:
                 conflicts.append(
                     {
                         "normalizedName": normalized_name,
-                        "existingCase": await self._stored_api_case(existing),
+                        "existingCase": await self._stored_api_case(
+                            existing, locking_reads=locking_reads
+                        ),
                         "generatedCase": item,
                     }
                 )
-        if conflicts and not confirm_overwrite:
+        if preview_only or (conflicts and not confirm_overwrite):
             return {
-                "requiresConfirmation": True,
+                "requiresConfirmation": bool(conflicts),
                 "conflicts": conflicts,
                 "importChanges": [],
                 "run": {},
@@ -229,7 +239,9 @@ class ApiCandidateImporter:
                     add_api_rules(self.repository, target_case.case_id, item)
                 else:
                     apply_api_case(target_case, item)
-                    await self._replace_api_rules(target_case.case_id, item)
+                    await self._replace_api_rules(
+                        target_case.case_id, item, locking_reads=locking_reads
+                    )
                 changed_case_ids.add(target_case.case_id)
             await self.repository.flush()
         except Exception:

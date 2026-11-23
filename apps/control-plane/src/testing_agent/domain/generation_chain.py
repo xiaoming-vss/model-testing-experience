@@ -1,8 +1,7 @@
 """Requirement generation chain vocabulary and stage dependency rules.
 
-A chain is one AI task per requirement and kind. A stage version is approved
-content; downstream stages read the latest approved version unless the operator
-explicitly selects an older one when starting a draft.
+Stage definitions are shared by legacy chains and candidate chains. Candidate
+chains use one adopted current result per stage, with explicit trial sources.
 """
 
 from __future__ import annotations
@@ -41,7 +40,10 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
     ),
 }
 
-# Functional generation consumes the approved material version.
+# The profile has an independent current slot; it is not one of the canvas chains.
+AUXILIARY_STAGE_DEFINITIONS = {"repository_profile": (("generate", "仓库画像"),)}
+
+# Functional generation consumes the current adopted material content.
 STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
     # The review report is advisory: extraction is independent of it.
     "requirement_review": (),
@@ -85,11 +87,13 @@ JSON_ARTIFACT_STAGES = {
 
 
 def stage_names(kind: str) -> tuple[str, ...]:
-    return tuple(stage for stage, _ in STAGE_DEFINITIONS[kind])
+    definitions = STAGE_DEFINITIONS if kind in STAGE_DEFINITIONS else AUXILIARY_STAGE_DEFINITIONS
+    return tuple(stage for stage, _ in definitions[kind])
 
 
 def stage_label(kind: str, stage: str) -> str:
-    return dict(STAGE_DEFINITIONS[kind]).get(
+    definitions = STAGE_DEFINITIONS if kind in STAGE_DEFINITIONS else AUXILIARY_STAGE_DEFINITIONS
+    return dict(definitions[kind]).get(
         stage, dict(STAGE_DEFINITIONS.get(kind_for_stage(stage), ())).get(stage, stage)
     )
 
@@ -123,54 +127,3 @@ def artifact_value(stage: str, content: str, artifact_format: str | None = None)
         except (TypeError, ValueError):
             return content
     return content
-
-
-def artifact_summary(stage: str, content: str, artifact_format: str | None = None) -> str:
-    """Short, stable copy for map nodes; never parse unbounded user text."""
-    if not content:
-        return "暂无产物"
-    if artifact_is_json(stage, artifact_format):
-        try:
-            data = json.loads(content)
-        except (TypeError, ValueError):
-            return f"{len(content)} 字符"
-        if isinstance(data, dict):
-            if data.get("artifactType") == "requirement_review":
-                status = {
-                    "passed": "通过",
-                    "needs_clarification": "待澄清",
-                    "blocked": "阻断",
-                }.get(str(data.get("reviewStatus") or ""), "")
-                issues = data.get("issues")
-                count = len(issues) if isinstance(issues, list) else 0
-                return f"{status} · {count} 个问题" if status else f"{count} 个问题"
-            interfaces = data.get("interfaces")
-            if isinstance(interfaces, dict):
-                cases = sum(
-                    len(item.get("cases") or [])
-                    for item in interfaces.values()
-                    if isinstance(item, dict)
-                )
-                return f"{len(interfaces)} 个接口 · {cases} 条用例"
-            for key, unit in (
-                ("testPoints", "个测试点"),
-                ("cases", "条用例"),
-                ("pages", "个页面"),
-                ("modules", "个模块"),
-                ("businessFlows", "条流程"),
-                ("controls", "个控件"),
-                ("categories", "个分类"),
-            ):
-                value = data.get(key)
-                if isinstance(value, list):
-                    return f"{len(value)} {unit}"
-            return f"{len(data)} 个字段"
-        if isinstance(data, list):
-            return f"{len(data)} 项"
-        return "1 项内容"
-    stripped = content.strip()
-    if not stripped:
-        return "暂无产物"
-    if stripped.startswith("- "):
-        return f"{sum(1 for line in stripped.splitlines() if line.startswith('- '))} 条记录"
-    return f"{len(stripped)} 字符"

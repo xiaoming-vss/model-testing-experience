@@ -2,7 +2,7 @@ import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { seedOwnerProject } from '@/test/projectAccess'
 import { listResponse } from '@/test/listResponse'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -84,6 +84,7 @@ it('渲染性能测试集和当前用例表单', async () => {
 
   expect(await screen.findByRole('heading', { name: '订单压测' })).toBeInTheDocument()
   expect(screen.getByText('1 个用例')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /编辑信息/ })).not.toBeInTheDocument()
   expect(screen.getByText(/1 个 VU，持续 10s/)).toBeInTheDocument()
   expect(screen.getByLabelText('用例名称')).toHaveValue('登录下单')
   expect(getSuite).toHaveBeenCalledWith('suite-1')
@@ -117,5 +118,98 @@ it('打开新增性能用例弹窗', async () => {
 
   expect(await screen.findByText('新增性能用例')).toBeInTheDocument()
   expect(screen.getByPlaceholderText('例如：登录后查询订单')).toBeInTheDocument()
+  client.clear()
+})
+
+it('删除性能用例需要二次确认并从测试集中移除', async () => {
+  vi.spyOn(api, 'getPerfSuite')
+    .mockResolvedValueOnce(suite)
+    .mockResolvedValue({ ...suite, cases: [], caseCount: 0 })
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const deleteCase = vi.spyOn(api, 'deletePerfCase').mockResolvedValue({})
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  await screen.findByLabelText('用例名称')
+  await userEvent.click(screen.getByRole('button', { name: '删除用例 登录下单' }))
+  expect(await screen.findByText('确认删除该用例？')).toBeInTheDocument()
+  expect(deleteCase).not.toHaveBeenCalled()
+
+  await userEvent.click(screen.getByRole('button', { name: /^删\s*除$/ }))
+  await waitFor(() => expect(deleteCase).toHaveBeenCalledWith('case-1'))
+  await waitFor(() => expect(screen.queryByText('登录下单')).not.toBeInTheDocument())
+  client.clear()
+})
+
+it('只有当前用例显示删除入口', async () => {
+  const secondCase = { ...suite.cases[0], caseId: 'case-2', name: '查询订单', orderNo: 2 }
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue({ ...suite, cases: [...suite.cases, secondCase], caseCount: 2 })
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  expect(await screen.findByRole('button', { name: '删除用例 登录下单' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '删除用例 查询订单' })).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: /^2\s*查询订单/ }))
+  expect(await screen.findByRole('button', { name: '删除用例 查询订单' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '删除用例 登录下单' })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('失效用例在树中标记，状态胶囊只显示失效，运行弹窗排除失效用例', async () => {
+  const secondCase = { ...suite.cases[0], caseId: 'case-2', name: '查询订单', orderNo: 2 }
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue({
+    ...suite,
+    cases: [{ ...suite.cases[0], invalidatedAt: '2026-11-22T02:30:00Z' }, secondCase],
+    caseCount: 2,
+  })
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  expect(await screen.findByText('2 个用例 · 1 已失效')).toBeInTheDocument()
+  expect(screen.getByText(/已失效/, { selector: '.tp-tone-tag' })).toBeInTheDocument()
+
+  const statusChips = () =>
+    [...document.querySelectorAll<HTMLButtonElement>('.tp-chip')]
+  await userEvent.click(statusChips().find((chip) => chip.textContent === '已失效')!)
+  await waitFor(() => expect(screen.queryByText('查询订单')).toBeNull())
+  expect(screen.getByText('登录下单')).toBeInTheDocument()
+
+  await userEvent.click(statusChips().find((chip) => chip.textContent === '全部')!)
+  await userEvent.click(screen.getByRole('button', { name: '运行测试集' }))
+
+  expect(await screen.findByText(/已排除 1 条失效用例/)).toBeInTheDocument()
+  const modal = document.querySelector('.ant-modal') as HTMLElement
+  expect(modal).toHaveTextContent('1 条有效用例')
+  expect(within(modal).getByText('查询订单')).toBeInTheDocument()
+  expect(within(modal).queryByText('登录下单')).toBeNull()
+  client.clear()
+})
+
+it('从「用例状态」弹窗批量标记失效', async () => {
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue(suite)
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const batch = vi
+    .spyOn(api, 'batchInvalidatePerfCases')
+    .mockResolvedValue({ caseIds: ['case-1'], updatedCount: 1 })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  await screen.findByLabelText('用例名称')
+  await userEvent.click(screen.getByRole('button', { name: '用例状态' }))
+
+  const checkboxes = [...document.querySelectorAll<HTMLInputElement>('.ant-modal input[type="checkbox"]')]
+  await userEvent.click(checkboxes[1])
+  await userEvent.click(screen.getByRole('button', { name: '标记失效' }))
+
+  await waitFor(() =>
+    expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], true),
+  )
   client.clear()
 })

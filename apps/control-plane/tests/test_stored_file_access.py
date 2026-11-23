@@ -73,6 +73,7 @@ async def linked_file(files, kind, *, suite_run=False):
     elif kind == "ui_worker_task":
         entities["suite"] = UiTestSuite(
             suite_id="access-suite",
+            project_id="p",
             requirement_id="access-r",
             name="access",
         )
@@ -86,6 +87,11 @@ async def linked_file(files, kind, *, suite_run=False):
             UiTestSuiteRun(
                 suite_run_id="access-run",
                 suite_id="access-suite",
+                project_id="p",
+                requirement_id="access-r",
+                requirement_name="access",
+                sprint_id="access-s",
+                sprint_name="access",
                 trigger_user_id="owner",
                 status="success",
             )
@@ -94,6 +100,11 @@ async def linked_file(files, kind, *, suite_run=False):
                 run_id="access-run",
                 suite_id="access-suite",
                 case_id="access-case",
+                project_id="p",
+                requirement_id="access-r",
+                requirement_name="access",
+                sprint_id="access-s",
+                sprint_name="access",
                 trigger_user_id="owner",
                 status="success",
             )

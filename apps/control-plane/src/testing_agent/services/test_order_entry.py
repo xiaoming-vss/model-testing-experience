@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from testing_agent.core.enums import TEST_ORDER_ENTRY_TERMINAL_STATUSES, TestOrderEntryStatus
 from testing_agent.core.errors import (
     ErrBadRequest,
+    ErrFunctionTestCaseInvalidated,
     ErrFunctionTestCaseNotFound,
     ErrNotFound,
     ErrTestOrderAssigneeInvalid,
@@ -16,6 +17,7 @@ from testing_agent.core.errors import (
     ErrTestOrderEntryAssigneeLocked,
     ErrTestOrderEntryDuplicate,
     ErrTestOrderEntryNotFound,
+    dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.function_case_content import CaseContent
@@ -65,6 +67,15 @@ class TestOrderEntryService:
             cases[case.case_id] = case
         if any(case_id not in cases for case_id in case_ids):
             raise ErrFunctionTestCaseNotFound()
+        invalid_case_ids = [
+            case_id for case_id in case_ids if cases[case_id].invalidated_at is not None
+        ]
+        if invalid_case_ids:
+            raise dynamic_error(
+                ErrFunctionTestCaseInvalidated,
+                f"{len(invalid_case_ids)} 条用例已失效，不能加入测试单",
+                {"invalidCaseIds": invalid_case_ids},
+            )
 
         existing = await self.repository.list_existing_case_ids(order_id)
         order_no = await self.repository.next_order_no(order_id)

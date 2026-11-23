@@ -1,6 +1,5 @@
 """Requirement-scoped history/configuration and execution reuse the real database paths."""
 
-import json
 from datetime import timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -16,7 +15,6 @@ from testing_agent.core.errors import AppError
 from testing_agent.domain.api_interface import path_key
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
 from testing_agent.models.api_interface import ApiInterface
-from testing_agent.models.requirement import Requirement
 from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
@@ -88,50 +86,22 @@ def seed_direct_history(sync, size):
     sync.commit()
 
 
-async def test_api_and_requirement_final_review_filters_use_their_own_stage(database):  # noqa: F811
+async def test_unbound_legacy_history_is_not_in_candidate_history(database):  # noqa: F811
     sync, session, _ = database
     task = sync.query(Task).filter_by(task_id="task").one()
-    from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
-    from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
     from testing_agent.models.ai_generation_stage import AiGenerationStage
 
     seed_direct_history(sync, 3)
-    version = AiGenerateStageVersion(
-        version_id="version",
-        task_id="task",
-        stage="generate",
-        version_no=1,
-        attempt_id="direct-attempt-00",
-        artifact_content="approved",
-        artifact_format="json",
-    )
-    sync.add(version)
-    sync.flush()
-    sync.add(
-        AiGenerateVersionImport(
-            import_id="import-direct",
-            task_id="task",
-            version_id="version",
-            leaf_stage="generate",
-            target_type="api_collection",
-            target_id="target",
-            imported_by="u",
-            imported_at=NOW,
-        )
-    )
-    sync.flush()
     for task_type, kind, final_stage in [
         ("api_case_generate", "api", "generate"),
         ("requirement_analysis", "requirement_analysis", "extracting_text"),
     ]:
         task.task_type = task_type
         sync.query(AiGenerationStage).update({"stage": final_stage})
-        version.stage = final_stage
         sync.commit()
         repository = RequirementDesignRepository(session)
-        assert (await repository.history("req", kind, 1, 20, "rejected"))["total"] == 1
-        assert (await repository.history("req", kind, 1, 20, "approved"))["total"] == 1
-        assert (await repository.history("req", kind, 1, 20, "imported"))["total"] == 1
+        for status in ("all", "rejected", "approved", "imported"):
+            assert (await repository.history("req", kind, 1, 20, status))["total"] == 0
 
 
 def test_workspace_requests_are_strict_and_have_no_client_owned_scope():
@@ -141,30 +111,13 @@ def test_workspace_requests_are_strict_and_have_no_client_owned_scope():
         Start(taskId="task", requestId="invalid", connectionId="llm")
 
 
-async def test_default_configuration_reuses_existing_task(database, monkeypatch):  # noqa: F811
-    sync, session, _ = database
-
-    tasks = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    service = tasks.design
-
-    async def scope(*args, **kwargs):
-        return sync.query(Requirement).filter_by(requirement_id="req").one()
-
-    async def owned(*args, **kwargs):
-        return sync.query(Task).filter_by(task_id="task").one()
-
-    monkeypatch.setattr(service, "scope", scope)
-    monkeypatch.setattr(tasks.access, "owned_task", owned)
-
-    async def access(*args, **kwargs):
-        pass
-
-    monkeypatch.setattr(tasks.access, "ensure_project_access", access)
-    monkeypatch.setattr(tasks.access, "ensure_sprint_access", access)
+async def test_default_configuration_ignores_legacy_task_and_reuses_new_chain(database):  # noqa: F811
+    sync, _, _ = database
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
     first = await service.configure("req", "function", Configuration(), "u")
     second = await service.configure("req", "function", Configuration(), "u")
-    assert first["taskId"] == second["taskId"] == "task"
-    assert sync.query(Task).count() == 1
+    assert first["taskId"] == second["taskId"] != "task"
+    assert sync.query(Task).count() == 2
     with pytest.raises(AppError):
         await service.configure("other", "function", Configuration(taskId="task"), "u")
 
@@ -188,38 +141,6 @@ async def test_workspace_old_start_requires_stage_chain_and_checks_requirement()
         await start_requirement_design("req", "function", body, "u", service)
 
 
-async def test_stage_response_loss_retry_creates_one_attempt_and_one_worker(database):  # noqa: F811
-
-    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
-    from testing_agent.models.worker_task import WorkerTask
-    from testing_agent.schemas.generation_chain import GenerationChainRunRequest
-    from testing_agent.services.stage_storage.commands import DirectStageCommands
-
-    sync, _, _ = database
-    task = sync.query(Task).filter_by(task_id="task").one()
-    task.task_type = "api_case_generate"
-    task.interface_ids_json = ["interface-1"]
-    seed_api_interface(sync)
-    sync.commit()
-    bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    commands = DirectStageCommands(bundle.chain)
-    request_id = uuid4()
-    body = GenerationChainRunRequest(connectionId="llm", requestId=request_id)
-    first = await commands.run("req", "api", "interface_extract", body, "u")
-    second = await commands.run("req", "api", "interface_extract", body, "u")
-    assert first.stages[0].active_run_id == second.stages[0].active_run_id
-    assert sync.query(AiGenerationAttempt).count() == sync.query(WorkerTask).count() == 1
-    with pytest.raises(AppError):
-        await commands.run(
-            "req",
-            "api",
-            "interface_extract",
-            GenerationChainRunRequest(connectionId="llm", requestId=uuid4()),
-            "u",
-        )
-    assert sync.query(AiGenerationAttempt).count() == 1
-
-
 async def test_first_configuration_is_durable_and_reused_on_request_retry(database):  # noqa: F811
     sync, _, _ = database
 
@@ -230,14 +151,21 @@ async def test_first_configuration_is_durable_and_reused_on_request_retry(databa
     second = await service.configure("req", "api", body, "u")
     assert first["taskId"] == second["taskId"]
     assert sync.query(Task).filter_by(task_type="api_case_generate").count() == 1
-    different = await service.configure(
-        "req",
-        "api",
-        Configuration(newConfiguration=True, interfaceIds=["interface-1"]),
-        "u",
+    with pytest.raises(AppError, match="已有当前生成链"):
+        await service.configure(
+            "req", "api", Configuration(newConfiguration=True, interfaceIds=["interface-1"]), "u"
+        )
+    from testing_agent.models.generation_candidates import (
+        AiGenerationStageContent,
+        RequirementGenerationChain,
     )
-    assert different["taskId"] != first["taskId"]
-    assert sync.query(Task).filter_by(task_type="api_case_generate").count() == 2
+
+    chain = sync.query(RequirementGenerationChain).filter_by(requirement_id="req", kind="api").one()
+    assert chain.task_id == first["taskId"]
+    assert {
+        slot.stage
+        for slot in sync.query(AiGenerationStageContent).filter_by(chain_id=chain.chain_id)
+    } == {"interface_extract", "api_design", "generate"}
 
 
 async def test_api_configuration_requires_interfaces(database):  # noqa: F811
@@ -256,29 +184,3 @@ async def test_api_configuration_rejects_document_source(database):  # noqa: F81
         await service.configure(
             "req", "api", Configuration(sourceContent='{"openapi":"3.0.0"}'), "u"
         )
-
-
-async def test_workspace_starts_function_stage_from_approved_version_without_binding(database):  # noqa: F811
-    from support.requirement_versions import material_version
-
-    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
-    from testing_agent.schemas.generation_chain import GenerationChainRunRequest
-    from testing_agent.services.stage_storage.commands import DirectStageCommands
-
-    sync, _, _ = database
-    requirement = sync.query(Requirement).filter_by(requirement_id="req").one()
-    requirement.document_content = ""
-    sync.commit()
-    version = material_version(sync, "req")
-    bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    result = await DirectStageCommands(bundle.chain).run(
-        "req",
-        "function",
-        "requirement_analysis",
-        GenerationChainRunRequest(connectionId="llm"),
-        "u",
-    )
-    attempt = sync.get(AiGenerationAttempt, result.stages[0].active_run_id)
-    source = attempt.input_snapshot_json["source"]
-    assert json.loads(source["sourceContent"]) == json.loads(version.artifact_content)
-    assert source["requirementMaterialVersion"]["versionId"] == version.version_id

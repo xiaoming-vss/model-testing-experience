@@ -10,9 +10,30 @@ from testing_agent.api.deps import (
     get_ui_test_suite_service,
 )
 from testing_agent.core.errors import success_payload
-from testing_agent.schemas.ui_test_suite import UiSuiteRequest, UiSuiteUpdateRequest
+from testing_agent.schemas.ui_test_suite import (
+    ProjectUiSuiteRequest,
+    UiSuiteRequest,
+    UiSuiteUpdateRequest,
+)
 from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_suite import UiTestSuiteService
+
+
+async def create_project_ui_suite(
+    project_id: str,
+    body: ProjectUiSuiteRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: UiTestSuiteService = Depends(get_ui_test_suite_service),
+):
+    return success_payload(await service.create_in_project(user_id, project_id, body))
+
+
+async def list_project_ui_suites(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: UiTestSuiteService = Depends(get_ui_test_suite_service),
+):
+    return success_payload(await service.list_by_project(user_id, project_id))
 
 
 async def create_ui_suite(
@@ -47,7 +68,7 @@ async def update_ui_suite(
     service: UiTestSuiteService = Depends(get_ui_test_suite_service),
 ):
     return success_payload(
-        await service.update(user_id, suite_id, body.model_dump(by_alias=False, exclude_unset=True))
+        await service.update(user_id, suite_id, body.model_dump(by_alias=True, exclude_unset=True))
     )
 
 

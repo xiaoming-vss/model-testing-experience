@@ -8,12 +8,6 @@ from pydantic.alias_generators import to_camel
 
 
 class AiGenerateTaskRunRequest(BaseModel):
-    requirement_material_version_id: str | None = Field(default=None, max_length=64)
-    requirement_understanding_version_id: str | None = Field(
-        default=None,
-        max_length=64,
-        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
-    )
     stage: str | None = None
     current_stage: str | None = None
     function_case_ids: list[str] | None = Field(default=None)
@@ -26,7 +20,7 @@ class AiGenerateTaskRunRequest(BaseModel):
 
     model_config = ConfigDict(
         populate_by_name=True,
-        extra="allow",
+        extra="forbid",
         json_schema_extra={"additionalProperties": False},
         alias_generator=to_camel,
     )
@@ -54,16 +48,10 @@ class CodeRiskAnalysisRunRequest(BaseModel):
     trigger_type: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
     result_yaml: str | None = Field(default=None)
-    requirement_material_version_id: str | None = Field(default=None, max_length=64)
-    requirement_understanding_version_id: str | None = Field(
-        default=None,
-        max_length=64,
-        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
-    )
 
     model_config = ConfigDict(
         populate_by_name=True,
-        extra="allow",
+        extra="forbid",
         json_schema_extra={"additionalProperties": False},
         alias_generator=to_camel,
     )
@@ -90,16 +78,10 @@ class RepositoryProfileRunRequest(BaseModel):
     instruction: str | None = None
     trigger_type: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
-    requirement_material_version_id: str | None = Field(default=None, max_length=64)
-    requirement_understanding_version_id: str | None = Field(
-        default=None,
-        max_length=64,
-        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
-    )
 
     model_config = ConfigDict(
         populate_by_name=True,
-        extra="allow",
+        extra="forbid",
         json_schema_extra={"additionalProperties": False},
         alias_generator=to_camel,
     )
@@ -277,30 +259,4 @@ class RepositoryProfileRunResponse(AiGenerateTaskRunResponse):
     """repository_profile run 响应:追加解析后的画像结构。"""
 
     profile: RepositoryProfileResponse | None = None
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class RepositoryProfileMaterialVersionResponse(BaseModel):
-    """画像运行冻结的材料整理版本引用。"""
-
-    version_id: str
-    version_no: int
-    task_id: str
-    run_id: str
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class RepositoryProfileVersionResponse(BaseModel):
-    """成功画像运行形成的不可变版本视图。"""
-
-    version_id: str
-    version_no: int
-    label: str
-    profile: RepositoryProfileResponse | None = None
-    result_yaml: str
-    source_run_id: str
-    requirement_material_version: RepositoryProfileMaterialVersionResponse | None = None
-    created_at: datetime
-
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

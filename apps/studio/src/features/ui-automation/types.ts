@@ -2,8 +2,10 @@ export type UiScreenshotPolicy = 'on_failure' | 'after_each_step' | 'never'
 
 export type UiTestSuite = {
   suiteId?: string
-  requirementId?: string
-  requirement_id?: string
+  projectId?: string
+  project_id?: string
+  requirementId?: string | null
+  requirement_id?: string | null
   name: string
   description?: string
   headless?: boolean
@@ -81,6 +83,7 @@ export type UiTestCase = {
   created_at?: string
   updatedAt?: string
   updated_at?: string
+  invalidatedAt?: string | null
 }
 
 export type UiMissingVariable = {
@@ -96,6 +99,7 @@ export type UiMissingVariable = {
 
 export type UiTestCaseDebugRunPayload = {
   environmentId: string
+  sprintId?: string
   liveDebug?: boolean
   headless?: boolean
   slowMoMs?: number
@@ -164,6 +168,11 @@ export type UiTestSuiteRunItem = {
 export type UiTestSuiteRunSummary = {
   suiteRunId?: string
   suiteId?: string
+  projectId?: string
+  requirementId?: string | null
+  requirementName?: string
+  sprintId?: string | null
+  sprintName?: string
   status?: 'pending' | 'claimed' | 'running' | 'success' | 'failed' | 'error' | 'canceled' | string
   totalCount?: number
   successCount?: number
@@ -212,9 +221,16 @@ export type RunUiTestSuitePayload = Pick<
   'headless' | 'slowMoMs' | 'viewportWidth' | 'viewportHeight' | 'defaultStepTimeoutMs'
 > & {
   environmentId: string
+  sprintId?: string
 }
 
-export type UpdateUiTestSuitePayload = Partial<CreateUiTestSuitePayload>
+export type CreateProjectUiTestSuitePayload = CreateUiTestSuitePayload & {
+  requirementId?: string | null
+}
+
+export type UpdateUiTestSuitePayload = Partial<CreateUiTestSuitePayload> & {
+  requirementId?: string | null
+}
 
 export type CreateUiTestCasePayload = {
   name: string

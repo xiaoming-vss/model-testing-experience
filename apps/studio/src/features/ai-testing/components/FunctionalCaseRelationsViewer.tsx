@@ -19,7 +19,8 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import caseRelationsStyles from '@/shared/styles/case-relations.module.css'
 import { api } from '@/services/api'
-import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
+import { getErrorMessage } from '@/utils/format'
+import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun, type CandidateRelationsSource } from '../hooks/useFunctionalCaseRelationsRun'
 
 // relation_analysis 产物只存在 configJson.caseRelations 里，是已通过校验的 JSON 对象。
 function getCaseRelationsContent(run?: FunctionalCaseGenerateTaskRun) {
@@ -42,7 +43,7 @@ function getCaseRelationsContent(run?: FunctionalCaseGenerateTaskRun) {
   }
 }
 
-export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded = false, controlsContainer }: { taskId: string; runId: string; onBack?: () => void; embedded?: boolean; controlsContainer?: HTMLElement | null }) {
+export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded = false, controlsContainer, candidate }: { taskId: string; runId: string; onBack?: () => void; embedded?: boolean; controlsContainer?: HTMLElement | null; candidate?: CandidateRelationsSource }) {
   const [activeTab, setActiveTab] = useState<'graph' | 'json'>('graph')
   const viewRef = useViewMotion(activeTab === 'graph' ? 0 : 1)
   const [jsonToolbar, setJsonToolbar] = useState<HTMLDivElement | null>(null)
@@ -54,7 +55,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
     queryFn: () => api.getFunctionalCaseGenerateTask(taskId as string),
     enabled: Boolean(taskId),
   })
-  const runQuery = useFunctionalCaseRelationsRun(runId)
+  const runQuery = useFunctionalCaseRelationsRun(runId, true, true, candidate)
 
   const run = runQuery.data
   const generating = relationGenerating(run)
@@ -129,7 +130,7 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
           {loading ? (
             <div className="ai-relations-page-loading flex items-center justify-center"><Spin /></div>
           ) : runQuery.error ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载失败，请返回任务页重试" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={candidate ? getErrorMessage(runQuery.error) : '运行记录加载失败，请返回任务页重试'} />
           ) : !relationsContent ? (
             generating ? <div className="ai-relations-page-loading flex items-center justify-center"><Spin /></div>
               : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={failed ? '本次未产生图谱，可重新生成' : '当前运行尚未生成用例图谱'} />

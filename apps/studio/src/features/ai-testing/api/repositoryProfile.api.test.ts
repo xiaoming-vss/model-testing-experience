@@ -23,14 +23,12 @@ it('仓库画像任务与运行端点使用需求级任务契约', async () => {
 
   await repositoryProfileApi.runRepositoryProfileTask('task', {
     llmConnectionId: 'llm',
-    requirementMaterialVersionId: 'v1',
     requestId: 'request',
   })
   expect(request).toHaveBeenLastCalledWith('/v1/repository-profile-tasks/task/run', {
     method: 'POST',
     body: JSON.stringify({
       llmConnectionId: 'llm',
-      requirementMaterialVersionId: 'v1',
       requestId: 'request',
     }),
   })
@@ -40,6 +38,4 @@ it('仓库画像任务与运行端点使用需求级任务契约', async () => {
     '/v1/repository-profile-tasks/task/runs?page=2&pageSize=20',
   )
 
-  await repositoryProfileApi.getRepositoryProfileVersions('task')
-  expect(request).toHaveBeenLastCalledWith('/v1/repository-profile-tasks/task/versions')
 })

@@ -74,16 +74,6 @@ class RequirementRepository(ResourceRepository):
             )
         )
 
-    async def get_by_sprint_and_name_unscoped(
-        self, sprint_id: str, name: str
-    ) -> Requirement | None:
-        return await self.session.scalar(
-            select(Requirement).where(
-                Requirement.sprint_id == sprint_id,
-                Requirement.name == name,
-            )
-        )
-
     async def list_sprint_page(
         self, sprint_id: str, page: int, page_size: int
     ) -> tuple[int, list[RowMapping]]:

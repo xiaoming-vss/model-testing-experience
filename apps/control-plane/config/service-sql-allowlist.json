@@ -3,10 +3,6 @@
   "reviewed_at": "2026-11-19",
   "policy": "Service 直接使用 SQL 的文件必须登记；新增文件需登记或添加 # transaction-bound: 标记。",
   "files": {
-    "services/ai_run_launcher.py": {
-      "classification": "read-write",
-      "reason": "Launch AI runs with preparation and final authorization in separate transactions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
     "services/ai_task_commands.py": {
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
@@ -121,10 +117,6 @@
       "classification": "write",
       "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
     },
-    "services/generation_chain.py": {
-      "classification": "read-write",
-      "reason": "Requirement generation chain orchestration；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
     "services/integration_authorization.py": {
       "classification": "locking-read",
       "reason": "Local authorization only. Worker access is scoped to the job actor and bound service；读取使用行锁并与调用方事务绑定，保留在 service。"
@@ -225,11 +217,6 @@
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/repository_profile_versions.py": {
-      "classification": "types-only",
-      "migration": "migrated",
-      "reason": "画像 attempt 查询已迁入 GenerationChainRepository.profile_attempts；文件保留版本投影和按 execution 去重规则。"
-    },
     "services/requirement_document_migration.py": {
       "classification": "read-write",
       "reason": "Migrate legacy plain-text requirements to sanitized rich-text documents；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
@@ -279,10 +266,6 @@
       "migration": "long-term-exception",
       "reason": "生成链全景需跨 stage/attempt/version/import 多表组装，属于读模型投影；拆到单一 repository 会把视图规则分散到多个方法，保留到生成链读模型整体改造。"
     },
-    "services/stage_storage/commands.py": {
-      "classification": "read-write",
-      "reason": "editable draft and review commands for direct stage storage；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
     "services/stage_storage/dispatch.py": {
       "classification": "read-write",
       "reason": "transactional dispatch for a directly owned stage attempt；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
@@ -291,39 +274,9 @@
       "classification": "types-only",
       "reason": "Project direct requirement-stage history to the existing paginated response；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
     },
-    "services/stage_storage/relations.py": {
-      "classification": "read-write",
-      "reason": "Version-scoped functional case relation graphs for direct stages；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/stage_storage/run_command.py": {
-      "classification": "read-write",
-      "reason": "direct stage launch; caller owns authorization and transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
     "services/stage_storage/run_view.py": {
       "classification": "types-only",
       "reason": "Adapt one requirement-chain attempt to the established run-detail response；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
-    },
-    "services/stage_storage/ui_batch.py": {
-      "classification": "read-write",
-      "reason": "UI source-batch transitions; caller owns task lock and transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/stage_storage/upstream.py": {
-      "classification": "locking-read",
-      "reason": "upstream version selection without old run ledger reads；读取使用行锁并与调用方事务绑定，保留在 service。"
-    },
-    "services/stage_storage/version_delete.py": {
-      "classification": "read-write",
-      "reason": "version deletion and direct dependent-draft invalidation；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/stage_storage/version_views.py": {
-      "classification": "types-only",
-      "migration": "migrated",
-      "reason": "版本、上游任务和 attempt 查询已迁入 GenerationChainRepository；文件保留跨阶段视图组装。"
-    },
-    "services/stage_storage/views.py": {
-      "classification": "read-only",
-      "migration": "long-term-exception",
-      "reason": "阶段与 attempt 展示投影跨多表并按任务批量组装，属于读模型；保留在 service 以免视图规则分散。"
     },
     "services/stage_storage/worker.py": {
       "classification": "read-write",
@@ -360,10 +313,6 @@
     "services/standalone_history.py": {
       "classification": "types-only",
       "reason": "Project independent execution history into existing paginated responses；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
-    },
-    "services/standalone_import.py": {
-      "classification": "write",
-      "reason": "Record formal-asset provenance for an approved independent candidate；写路径由 service 持有事务边界，保留直接 SQL。"
     },
     "services/standalone_worker_authorization.py": {
       "classification": "read-only",
@@ -427,6 +376,10 @@
     "services/ui_test_case_run.py": {
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/ui_test_suite.py": {
+      "classification": "write",
+      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
     },
     "services/user_admin.py": {
       "classification": "read-write",

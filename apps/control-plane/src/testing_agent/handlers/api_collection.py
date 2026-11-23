@@ -6,8 +6,21 @@ from fastapi import Body, Depends, File, UploadFile
 
 from testing_agent.api.deps import get_api_collection_service, get_current_user_id
 from testing_agent.core.errors import success_payload
-from testing_agent.schemas.api_collection import ApiCollectionRequest, ApiCollectionUpdateRequest
+from testing_agent.schemas.api_collection import (
+    ApiCollectionRequest,
+    ApiCollectionUpdateRequest,
+    ProjectApiCollectionRequest,
+)
 from testing_agent.services.api_collection import ApiCollectionService
+
+
+async def create_project_api_collection(
+    project_id: str,
+    body: ProjectApiCollectionRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: ApiCollectionService = Depends(get_api_collection_service),
+):
+    return success_payload(await service.create_in_project(user_id, project_id, body))
 
 
 async def create_api_collection(

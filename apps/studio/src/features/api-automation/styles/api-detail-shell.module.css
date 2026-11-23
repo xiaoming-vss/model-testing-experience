@@ -16,38 +16,6 @@
   border-color: var(--srf-card-border);
 }
 
-/* ===== 用例名称行：标签与输入同排 ===== */
-
-.scope :global(.api-wb-case-name-item .ant-form-item-row) {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.scope :global(.api-wb-case-name-item .ant-form-item-label) {
-  flex: 0 0 auto;
-  padding: 0;
-}
-
-.scope :global(.api-wb-case-name-item .ant-form-item-label > label) {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.scope :global(.api-wb-case-name-item .ant-form-item-control) {
-  flex: 1 1 200px;
-  min-width: 0;
-  max-width: 420px;
-}
-
-.scope :global(.api-wb-case-name-item .ant-input) {
-  font-size: 14px;
-  font-weight: 600;
-}
-
 /* ===== 请求方法：按 tone 着色的 Select ===== */
 
 .scope :global(.api-wb-method .ant-select-selector) {
@@ -86,12 +54,12 @@
 }
 
 .scope :global(.api-wb-tabs > .ant-tabs-nav .ant-tabs-tab) {
-  padding: 10px 0;
+  padding: 10px 8px;
   font-size: 12px;
 }
 
 .scope :global(.api-wb-tabs > .ant-tabs-nav .ant-tabs-tab + .ant-tabs-tab) {
-  margin-left: 20px;
+  margin-left: 4px;
 }
 
 .scope :global(.api-wb-tabs .ant-tabs-ink-bar) {
@@ -138,93 +106,3 @@
 }
 
 /* ===== 请求头表：表头、行距与输入 ===== */
-
-.scope :global(.api-wb-hdr-table thead th) {
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--srf-card-border);
-  background: var(--srf-hover);
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.scope :global(.api-wb-hdr-table tbody td) {
-  padding: 4px 12px;
-  border-bottom: 1px solid var(--app-list-row-border);
-  vertical-align: middle;
-}
-
-.scope :global(.api-wb-hdr-table tbody tr:last-child td) {
-  border-bottom: 0;
-}
-
-.scope :global(.api-wb-hdr-input.ant-input) {
-  padding: 4px 8px;
-  border-color: transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--srf-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  box-shadow: none;
-}
-
-.scope :global(.api-wb-hdr-input.is-key.ant-input) {
-  font-weight: 500;
-}
-
-.scope :global(.api-wb-hdr-input.ant-input:hover) {
-  background: var(--srf-chip);
-}
-
-.scope :global(.api-wb-hdr-input.ant-input:focus) {
-  border-color: var(--srf-accent);
-  background: var(--srf-card);
-  box-shadow: 0 0 0 3px var(--srf-accent-soft);
-}
-
-.scope :global(.api-wb-hdr-input.is-draft.ant-input) {
-  border-style: dashed;
-  border-color: var(--srf-card-border);
-  background: var(--srf-card);
-}
-
-/* ===== 请求体：编辑器外壳与 CodeMirror ===== */
-
-.scope :global(.api-wb-body-panel .api-body-editor-form-item) {
-  margin: 0;
-}
-
-.scope :global(.api-wb-body-panel .json-editor-shell) {
-  border: 0;
-  border-radius: 0;
-  background: var(--srf-card);
-}
-
-.scope :global(.api-wb-body-panel .json-editor-shell:focus-within) {
-  border: 0;
-  box-shadow: none;
-}
-
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-editor),
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-scroller),
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-gutters) {
-  background: var(--srf-card);
-}
-
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-gutters) {
-  border-right: 1px solid var(--srf-divider);
-  color: var(--srf-text-muted);
-}
-
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-editor) {
-  max-height: max(260px, calc(100cqh - 200px));
-  font-size: 12px;
-  line-height: 24px;
-}
-
-.scope :global(.api-wb-body-panel .json-editor-codemirror .cm-gutterElement) {
-  padding-inline: 8px;
-}

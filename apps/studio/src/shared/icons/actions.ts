@@ -1,6 +1,6 @@
 import {
   CaretRightOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, LinkOutlined,
-  PlusOutlined, ReloadOutlined, SaveOutlined, SyncOutlined, UploadOutlined,
+  PlusOutlined, ReloadOutlined, SaveOutlined, UploadOutlined,
 } from '@ant-design/icons'
 
 export const actionRegistry = {
@@ -13,7 +13,6 @@ export const actionRegistry = {
   download: { label: '下载', Icon: DownloadOutlined },
   upload: { label: '上传', Icon: UploadOutlined },
   bind: { label: '绑定', Icon: LinkOutlined },
-  sync: { label: '同步', Icon: SyncOutlined },
 } as const
 
 export type ActionName = keyof typeof actionRegistry

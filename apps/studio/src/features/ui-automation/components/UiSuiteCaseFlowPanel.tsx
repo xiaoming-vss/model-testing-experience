@@ -8,6 +8,8 @@ import type { UiTestSuiteCasePageModel } from '../hooks/useUiTestSuiteCasePage'
 export function UiSuiteCaseFlowPanel({ page }: { page: UiTestSuiteCasePageModel }) {
   const {
     flowLevel,
+    invalidatedFilter,
+    setInvalidatedFilter,
     caseFlowRef,
     caseFlowItems,
     runningCaseIds,
@@ -35,13 +37,33 @@ export function UiSuiteCaseFlowPanel({ page }: { page: UiTestSuiteCasePageModel 
   } = page
 
   return <div className="ui-wb-main ui-suite-case-editor-panel flex min-h-0 min-w-0 flex-col gap-3">
-    {flowLevel === 'cases' ? <UiExecutionFlow
-      ref={caseFlowRef} inlineSave
-      key={`cases:${suiteId}:${caseFlowItems.map((item) => item.id).join('|')}`}
-      items={caseFlowItems} runningIds={runningCaseIds} storageKey={`ui-flow:${suiteId}:cases`} editable={canReorder && !reorderCasesMutation.isPending}
-      applying={reorderCasesMutation.isPending} onSelect={handleSelectCase} onOpen={handleSelectCase} onApply={applyCaseFlowOrder}
-      onAdd={can('write') ? openCreateCase : undefined} addLabel="添加用例" hint="点击用例进入 · "
-    /> : null}
+    {flowLevel === 'cases' ? <>
+      <div className="ui-wb-case-status-filter flex flex-none flex-wrap items-center gap-2 px-1 text-[12px] text-[var(--srf-text-secondary)]">
+        <span>状态:</span>
+        {([
+          ['all', '全部'],
+          ['valid', '有效'],
+          ['invalid', '已失效'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={`tp-chip${invalidatedFilter === value ? ' active' : ''}`}
+            aria-pressed={invalidatedFilter === value}
+            onClick={() => setInvalidatedFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <UiExecutionFlow
+        ref={caseFlowRef} inlineSave
+        key={`cases:${suiteId}:${caseFlowItems.map((item) => item.id).join('|')}`}
+        items={caseFlowItems} runningIds={runningCaseIds} storageKey={`ui-flow:${suiteId}:cases`} editable={canReorder && !reorderCasesMutation.isPending}
+        applying={reorderCasesMutation.isPending} onSelect={handleSelectCase} onOpen={handleSelectCase} onApply={applyCaseFlowOrder}
+        onAdd={can('write') ? openCreateCase : undefined} addLabel="添加用例" hint="点击用例进入 · "
+      />
+    </> : null}
     <div className="ui-flow-editor flex min-h-0 flex-1 flex-col" hidden={flowLevel === 'cases'}>
       {caseList.length === 0 ? (
         casesQuery.isLoading ? <UiFlowLoading label="正在加载 UI 测试用例..." /> : (

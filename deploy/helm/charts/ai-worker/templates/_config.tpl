@@ -52,7 +52,6 @@ provider_request_timeout_seconds = {{ float64 . }}
 {{ end }}
 {{ end }}
 [code_risk_analysis]
-gitlab_timeout_seconds = {{ float64 .Values.config.code_risk_analysis.gitlab_timeout_seconds }}
 git_timeout_seconds = {{ float64 .Values.config.code_risk_analysis.git_timeout_seconds }}
 workspace_retention_hours = {{ float64 .Values.config.code_risk_analysis.workspace_retention_hours }}
 max_diff_chars = {{ int64 .Values.config.code_risk_analysis.max_diff_chars }}

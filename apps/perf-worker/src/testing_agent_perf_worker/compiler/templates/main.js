@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 import exec from 'k6/execution';
-import { Counter } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
 
 const plan = JSON.parse(open('plan.json'));
 
@@ -16,6 +16,10 @@ for (const meta of plan.data) {
 }
 
 const bizFailures = new Counter('biz_failures');
+const stepResults = new Counter('mtx_step_results');
+const stepFailures = new Counter('mtx_step_failures');
+const caseDuration = new Trend('mtx_case_request_duration', true);
+const stepDuration = new Trend('mtx_step_request_duration', true);
 
 function asString(value) {
   if (value === undefined || value === null) {
@@ -290,30 +294,35 @@ export default function () {
       headers: headers,
       tags: { step: step.name },
     });
-
-    const passed = runChecks(res, step, ctx);
-    if (!passed) {
-      if (step.onFailure === 'abort_test') {
-        exec.test.abort('step ' + step.name + ' checks failed');
-      }
-      if (step.onFailure === 'abort_iteration') {
-        return;
+    if (res && res.timings && (res.status !== 0 || res.timings.duration > 0)) {
+      caseDuration.add(res.timings.duration);
+      stepDuration.add(res.timings.duration, { step: step.name });
+    }
+    const expected = step.expectedStatuses;
+    let reason = '';
+    if (!res || !res.status || (expected ? expected.indexOf(res.status) < 0 : res.status < 200 || res.status >= 300)) {
+      reason = 'request';
+    } else if (!runChecks(res, step, ctx)) {
+      reason = 'check';
+    } else {
+      for (const rule of step.extract || []) {
+        const value = extractValue(res, rule);
+        if (value === undefined) {
+          bizFailures.add(1);
+          reason = 'extract';
+          break;
+        }
+        ctx.vars[rule.name] = value;
       }
     }
-
-    for (const rule of step.extract || []) {
-      const value = extractValue(res, rule);
-      if (value === undefined) {
-        bizFailures.add(1);
-        if (step.onFailure === 'abort_test') {
-          exec.test.abort('step ' + step.name + ' extract ' + rule.name + ' missing');
-        }
-        if (step.onFailure === 'abort_iteration') {
-          return;
-        }
-        continue;
+    stepResults.add(1, { step: step.name, outcome: reason ? 'failed' : 'success' });
+    if (reason) {
+      stepFailures.add(1, { step: step.name, reason: reason });
+      if (step.onFailure === 'abort_test') {
+        exec.test.abort('step ' + step.name + ' failed: ' + reason);
       }
-      ctx.vars[rule.name] = value;
+      if (step.onFailure === 'abort_iteration') return;
+      continue;
     }
 
     if (step.thinkTimeMs > 0) {

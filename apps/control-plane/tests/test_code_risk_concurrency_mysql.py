@@ -12,17 +12,58 @@ from support.mysql_initialization import mysql, seed_row  # noqa: F401
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_execution import AiExecution
 from testing_agent.models.ai_generate_task import AiGenerateTask
+from testing_agent.models.generation_candidates import RequirementGenerationChain
+from testing_agent.models.project import Project
+from testing_agent.models.requirement import Requirement
+from testing_agent.models.sprint import Sprint
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 
 
+def seed_material(connection):
+    project = seed_row(connection, Project.__table__)
+    sprint = seed_row(connection, Sprint.__table__, {"project_id": project["project_id"]})
+    requirement = seed_row(connection, Requirement.__table__, {"sprint_id": sprint["sprint_id"]})
+    source = seed_row(
+        connection,
+        AiGenerateTask.__table__,
+        {
+            "task_type": "requirement_analysis",
+            "project_id": project["project_id"],
+            "sprint_id": sprint["sprint_id"],
+            "requirement_id": requirement["requirement_id"],
+        },
+    )
+    seed_row(
+        connection,
+        RequirementGenerationChain.__table__,
+        {
+            "task_id": source["task_id"],
+            "requirement_id": requirement["requirement_id"],
+            "kind": "requirement_analysis",
+        },
+    )
+    return {key: source[key] for key in ("project_id", "sprint_id", "requirement_id")}
+
+
+def use_current_material(launcher, monkeypatch):
+    monkeypatch.setattr(
+        launcher, "_prepare_current_material", AsyncMock(return_value=(object(), object()))
+    )
+    monkeypatch.setattr(
+        "testing_agent.services.ai_run_launcher.lock_prepared_requirement_root", AsyncMock()
+    )
+    monkeypatch.setattr("testing_agent.services.ai_run_launcher.lock_current_material", AsyncMock())
+
+
 async def test_concurrent_code_risk_launch_creates_one_run(mysql, monkeypatch):  # noqa: F811
     with mysql.begin() as connection:
+        material = seed_material(connection)
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
-            {"task_type": "code_risk_analysis", "sprint_id": "", "requirement_id": ""},
+            {"task_type": "code_risk_analysis", **material},
         )
     monkeypatch.setattr(
         "testing_agent.services.ai_run_launcher.require_project_access", AsyncMock()
@@ -53,9 +94,12 @@ async def test_concurrent_code_risk_launch_creates_one_run(mysql, monkeypatch): 
                 repository=repository,
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(
-                    build_snapshot=AsyncMock(return_value={})
+                    build_snapshot=AsyncMock(
+                        return_value={"requirementMaterialCurrent": {"candidateId": "current"}}
+                    )
                 ),
             )
+            use_current_material(launcher, monkeypatch)
             try:
                 return await launcher.launch(
                     "code_risk_analysis", task["task_id"], {"connectionId": "llm"}, "user"
@@ -90,10 +134,11 @@ async def test_code_risk_same_request_replays_after_concurrent_dispatch(mysql, m
     from testing_agent.services.stage_storage import authorization
 
     with mysql.begin() as connection:
+        material = seed_material(connection)
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
-            {"task_type": "code_risk_analysis", "sprint_id": "", "requirement_id": ""},
+            {"task_type": "code_risk_analysis", **material},
         )
     monkeypatch.setattr(
         "testing_agent.services.ai_run_launcher.require_project_access", AsyncMock()
@@ -103,7 +148,7 @@ async def test_code_risk_same_request_replays_after_concurrent_dispatch(mysql, m
     )
     authorization_check = AsyncMock(return_value="user")
     monkeypatch.setattr(authorization, "authorize_worker_actor", authorization_check)
-    snapshot = AsyncMock(return_value={})
+    snapshot = AsyncMock(return_value={"requirementMaterialCurrent": {"candidateId": "current"}})
     engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     arrived = 0
@@ -138,6 +183,7 @@ async def test_code_risk_same_request_replays_after_concurrent_dispatch(mysql, m
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(build_snapshot=snapshot),
             )
+            use_current_material(launcher, monkeypatch)
             return await launcher.launch("code_risk_analysis", task["task_id"], body, actor)
 
     body = {"connectionId": "llm", "requestId": "same-risk-request"}
@@ -194,17 +240,17 @@ async def test_distinct_risks_dispatch_in_parallel_without_queue_gap_deadlock(
     from testing_agent.services import auxiliary_execution
 
     with mysql.begin() as connection:
+        materials = [seed_material(connection), seed_material(connection)]
         tasks = [
             seed_row(
                 connection,
                 AiGenerateTask.__table__,
                 {
                     "task_type": "code_risk_analysis",
-                    "sprint_id": "",
-                    "requirement_id": "",
+                    **material,
                 },
             )
-            for _ in range(2)
+            for material in materials
         ]
     monkeypatch.setattr(
         "testing_agent.services.ai_run_launcher.require_project_access", AsyncMock()
@@ -246,9 +292,12 @@ async def test_distinct_risks_dispatch_in_parallel_without_queue_gap_deadlock(
                 repository=repository,
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(
-                    build_snapshot=AsyncMock(return_value={})
+                    build_snapshot=AsyncMock(
+                        return_value={"requirementMaterialCurrent": {"candidateId": "current"}}
+                    )
                 ),
             )
+            use_current_material(launcher, monkeypatch)
             try:
                 return await launcher.launch(
                     "code_risk_analysis",

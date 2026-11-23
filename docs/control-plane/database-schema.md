@@ -44,6 +44,13 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 表名保留 `api_` 前缀，因为改名会牵动 API 自动化的全部代码。运行协议与隐私规则见 [UI 环境变量与后置提取](ui-environment-variables.md)。
 
+## API/UI 测试集归属与运行快照
+
+- `api_collections`、`ui_test_suites`：项目级测试资产。`project_id` 非空并决定权限、生命周期和名称唯一性，唯一约束为 `(project_id, name)`；`requirement_id` 可空，只表示来源需求或可选关联，外键 `ON DELETE SET NULL`。接收过正式生成导入的测试集以非空 `effective_import_id` 标记，不允许清空或更换需求；手工测试集可以自由关联和解除。需求删除时测试集自动转为项目级，项目删除前必须先删除测试集。
+- `api_collection_runs`、`api_case_runs`、`ui_test_suite_runs`、`ui_test_case_runs`：运行创建时冻结 `project_id`、可空 `requirement_id`、`requirement_name`、可空 `sprint_id`、`sprint_name` 和 `trigger_type`。权限校验、历史展示和按迭代筛选使用冻结值，不从测试集当前关联推导；未关联需求的项目级运行可以不记录需求和迭代。索引覆盖 `(project_id, sprint_id, created_at)`，供项目级运行记录筛选。
+
+结构决策与备选方案见 [ADR 0027](adr/0027-project-owned-api-ui-test-suites.md)。
+
 ## 性能测试
 
 性能资产和执行账本与功能执行分开：
@@ -58,6 +65,12 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 - `worker_tasks.domain` 扩展 `perf`；子运行使用 `task_type="perf_run"` 和 60 秒租约。通用状态列仍为 `pending/claimed/running/stopping/success/failed/canceled`。
 
 测试集运行时，控制面在同一事务中预创建所有用例的子 `perf_runs`、父 `perf_suite_runs` 和有序条目，但只给第一条子运行写入 `worker_tasks`。子运行完成后在同一/后续事务中推进下一条，失败继续，用户停止则跳过剩余条目。父运行推进有租约扫描兜底，避免完成事件丢失导致长期挂起。停止只允许触发人操作；停止单条子运行会级联停止父测试集。Worker 结果映射、停止优先和终态幂等见 [ADR 0002](../perf-worker/adr/0002-control-plane-poll-mode.md)。项目删除前必须没有性能测试集和监控接入；删除测试集会级联删除用例、子运行、父运行和任务，并把当前及历史数据文件标记为 `deleting` 交给统一存储清理。
+
+## 正式用例失效标记
+
+- `function_test_cases`、`api_cases`、`ui_test_cases`、`perf_cases` 统一增加 `invalidated_at DATETIME NULL` 和同名索引：空值表示有效，非空表示已失效并保存首次失效时间；恢复有效只清空该列，重复失效不刷新首次时间。
+- 该列是资产生命周期标记，不是 API/UI 的 `enabled` 执行开关，也不是软删除。失效用例仍属于原测试集或 Collection，并继续占用原有名称/标题唯一约束；`enabled` 原值和语义不变。
+- 失效用例退出新的执行与 AI 分析，但不会被历史运行、运行快照、测试单执行条目、执行结果、历史统计或已冻结 AI 快照引用；删除资产仍按硬删除处理。结构决策见 [ADR 0026](adr/0026-case-invalidation-marker.md)。
 
 ## 接口库与软件仓库
 
@@ -74,9 +87,12 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 - `ai_generate_tasks`：任务定义、归属、创建者和来源配置。
 - `ai_executions`：一次用户或系统发起的执行身份、发起者和创建时间；独立多阶段执行另存聚合状态、当前阶段、检查点、初始快照和起止时间。
-- `ai_generation_stages`：任务的稳定阶段，保存当前候选、活动尝试、版本计数和 UI 输入批次；不保存可推导的执行状态或审核副本。
+- `ai_generation_stages`：任务的稳定阶段，保存当前尝试和活动尝试；输入来源由候选内容的快照保存，不保存业务版本计数。
 - `ai_generation_attempts`：阶段内的生成、修订或人工编辑尝试，保存冻结输入、输出、错误和可选执行关联；人工编辑可以没有 Worker 队列。
-- `ai_generate_stage_versions`：审核通过后产生的不可变正文及来源快照，版本号在任务阶段内不复用。
-- `ai_generate_version_imports`：正式资产导入来源，只引用一个已审核版本或一个独立候选尝试，并记录目标、变更用例和上游快照。
+- `ai_generate_imports` 和 `ai_generate_import_requests`：正式资产导入的自包含来源回执及幂等请求，不依赖生成任务或尝试继续存在。
+
+预发布单基线包含 `requirement_generation_chains`、`ai_generation_candidates`、`ai_generation_stage_contents` 和 `ai_generation_review_receipts`，用于多候选和唯一当前内容。候选以 `(stage_id, origin_attempt_id)` 防止同一尝试重复入池，当前内容以阶段及 `(chain_id, stage)` 保证唯一，并保留空槽令牌；`source_candidate_id` 是阶段本地采用指针，采用和导入只校验该内容自身的冻结来源闭包，不要求上游阶段当前指针一致。材料、功能、API、UI 和画像候选的公开读取、派发、采用及清空入口已接入。
+
+`ai_generate_import_requests` 和 `ai_generate_imports` 是新导入方案的请求幂等记录及自包含目标回执。回执保存导入正文、所选上游产物、来源身份和摘要，不依赖来源候选、尝试或旧版本的外键；每个请求和正式目标的组合最多一条回执。来源审计快照不复制运行凭据、签名地址或原始提示词，但完整上游产物和导入正文仍属于项目业务数据，必须按项目权限保护。独立任务导入及其历史读取使用新回执。用户已确认不迁移旧生成历史，正式功能、API 和 UI 测试用例必须保留；本轮不连接或修改业务数据库。详情见[阶段记录](records/2026-11-20-generation-candidate-foundation.md)。
 
 阶段尝试不保存 `progress_json` 或 `remediation`；阶段不保存可推导的执行状态和审核副本。公开 AI 接口的 `runId` 是执行 ID，AI Worker 队列和回传的标识是 `attemptId`。执行身份与阶段模型的完整决策见 [ADR 0010](adr/0010-unified-ai-execution.md)，历史删除规则见[生成链文档](generation-chain.md#历史与删除)。

@@ -45,7 +45,7 @@ export function ArtifactDivider() {
   return <span className="h-6 w-px bg-app-surface-border" aria-hidden="true" />
 }
 
-export type ArtifactBreakdownItem = {
+type ArtifactBreakdownItem = {
   label: ReactNode
   value?: ReactNode
   dot?: 'ok' | 'warn' | 'danger' | 'muted' | 'accent'

@@ -136,7 +136,7 @@ python3 scripts/manage.py compose up -d --build --no-deps ai-worker
 
 ## 本地独立启动
 
-先按项目安装依赖：五个 Python 项目在各自目录执行 `uv sync --locked`；前端执行 `npm ci`；API/UI Worker 另执行 `uv run playwright install chromium`（Linux 首次安装可使用 `--with-deps`）。Python 开发测试按项目 README 安装开发依赖。
+先按项目安装依赖：五个 Python 项目在各自目录执行 `uv sync --locked`；前端执行 `npm ci`；API/UI Worker 另执行 `uv run --locked playwright install chromium`（Linux 首次安装可使用 `--with-deps`）。Python 开发测试按项目 README 安装开发依赖。
 
 使用已有数据库时，按下一节填写 `database.url`，跳过内置 MySQL 启动。如果使用内置的空数据库，先执行：
 

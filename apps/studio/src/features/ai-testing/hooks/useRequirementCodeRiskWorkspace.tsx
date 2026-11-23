@@ -1,10 +1,10 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Select, Typography } from 'antd'
+import { Alert, Typography } from 'antd'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { listTotal } from '@/shared/api/request'
 import { listItems } from '@/services/api'
 import { aiTestingApi } from '../api/aiTesting.api'
-import { generationChainApi } from '../api/generationChain.api'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { message } from '@/shared/utils/feedback'
 import { randomId } from '@/shared/utils/crypto'
@@ -34,34 +34,22 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [selectedRunId, setSelectedRunId] = useState<string>()
-  const [materialVersionId, setMaterialVersionId] = useState('')
   const requestId = useRef<{ taskId: string; options: string; id: string } | undefined>(undefined)
-  const materialQuery = useQuery({
-    queryKey: ['generationChain', requirementId, 'requirement_analysis', 'detail'],
-    queryFn: () => generationChainApi.chain(requirementId, 'requirement_analysis'),
+  const currentMaterialQuery = useQuery({
+    queryKey: ['candidateWorkflow', requirementId, 'requirement_analysis', 'extracting_text', 'current'],
+    queryFn: () => generationCandidatesApi.current(requirementId, 'requirement_analysis', 'extracting_text'),
     enabled: active && Boolean(requirementId),
   })
-  const materialStage = materialQuery.data?.stages.find(item => item.stage === 'extracting_text')
-  const materialVersions = materialStage?.versions ?? []
-  const latestMaterialVersionId = materialStage?.latestVersion?.versionId ?? materialVersions[0]?.versionId
-  useEffect(() => {
-    if (materialVersionId || !latestMaterialVersionId) return
-    setMaterialVersionId(latestMaterialVersionId)
-  }, [materialVersionId, latestMaterialVersionId])
+  const currentAvailable = Boolean(currentMaterialQuery.data?.candidateId && !currentMaterialQuery.data.invalidatedAt)
   const understandingRunOptions = {
-    // 没有已审核版本时服务端会拒绝运行，这里提前禁用确认并说明原因。
-    confirmDisabled: materialQuery.isSuccess && !materialVersions.length,
+    confirmDisabled: !currentAvailable,
     render: () => <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Text strong>材料整理版本</Text>
-      <Text type="secondary">代码风险分析读取已审核的材料整理版本，默认使用最新版本。</Text>
-      {materialVersions.length ? <Select aria-label="材料整理版本" value={materialVersionId || undefined}
-        onChange={setMaterialVersionId}
-        options={materialVersions.map(version => ({
-          value: version.versionId,
-          label: version.versionId === latestMaterialVersionId ? `${version.label}（最新）` : version.label,
-        }))} /> : materialQuery.isPending
-        ? <Text type="secondary">正在读取材料整理版本…</Text>
-        : <Alert showIcon type="info" title="当前需求还没有审核通过的材料整理，请先完成需求分析并审核通过。" />}
+      <Text strong>当前材料整理</Text>
+      <Text type="secondary">代码风险分析使用当前采用的材料整理，发起前会重新校验来源。</Text>
+      {currentMaterialQuery.isPending ? <Text type="secondary">正在读取当前材料…</Text>
+        : currentMaterialQuery.error ? <Alert showIcon type="error" title={getErrorMessage(currentMaterialQuery.error)} />
+          : currentAvailable ? <Text>已采用，来源将在发起时校验。</Text>
+            : <Alert showIcon type="info" title="请先采用有效的材料整理结果。" />}
     </div>,
   }
   const personalLlm = usePersonalLlmChoice(projectId, understandingRunOptions)
@@ -137,7 +125,6 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         connectionId,
         instruction,
         gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)),
-        requirementMaterialVersionId: materialVersionId,
       })
       if (requestId.current?.taskId !== taskId || requestId.current.options !== options) requestId.current = { taskId, options, id: randomId() }
       return aiTestingApi.runCodeRiskTask(taskId, {
@@ -145,7 +132,6 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         instruction: instruction || undefined,
         triggerType: 'manual',
         gitlabConnectionIds,
-        requirementMaterialVersionId: materialVersionId || undefined,
         requestId: requestId.current.id,
       })
     },

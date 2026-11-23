@@ -53,6 +53,7 @@ class UiCaseResponse(UiCaseRequest):
     suite_id: str = Field()
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")
+    invalidated_at: datetime | None = Field(default=None)
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
 
 

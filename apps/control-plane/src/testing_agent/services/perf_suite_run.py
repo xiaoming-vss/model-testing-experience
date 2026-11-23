@@ -58,6 +58,7 @@ class PerfRunPreparer(Protocol):
         case: PerfCase,
         body: PerfRunCreate | PerfSuiteRunCreate,
         run_id: str,
+        suite_run_id: str = "",
     ) -> PerfRun: ...
 
 
@@ -111,6 +112,8 @@ class PerfSuiteRunService:
             suite_run_id=run.suite_run_id,
             suite_id=run.suite_id,
             project_id=run.project_id,
+            sprint_id=run.sprint_id,
+            sprint_name=run.sprint_name,
             suite_name=run.suite_name,
             environment_id=run.environment_id,
             environment_name=run.environment_name,
@@ -223,21 +226,25 @@ class PerfSuiteRunService:
         suite = await self._accessible_suite(user_id, suite_id, action="execute", for_update=True)
         if await self.repository.get_active_by_suite(suite_id) is not None:
             raise ErrBadRequest()
-        cases = await self.cases.list_by_suite(suite_id)
+        all_cases = await self.cases.list_by_suite(suite_id)
+        cases = [case for case in all_cases if case.invalidated_at is None]
         if not cases:
             raise ErrBadRequest()
 
+        suite_run_id = new_id()
         prepared: list[tuple[PerfCase, PerfRun]] = []
         for case in cases:
-            child = await self.perf_runs.prepare(user_id, case, body, new_id())
+            child = await self.perf_runs.prepare(user_id, case, body, new_id(), suite_run_id)
             child.trigger_type = "suite"
             prepared.append((case, child))
 
         first_run = prepared[0][1]
         suite_run = PerfSuiteRun(
-            suite_run_id=new_id(),
+            suite_run_id=suite_run_id,
             suite_id=suite.suite_id,
             project_id=suite.project_id,
+            sprint_id=first_run.sprint_id,
+            sprint_name=first_run.sprint_name,
             suite_name=suite.name,
             environment_id=first_run.environment_id,
             environment_name=first_run.environment_name,

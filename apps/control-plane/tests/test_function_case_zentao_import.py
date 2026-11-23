@@ -100,7 +100,7 @@ class FakeFunctionCaseRepository:
             FunctionCaseExportReference(case.case_id, case.suite_id, case.title) for case in cases
         ]
 
-    async def list_by_suite(self, suite_id):
+    async def list_by_suite(self, suite_id, *, invalidated=None):
         return [case for case in self.cases.values() if case.suite_id == suite_id]
 
     async def get_case(self, case_id):

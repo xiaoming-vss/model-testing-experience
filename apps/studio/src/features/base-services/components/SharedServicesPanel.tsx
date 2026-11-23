@@ -155,7 +155,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
             {pagedServices.map((resource) => {
               const authorized = resource.authorization.status === 'authorized'
               const authorizationLabel = resource.authorization.status === 'unauthorized' ? '授权' : '更新我的授权'
-              const actions = <div className={cx('sprint-card-actions base-services-connection-actions', serviceCardActionsClass)}>
+              const actions = <div className={cx('base-services-connection-actions', serviceCardActionsClass)}>
                   <Tooltip title={authorizationLabel}>
                     <Button type="text" shape="circle" className="app-action app-action-icon app-action-save" aria-label={authorizationLabel} icon={<SafetyCertificateOutlined />} disabled={saving} onClick={() => { credentials.resetFields(); setAuthorization(resource) }}></Button>
                   </Tooltip>

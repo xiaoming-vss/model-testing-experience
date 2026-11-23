@@ -90,7 +90,7 @@ it('打开弹窗默认按测试单迭代查询用例', async () => {
   await waitFor(() =>
     expect(getCases).toHaveBeenLastCalledWith(
       'project-1',
-      expect.objectContaining({ sprintId: 'sprint-1', requirementId: '', suiteId: '' }),
+      expect.objectContaining({ sprintId: 'sprint-1', requirementId: '', suiteId: '', invalidated: false }),
     ),
   )
   expect(vi.mocked(api.getRequirements)).not.toHaveBeenCalled()

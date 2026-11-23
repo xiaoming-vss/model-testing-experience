@@ -79,7 +79,7 @@ class DirectStageWorkerService:
         await self.session.commit()
 
     async def retire_authorization(self, task: WorkerTask) -> None:
-        """Retire a task inside the caller's transaction, preserving approved versions."""
+        """Retire a task inside the caller's transaction, preserving current content."""
         message = "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
         attempt = await self.session.scalar(
             select(AiGenerationAttempt).where(

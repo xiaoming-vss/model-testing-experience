@@ -12,6 +12,7 @@ from testing_agent.api.deps import (
 )
 from testing_agent.core.errors import success_payload
 from testing_agent.domain.function_case_query import FunctionCaseQuery
+from testing_agent.schemas.case_lifecycle import CaseInvalidationRequest
 from testing_agent.schemas.function_test_case import (
     CasePushReconcileRequest,
     FunctionCaseRequest,
@@ -66,10 +67,11 @@ async def import_function_suites_to_zentao(
 
 async def list_function_cases(
     suite_id: str,
+    invalidated: bool | None = Query(default=None),
     user_id: str = Depends(get_current_user_id),
     service: FunctionTestCaseService = Depends(get_function_test_case_service),
 ):
-    return success_payload(await service.list(user_id, suite_id))
+    return success_payload(await service.list(user_id, suite_id, invalidated=invalidated))
 
 
 async def list_project_function_cases(
@@ -80,6 +82,7 @@ async def list_project_function_cases(
     module: str = Query(default=""),
     priority: str = Query(default=""),
     case_type: str = Query(default="", alias="caseType"),
+    invalidated: bool | None = Query(default=None),
     keyword: str = Query(default=""),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200, alias="pageSize"),
@@ -99,6 +102,7 @@ async def list_project_function_cases(
                 module=module,
                 priority=priority,
                 case_type=case_type,
+                invalidated=invalidated,
                 keyword=keyword,
             ),
         )
@@ -139,6 +143,17 @@ async def batch_delete_function_cases(
     service: FunctionTestCaseService = Depends(get_function_test_case_service),
 ):
     return success_payload(await service.batch_delete(user_id, suite_id, body.case_ids))
+
+
+async def batch_invalidate_function_cases(
+    project_id: str,
+    body: CaseInvalidationRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionTestCaseService = Depends(get_function_test_case_service),
+):
+    return success_payload(
+        await service.batch_set_invalidated(user_id, project_id, body.case_ids, body.invalidated)
+    )
 
 
 async def preview_function_case_push(

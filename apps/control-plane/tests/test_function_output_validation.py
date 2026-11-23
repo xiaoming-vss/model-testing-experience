@@ -4,9 +4,8 @@ import pytest
 from support.worker_contract import FakeWorkerRepository
 
 from testing_agent.core.errors import AppError
-from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
+from testing_agent.schemas.workers import WorkerProgressRequest
 from testing_agent.services import worker_task as module
-from testing_agent.services.worker import apply_ai_completion_to_run
 from testing_agent.services.worker_task import WorkerTaskService
 
 
@@ -24,39 +23,6 @@ def run_record():
         snapshot_json={},
         duration_ms=0,
     )
-
-
-@pytest.mark.parametrize("status", ["error", "failed", "canceled"])
-def test_failed_functional_completion_preserves_valid_artifacts(status):
-    run = run_record()
-    old = run.config_json.copy(), run.result_yaml
-    apply_ai_completion_to_run(
-        run,
-        WorkerTaskEventRequest(
-            workerId="w", status=status, configJson={}, resultYaml="", errorMessage="输出校验失败"
-        ),
-        functional=True,
-    )
-    assert (run.config_json, run.result_yaml) == old
-    assert run.stage_status == "failed"
-    assert run.error_message == "输出校验失败"
-
-
-def test_successful_functional_completion_replaces_artifacts_and_instruction():
-    run = run_record()
-    apply_ai_completion_to_run(
-        run,
-        WorkerTaskEventRequest(
-            workerId="w",
-            status="success",
-            configJson={"requirementAnalysis": {"new": True}},
-            resultYaml='{"cases":[]}',
-        ),
-        functional=True,
-    )
-    assert "revisionInstruction" not in run.config_json
-    assert run.result_yaml == '{"cases":[]}'
-    assert run.current_stage == "completed"
 
 
 @pytest.mark.asyncio

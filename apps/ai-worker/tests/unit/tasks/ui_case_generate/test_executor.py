@@ -1,7 +1,5 @@
 import sys
-import tempfile
 import unittest
-from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -10,7 +8,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.config.models import PiConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import RepositoryBinding, Task, TaskPayload
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import (
     UiCaseExecutor,
@@ -19,7 +16,6 @@ from testing_agent_ai_worker.tasks.ui_case_generate.executor import (
 )
 from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
     RepositorySource,
-    RepositorySourceError,
 )
 
 VALID_YAML = """- name: 登录成功
@@ -133,62 +129,6 @@ class UiCaseExecutorTests(unittest.TestCase):
             credentials_fetcher=lambda task: ["credential"],
             skill_runner=skill_runner,
         )
-
-    def test_execute_prepares_repository_and_returns_skill_yaml(self) -> None:
-        captured: dict[str, object] = {}
-        progress: list[TaskProgress] = []
-
-        def fake_skill_runner(**kwargs):
-            captured.update(kwargs)
-            return VALID_YAML
-
-        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = self._executor(temp_dir, skill_runner=fake_skill_runner)
-        result = executor.execute(self._task(), datetime.now().astimezone(), progress.append)
-
-        self.assertEqual(TaskStatus.SUCCESS, result.status)
-        self.assertEqual(VALID_YAML, result.output_yaml)
-        self.assertEqual("mtx-generate-ui-test-case", captured["skill_name"])
-        self.assertIn("sourceRoot", result.intermediate_json_text)
-        self.assertIn('"sourceKind": "repository"', result.intermediate_json_text)
-        self.assertIn('"repositoryId": "repo-1"', result.intermediate_json_text)
-        self.assertIn("登录流程", captured["input_text"])
-        self.assertIn("始终返回 YAML list", captured["input_text"])
-        self.assertNotIn(
-            "步骤必须包含 orderNo、stepName、keyword、operationValue", captured["input_text"]
-        )
-        self.assertNotIn("不得传入技能", captured["input_text"])
-        self.assertEqual(1, len(progress))
-        self.assertEqual("ui_case_generating", progress[0].current_stage)
-        self.assertFalse((Path(temp_dir) / "run").exists())
-
-    def test_execute_fails_when_repository_source_cannot_be_prepared(self) -> None:
-        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = self._executor(
-            temp_dir,
-            error=RepositorySourceError("UI 用例生成缺少仓库来源绑定"),
-            skill_runner=lambda **kwargs: VALID_YAML,
-        )
-        result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
-        self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertIn("缺少仓库来源绑定", result.error_message or "")
-
-    def test_execute_never_returns_blank_failure_reason_for_timeout(self) -> None:
-        def timed_out(**kwargs):
-            raise TimeoutError()
-
-        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = self._executor(temp_dir, skill_runner=timed_out)
-        result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
-        self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertEqual("UI 用例生成执行失败，未返回错误信息", result.error_message)
-
-    def test_execute_fails_when_skill_output_is_not_a_complete_yaml_case(self) -> None:
-        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = self._executor(temp_dir, skill_runner=lambda **kwargs: "- name: incomplete")
-        result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
-        self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertIn("缺少必填字段", result.error_message or "")
 
     def test_validator_rejects_single_mapping(self) -> None:
         with self.assertRaisesRegex(ValueError, "顶层必须是 YAML list"):

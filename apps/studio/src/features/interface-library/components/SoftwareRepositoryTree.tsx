@@ -1,6 +1,7 @@
 import {
   AppstoreOutlined,
   DownOutlined,
+  FolderOpenOutlined,
   MoreOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -177,7 +178,8 @@ export function SoftwareRepositoryTree({
     <aside className={treeClassName}>
       <div className="if-app-tree-head flex min-h-6 items-center justify-between gap-2 text-[12px] font-semibold text-[var(--srf-text-secondary)]">
         <div className="if-app-tree-title inline-flex min-w-0 items-center gap-1.5">
-          <span>软件仓库</span>
+          <FolderOpenOutlined className="text-[var(--srf-accent)]" aria-hidden />
+          <span>接口导航</span>
           <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
         </div>
       </div>
@@ -367,7 +369,7 @@ export function SoftwareRepositoryTree({
               ) : null}
             </div>
           )
-        })}
+          })}
       </div>
     </aside>
   )

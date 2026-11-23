@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,10 +11,7 @@ from typing import Any, Callable
 import yaml
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import AgentBackendConfig, UiGenerationConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
@@ -27,7 +23,7 @@ from testing_agent_ai_worker.tasks.git_workspace import (
     retain_failed_workspace,
     task_run_root,
 )
-from testing_agent_ai_worker.tasks.output_repair import generate_validated, parse_yaml
+from testing_agent_ai_worker.tasks.output_repair import parse_yaml
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.ui_case_generate.missing_fields import draft_step_for_validation
 from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
@@ -42,11 +38,6 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 from .ui_step_extract import normalize_save_to
 from .ui_variable_template import TOKEN_PATTERN, validate_step_variables
-
-UI_CASE_YAML_ONLY_INSTRUCTION = """请分析指定的前端源码目录并生成 UI 自动化测试用例。
-源码根目录：{source_root}
-始终返回 YAML list，即使只有一条用例。每条用例必须包含 name、enabled、stepsJson、orderNo；每个步骤必须包含 orderNo、stepName、keyword、continueOnFailure、enabled。operationValue、locatorType、locatorValue、comparator 必须严格按照 keyword 规则提供。缺失内容保留步骤并使用 missingFields 数组：每项含 fields、operation、target、value、reason，fields列出的字段显式为null，其他已知字段保留。前置准备缺口使用空fields。不要返回阻塞字符串。全部目标明确排除时可返回空列表[]。不要输出 Markdown 代码块、解释文字或 JSON。"""
-
 
 UI_STAGE_YAML_INSTRUCTION = """直接返回平台原格式的 YAML 用例列表。
 每条用例仅包含 name、enabled、orderNo、stepsJson；每步包含 orderNo、stepName、keyword、continueOnFailure、enabled 及操作需要的字段。
@@ -111,7 +102,6 @@ class UiCaseExecutor(TaskExecutor):
         skill_name: str = UI_YAML_SKILL,
     ) -> None:
         self.agent_config = agent_config
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.ui_generation_config = ui_generation_config or UiGenerationConfig()
         self.repository_source_preparer = (
             repository_source_preparer
@@ -154,55 +144,7 @@ class UiCaseExecutor(TaskExecutor):
                     )
                 self._cleanup_repository_source(repository_source, success=True)
                 return result
-            input_text = UI_CASE_YAML_ONLY_INSTRUCTION.format(source_root=source_root)
-            if task.payload.extra_instruction.strip():
-                input_text = f"{input_text}\n\n{task.payload.extra_instruction.strip()}"
-            progress_callback(self._progress(task, source_root, repository_source))
-            with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-
-                def repair_progress(event: dict[str, Any]) -> None:
-                    progress = self._progress(task, source_root, repository_source)
-                    progress.result_summary_json = json.dumps(
-                        {"outputValidation": event}, ensure_ascii=False
-                    )
-                    progress_callback(progress)
-
-                output_yaml = asyncio.run(
-                    generate_validated(
-                        stage="ui_case_generating",
-                        inputs=input_text,
-                        generate=lambda prompt: self.skill_runner(
-                            input_text=prompt,
-                            session_key=task.session_key,
-                            skill_name=self.skill_name,
-                            config_path=config_path,
-                            workspace=str(workspace),
-                            extra_instruction="",
-                        ),
-                        validate=_validate_ui_cases_yaml,
-                        diagnostic_dir=workspace / "diagnostics" / "ui-output",
-                        report=repair_progress,
-                    )
-                )
-            case_count = _validate_ui_cases_yaml(output_yaml)
-            intermediate = {
-                "sourceRoot": str(source_root),
-                "caseCount": case_count,
-            }
-            intermediate.update(repository_source.metadata)
-            result = TaskResult(
-                task_id=task.task_id,
-                attempt_id=task.attempt_id,
-                generate_task_id=task.generate_task_id,
-                status=TaskStatus.SUCCESS,
-                intermediate_json_text=json.dumps(intermediate, ensure_ascii=False),
-                output_yaml=output_yaml,
-                result_summary_json=self._summary(task, "success", case_count, None),
-                started_at=started_at,
-                finished_at=datetime.now().astimezone(),
-            )
-            self._cleanup_repository_source(repository_source, success=True)
-            return result
+            raise ValueError("不支持的 UI 工作流版本")
         except (OSError, ValueError, yaml.YAMLError, RepositorySourceError) as error:
             self._cleanup_failed_source(repository_source, repository_run_root)
             return self._failure(task, started_at, str(error))

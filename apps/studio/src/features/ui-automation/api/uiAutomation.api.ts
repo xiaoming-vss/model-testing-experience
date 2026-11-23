@@ -1,5 +1,6 @@
 import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
+  CreateProjectUiTestSuitePayload,
   CreateUiTestCasePayload,
   CreateUiTestSuitePayload,
   UiTestCase,
@@ -19,6 +20,13 @@ export const uiAutomationApi = {
     request<ListResponse<UiTestSuite>>(`/v1/requirements/${requirementId}/ui-test-suites`),
   createUiTestSuite: (requirementId: string, body: CreateUiTestSuitePayload) =>
     request<UiTestSuite>(`/v1/requirements/${requirementId}/ui-test-suites`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  getProjectUiTestSuites: (projectId: string) =>
+    request<ListResponse<UiTestSuite>>(`/v1/projects/${projectId}/ui-test-suites`),
+  createProjectUiTestSuite: (projectId: string, body: CreateProjectUiTestSuitePayload) =>
+    request<UiTestSuite>(`/v1/projects/${projectId}/ui-test-suites`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -46,7 +54,15 @@ export const uiAutomationApi = {
       { signal },
       { normalizeListResponse: false },
     ),
-  getUiTestCases: (suiteId: string) => request<ListResponse<UiTestCase>>(`/v1/ui-test-suites/${suiteId}/cases`),
+  getUiTestCases: (suiteId: string, filters: { invalidated?: boolean } = {}) =>
+    request<ListResponse<UiTestCase>>(
+      `/v1/ui-test-suites/${suiteId}/cases${buildQuery({ ...filters })}`,
+    ),
+  batchInvalidateUiCases: (projectId: string, caseIds: string[], invalidated: boolean) =>
+    request<{ caseIds: string[]; updatedCount: number }>(
+      `/v1/projects/${projectId}/ui-test-cases/batch-invalidation`,
+      { method: 'POST', body: JSON.stringify({ caseIds, invalidated }) },
+    ),
   importUiTestCases: (suiteId: string, file: Blob, filename = 'import.yaml') => {
     const formData = new FormData()
     formData.append('file', file, filename)

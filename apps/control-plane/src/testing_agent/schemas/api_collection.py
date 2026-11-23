@@ -17,6 +17,10 @@ class ApiCollectionRequest(StrictRequest):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class ProjectApiCollectionRequest(ApiCollectionRequest):
+    requirement_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 class ApiCollectionUpdateRequest(StrictRequest):
     requirement_id: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = None
@@ -26,7 +30,8 @@ class ApiCollectionUpdateRequest(StrictRequest):
 
 class ApiCollectionResponse(BaseModel):
     collection_id: str = Field()
-    requirement_id: str = Field()
+    project_id: str = Field()
+    requirement_id: str | None = Field(default=None)
     name: str
     description: str = ""
     effective_import_id: str | None = Field(default=None)

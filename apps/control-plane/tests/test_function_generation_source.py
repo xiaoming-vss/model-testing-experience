@@ -62,8 +62,9 @@ async def test_requirement_generation_cannot_bypass_independent_stages(kind, mon
 
 
 @pytest.mark.asyncio
-async def test_function_snapshot_rejects_missing_requirement_understanding():
+async def test_function_snapshot_cannot_read_legacy_requirement_versions():
     repository = SimpleNamespace(session=AsyncMock())
     task = SimpleNamespace(requirement_id="requirement-1", source_content="legacy task source")
-    with pytest.raises(AppError, match="请先审核通过材料整理，再生成功能用例"):
+    with pytest.raises(AppError, match="请在需求生成链"):
         await _generation_build_generate_run_snapshot(repository, "function", task, "run-1")
+    repository.session.execute.assert_not_called()

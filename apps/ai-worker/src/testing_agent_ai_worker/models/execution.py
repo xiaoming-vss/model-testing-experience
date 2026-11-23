@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class TaskStatus(str, Enum):
@@ -28,7 +28,6 @@ class TaskResult(BaseModel):
     error_message: str | None = None
     started_at: datetime
     finished_at: datetime
-    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class TaskProgress(BaseModel):

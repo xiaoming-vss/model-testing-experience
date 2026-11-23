@@ -1,11 +1,23 @@
+import { RequestJsonValidity } from '@/shared/components/request-editor/RequestJsonValidity'
+import requestStyles from '@/shared/components/request-editor/request-editor.module.css'
+import { RequestBodyStatus } from '@/shared/components/request-editor/RequestBodyStatus'
+import { RequestBodyToolbar, requestBodyVariableClass } from '@/shared/components/request-editor/RequestBodyToolbar'
 import { bodyTypeOptions } from '@/features/api-automation/config/collectionConfig'
 import type { TemplatesProps } from '@/features/api-automation/components/apiCaseEditorProps'
-import { Text, validateJsonText } from '@/features/api-automation/utils/detailView'
+import { validateJsonText } from '@/features/api-automation/utils/detailView'
 import type { ApiCaseFormValues } from '@/features/api-automation/utils/apiCaseEditor'
 import { JsonEditor, type JsonEditorCursor } from '@/shared/components/JsonEditor/JsonEditor'
+import {
+  KV_EMPTY_CLASS,
+  KV_EMPTY_HINT_CLASS,
+  KV_EMPTY_ICON_CLASS,
+  KV_EMPTY_TEXT_CLASS,
+  KV_EMPTY_TITLE_CLASS,
+  KV_SECTION_HINT_CLASS,
+} from '@/shared/ui/keyValueTable'
 import { message } from '@/shared/utils/feedback'
-import { CheckCircleFilled, CodeOutlined, CompressOutlined, FormatPainterOutlined, WarningFilled } from '@ant-design/icons'
-import { Card, Form, Input } from 'antd'
+import { ApiOutlined, CodeOutlined } from '@ant-design/icons'
+import { Form, Input } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 
 import type { ApiCase } from '@/services/api'
@@ -15,9 +27,6 @@ type Props = {
   templates: TemplatesProps
 }
 
-/** 与 `.json-editor-codemirror` 的格式化缩进一致，状态条上的「空格」照着它显示。 */
-const INDENT_WIDTH = 2
-
 function isJsonTextValid(value?: string) {
   if (!value?.trim()) return true
   try {
@@ -26,10 +35,6 @@ function isJsonTextValid(value?: string) {
   } catch {
     return false
   }
-}
-
-function formatByteSize(bytes: number) {
-  return bytes >= 1024 ? `${(bytes / 1024).toFixed(2)} KB` : `${bytes} B`
 }
 
 /**
@@ -49,7 +54,6 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
     return () => window.clearTimeout(timer)
   }, [bodyJson])
   const jsonValid = useMemo(() => isJsonTextValid(stableBodyJson), [stableBodyJson])
-  const sizeText = useMemo(() => formatByteSize(new TextEncoder().encode(stableBodyJson).length), [stableBodyJson])
 
   function guardJsonAction(action: () => void, actionLabel: string) {
     // 动作用当前文本重新校验，不依赖防抖后的状态。
@@ -61,64 +65,21 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
   }
 
   return (
-    <div className="api-wb-body-panel -mx-4 flex min-w-0 flex-col" data-tab-motion-scope>
-      <div className="api-wb-body-bar flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-card-border)] bg-[var(--srf-hover)] px-4 py-1">
-        <div className="api-wb-body-types flex flex-wrap items-center gap-1" role="tablist" data-tab-motion-scoped aria-label="请求体类型">
-          {bodyTypeOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="tab"
-              aria-selected={option.value === bodyType}
-              className={`api-wb-body-type cursor-pointer rounded-[4px] border-0 px-2 py-1 text-[12px] leading-4 transition-colors hover:text-[var(--srf-text)]${option.value === bodyType ? ' active bg-[var(--srf-card)] font-semibold text-[var(--srf-accent)]' : ' bg-transparent text-[var(--srf-text-secondary)]'}`}
-              onClick={() => caseForm.setFieldValue('bodyType', option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="api-wb-body-actions flex flex-wrap items-center gap-1">
-          <button
-            type="button"
-            className="api-wb-body-action inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-[var(--srf-chip)] px-2 py-1 text-[12px] leading-4 text-[var(--srf-text)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
-            disabled={bodyType !== 'json'}
-            onClick={() => guardJsonAction(handleFormatBodyJson, '格式化')}
-          >
-            <FormatPainterOutlined />
-            格式化代码
-          </button>
-          <button
-            type="button"
-            className="api-wb-body-action inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-[var(--srf-chip)] px-2 py-1 text-[12px] leading-4 text-[var(--srf-text)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-text-muted)]"
-            disabled={bodyType !== 'json'}
-            onClick={() => guardJsonAction(handleCompressBodyJson, '压缩')}
-          >
-            <CompressOutlined />
-            压缩
-          </button>
-          {bodyType === 'json'
-            ? renderEnvVarPicker({
-              pickerKey: 'bodyJson',
-              placement: 'bottomLeft',
-              onInsert: insertTemplateTextIntoJson,
-              trigger: (
-                <button type="button" className="api-wb-body-action is-accent inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-transparent px-2 py-1 text-[12px] leading-4 text-[var(--srf-accent)] transition-colors hover:bg-[var(--srf-accent-soft)] disabled:cursor-not-allowed disabled:opacity-45 [&_.anticon]:text-[var(--srf-accent)]">
-                  <CodeOutlined />
-                  插入变量 {'{{var}}'}
-                </button>
-              ),
-            })
-            : null}
-          <span className="api-wb-body-action-divider h-3 w-px bg-[var(--srf-card-border)]" aria-hidden="true" />
-          {bodyType === 'json' ? (
-            <span className={`api-wb-body-validity inline-flex items-center gap-1 whitespace-nowrap rounded-[4px] border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-2 py-1 text-[11px] font-semibold leading-4 text-[var(--srf-tone-text)] tone-${jsonValid ? 'green' : 'red'}`}>
-              {jsonValid ? <CheckCircleFilled /> : <WarningFilled />}
-              {jsonValid ? 'JSON Schema 合法' : 'JSON 语法错误'}
-            </span>
-          ) : null}
-        </div>
+    <div className={`${requestStyles.body} -mx-4 flex min-w-0 flex-col`} data-tab-motion-scope>
+      <div className="api-wb-body-head px-4 pb-2 pt-1">
+        <div className="text-[12px] font-semibold leading-[18px] text-[var(--srf-text)]">请求体</div>
+        <p className={KV_SECTION_HINT_CLASS}>
+          请求体随用例保存，支持 {'{{变量}}'} 模板和 JSON 语法校验。
+        </p>
       </div>
+      <RequestBodyToolbar options={bodyTypeOptions} value={bodyType} onChange={value => caseForm.setFieldValue('bodyType', value)}
+        json={bodyType === 'json'} onFormat={() => guardJsonAction(handleFormatBodyJson, '格式化')}
+        onCompress={() => guardJsonAction(handleCompressBodyJson, '压缩')}
+        variableControl={bodyType === 'json' ? renderEnvVarPicker({
+          pickerKey: 'bodyJson', placement: 'bottomLeft', onInsert: insertTemplateTextIntoJson,
+          trigger: <button type="button" className={requestBodyVariableClass}><CodeOutlined />插入变量 {'{{var}}'}</button>,
+        }) : null}
+        validity={bodyType === 'json' ? <RequestJsonValidity valid={jsonValid} /> : null} />
 
       <Form.Item name="bodyType" hidden>
         <Input />
@@ -154,46 +115,28 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
       ) : null}
 
       {bodyType === 'form' ? (
-        <Card size="small" className="api-body-placeholder-card" style={{ borderRadius: 10, background: 'var(--app-request-section-bg)' }}>
-          <Text type="secondary">`x-www-form-urlencoded` 类型的键值表单下一步再补，这一版先保留类型切换。</Text>
-        </Card>
+        <div className={`mx-4 my-3 ${KV_EMPTY_CLASS}`}>
+          <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
+          <div className={KV_EMPTY_TEXT_CLASS}>
+            <strong className={KV_EMPTY_TITLE_CLASS}>表单请求体暂未提供键值编辑器</strong>
+            <span className={KV_EMPTY_HINT_CLASS}>当前版本先保留类型切换，后续补充键值表单。</span>
+          </div>
+        </div>
       ) : null}
 
       {bodyType === 'none' ? (
-        <Card size="small" className="api-body-placeholder-card" style={{ borderRadius: 10, background: 'var(--app-request-section-bg)' }}>
-          <Text type="secondary">当前选择 `none`，无需填写请求体。</Text>
-        </Card>
+        <div className={`mx-4 my-3 ${KV_EMPTY_CLASS}`}>
+          <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
+          <div className={KV_EMPTY_TEXT_CLASS}>
+            <strong className={KV_EMPTY_TITLE_CLASS}>当前请求没有请求体</strong>
+            <span className={KV_EMPTY_HINT_CLASS}>切换到 JSON 或 raw 即可编辑请求体内容。</span>
+          </div>
+        </div>
       ) : null}
 
       </div>
-      <div className="api-wb-body-status flex flex-wrap items-center justify-between gap-2 border-t border-[var(--srf-divider)] bg-[var(--srf-hover)] px-4 py-1 text-[11px] leading-[18px] text-[var(--srf-text-secondary)]">
-        <div className="api-wb-body-status-main flex flex-wrap items-center gap-3">
-          {bodyType === 'json' ? (
-            jsonValid ? (
-              <span className="tone-green inline-flex items-center gap-1 font-mono font-medium text-[var(--srf-tone-text)]">
-                <CheckCircleFilled />
-                无语法错误
-              </span>
-            ) : (
-              <span className="tone-red inline-flex items-center gap-1 font-mono font-medium text-[var(--srf-tone-text)]">
-                <WarningFilled />
-                存在语法错误
-              </span>
-            )
-          ) : (
-            <span className="is-muted text-[var(--srf-text-muted)]">无需校验</span>
-          )}
-          <span className="is-muted text-[var(--srf-text-muted)]">大小: {sizeText}</span>
-          <span className="is-muted text-[var(--srf-text-muted)]">格式: {bodyType === 'json' ? 'JSON' : '文本'}</span>
-          <span className="is-muted text-[var(--srf-text-muted)]">编码: UTF-8</span>
-        </div>
-        <div className="api-wb-body-status-side flex flex-wrap items-center gap-3">
-          {bodyType === 'json' ? (
-            <span className="font-mono">行 {cursor.line}, 列 {cursor.column} (光标聚焦)</span>
-          ) : null}
-          <span className="is-muted text-[var(--srf-text-muted)]">空格: {INDENT_WIDTH}</span>
-        </div>
-      </div>
+      <RequestBodyStatus json={bodyType === 'json'} valid={jsonValid} value={stableBodyJson}
+        cursor={<span className="font-mono">行 {cursor.line}, 列 {cursor.column} (光标聚焦)</span>} />
     </div>
   )
 }

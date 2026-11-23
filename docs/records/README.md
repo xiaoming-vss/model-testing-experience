@@ -29,17 +29,34 @@
 
 ### 跨项目
 
-暂无。跨项目规格后续放入 `docs/records/`。
+- [2026-11-20 生成链多候选与唯一当前内容实施规格](2026-11-20-generation-candidates-spec.md)
+- [2026-11-20 整改复核及本地验收](2026-11-20-remediation-recheck.md)
+- [2026-11-22 阶段采用改为独立指针](2026-11-22-independent-stage-adoption.md)
+- [2026-11-22 正式用例失效标记](2026-11-22-case-invalidation.md)
 
 ### control-plane
 
+- [2026-11-20 生成链候选改造契约与盘点基础](../control-plane/records/2026-11-20-generation-candidate-foundation.md)
+- [2026-11-20 本地开发库性能运行迭代字段升级](../control-plane/records/2026-11-20-perf-run-local-db-upgrade.md)
 - [2026-11-14 测试单单用例执行可视化规格](../control-plane/records/2026-11-14-test-order-case-visualization-spec.md)
 - [2026-10-04 Bug 附件、正文图片与状态同步可行性分析](../control-plane/records/2026-10-04-bug-zentao-sync-feasibility.md)
 
 ### studio
 
+- [2026-11-22 候选工作区独立采用视觉验收](../studio/records/2026-11-22-independent-adoption-visual-check.md)
+- [2026-11-21 候选侧栏视觉验收](../studio/records/2026-11-21-candidate-sidebar-visual-check.md)
+- [2026-11-20 EntityCard 颜色回归验收](../studio/records/2026-11-20-entity-card-visual-check.md)
 - [2026-10-12 测试单参考图对齐验收记录](../studio/records/2026-10-12-reference-image-alignment.md)
 - [2026-09-28 Bug 管理需求核对与页面整理](../studio/records/2026-09-28-bug-management-review.md)
+
+### perf-worker
+
+- [2026-11-20 性能运行指标与夜莺筛选规格](../perf-worker/records/2026-11-20-performance-metrics-spec.md)
+- [2026-11-20 性能运行指标阶段验证](../perf-worker/records/2026-11-20-performance-metrics-validation.md)
+
+### ai-worker
+
+- [2026-11-14 用例可视化技能独立试跑记录](../ai-worker/records/2026-11-14-case-visualization-skill-trial.md)
 
 ## 维护规则
 

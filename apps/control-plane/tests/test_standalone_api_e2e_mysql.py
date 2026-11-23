@@ -1,19 +1,13 @@
-"""Real-MySQL standalone API launch, callbacks, review, import and deletion."""
+"""Real-MySQL standalone API launch, worker callbacks, history and deletion."""
 
 from unittest.mock import AsyncMock
 
-import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.mysql_initialization import mysql, seed_api_interface, seed_row  # noqa: F401
 
-from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
-from testing_agent.models.api_case import ApiCase
-from testing_agent.models.api_collection import ApiCollection
-from testing_agent.models.requirement import Requirement
-from testing_agent.models.sprint import Sprint
+from testing_agent.models.project import Project
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.worker_task import WorkerTaskRepository
@@ -23,36 +17,17 @@ from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
 from testing_agent.services import ai_run_launcher, standalone_worker_authorization
-from testing_agent.services.ai_candidate_review import GenerationCandidateReview
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
-from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.ai_task_scope import GenerationAccess
-from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.worker_task import WorkerTaskService
 
 
-@pytest.mark.parametrize("checkpointed", [False, True])
-async def test_standalone_api_end_to_end(mysql, monkeypatch, checkpointed):  # noqa: F811
+async def test_standalone_api_launch_and_worker_callbacks(mysql, monkeypatch):  # noqa: F811
     with mysql.begin() as connection:
-        target = seed_row(connection, ApiCollection.__table__)
-        project_id = connection.scalar(
-            sa.select(Sprint.project_id)
-            .join(Requirement, Requirement.sprint_id == Sprint.sprint_id)
-            .where(Requirement.requirement_id == target["requirement_id"])
-        )
-        case = seed_row(
-            connection,
-            ApiCase.__table__,
-            {
-                "collection_id": target["collection_id"],
-                "name": "Login",
-                "method": "GET",
-                "url_template": "/old",
-            },
-        )
-        interface = seed_api_interface(connection, project_id)
+        project = seed_row(connection, Project.__table__)
+        interface = seed_api_interface(connection, project["project_id"])
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
@@ -60,7 +35,7 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, checkpointed):  # n
                 "task_type": "api_case_generate",
                 "sprint_id": "",
                 "requirement_id": "",
-                "project_id": project_id,
+                "project_id": project["project_id"],
                 "source_type": "interface_library",
                 "source_content": "",
                 "interface_ids_json": [interface["interface_id"]],
@@ -94,193 +69,49 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, checkpointed):  # n
                 access=access,
                 id_factory=lambda: next(ids),
             )
-            body = {"connectionId": "llm"}
-            if checkpointed:
-                body["apiWorkflowVersion"] = "api_three_stage/1.0"
-            launched = await launcher.launch("api", task["task_id"], body, "actor")
+            launched = await launcher.launch(
+                "api", task["task_id"], {"connectionId": "llm"}, "actor"
+            )
             assert launched["runId"] == "api-e2e-run" and launched["status"] == "pending"
             assert not any("ai_generate_task_runs" in sql for sql in statements)
-            # The final cutover revision drops the retired ledger, so the old
-            # run cannot exist regardless of the new execution identity.
             with mysql.connect() as probe:
                 assert "ai_generate_task_runs" not in sa.inspect(probe).get_table_names()
             statements.clear()
-            queue = await session.scalar(
-                sa.select(WorkerTask).where(WorkerTask.task_id == "api-e2e-worker")
-            )
-            assert queue.run_id != launched["runId"]
-            commands = GenerationTaskCommands(repository, access)
-            with pytest.raises(AppError):
-                await commands.delete("api", task["task_id"], "actor")
+            # The launcher committed; end this session's snapshot before the
+            # worker claim starts its own READ COMMITTED transaction.
             await session.rollback()
+
             worker = WorkerTaskService(WorkerTaskRepository(session))
             claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
-            assert claim["taskId"] == "api-e2e-worker" and claim["attemptId"] != launched["runId"]
+            assert claim["taskId"] == "api-e2e-worker"
             await worker.started("ai", "api-e2e-worker", WorkerTaskEventRequest(worker_id="agent"))
-            if checkpointed:
-                extraction = {"login": {"method": "GET", "path": "/login"}}
-                await worker.progress(
-                    "api-e2e-worker",
-                    WorkerProgressRequest(
-                        worker_id="agent",
-                        run_id=claim["attemptId"],
-                        current_stage="interface_extract",
-                        stage_status="waiting_review",
-                        config_json={"apiExtraction": extraction},
-                    ),
-                )
-                stages = GenerationStageWorkflow(repository=repository, owned_run=access.owned_run)
-                stages.stage_connection = AsyncMock(return_value="llm")
-                extraction = {"login": {"method": "POST", "path": "/edited"}}
-                await stages.save_api_checkpoint(
-                    "api-e2e-run",
-                    {"stage": "interface_extract", "configJson": {"apiExtraction": extraction}},
-                    "actor",
-                )
-                revision = {
-                    "stage": "interface_extract",
-                    "revisionInstruction": "补充边界",
-                    "requestId": "api-revision",
-                }
-                await stages.revise_api_stage("api-e2e-run", revision, "actor")
-                assert (await stages.revise_api_stage("api-e2e-run", revision, "actor"))[
-                    "runId"
-                ] == "api-e2e-run"
-                claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
-                assert claim["taskId"] == "api-revision" and "/edited" in claim["configJson"]
-                await worker.started(
-                    "ai", "api-revision", WorkerTaskEventRequest(worker_id="agent")
-                )
-                await worker.progress(
-                    "api-revision",
-                    WorkerProgressRequest(
-                        worker_id="agent",
-                        run_id=claim["attemptId"],
-                        current_stage="interface_extract",
-                        stage_status="waiting_review",
-                        config_json={"apiExtraction": extraction},
-                    ),
-                )
-                request = {
-                    "stage": "interface_extract",
-                    "action": "approve",
-                    "requestId": "api-next-worker",
-                }
-                continued = await stages.review_api_checkpoint("api-e2e-run", request, "actor")
-                assert continued["currentStage"] == "api_design"
-                assert (await stages.review_api_checkpoint("api-e2e-run", request, "actor"))[
-                    "runId"
-                ] == "api-e2e-run"
-                claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
-                assert claim["taskId"] == "api-next-worker"
-                await worker.started(
-                    "ai", "api-next-worker", WorkerTaskEventRequest(worker_id="agent")
-                )
-                design = {
-                    "schemaVersion": "api_test_design/1.0",
-                    "interfaces": {
-                        "login": {
-                            "method": "POST",
-                            "path": "/edited",
-                            "cases": [
-                                {
-                                    "id": "login_positive",
-                                    "title": "登录-正向",
-                                    "basis": {
-                                        "kind": "positive",
-                                        "section": "",
-                                        "field": "",
-                                        "constraint": "",
-                                    },
-                                    "expected": {
-                                        "statusClass": "2xx",
-                                        "assertions": [],
-                                    },
-                                }
-                            ],
-                            "uncovered": [],
-                        }
-                    },
-                }
-                await worker.progress(
-                    "api-next-worker",
-                    WorkerProgressRequest(
-                        worker_id="agent",
-                        run_id=claim["attemptId"],
-                        current_stage="api_design",
-                        stage_status="waiting_review",
-                        config_json={
-                            "apiExtraction": extraction,
-                            "apiDesign": design,
-                        },
-                    ),
-                )
-                design_request = {
-                    "stage": "api_design",
-                    "action": "approve",
-                    "requestId": "api-design-next",
-                }
-                continued = await stages.review_api_checkpoint(
-                    "api-e2e-run", design_request, "actor"
-                )
-                assert continued["currentStage"] == "generate"
-                claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
-                assert claim["taskId"] == "api-design-next"
-                await worker.started(
-                    "ai", "api-design-next", WorkerTaskEventRequest(worker_id="agent")
-                )
-            worker_id = "api-design-next" if checkpointed else "api-e2e-worker"
             await worker.progress(
-                worker_id,
+                "api-e2e-worker",
                 WorkerProgressRequest(
                     worker_id="agent",
                     run_id=claim["attemptId"],
-                    current_stage="generate" if checkpointed else "interface_extract",
+                    current_stage="generate",
                     stage_status="running",
                     config_json={},
                 ),
             )
             await worker.complete(
                 "ai",
-                worker_id,
+                "api-e2e-worker",
                 WorkerTaskEventRequest(
                     worker_id="agent",
                     run_id=claim["attemptId"],
                     status="success",
                     result_yaml="cases:\n  - name: Login\n    method: GET\n    urlTemplate: /new\n",
-                    config_json=(
-                        {"apiExtraction": extraction, "apiDesign": design} if checkpointed else {}
-                    ),
+                    config_json={},
                 ),
             )
-            review = GenerationCandidateReview(repository, access.owned_run)
-            reviewed = await review.review("api", "api-e2e-run", {"action": "approve"}, "actor")
-            assert reviewed["reviewStatus"] == "approved"
-            importer = ApiCandidateImporter(
-                repository=repository,
-                owned_run=access.owned_run,
-                ensure_collection_access=AsyncMock(),
-            )
-            preview = await importer.import_api_run(
-                "api-e2e-run", target["collection_id"], False, "actor"
-            )
-            assert preview["requiresConfirmation"]
-            result = await importer.import_api_run(
-                "api-e2e-run", target["collection_id"], True, "actor"
-            )
-            assert result["run"]["importStatus"] == "imported"
             history = await GenerationQueries(repository, access).list_run_summaries(
                 "api", task["task_id"], "actor"
             )
-            assert history["total"] == 1 and history["items"][0]["importStatus"] == "imported"
+            assert history["total"] == 1
+            commands = GenerationTaskCommands(repository, access)
             assert await commands.delete_run("api", "api-e2e-run", "actor") == {}
-            row = await session.scalar(sa.select(ApiCase).where(ApiCase.case_id == case["case_id"]))
-            collection = await session.scalar(
-                sa.select(ApiCollection).where(
-                    ApiCollection.collection_id == target["collection_id"]
-                )
-            )
-            assert row.url_template == "/new" and collection.effective_import_id is None
             retired_sql = [
                 sql
                 for sql in statements
@@ -291,31 +122,16 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, checkpointed):  # n
                         "ai_generate_run_stages",
                         "ai_generate_stage_attempts",
                         "ai_generate_run_imports",
+                        "ai_generate_stage_versions",
+                        "ai_generate_version_imports",
                     )
                 )
             ]
             assert not retired_sql, retired_sql
-            assert (
-                await session.scalar(
-                    sa.select(AiGenerateVersionImport.id).where(
-                        AiGenerateVersionImport.target_id == target["collection_id"]
-                    )
-                )
-                is None
-            )
     finally:
         await engine.dispose()
         with mysql.begin() as connection:
             connection.execute(
-                sa.delete(WorkerTask).where(
-                    WorkerTask.task_id.in_(
-                        [
-                            "api-e2e-worker",
-                            "api-next-worker",
-                            "api-design-next",
-                            "api-revision",
-                        ]
-                    )
-                )
+                sa.delete(WorkerTask).where(WorkerTask.task_id.in_(["api-e2e-worker"]))
             )
             connection.execute(sa.delete(AiGenerateTask))

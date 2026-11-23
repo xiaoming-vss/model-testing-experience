@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 class PerfSuiteRunCreate(BaseModel):
     environment_id: str = Field(min_length=1)
     monitoring_connection_id: str = Field(min_length=1)
+    sprint_id: str = Field(min_length=1, max_length=64)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
@@ -38,6 +39,8 @@ class PerfSuiteRunSummaryResponse(BaseModel):
     suite_run_id: str
     suite_id: str
     project_id: str
+    sprint_id: str | None = None
+    sprint_name: str = ""
     suite_name: str
     environment_id: str
     environment_name: str

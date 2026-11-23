@@ -43,8 +43,6 @@ uv run --locked --extra dev pytest tests/test_architecture_layers.py -q
 | `services/code_risk_analysis.py::gitlab_credentials_payload` | `IntegrationConnectionRepository.get_active_for_user` | `test_code_risk_snapshot.py`、`test_code_risk_credentials.py`、`test_code_risk_worker_api.py`、`test_code_risk_latest_runs.py` |
 | `services/environment_access.py::authorized_environment_vars` | `ApiEnvironmentVarRepository.list_by_environment` | `test_ai_task_snapshots.py`、`test_ui_variables.py` |
 | `services/integration_runtime.py` | `IntegrationRuntimeRepository.restored`、`isolated_scope` | `test_integration_maintenance.py` |
-| `services/repository_profile_versions.py::_profile_attempts` | `GenerationChainRepository.profile_attempts` | `test_repository_profile_api.py`、`test_repository_profile_task.py` |
-| `services/stage_storage/version_views.py` | `GenerationChainRepository.version`、`version_for_stage`、`latest_requirement_analysis_task`、`attempt` | `test_generation_chain.py`、`test_generation_chain_api.py` |
 | `services/ui_generation_source.py::_access` | `SoftwareRepositoryRepository.get` | `test_ui_generation_repository_source.py` |
 | `services/worker_domains/perf.py::get_run` | `PerfRunRepository.get_run` | `test_perf_api.py` |
 | `services/zentao_mcp_authorization.py::invalidate_others` | `IntegrationConnectionRepository.list_authorized_by_service` | `test_zentao_mcp_bindings_api.py` |
@@ -59,7 +57,6 @@ uv run --locked --extra dev pytest tests/test_architecture_layers.py -q
 | 文件 | 长期保留理由 | 重新评估条件 |
 | --- | --- | --- |
 | `services/stage_storage/chain_view.py` | 生成链全景由 stage/attempt/version/import 多表组装，属于读模型投影 | 生成链读模型整体收口时 |
-| `services/stage_storage/views.py` | 阶段与 attempt 展示投影按任务批量组装，拆开会使视图规则分散 | 与 chain_view 一并改造时 |
 | `services/standalone_worker_authorization.py` | 队列身份、执行、尝试和阶段的多表授权判断属于独立执行授权策略 | 执行授权协议调整时 |
 | `services/stored_file_access.py` | 下载授权按文件用途跨需求、Bug、运行、技能等资源验证归属，属于访问策略 | 文件访问策略抽为独立领域服务时 |
 | `services/worker_domains/ui.py` | 读取与 UI 任务状态迁移、结果应用和计数更新交织 | worker 域拆分时 |

@@ -7,10 +7,7 @@ import json
 from datetime import datetime
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
@@ -60,7 +57,6 @@ class ApiCaseExecutor(TaskExecutor):
         attachment_downloader=None,
     ) -> None:
         self.agent_config = agent_config
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.chain_runner = chain_runner
         self.stage_runner = stage_runner
         self.attachment_downloader = attachment_downloader

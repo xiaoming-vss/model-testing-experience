@@ -1,4 +1,5 @@
 import { Form } from 'antd'
+import { CaseInvalidationModal } from '@/shared/components/CaseInvalidationModal'
 import { message } from '@/shared/utils/feedback'
 import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
 import { normalizeUiTestCaseId } from '@/utils/format'
@@ -34,6 +35,10 @@ export function UiSuiteCaseWorkspace({ page }: { page: UiTestSuiteCasePageModel 
     uiTestCaseRunQuery,
     handleRefreshUiRunDetail,
     setStepConfigHost,
+    caseStatusOpen,
+    setCaseStatusOpen,
+    batchInvalidateCasesMutation,
+    uiTestCases,
   } = page
 
   return <>
@@ -109,5 +114,20 @@ export function UiSuiteCaseWorkspace({ page }: { page: UiTestSuiteCasePageModel 
         />
       </div>
     </Form>
+    <CaseInvalidationModal
+      open={caseStatusOpen}
+      scopeLabel={`${suiteQuery.data?.name ?? '当前 UI 测试集'} · ${uiTestCases.length} 条用例`}
+      cases={uiTestCases.map((item) => ({
+        id: normalizeUiTestCaseId(item),
+        name: item.name,
+        invalidatedAt: item.invalidatedAt,
+      }))}
+      canWrite={can('write')}
+      pending={batchInvalidateCasesMutation.isPending}
+      onClose={() => setCaseStatusOpen(false)}
+      onSubmit={(caseIds, invalidated) =>
+        batchInvalidateCasesMutation.mutate({ caseIds, invalidated })
+      }
+    />
   </>
 }

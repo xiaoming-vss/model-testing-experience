@@ -33,7 +33,7 @@ it('does not fall back to public worker URLs for legacy screenshots', async () =
 })
 
 it('renders registered live screenshots and rejects other object URLs', async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['png'], { type: 'image/png' })))
+  const fetchMock = vi.fn().mockResolvedValue(new Response('png', { headers: { 'content-type': 'image/png' } }))
   vi.stubGlobal('fetch', fetchMock)
   URL.createObjectURL = vi.fn().mockReturnValueOnce('blob:live').mockReturnValueOnce('blob:display')
   URL.revokeObjectURL = vi.fn()

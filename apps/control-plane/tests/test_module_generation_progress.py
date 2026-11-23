@@ -1,6 +1,7 @@
 """Module progress survives polling and cannot overwrite another attempt or artifact."""
 
 import copy
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -10,8 +11,13 @@ from support.ai_execution import db as db
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_stage import AiGenerationStage
+from testing_agent.models.generation_candidates import (
+    AiGenerationCandidate,
+    AiGenerationStageContent,
+    RequirementGenerationChain,
+)
 from testing_agent.services.stage_storage import DirectStageStorage
-from testing_agent.services.stage_storage.views import build_stage_views
+from testing_agent.services.stage_storage.chain_view import build_chain_view
 from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 
 
@@ -37,9 +43,7 @@ def snapshot(sequence=1):
 
 async def setup(session):
     seed_task(session)
-    stage = AiGenerationStage(
-        id="modules", task_id="task", stage="detailed_cases", next_version_no=1
-    )
+    stage = AiGenerationStage(id="modules", task_id="task", stage="detailed_cases")
     session.add(stage)
     session.commit()
     storage = DirectStageStorage(AsyncSessionAdapter(session))
@@ -51,8 +55,18 @@ async def setup(session):
     return stage, attempt, storage, worker
 
 
+def bind_chain(session):
+    session.add(
+        RequirementGenerationChain(
+            chain_id="chain", requirement_id="r", kind="function", task_id="task"
+        )
+    )
+    session.flush()
+
+
 async def test_progress_visible_after_poll_and_older_snapshots_are_ignored(db):
     stage, attempt, _, worker = await setup(db)
+    bind_chain(db)
     await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot(2)})
     await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot(1)})
     await worker.progress(
@@ -63,13 +77,101 @@ async def test_progress_visible_after_poll_and_older_snapshots_are_ignored(db):
     )
     db.commit()
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
-    view = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
     progress = next(s for s in view.stages if s.stage == "detailed_cases").module_generation
     assert progress.attempt_id == attempt.id
     assert progress.sequence == 2
     assert progress.modules[0].module == "文件校验"
     assert attempt.output_content is None
     assert set(attempt.output_context_json) == {"moduleGeneration"}
+
+
+async def test_candidate_chain_shows_only_active_attempt_progress(db):
+    from testing_agent.services.stage_storage.chain_view import build_chain_view
+
+    stage, attempt, storage, worker = await setup(db)
+    db.add(
+        RequirementGenerationChain(
+            chain_id="chain", requirement_id="r", kind="function", task_id="task"
+        )
+    )
+    await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot(2)})
+    db.commit()
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
+    progress = next(
+        item for item in view.stages if item.stage == "detailed_cases"
+    ).module_generation
+    assert progress.attempt_id == attempt.id
+    assert progress.sequence == 2
+    await worker.failed(stage.id, attempt.id, "modules-worker", error_message="failed")
+    await storage.prepare(
+        stage.id, worker_task_id="next-worker", requested_by="u", input_snapshot={}
+    )
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
+    assert (
+        next(item for item in view.stages if item.stage == "detailed_cases").module_generation
+        is None
+    )
+
+
+async def test_unbound_legacy_task_does_not_use_version_fallback(db):
+    from testing_agent.services.stage_storage.chain_view import build_chain_view
+
+    await setup(db)
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    with pytest.raises(AppError, match="未绑定候选工作区"):
+        await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
+
+
+async def test_failed_rerun_keeps_current_and_reports_failure(db):
+    from testing_agent.services.stage_storage.chain_view import build_chain_view
+
+    stage, attempt, _, worker = await setup(db)
+    db.add(
+        RequirementGenerationChain(
+            chain_id="chain", requirement_id="r", kind="function", task_id="task"
+        )
+    )
+    db.flush()
+    db.add(
+        AiGenerationCandidate(
+            candidate_id="adopted",
+            snapshot_id="snapshot",
+            chain_id="chain",
+            stage_id=stage.id,
+            content="existing",
+            format="text",
+            candidate_token="token",
+            disposition="available",
+            generation_mode="current",
+            created_by="u",
+        )
+    )
+    db.flush()
+    slot = AiGenerationStageContent(
+        stage_id=stage.id,
+        chain_id="chain",
+        stage="detailed_cases",
+        content="existing",
+        format="text",
+        content_token="current",
+        source_candidate_id="adopted",
+        confirmed_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    db.add(slot)
+    await worker.failed(stage.id, attempt.id, "modules-worker", error_message="模型不可用")
+    db.commit()
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
+    failed = next(item for item in view.stages if item.stage == "detailed_cases")
+    assert failed.state == "failed" and failed.error_message == "模型不可用"
+    assert failed.failure_run_id == attempt.id and failed.failed_at is not None
+    assert slot.content == "existing" and slot.source_candidate_id == "adopted"
+    slot.confirmed_at = datetime.now(UTC) + timedelta(seconds=1)
+    db.commit()
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
+    assert next(item for item in view.stages if item.stage == "detailed_cases").state == "approved"
 
 
 @pytest.mark.parametrize(
@@ -98,17 +200,18 @@ async def test_progress_rejects_invalid_or_arbitrary_payload(db, mutation):
 
 async def test_failure_stops_progress_and_next_attempt_does_not_reuse_it(db):
     stage, attempt, storage, worker = await setup(db)
+    bind_chain(db)
     await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot()})
     await worker.failed(stage.id, attempt.id, "modules-worker", error_message="failed")
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
-    view = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
     progress = next(s for s in view.stages if s.stage == "detailed_cases").module_generation
     assert progress.status == "failed"
     assert progress.modules[0].status == "canceled"
     next_attempt = await storage.prepare(
         stage.id, worker_task_id="next-worker", requested_by="u", input_snapshot={}
     )
-    view = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
     assert next(s for s in view.stages if s.stage == "detailed_cases").module_generation is None
     with pytest.raises(AppError):
         await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot(2)})
@@ -174,31 +277,10 @@ async def test_worker_string_summary_reaches_stage_projection(db):
     assert attempt.output_context_json["moduleGeneration"]["sequence"] == 1
 
 
-async def test_manual_edit_does_not_claim_another_attempts_module_progress(db):
-    stage, attempt, storage, worker = await setup(db)
-    await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": snapshot()})
-    await worker.completed(
-        stage.id,
-        attempt.id,
-        "modules-worker",
-        content='{"cases":[]}',
-        output_format="json",
-        output_context={"source": "keep"},
-    )
-    edited = await storage.save_draft(
-        stage.id,
-        expected_attempt_id=attempt.id,
-        requested_by="u",
-        content='{"cases":[]}',
-        output_format="json",
-    )
-    assert edited.output_context_json == {"source": "keep"}
-    assert "moduleGeneration" in attempt.output_context_json
-
-
 async def test_point_review_progress_is_persisted_and_projected_on_its_stage(db):
     stage, attempt, _, worker = await setup(db)
     stage.stage = "case_names"
+    bind_chain(db)
     value = snapshot()
     value["moduleGeneration"].update(
         stage="case_names", status="reviewing", reviewRound=1, issueCount=0
@@ -208,7 +290,7 @@ async def test_point_review_progress_is_persisted_and_projected_on_its_stage(db)
     value["moduleGeneration"].update(sequence=2, status="review_failed", issueCount=3)
     await worker.progress(stage.id, attempt.id, "modules-worker", {"summary": value})
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
-    view = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
+    view = await build_chain_view(AsyncSessionAdapter(db), "r", "function", task, detail=True)
     progress = next(s for s in view.stages if s.stage == "case_names").module_generation
     assert progress.stage == "case_names"
     assert progress.status == "review_failed"

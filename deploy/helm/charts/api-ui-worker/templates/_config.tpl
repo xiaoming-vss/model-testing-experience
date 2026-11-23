@@ -22,10 +22,7 @@ heartbeat_interval_ms = {{ int64 .Values.config.worker.heartbeat_interval_ms }}
 
 [ui]
 artifacts_dir = {{ .Values.config.ui.artifacts_dir | default "/app/artifacts" | toJson }}
-headless = {{ .Values.config.ui.headless }}
-slow_mo_ms = {{ int64 .Values.config.ui.slow_mo_ms }}
 trace_enabled = {{ .Values.config.ui.trace_enabled }}
-screenshot_on_failure = {{ .Values.config.ui.screenshot_on_failure }}
 
 [once]
 snapshot_file = {{ .Values.config.once.snapshot_file | default "" | toJson }}

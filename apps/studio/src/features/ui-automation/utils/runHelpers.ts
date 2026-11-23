@@ -8,7 +8,7 @@ export function buildUiSuiteRunPayload(
     viewportWidth?: number
     viewportHeight?: number
     defaultStepTimeoutMs?: number
-  } | null
+  } | null,
 ): RunUiTestSuitePayload {
   const payload: RunUiTestSuitePayload = { environmentId }
 
@@ -30,7 +30,7 @@ export function buildUiSuiteDebugRunPayload(
     viewportHeight?: number
     defaultStepTimeoutMs?: number
     screenshotPolicy?: UiScreenshotPolicy
-  } | null
+  } | null,
 ): UiTestCaseDebugRunPayload {
   const payload: UiTestCaseDebugRunPayload = { environmentId }
 

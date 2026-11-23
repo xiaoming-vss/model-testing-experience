@@ -5,6 +5,8 @@ from typing import Any
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound
 from testing_agent.models.requirement import Requirement
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.generation_chain import GenerationChainRepository
+from testing_agent.repositories.generation_schema import candidate_schema_installed
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     DesignKind,
@@ -77,6 +79,8 @@ class RequirementDesignService:
         if kind == "api" and body.source_content:
             raise AppError(400, "API 用例生成任务不再接受 OpenAPI/Swagger 文档来源", 400)
         requirement = await self.scope(requirement_id, user_id)
+        if not await candidate_schema_installed(self.task_repository.session):
+            raise AppError(400, "请先升级候选数据表", 400)
         sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
             raise ErrNotFound()
@@ -96,15 +100,24 @@ class RequirementDesignService:
         sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
             raise ErrNotFound()
-        task_id = body.task_id
+        bound_task_id = await GenerationChainRepository(
+            self.task_repository.session
+        ).candidate_chain_task(requirement_id, kind)
+        if bound_task_id and (
+            body.new_configuration or (body.task_id and body.task_id != bound_task_id)
+        ):
+            raise AppError(400, "该需求已有当前生成链，请修改现有配置", 400)
+        if body.task_id and not bound_task_id:
+            raise AppError(400, "旧生成配置不可使用，请创建新的生成链", 400)
+        task_id = bound_task_id
         if body.request_id:
             existing = await self.task_repository.get_task_for_update(str(body.request_id))
             if existing is not None:
+                if not bound_task_id:
+                    raise ErrBadRequest()
                 if task_id and task_id != existing.task_id:
                     raise ErrBadRequest()
                 task_id = existing.task_id
-        if not task_id and not body.new_configuration:
-            task_id = await self.repository.configuration_task_id(requirement_id, kind)
         if task_id:
             task = await self.access.owned_task(
                 user_id, task_id, kind, action="write", current_read=True
@@ -141,4 +154,5 @@ class RequirementDesignService:
             },
             user_id,
             task_id=str(body.request_id) if body.request_id else None,
+            initialize_candidate_chain=True,
         )

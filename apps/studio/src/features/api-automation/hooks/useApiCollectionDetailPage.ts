@@ -1,12 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Form } from 'antd'
 import type { InputRef } from 'antd'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { api } from '@/services/api'
 import type { JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
+import {
+  isCaseInvalidated,
+  type CaseInvalidationFilter,
+} from '@/shared/utils/caseInvalidation'
 import { message } from '@/shared/utils/feedback'
 import {
   formatTime,
@@ -36,6 +40,8 @@ export function useApiCollectionDetailPage() {
   const queryClient = useQueryClient()
   const { collectionId = '' } = useParams()
   const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [invalidatedFilter, setInvalidatedFilter] = useState<CaseInvalidationFilter>('all')
+  const [caseStatusOpen, setCaseStatusOpen] = useState(false)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | undefined>(undefined)
   const [environmentPopoverOpen, setEnvironmentPopoverOpen] = useState(false)
   const [caseForm] = Form.useForm<ApiCaseFormValues>()
@@ -57,6 +63,7 @@ export function useApiCollectionDetailPage() {
     selectedCaseId,
     setSelectedCaseId,
     selectedCaseDetail: data.selectedCaseDetailQuery.data,
+    invalidatedFilter,
   })
   const caseImport = useApiCaseImport({ collectionId })
   const envPicker = useApiEnvVarPicker({
@@ -203,17 +210,36 @@ export function useApiCollectionDetailPage() {
       message.warning('请先选择可用环境')
       return
     }
-    if (cases.length === 0) {
-      message.warning('当前 Collection 还没有可运行的用例')
+    if (!cases.some((item) => !isCaseInvalidated(item))) {
+      message.warning('当前 Collection 没有有效用例，失效用例不会参与运行')
       return
     }
 
     try {
-      await execution.runApiCollectionMutation.mutateAsync({ collectionId, environmentId: data.resolvedEnvironmentId })
+      await execution.runApiCollectionMutation.mutateAsync({
+        collectionId,
+        environmentId: data.resolvedEnvironmentId,
+      })
     } catch (error) {
       message.error(getErrorMessage(error))
     }
   }
+
+  const batchInvalidateCasesMutation = useMutation({
+    mutationFn: ({ caseIds, invalidated }: { caseIds: string[]; invalidated: boolean }) =>
+      api.batchInvalidateApiCases(data.projectId!, caseIds, invalidated),
+    onSuccess: (result, { invalidated }) => {
+      message.success(
+        invalidated
+          ? `已标记失效 ${result?.updatedCount ?? 0} 条用例`
+          : `已恢复有效 ${result?.updatedCount ?? 0} 条用例`,
+      )
+      queryClient.invalidateQueries({ queryKey: ['apiCases', collectionId] })
+      queryClient.invalidateQueries({ queryKey: ['apiCase'] })
+      setCaseStatusOpen(false)
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
 
   const runReport = useApiCollectionRunReport({
     collectionId,
@@ -229,37 +255,15 @@ export function useApiCollectionDetailPage() {
 
   const isSelectedCaseReady = caseState.isCreatingCase || (Boolean(data.activeCaseId) && (caseState.editingCase ? getCaseId(caseState.editingCase) === data.activeCaseId : false))
 
-  /* Query 参数页签靠末尾空行新增，所以编辑中始终保证 query 列表末尾有一行空行。
-     请求头页签有自己的虚线新增行，不再需要这一行。 */
-  const ensureQueryTrailingRow = useCallback((items?: Array<{ enabled?: boolean; key?: string; value?: string }>) => {
-    const rows = items ?? []
-    if (rows.length === 0) {
-      caseForm.setFieldValue('query', [{ enabled: false, key: '', value: '' }])
-      return
-    }
-
-    const nextRows = rows.map((row) => {
-      const hasContent = Boolean((row.key ?? '').trim() || (row.value ?? '').trim())
-      if (hasContent && row.enabled === false) {
-        return { ...row, enabled: true }
-      }
-      return row
-    })
-
-    const lastRow = nextRows[nextRows.length - 1]
-    if ((lastRow?.key ?? '').trim() || (lastRow?.value ?? '').trim()) {
-      caseForm.setFieldValue('query', [...nextRows, { enabled: false, key: '', value: '' }])
-      return
-    }
-
-    const changed = JSON.stringify(rows) !== JSON.stringify(nextRows)
-    if (changed) caseForm.setFieldValue('query', nextRows)
-  }, [caseForm])
-
   return {
     collectionId,
     navigate,
     queryClient,
+    invalidatedFilter,
+    setInvalidatedFilter,
+    caseStatusOpen,
+    setCaseStatusOpen,
+    batchInvalidateCasesMutation,
     selectedEnvironmentId,
     environmentPopoverOpen,
     setEnvironmentPopoverOpen,
@@ -276,7 +280,6 @@ export function useApiCollectionDetailPage() {
     ...envPicker,
     envVarPicker: envPicker,
     ...splitter,
-    ensureQueryTrailingRow,
     switchDefaultEnvironmentMutation,
     handleSelectEnvironment,
     handleSendRequest,

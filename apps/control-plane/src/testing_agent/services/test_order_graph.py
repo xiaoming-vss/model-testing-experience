@@ -13,21 +13,29 @@ from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.domain.function_case_content import generation_fields
+from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
+from testing_agent.domain.generation_source_closure import SourceClosureError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.test_order import TestOrder
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
+from testing_agent.repositories.generation_candidate_view import has_adopted_material
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderGraphInputResponse
 from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
 from testing_agent.services.auxiliary_execution_view import auxiliary_detail, auxiliary_history
 from testing_agent.services.common import dump
-from testing_agent.services.personal_authorization import require_personal_connection
-from testing_agent.services.requirement_material_source import (
-    approved_material,
-    material_source,
+from testing_agent.services.generation_current_material import lock_current_material
+from testing_agent.services.generation_document_preparation import (
+    lock_prepared_requirement_root,
+    prepare_requirement_document,
 )
+from testing_agent.services.generation_source_errors import closure_error, source_error
+from testing_agent.services.personal_authorization import require_personal_connection
+from testing_agent.services.project_access import require_project_access
+from testing_agent.services.requirement_material_source import material_source
+from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.test_order import TestOrderService
 
 TEST_ORDER_GRAPH_TASK_TYPE = task_type_for("test_order_graph")
@@ -126,10 +134,12 @@ class TestOrderGraphService:
         repository: AiGenerateTaskRepository,
         test_order_service: TestOrderService,
         entries: TestOrderEntryRepository,
+        files: StoredFileService | None = None,
     ) -> None:
         self.repository = repository
         self.orders = test_order_service
         self.entries = entries
+        self.files = files
 
     async def _read_order(self, user_id: str, order_id: str) -> TestOrder:
         order = await self.orders.get_accessible_entity(user_id, order_id, action="read")
@@ -180,7 +190,7 @@ class TestOrderGraphService:
                 by_group[group_id] = link
                 links.append(link)
             link["case_ids"].append(case.case_id)
-        await self._fill_material(pending)
+        await self._fill_material(pending, user_id=user_id, order_id=order_id)
         return dump(
             TestOrderGraphInputResponse,
             {
@@ -190,18 +200,87 @@ class TestOrderGraphService:
             },
         )
 
-    async def _fill_material(self, pending: list[tuple[dict[str, Any], str, str]]) -> None:
-        """Fill each requirement's latest approved material; reject if any is missing."""
+    async def _fill_material(
+        self, pending: list[tuple[dict[str, Any], str, str]], *, user_id: str, order_id: str
+    ) -> None:
+        """Fill each requirement's current adopted material; reject if any is missing."""
         chain = GenerationChainRepository(self.repository.session)
         missing: list[str] = []
         for item, requirement_id, name in pending:
-            version = await approved_material(chain, requirement_id)
-            if version is None:
+            bound_task_id = await chain.candidate_chain_task(requirement_id, "requirement_analysis")
+            if not bound_task_id or not await has_adopted_material(
+                self.repository.session, requirement_id
+            ):
                 missing.append(name)
                 continue
-            item["requirement_content"] = material_source(version)
+            item["requirement_content"] = await self._candidate_material(
+                requirement_id, bound_task_id, user_id, order_id
+            )
         if missing:
-            raise dynamic_error(ErrBadRequest, _missing_material_message(missing))
+            raise dynamic_error(
+                ErrBadRequest, _missing_material_message(missing), {"reason": "pending_upstream"}
+            )
+
+    async def _candidate_material(
+        self, requirement_id: str, bound_task_id: str, user_id: str, order_id: str
+    ) -> str:
+        """Read a validated adopted material without holding locks during S3 reads."""
+        if self.files is None:
+            raise dynamic_error(ErrBadRequest, "需求文件存储不可用")
+        try:
+            await self.repository.commit()
+            document = await prepare_requirement_document(
+                self.repository.session, requirement_id=requirement_id, files=self.files
+            )
+            await self.repository.commit()
+            order = await self._read_order(user_id, order_id)
+            project = await self.repository.get_project_for_update(order.project_id)
+            if project is None:
+                raise ErrNotFound()
+            await require_project_access(self.repository.session, user_id, project, "read")
+            sprint = await self.repository.get_sprint_for_update(order.sprint_id)
+            requirement = await self.repository.get_requirement_for_update(requirement_id)
+            if (
+                sprint is None
+                or sprint.project_id != project.project_id
+                or requirement is None
+                or requirement.sprint_id != sprint.sprint_id
+            ):
+                raise ErrNotFound()
+            chain = GenerationChainRepository(self.repository.session)
+            if (
+                await chain.candidate_chain_task(requirement_id, "requirement_analysis")
+                != bound_task_id
+            ):
+                raise SourceClosureError("concurrent_change")
+            task = await self.repository.get_task_for_update(bound_task_id)
+            if (
+                task is None
+                or task.requirement_id != requirement_id
+                or task.project_id != project.project_id
+                or task.sprint_id not in ("", sprint.sprint_id)
+                or task.task_type != "requirement_analysis"
+            ):
+                raise SourceClosureError("source_unknown")
+            root = await lock_prepared_requirement_root(self.repository.session, prepared=document)
+            material = await lock_current_material(
+                self.repository.session,
+                requirement_id=requirement_id,
+                document_root=root,
+                freeze=False,
+            )
+            result = material_source(material)
+            await self.repository.commit()
+            return result
+        except IncompleteRootInput as exc:
+            await self.repository.session.rollback()
+            raise source_error("source_unknown") from exc
+        except SourceClosureError as exc:
+            await self.repository.session.rollback()
+            raise closure_error(exc) from exc
+        except Exception:
+            await self.repository.session.rollback()
+            raise
 
     async def dispatch(self, user_id: str, order_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """派发一次图谱分析；一次生成完成前重复点击返回 400。"""

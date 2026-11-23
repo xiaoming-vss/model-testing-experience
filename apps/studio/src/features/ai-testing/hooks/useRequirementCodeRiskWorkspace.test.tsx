@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { aiTestingApi } from '../api/aiTesting.api'
-import { generationChainApi } from '../api/generationChain.api'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { useRequirementCodeRiskWorkspace } from './useRequirementCodeRiskWorkspace'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 
@@ -36,16 +36,6 @@ function renderWorkspace(active = false) {
   return { ...rendered, client }
 }
 
-function chainWithVersions(versions: { versionId: string; versionNo: number; label: string }[]) {
-  return {
-    stages: [{
-      stage: 'extracting_text',
-      versions,
-      latestVersion: versions.at(-1),
-    }],
-  } as never
-}
-
 it('网络失败后复用请求标识，成功后下一次生成使用新标识', async () => {
   const launch = vi.spyOn(aiTestingApi, 'runCodeRiskTask')
     .mockRejectedValueOnce(new TypeError('network unavailable'))
@@ -65,32 +55,23 @@ it('网络失败后复用请求标识，成功后下一次生成使用新标识'
   client.clear()
 })
 
-it('默认携带最新已审核的材料整理版本', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([
-    { versionId: 'sv-1', versionNo: 1, label: 'V1' },
-    { versionId: 'sv-2', versionNo: 2, label: 'V2' },
-  ]))
-  const launch = vi.spyOn(aiTestingApi, 'runCodeRiskTask')
-    .mockResolvedValue({ runId: 'run-1', status: 'pending' } as never)
+it('使用当前材料，不发送历史版本选择', async () => {
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: 'material-a', invalidatedAt: null } as never)
+  const launch = vi.spyOn(aiTestingApi, 'runCodeRiskTask').mockResolvedValue({ runId: 'run-1', status: 'pending' } as never)
   const { result, unmount, client } = renderWorkspace(true)
+  await waitFor(() => expect(vi.mocked(usePersonalLlmChoice).mock.calls.at(-1)?.[1]?.confirmDisabled).toBe(false))
   await waitFor(() => expect(result.current.runDisabledReason).toBeUndefined())
-
   await act(async () => { await result.current.start.mutateAsync() })
-
-  expect(launch).toHaveBeenCalledWith('task', expect.objectContaining({
-    requirementMaterialVersionId: 'sv-2',
-  }))
+  expect(launch.mock.calls[0][1]).not.toHaveProperty('requirementMaterialVersionId')
   unmount()
   client.clear()
 })
 
-it('没有已审核材料整理版本时禁用确认运行', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([]))
+it('没有当前材料时禁用确认', async () => {
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: null, invalidatedAt: null } as never)
   const { unmount, client } = renderWorkspace(true)
-
-  await waitFor(() => {
-    expect(vi.mocked(usePersonalLlmChoice).mock.calls.at(-1)?.[1]?.confirmDisabled).toBe(true)
-  })
+  await waitFor(() => expect(generationCandidatesApi.current).toHaveBeenCalled())
+  await waitFor(() => expect(vi.mocked(usePersonalLlmChoice).mock.calls.at(-1)?.[1]?.confirmDisabled).toBe(true))
   unmount()
   client.clear()
 })

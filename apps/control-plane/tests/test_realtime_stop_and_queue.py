@@ -374,6 +374,11 @@ async def test_recovery_scan_moves_past_failed_page_and_revisits_it(db, monkeypa
         common = dict(
             run_id=run_id,
             case_id="case",
+            project_id="p1",
+            requirement_id="req",
+            requirement_name="req",
+            sprint_id="s1",
+            sprint_name="s1",
             environment_id="env",
             trigger_user_id="owner",
             trigger_type="live_debug",
@@ -415,6 +420,11 @@ async def test_recovery_scan_moves_past_failed_page_and_revisits_it(db, monkeypa
     new_run = dict(
         run_id="scan-new",
         case_id="case",
+        project_id="p1",
+        requirement_id="req",
+        requirement_name="req",
+        sprint_id="s1",
+        sprint_name="s1",
         environment_id="env",
         trigger_user_id="owner",
         trigger_type="live_debug",

@@ -4,6 +4,8 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { generationChainApi } from '../api/generationChain.api'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
+import { profileCandidatesApi } from '../api/profileCandidates.api'
 import { repositoryProfileApi } from '../api/repositoryProfile.api'
 import { useRequirementRepositoryProfileWorkspace } from './useRequirementRepositoryProfileWorkspace'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
@@ -28,7 +30,7 @@ beforeEach(() => {
     { taskId: 'task', requirementId: 'req' },
   ] as never)
   vi.spyOn(repositoryProfileApi, 'getRepositoryProfileTaskRuns').mockResolvedValue([] as never)
-  vi.spyOn(repositoryProfileApi, 'getRepositoryProfileVersions').mockResolvedValue([] as never)
+  vi.spyOn(profileCandidatesApi, 'list').mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
 })
 
 afterEach(() => vi.restoreAllMocks())
@@ -47,95 +49,51 @@ function renderWorkspace(active = true) {
   return { ...rendered, client }
 }
 
-function chainWithVersions(versions: { versionId: string; versionNo: number; label: string }[]) {
-  return {
-    stages: [
-      {
-        stage: 'extracting_text',
-        versions,
-        latestVersion: versions.at(-1),
-      },
-    ],
-  } as never
-}
-
-it('默认携带最新已审核材料整理版本，并独立于阶段版本选择', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
-    chainWithVersions([
-      { versionId: 'sv-1', versionNo: 1, label: 'V1' },
-      { versionId: 'sv-2', versionNo: 2, label: 'V2' },
-    ]),
-  )
-  const launch = vi
-    .spyOn(repositoryProfileApi, 'runRepositoryProfileTask')
-    .mockResolvedValue({ runId: 'run-1', status: 'pending' } as never)
-  const chainRun = vi.spyOn(generationChainApi, 'run')
+it('候选模式使用已采用材料并移除旧版本参数', async () => {
+  vi.spyOn(generationChainApi, 'chain').mockResolvedValue({ candidateMode: true, stages: [{ stage: 'extracting_text', versions: [] }] } as never)
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: 'material-a', invalidatedAt: null } as never)
+  const launch = vi.spyOn(repositoryProfileApi, 'runRepositoryProfileTask').mockResolvedValue({ runId: 'run-1', status: 'pending' } as never)
   const { result, unmount, client } = renderWorkspace()
-
-  await waitFor(() => expect(result.current.materialVersionId).toBe('sv-2'))
-  expect(result.current.runDisabledReason).toBeUndefined()
-
-  act(() => result.current.setMaterialVersionId('sv-1'))
-  await act(async () => {
-    await result.current.start.mutateAsync()
-  })
-
-  expect(launch).toHaveBeenCalledWith(
-    'task',
-    expect.objectContaining({
-      requirementMaterialVersionId: 'sv-1',
-      llmConnectionId: 'llm',
-      gitlabConnectionIds: { repo: 'gitlab' },
-    }),
-  )
-  expect(chainRun).not.toHaveBeenCalled()
+  await waitFor(() => expect(result.current.currentMaterialAvailable).toBe(true))
+  await waitFor(() => expect(result.current.runDisabledReason).toBeUndefined())
+  await act(async () => { await result.current.start.mutateAsync() })
+  expect(launch).toHaveBeenCalledWith('task', expect.not.objectContaining({ requirementMaterialVersionId: expect.anything() }))
   unmount()
   client.clear()
 })
 
-it('默认选择最新画像版本，也可以切换历史版本', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
-    chainWithVersions([{ versionId: 'sv-1', versionNo: 1, label: 'V1' }]),
-  )
-  vi.spyOn(repositoryProfileApi, 'getRepositoryProfileVersions').mockResolvedValue([
-    {
-      versionId: 'version-2', versionNo: 2, label: 'v2', sourceRunId: 'run-2',
-      resultYaml: '{"repositories":[],"overallSummary":"v2"}', createdAt: '2026-11-09T10:00:00Z',
-      profile: { repositories: [], overallSummary: 'v2' },
-    },
-    {
-      versionId: 'version-1', versionNo: 1, label: 'v1', sourceRunId: 'run-1',
-      resultYaml: '{"repositories":[],"overallSummary":"v1"}', createdAt: '2026-11-09T09:00:00Z',
-      profile: { repositories: [], overallSummary: 'v1' },
-    },
-  ] as never)
+it('候选模式没有当前材料时禁止画像运行', async () => {
+  vi.spyOn(generationChainApi, 'chain').mockResolvedValue({ candidateMode: true, stages: [{ stage: 'extracting_text', versions: [] }] } as never)
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: null, invalidatedAt: null } as never)
   const { result, unmount, client } = renderWorkspace()
-
-  await waitFor(() => expect(result.current.selectedVersionId).toBe('version-2'))
-  expect(result.current.latestVersion?.versionId).toBe('version-2')
-  expect(result.current.selectedVersion?.profile?.overallSummary).toBe('v2')
-
-  act(() => result.current.setSelectedVersionId('version-1'))
-  await waitFor(() => expect(result.current.selectedVersion?.profile?.overallSummary).toBe('v1'))
+  await waitFor(() => expect(result.current.runDisabledReason).toContain('采用有效的材料整理'))
   unmount()
   client.clear()
 })
 
-it('没有已审核材料整理版本时禁用运行', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([]))
+it('画像候选显式采用并携带候选和当前令牌', async () => {
+  vi.spyOn(generationChainApi, 'chain').mockResolvedValue({ candidateMode: true, stages: [{ stage: 'extracting_text', versions: [] }] } as never)
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: 'material-a', invalidatedAt: null } as never)
+  const candidate = { candidateId: 'profile-a', snapshotId: 'profile-snapshot', candidateToken: 'candidate-token',
+    currentAttemptId: 'attempt-a', derivedFromCandidateId: null, disposition: 'available' as const, generationMode: 'current' as const,
+    frozenAt: null, createdBy: 'user', createdAt: '2026-11-20T10:00:00Z', isCurrent: false }
+  vi.mocked(profileCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
+  vi.spyOn(profileCandidatesApi, 'current').mockResolvedValue({ candidateId: null, currentToken: 'empty-token' } as never)
+  vi.spyOn(profileCandidatesApi, 'detail').mockResolvedValue({ ...candidate, content: '{"repositories":[],"overallSummary":"画像"}', format: 'json' })
+  const adopt = vi.spyOn(profileCandidatesApi, 'adopt').mockResolvedValue({ requestId: 'request', candidateId: 'profile-a', contentToken: 'current-token', replayed: false })
   const { result, unmount, client } = renderWorkspace()
-
-  await waitFor(() => {
-    expect(result.current.runDisabledReason).toContain('审核通过材料整理')
-  })
+  await waitFor(() => expect(result.current.selectedCandidate?.candidateId).toBe('profile-a'))
+  await waitFor(() => expect(result.current.currentProfile?.currentToken).toBe('empty-token'))
+  expect(result.current.selectedProfileView?.profile?.overallSummary).toBe('画像')
+  await act(async () => { await result.current.adopt.mutateAsync() })
+  expect(adopt).toHaveBeenCalledWith('req', expect.objectContaining({ candidateId: 'profile-a', expectedCandidateToken: 'candidate-token', expectedAttemptId: 'attempt-a', expectedCurrentToken: 'empty-token' }))
   unmount()
   client.clear()
 })
 
 it('没有关联软件仓库时禁用运行', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
-    chainWithVersions([{ versionId: 'sv-1', versionNo: 1, label: 'V1' }]),
-  )
+  vi.spyOn(generationChainApi, 'chain').mockResolvedValue({ candidateMode: true, stages: [] } as never)
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: 'material-a', invalidatedAt: null } as never)
   vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([] as never)
   const { result, unmount, client } = renderWorkspace()
 
@@ -147,9 +105,8 @@ it('没有关联软件仓库时禁用运行', async () => {
 })
 
 it('网络失败后复用请求标识，成功后下一次运行使用新标识', async () => {
-  vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
-    chainWithVersions([{ versionId: 'sv-1', versionNo: 1, label: 'V1' }]),
-  )
+  vi.spyOn(generationChainApi, 'chain').mockResolvedValue({ candidateMode: true, stages: [] } as never)
+  vi.spyOn(generationCandidatesApi, 'current').mockResolvedValue({ candidateId: 'material-a', invalidatedAt: null } as never)
   const launch = vi
     .spyOn(repositoryProfileApi, 'runRepositoryProfileTask')
     .mockRejectedValueOnce(new TypeError('network unavailable'))

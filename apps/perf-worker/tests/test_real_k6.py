@@ -16,6 +16,68 @@ from testing_agent_perf_worker.runner.workspace import Workspace
 
 
 @pytest.mark.skipif(shutil.which("k6") is None, reason="k6 not installed")
+async def test_real_k6_step_failure_priority(tmp_path: Path) -> None:
+    class Endpoint(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(404 if self.path == "/missing" else 200)
+            self.end_headers()
+            self.wfile.write(b'{"ok": true}')
+
+        def do_POST(self) -> None:
+            self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Endpoint)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        port = server.server_address[1]
+        path = tmp_path / "spec.yaml"
+        path.write_text(
+            f"""specVersion: "1.0"
+runId: step-priority
+case:
+  name: priority
+  steps:
+    - name: unexpected
+      path: /missing
+      onFailure: continue
+      checks: [{{type: status, value: 200}}]
+      extract: [{{name: missing, from: json, path: missing}}]
+    - name: expected
+      path: /missing
+      expectedStatuses: [404]
+      checks: [{{type: status, value: 404}}]
+  load: {{model: vus, vus: 1, duration: "1s"}}
+  acceptance: {{source: missing, confirmed: false}}
+environment: {{baseUrl: "http://127.0.0.1:{port}", variables: {{}}}}
+remoteWrite: {{url: "http://127.0.0.1:{port}/write", pushInterval: "1s"}}
+""",
+            encoding="utf-8",
+        )
+        settings = Settings()
+        settings.k6.expected_version = ""
+        workspace = Workspace.create(tmp_path / "runs", "step-priority")
+        compiled = compile_run_spec(load_run_spec(path), tmp_path, workspace.root, settings)
+        execution = await K6Runner(settings).run(compiled, workspace)
+        assert execution.exit_code == 0
+        assert execution.summary is not None
+        metrics = execution.summary["metrics"]
+        assert metrics["mtx_step_failures"]["values"]["count"] > 0
+        assert (
+            metrics["mtx_step_results"]["values"]["count"]
+            == 2 * metrics["mtx_step_failures"]["values"]["count"]
+        )
+        assert metrics["checks"]["values"]["rate"] == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+@pytest.mark.skipif(shutil.which("k6") is None, reason="k6 not installed")
 async def test_real_k6_runs_fixed_template(tmp_path: Path) -> None:
     posts: list[bytes] = []
 

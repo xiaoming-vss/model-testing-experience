@@ -136,7 +136,8 @@ class ControlPlaneClient:
                 if (
                     isinstance(exc, ControlPlaneError)
                     and exc.status_code
-                    and exc.status_code not in _RETRYABLE_STATUSES
+                    and exc.status_code != 429
+                    and not 500 <= exc.status_code < 600
                 ):
                     raise
                 if attempt + 1 < self._attempts:

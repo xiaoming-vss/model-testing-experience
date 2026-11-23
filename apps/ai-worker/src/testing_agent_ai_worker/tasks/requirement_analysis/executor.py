@@ -3,10 +3,7 @@
 from datetime import datetime
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
-from testing_agent_ai_worker.agent.paths import (
-    resolve_runtime_paths,
-    resolve_task_workspace,
-)
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
@@ -44,7 +41,6 @@ class RequirementAnalysisExecutor(TaskExecutor):
         attachment_downloader=None,
     ) -> None:
         self.agent_config = agent_config
-        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.first_skill_name = first_skill_name
         self.source_downloader = source_downloader

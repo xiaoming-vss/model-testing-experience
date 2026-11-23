@@ -44,7 +44,6 @@ config:
     # JWT 签名密钥和有效期。key 生产环境必须显式设置，且所有控制面副本一致。
     jwt:
       key: ""
-      expire_hours: 72
       user_expire_hours: 72
       super_admin_expire_hours: 24
 
@@ -116,10 +115,6 @@ config:
       signature_seconds: 900
       temporary_hours: 24
       max_bytes: 104857600
-
-  # 代码概览缓存时间（秒）。
-  code_overview:
-    cache_ttl_seconds: 300
 
   # 用户资产导入的资源预算；超限请求会被拒绝。
   asset_import:

@@ -1,0 +1,28 @@
+/* 测试范围风险分析：材料依据里的表格皮肤。
+ * 布局与文字层级由组件 utility 负责，这里只处理 Markdown 表格的
+ * 首行强调、单元格对齐和窄屏横向滚动。 */
+
+.evidenceContent {
+  min-width: 0;
+  color: var(--app-surface-text);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.evidenceContent table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.evidenceContent td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.evidenceContent tr:first-child td {
+  color: var(--app-surface-text);
+  background: var(--app-surface-hover);
+  font-weight: 600;
+}

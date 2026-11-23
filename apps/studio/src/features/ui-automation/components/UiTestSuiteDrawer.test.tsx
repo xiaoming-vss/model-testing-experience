@@ -17,7 +17,6 @@ function DrawerHarness() {
       loading={false}
       error={null}
       onClose={vi.fn()}
-      sprintOptions={[{ label: 'v1.0.0', value: 'sprint-1' }]}
       requirementOptions={[
         { label: '全部需求', value: 'all' },
         { label: '安装部署', value: 'requirement-1' },

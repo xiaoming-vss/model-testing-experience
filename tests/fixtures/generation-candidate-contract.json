@@ -1,0 +1,37 @@
+{
+  "validRuns": [
+    {"connectionId": "connection-1"},
+    {
+      "connectionId": "connection-1",
+      "generationMode": "trial",
+      "sourceSelections": [
+        {"chainKind": "function", "stage": "requirement_analysis", "sourceKind": "candidate", "candidateId": "analysis-a", "snapshotId": "snapshot-a", "expectedCandidateToken": "token-a"},
+        {"chainKind": "function", "stage": "case_names", "sourceKind": "current", "expectedCurrentToken": "current-token"}
+      ]
+    }
+  ],
+  "invalidRuns": [
+    {"connectionId": "connection-1", "generationMode": "current", "sourceSelections": [{"chainKind": "function", "stage": "case_names", "sourceKind": "current", "expectedCurrentToken": "token"}]},
+    {"connectionId": "connection-1", "generationMode": "trial", "sourceSelections": [{"chainKind": "function", "stage": "case_names", "sourceKind": "candidate", "candidateId": "a", "snapshotId": "s"}]},
+    {"connectionId": "connection-1", "generationMode": "trial", "sourceSelections": [{"chainKind": "function", "stage": "case_names", "sourceKind": "current", "expectedCurrentToken": "t"}, {"chainKind": "function", "stage": "case_names", "sourceKind": "current", "expectedCurrentToken": "u"}]},
+    {"connectionId": "connection-1", "generationMode": "trial", "sourceSelections": [{"chainKind": "function", "stage": "case_names", "sourceKind": "candidate", "candidateId": "a", "snapshotId": "s", "expectedCandidateToken": "t", "content": "untrusted"}]}
+  ],
+  "frozenTrialInput": {
+    "generationMode": "trial",
+    "lineageHash": "sha256:lineage",
+    "sources": [
+      {"requirementId": "requirement-1", "chainKind": "function", "stage": "requirement_analysis", "sourceKind": "candidate", "candidateId": "analysis-a", "snapshotId": "snapshot-a", "contentHash": "sha256:content", "basisHash": "sha256:basis", "sourceBatchId": null, "parentSnapshotIds": [], "rootSnapshotIds": ["root-snapshot"]}
+    ],
+    "rootSources": [
+      {"snapshotId": "root-snapshot", "resourceKind": "requirement_document", "resourceId": "requirement-1", "contentHash": "sha256:root", "sourceBatchId": null}
+    ],
+    "selectedSources": [
+      {"chainKind": "function", "stage": "requirement_analysis", "sourceKind": "candidate", "candidateId": "analysis-a", "snapshotId": "snapshot-a"}
+    ]
+  },
+  "blockedAdoption": {
+    "canAdopt": false,
+    "lineageHash": "sha256:lineage",
+    "blockingSources": [{"chainKind": "function", "stage": "requirement_analysis", "reason": "source_stale"}]
+  }
+}

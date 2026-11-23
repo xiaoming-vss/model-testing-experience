@@ -50,7 +50,7 @@
 }
 .scope :global(.gc-flow-stage .gc-node:is(.is-approved, .is-imported)) { background: linear-gradient(160deg, var(--app-testing-success-tag-bg), var(--gc-surface) 75%); }
 .scope :global(.gc-flow-stage .gc-node.is-draft) { background: linear-gradient(160deg, var(--app-status-warning-bg), var(--gc-surface) 75%); }
-.scope :global(.gc-flow-stage .gc-node.is-rejected) { background: linear-gradient(160deg, var(--app-danger-surface-soft), var(--gc-surface) 75%); }
+.scope :global(.gc-flow-stage .gc-node.is-invalid) { background: linear-gradient(160deg, var(--app-danger-surface-soft), var(--gc-surface) 75%); }
 .scope :global(.gc-flow-stage .gc-node.is-running) {
   border-color: color-mix(in srgb, var(--app-generation-running-accent) 45%, var(--gc-line));
   background: linear-gradient(160deg, color-mix(in srgb, var(--app-generation-running-accent) 8%, var(--gc-surface)), var(--gc-surface) 55%);
@@ -121,27 +121,6 @@
  .scope :global(.gc-inspector-drawer),
  .scope :global(.gc-inspector-rail) { transition: none; } }
 .scope :global(.gc-inspector-header h2) { margin: 0; font-size: 15px; line-height: 1.4; }
-.scope :global(.gc-inspector-header p) { margin: 4px 0 0; color: var(--app-surface-text-muted); font-size: 12px; }
-.scope :global(.gc-inspector-header .gc-state) { position: relative; flex: none; height: 24px; padding: 0 9px; gap: 6px; overflow: hidden; font-weight: 600; isolation: isolate; }
-.scope :global(.gc-inspector-header .gc-state-text) { position: relative; z-index: 1; }
-.scope :global(.gc-inspector-header .gc-state:is(.is-running, .is-draft, .is-approved, .is-imported, .is-failed, .is-rejected, .is-empty)::before) { content: ""; position: relative; z-index: 1; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
-.scope :global(.gc-inspector-header .gc-state.is-running) { border-color: color-mix(in srgb, var(--app-generation-running-accent) 42%, var(--app-surface-border)); background: color-mix(in srgb, var(--app-generation-running-accent) 14%, transparent); color: var(--app-generation-running-accent); }
-.scope :global(.gc-inspector-header .gc-state.is-running::before) { animation: gc-state-dot-pulse 1.7s ease-out infinite; }
-.scope :global(.gc-inspector-header .gc-state.is-running::after) { content: ""; position: absolute; inset: -1px; z-index: 0; background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--app-generation-running-accent) 20%, transparent) 50%, transparent 70%); transform: translateX(-120%); animation: gc-state-sheen 2.8s ease-in-out infinite; pointer-events: none; }
-.scope :global(.gc-inspector-header .gc-state.is-draft) { color: var(--app-status-warning-text); background: var(--app-status-warning-bg); border-color: var(--app-review-warning-border); }
-.scope :global(.gc-inspector-header .gc-state.is-draft::before) { animation: gc-state-dot-breathe 2.2s ease-in-out infinite; }
-.scope :global(.gc-inspector-header .gc-state.is-approved),
-.scope :global(.gc-inspector-header .gc-state.is-imported) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); color: var(--app-result-success-text); background: var(--app-testing-success-tag-bg); }
-.scope :global(.gc-inspector-header .gc-state.is-failed),
-.scope :global(.gc-inspector-header .gc-state.is-rejected) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
-.scope :global(.gc-inspector-header .gc-state:is(.is-failed, .is-rejected)::before) { animation: gc-state-dot-glow 2.4s ease-in-out infinite; }
-.scope :global(.gc-inspector-header .gc-state.is-empty) { background: var(--app-surface-chip); }
-@keyframes gc-state-dot-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 42%, transparent); } 75%, 100% { box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 0%, transparent); } }
-@keyframes gc-state-sheen { 0%, 30% { transform: translateX(-120%); } 65%, 100% { transform: translateX(120%); } }
-@keyframes gc-state-dot-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes gc-state-dot-glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); } 50% { box-shadow: 0 0 7px 1px color-mix(in srgb, currentColor 55%, transparent); } }
-@media (prefers-reduced-motion: reduce) { .scope :global(.gc-inspector-header .gc-state::before),
- .scope :global(.gc-inspector-header .gc-state::after) { animation: none; } }
 .scope :global(.gc-inspector-versions > span) { color: var(--app-surface-text-muted); font-size: 12px; }
 .scope :global(.gc-inspector-trace .gc-trace-chip) { max-width: 100%; }
 @media (max-width: 900px) { .scope :global(.gc-inspector-drawer) { flex: 0 0 auto; min-height: 220px; } .scope :global(.gc-inspector-drawer.is-collapsed) { min-height: 48px; height: 48px; } .scope :global(.gc-inspector) { width: 100%; min-height: 220px; } .scope :global(.gc-inspector-toggle),
@@ -171,29 +150,11 @@
 .scope :global(.gc-canvas-stage .gc-embedded-artifact .ant-modal-title) { flex: 1 1 200px; min-width: 0; padding-right: 0; }
 .scope :global(.gc-canvas-stage .gc-embedded-artifact .gc-return-canvas) { position: static; flex: 0 0 auto; margin-left: auto; }
 
-/* 画布阅读时，版本、上游与对比集中在侧栏；视图切换和复制跟随正文。 */
-.scope :global(.gc-inspector-reading-tools .gc-title-tools) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
-.scope :global(.gc-inspector-reading-tools .gc-title-tools > .gc-upstream-trigger) { grid-column: 1 / -1; width: 100%; max-width: 100%; }
-.scope :global(.gc-inspector-reading-tools .gc-footer-row) { display: flex; flex-direction: column; align-items: stretch; }
+/* 画布阅读时，候选操作集中在侧栏；正文只保留产物。 */
 .scope :global(.gc-inspector-reading-tools .gc-modal-actions) { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; margin: 0; }
 .scope :global(.gc-inspector-reading-tools .gc-modal-actions > span > button) { width: 100%; }
 .scope :global(.gc-inspector-reading-tools .gc-modal-actions > button),
 .scope :global(.gc-inspector-reading-tools .gc-modal-actions > span > button) { width: 100%; height: auto; min-height: 36px; padding: 7px 12px; line-height: 1.5; white-space: normal; }
-.scope :global(.gc-inspector-reading-tools .gc-footer-status:empty) { display: none; }
-.scope :global(.gc-inspector-reading-tools .gc-modal-meta) { flex-wrap: wrap; padding: 0; line-height: 1.6; }
-.scope :global(.gc-inspector-reading-tools .revision-side-panel) { flex: none; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; overflow: visible; }
-.scope :global(.gc-inspector-reading-tools .revision-side-panel header) { display: none; }
-.scope :global(.gc-inspector-reading-tools .revision-footer-actions) { flex-wrap: wrap; }
-.scope :global(.gc-inspector-reading-tools .revision-footer-actions > button) { flex: 1; }
-.scope :global(.gc-embedded-artifact .gc-workspace.is-revising > .gc-reading-body) { flex: 0 0 auto; width: var(--revision-source-width, 60%); min-width: 35%; max-width: min(75%, calc(100% - 320px)); overflow: hidden; }
-.scope :global(.gc-embedded-artifact .gc-workspace.is-revising > .revision-side-panel) { flex: 1 1 0%; min-width: 300px; margin: 0; border: 0; border-radius: 0; padding: 20px; }
-.scope :global(.gc-embedded-artifact .gc-workspace.is-revising .revision-footer-actions) { margin-top: auto; flex-wrap: wrap; }
-@media (max-width: 1100px) {
-  .scope :global(.gc-embedded-artifact .gc-workspace.is-revising) { flex-direction: column; overflow: auto; }
-  .scope :global(.gc-embedded-artifact .gc-workspace.is-revising > .gc-reading-body) { flex: 0 0 auto; width: 100%; max-width: none; min-height: 280px; height: 40%; }
-  .scope :global(.gc-embedded-artifact .gc-workspace.is-revising > .revision-divider) { display: none; }
-  .scope :global(.gc-embedded-artifact .gc-workspace.is-revising > .revision-side-panel) { flex: 0 0 auto; min-width: 0; min-height: 480px; }
-}
 .scope :global(.gc-reading-body > .gc-artifact-scroll) { flex: 1 1 0%; margin: 0; border: 0; }
 /* 嵌入式测试点树图由左侧面板提供唯一外框。 */
 .scope :global(.gc-reading-body > .gc-artifact-scroll.is-case-names) { padding: 0; }
@@ -202,18 +163,12 @@
 .scope :global(.gc-reading-body > .gc-artifact-scroll.is-raw) { padding: 0; }
 .scope :global(.gc-reading-body > .gc-artifact-scroll.is-raw .json-editor-shell),
 .scope :global(.gc-reading-body > .gc-artifact-scroll.is-raw .json-editor-shell:focus-within) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.scope :global(.gc-reading-body > .gc-artifact-scroll.is-raw > .gc-raw-editor) { flex: 1 1 0%; height: 100%; overflow: hidden; }
 
 .scope :global(.gc-inspector-reading) { box-shadow: none; }
 
-.scope :global(.gc-inspector-header .gc-inspector-back) { align-self: flex-start; margin: -4px 0 6px -7px; color: var(--app-surface-text-muted); font-size: 12px; }
-.scope :global(.gc-inspector-header p) { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
-.scope :global(.gc-inspector-stage-summary::before) { content: ' · '; }
-.scope :global(.gc-inspector-stage-summary) { color: var(--app-surface-text-muted); }
 .scope :global(.gc-inspector-source p) { margin: 0; overflow-wrap: anywhere; }
 .scope :global(.gc-inspector-source .ant-upload-wrapper) { min-width: 0; }
 .scope :global(.gc-inspector-source .ant-upload-select) { max-width: 100%; }
-.scope :global(.gc-inspector-reading-tools .gc-title-tools > .ant-btn) { min-width: 0; min-height: 32px; font-size: 12px; }
 @media (max-width: 900px) {
   .scope :global(.gc-inspector-content) { flex: 0 0 auto; overflow: visible; }
   .scope :global(.gc-inspector-footer) { max-height: none; overflow: visible; }

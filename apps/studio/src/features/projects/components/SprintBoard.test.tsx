@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { seedOwnerProject } from '@/test/projectAccess'
 import { SprintBoard } from './SprintBoard'
+import { entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import type { Sprint } from '@/domain/projects/types'
 
 const clients: QueryClient[] = []
@@ -47,6 +48,10 @@ it('未知状态不丢失，删除仍须确认', async () => {
   const confirmation = (await screen.findByText('确认删除该迭代？')).closest('[role="tooltip"]')!
   await user.click(within(confirmation as HTMLElement).getByRole('button', { name: /删\s*除/ }))
   await waitFor(() => expect(onDelete).toHaveBeenCalledWith('odd'))
+})
+it('卡片网格复用需求页的共享列宽', () => {
+  mount([{ sprintId: 's1', name: '迭代 A', status: 'running' }])
+  expect(screen.getByLabelText('迭代列表').className).toContain(entityCardGridClass)
 })
 it('只读成员保留详情链接但不能编辑、绑定或删除', () => {
   mount([{ sprintId: 'active', name: '当前迭代', status: 'running' }], true)

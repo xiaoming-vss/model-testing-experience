@@ -47,37 +47,6 @@ async def test_direct_stage_dispatch_creates_one_execution_and_reuses_it_on_retr
     assert len(db.scalars(select(AiExecution)).all()) == 1
 
 
-async def test_editing_a_candidate_does_not_create_a_worker_execution(db):  # noqa: F811
-    from testing_agent.models.ai_execution import AiExecution
-    from testing_agent.services.stage_storage import DirectStageStorage
-
-    seed_task(db)
-    stage = AiGenerationStage(id="edit-stage", task_id="task", stage="case_names")
-    db.add(stage)
-    db.commit()
-    storage = DirectStageStorage(AsyncSessionAdapter(db))
-    original = await storage.prepare(
-        stage.id, worker_task_id="worker", requested_by="u", input_snapshot={}
-    )
-    await storage.publish(
-        stage.id,
-        attempt_id=original.id,
-        worker_task_id="worker",
-        content='{"name":"first"}',
-        output_format="json",
-        output_context=None,
-    )
-    edited = await storage.save_draft(
-        stage.id,
-        expected_attempt_id=original.id,
-        requested_by="u",
-        content='{"name":"edited"}',
-        output_format="json",
-    )
-    assert edited.execution_id is None
-    assert len(db.scalars(select(AiExecution)).all()) == 1
-
-
 async def test_unreviewed_stage_keeps_successful_history_across_runs(db):  # noqa: F811
     from testing_agent.services.stage_storage import DirectStageStorage
 

@@ -10,13 +10,9 @@ from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import AppError, ErrForbidden
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
-from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.perf_run import PerfRun
-from testing_agent.models.requirement import Requirement
-from testing_agent.models.sprint import Sprint
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
-from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
@@ -46,35 +42,26 @@ async def execution_authority(session, task) -> ExecutionAuthority:
     if task.domain not in {"api", "ui"}:
         raise ErrForbidden()
     model: Any
-    container: Any
     if task.domain == "api":
         model, key = (
             (ApiCollectionRun, "collection_run_id")
             if task.task_type == "api_collection_run"
             else (ApiCaseRun, "run_id")
         )
-        container, field = ApiCollection, "collection_id"
     else:
         model, key = (
             (UiTestSuiteRun, "suite_run_id")
             if task.task_type == "suite_run"
             else (UiTestCaseRun, "run_id")
         )
-        container, field = UiTestSuite, "suite_id"
-    row = (
-        await session.execute(
-            select(model, Sprint.project_id)
-            .select_from(model)
-            .join(container, getattr(container, field) == getattr(model, field))
-            .join(Requirement, Requirement.requirement_id == container.requirement_id)
-            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-            .where(getattr(model, key) == task.run_id)
-        )
-    ).one_or_none()
-    if row is None or not row[1]:
+    run = await session.scalar(
+        select(model)
+        .where(getattr(model, key) == task.run_id)
+        .execution_options(populate_existing=True)
+    )
+    if run is None or not run.project_id:
         raise ErrForbidden()
-    run, project_id = row
-    return ExecutionAuthority(run.trigger_user_id, project_id, run, [])
+    return ExecutionAuthority(run.trigger_user_id, run.project_id, run, [])
 
 
 async def fail_authorization(session, task, authority=None):

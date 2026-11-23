@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 from testing_agent.api.deps import get_current_user_id, get_perf_case_service
 from testing_agent.core.errors import success_payload
+from testing_agent.schemas.case_lifecycle import CaseInvalidationRequest
 from testing_agent.schemas.perf_case import PerfCaseCreate, PerfCaseUpdate
 from testing_agent.services.perf_case import PerfCaseService
 
@@ -19,10 +20,22 @@ async def create_perf_case(
 
 async def list_perf_cases(
     project_id: str,
+    invalidated: bool | None = Query(default=None),
     user_id: str = Depends(get_current_user_id),
     service: PerfCaseService = Depends(get_perf_case_service),
 ):
-    return success_payload(await service.list(user_id, project_id))
+    return success_payload(await service.list(user_id, project_id, invalidated=invalidated))
+
+
+async def batch_invalidate_perf_cases(
+    project_id: str,
+    body: CaseInvalidationRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: PerfCaseService = Depends(get_perf_case_service),
+):
+    return success_payload(
+        await service.batch_set_invalidated(user_id, project_id, body.case_ids, body.invalidated)
+    )
 
 
 async def get_perf_case(

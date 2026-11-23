@@ -9,19 +9,30 @@ from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
 class UiTestSuite(Base):
     __tablename__ = "ui_test_suites"
     __table_args__ = (
-        UniqueConstraint("requirement_id", "name", name="uk_ui_suite_requirement_name"),
+        UniqueConstraint("project_id", "name", name="uk_ui_suite_project_name"),
+        Index("idx_ui_test_suites_project_updated", "project_id", "updated_at"),
         Index("idx_ui_test_suites_effective_import", "effective_import_id"),
-        {"comment": "需求下的 UI 测试套件及浏览器执行配置"},
+        {"comment": "项目级 UI 测试集、浏览器执行配置及可选来源需求"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     suite_id: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, comment="UI 测试套件业务标识"
     )
-    requirement_id: Mapped[str] = mapped_column(
+    project_id: Mapped[str] = mapped_column(
         String(64),
-        ForeignKey("requirements.requirement_id", name="fk_ui_test_suites_requirement"),
+        ForeignKey("projects.project_id", name="fk_ui_test_suites_project"),
         nullable=False,
-        comment="需求业务标识",
+        comment="所属项目业务标识，决定权限、生命周期和名称唯一性",
+    )
+    requirement_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey(
+            "requirements.requirement_id",
+            name="fk_ui_test_suites_requirement",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        comment="可选关联的来源需求业务标识；空值表示项目级测试集",
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False, comment="UI 测试集名称")
     description: Mapped[str] = mapped_column(

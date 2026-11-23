@@ -44,14 +44,16 @@ async def test_live_api_debug_result_is_private_but_manual_result_remains_shared
 
 
 @pytest.mark.asyncio
-async def test_api_run_scope_changes_permissions_and_statistics_with_requirement(db):
+async def test_run_scope_snapshot_is_stable_when_requirement_moves(db):
     seed(db)
     cases, collections = services(db)
     single = await cases.run("u1", "api-case", RunApiCaseRequest(environmentId="env"))
     group = await collections.run("u1", "collection", RunApiCollectionRequest(environmentId="env"))
     assert group["projectId"] == "p1"
-    assert single["collectionId"] == "collection"
+    assert group["requirementId"] == "req"
     assert group["sprintId"] == "s1"
+    assert single["projectId"] == "p1"
+    assert single["sprintId"] == "s1"
     stored = db.scalar(select(ApiCaseRun))
     stored.status = "success"
     db.commit()
@@ -59,14 +61,15 @@ async def test_api_run_scope_changes_permissions_and_statistics_with_requirement
     assert await metrics.list_latest_api_run_statuses("s1") == {"api-case": "success"}
     db.scalar(select(Requirement)).sprint_id = "s2"
     db.commit()
+    # Sprint metrics stay requirement-scoped; project and run snapshots do not move.
     assert await metrics.list_latest_api_run_statuses("s1") == {}
     assert await metrics.list_latest_api_run_statuses("s2") == {"api-case": "success"}
+    assert (await cases.get_run("u1", single["runId"]))["sprintId"] == "s1"
+    assert (await collections.get("u1", group["collectionRunId"]))["sprintId"] == "s1"
     with pytest.raises(type(ErrForbidden)):
-        await cases.get_run("u1", single["runId"])
+        await cases.get_run("u2", single["runId"])
     with pytest.raises(type(ErrForbidden)):
-        await collections.report("u1", group["collectionRunId"])
-    assert (await cases.get_run("u2", single["runId"]))["runId"] == single["runId"]
-    assert (await collections.get("u2", group["collectionRunId"]))["sprintId"] == "s2"
+        await collections.report("u2", group["collectionRunId"])
     from testing_agent.services.resource_deletion import delete_resource
 
     adapter = AsyncSessionAdapter(db)
@@ -76,9 +79,9 @@ async def test_api_run_scope_changes_permissions_and_statistics_with_requirement
     db.commit()
     assert await metrics.list_latest_api_run_statuses("s2") == {}
     with pytest.raises(type(ErrNotFound)):
-        await cases.get_run("u2", single["runId"])
+        await cases.get_run("u1", single["runId"])
     with pytest.raises(type(ErrNotFound)):
-        await collections.report("u2", group["collectionRunId"])
+        await collections.report("u1", group["collectionRunId"])
     assert db.scalar(select(SprintDailyMetrics)).api_case_total == 11
     assert db.scalar(select(SprintDailyMetrics)).api_case_success == 9
 

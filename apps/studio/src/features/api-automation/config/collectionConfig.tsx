@@ -29,17 +29,6 @@ export const bodyTypeOptions: Array<{ label: string; value: NonNullable<ApiCase[
   { label: 'raw', value: 'raw' },
 ]
 
-/**
- * 请求头面板的「快捷注入」预设：接口调试里最常手写的几个头。
- * `Authorization` 与 `X-Request-ID` 只注入键名，值留给使用者按当前环境填写。
- */
-export const headerQuickInjectPresets: Array<{ label: string; key: string; value: string }> = [
-  { label: 'Authorization', key: 'Authorization', value: '' },
-  { label: 'Accept: application/json', key: 'Accept', value: 'application/json' },
-  { label: 'X-Request-ID', key: 'X-Request-ID', value: '' },
-  { label: 'User-Agent', key: 'User-Agent', value: '' },
-]
-
 export const runResultViewOptions: Array<{ label: string; value: RunResultView }> = [
   { label: '原始请求', value: 'request' },
   { label: '响应结果', value: 'response' },

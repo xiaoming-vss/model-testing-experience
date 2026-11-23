@@ -16,6 +16,7 @@ from testing_agent.schemas.function_test_case import (
     FunctionCaseRequest,
     FunctionCaseResponse,
 )
+from testing_agent.services.case_lifecycle import set_case_invalidated
 from testing_agent.services.common import apply_patch, dump, list_payload, paged_payload
 from testing_agent.services.function_case_access import FunctionCaseAccess
 from testing_agent.services.project_access import (
@@ -47,9 +48,11 @@ class FunctionTestCaseService:
         await self.repository.refresh(case)
         return dump(FunctionCaseResponse, case)
 
-    async def list(self, user_id: str, suite_id: str) -> dict[str, Any]:
+    async def list(
+        self, user_id: str, suite_id: str, *, invalidated: bool | None = None
+    ) -> dict[str, Any]:
         await self.access.get_accessible_suite(user_id, suite_id, action="read")
-        rows = await self.repository.list_by_suite(suite_id)
+        rows = await self.repository.list_by_suite(suite_id, invalidated=invalidated)
         return list_payload([dump(FunctionCaseResponse, row) for row in rows])
 
     async def list_project_cases(self, user_id: str, query: FunctionCaseQuery) -> dict[str, Any]:
@@ -105,6 +108,25 @@ class FunctionTestCaseService:
         await self.repository.commit()
         await self.repository.refresh(case)
         return dump(FunctionCaseResponse, case)
+
+    async def batch_set_invalidated(
+        self,
+        user_id: str,
+        project_id: str,
+        case_ids: builtins.list[str],
+        invalidated: bool,
+    ) -> dict:
+        await require_project_id(self.repository.session, user_id, project_id, action="write")
+        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
+        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
+            raise ErrNotFound()
+        changed = set_case_invalidated(rows, invalidated)
+        try:
+            await self.repository.commit()
+        except Exception:
+            await self.repository.rollback()
+            raise
+        return {"caseIds": case_ids, "updatedCount": changed}
 
     async def batch_delete(self, user_id: str, suite_id: str, case_ids: builtins.list[str]) -> dict:
         await self.access.get_accessible_suite(user_id, suite_id, action="write")

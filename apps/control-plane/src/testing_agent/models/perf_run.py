@@ -32,6 +32,12 @@ class PerfRun(Base):
     project_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="项目业务标识"
     )
+    sprint_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="运行关联的迭代业务标识；空值表示未关联"
+    )
+    sprint_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="", comment="运行创建时冻结的迭代名称；空值表示未关联"
+    )
     case_version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, comment="发起运行时冻结的用例版本号"
     )

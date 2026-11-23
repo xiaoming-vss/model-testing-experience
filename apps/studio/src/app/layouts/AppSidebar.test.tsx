@@ -48,7 +48,7 @@ describe('AppSidebar', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Bug列表' }))
     expect(screen.getByRole('link', { name: 'Bug列表' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: '测试' })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('navigation', { name: '主导航' })).toHaveClass('top-navigation-links')
+    expect(screen.getByRole('navigation', { name: '主导航' })).toHaveClass('top-navigation-links', '[scrollbar-width:none]', '[&::-webkit-scrollbar]:hidden')
   })
 
   it.each([

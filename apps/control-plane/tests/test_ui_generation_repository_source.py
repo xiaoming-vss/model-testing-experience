@@ -20,14 +20,9 @@ from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.schemas.generation_chain import GenerationChainRunRequest
 from testing_agent.services.repo_gitlab_access import RepoGitlabAccess
 from testing_agent.services.service_instance import instance_key
-from testing_agent.services.stage_storage.authorization import DirectWorkerAuthority
-from testing_agent.services.stage_storage.payload import worker_payloads
 from testing_agent.services.ui_generation_source import (
-    ResolvedUiSource,
     UiGenerationSourceService,
 )
 
@@ -65,9 +60,7 @@ def seed_profile(
     seed_task(session)
     task = session.query(AiGenerateTask).filter_by(task_id="task").one()
     task.task_type = "repository_profile"
-    stage = AiGenerationStage(
-        id="profile-stage", task_id=task.task_id, stage="generate", next_version_no=1
-    )
+    stage = AiGenerationStage(id="profile-stage", task_id=task.task_id, stage="generate")
     session.add(stage)
     session.flush()
     for index, (profile, bindings) in enumerate(profiles, start=1):
@@ -151,6 +144,134 @@ def source_service(
     return service, connections
 
 
+async def test_resolve_current_profile_freezes_pin_with_initiators_access(db):  # noqa: F811
+    seed_profile(
+        db,
+        [(repository_profile(profile_repository("repo-front", "frontend")), [profile_binding()])],
+    )
+    service, connections = source_service(db)
+    current = SimpleNamespace(
+        candidate_id="candidate-a",
+        profile=repository_profile(profile_repository("repo-front", "frontend")),
+        bindings=[profile_binding()],
+    )
+    resolved = await service.resolve_current(
+        current=current,
+        project_id="p",
+        user_id="u",
+        repository_id="repo-front",
+        commit_mode="latest",
+        gitlab_connection_id="ui-conn",
+    )
+    assert resolved.repository["commit"] == "sha-head"
+    assert resolved.binding["connectionId"] == "ui-conn"
+    connections.get_gitlab_project.assert_awaited_once_with(
+        "ui-conn", "p", "repo-front", user_id="u"
+    )
+    connections.resolve_gitlab_commit.assert_awaited_once()
+
+
+async def test_resolve_current_profile_rejects_unavailable_repository(db):  # noqa: F811
+    seed_task(db)
+    service, connections = source_service(db)
+    current = SimpleNamespace(
+        candidate_id="candidate-a",
+        profile=repository_profile(profile_repository("repo-front", "frontend")),
+        bindings=[{**profile_binding(), "profileError": "unavailable"}],
+    )
+    with pytest.raises(AppError):
+        await service.resolve_current(
+            current=current, project_id="p", user_id="u", repository_id="repo-front"
+        )
+    connections.get_gitlab_project.assert_not_awaited()
+
+
+async def test_resolve_current_profile_uses_pinned_commit_and_actor_access(db):  # noqa: F811
+    seed_profile(
+        db,
+        [(repository_profile(profile_repository("repo-front", "frontend")), [profile_binding()])],
+    )
+    service, connections = source_service(db)
+    current = SimpleNamespace(
+        candidate_id="candidate-a",
+        profile=repository_profile(profile_repository("repo-front", "frontend")),
+        bindings=[profile_binding()],
+    )
+    resolved = await service.resolve_current(
+        current=current, project_id="p", user_id="u", repository_id="repo-front"
+    )
+    assert resolved.repository["commit"] == "sha-profile"
+    assert resolved.repository["commitMode"] == "profile"
+    assert resolved.binding["connectionId"] == "ui-conn"
+    connections.resolve_gitlab_commit.assert_not_called()
+    connections.get_gitlab_project.assert_awaited_once_with(
+        "ui-conn", "p", "repo-front", user_id="u"
+    )
+
+
+async def test_resolve_current_profile_rejects_non_frontend_repository(db):  # noqa: F811
+    seed_task(db)
+    service, connections = source_service(db)
+    current = SimpleNamespace(
+        candidate_id="candidate-a",
+        profile=repository_profile(profile_repository("repo-back", "backend")),
+        bindings=[profile_binding("repo-back")],
+    )
+    with pytest.raises(AppError, match="不属于当前画像"):
+        await service.resolve_current(
+            current=current, project_id="p", user_id="u", repository_id="repo-back"
+        )
+    connections.get_gitlab_project.assert_not_awaited()
+
+
+async def test_rebind_frozen_uses_new_actor_and_keeps_original_commit(db):  # noqa: F811
+    seed_profile(
+        db,
+        [(repository_profile(profile_repository("repo-front", "frontend")), [profile_binding()])],
+    )
+    service, connections = source_service(db)
+    pin = {
+        "repositoryId": "repo-front",
+        "instanceUrl": "https://gitlab.example.com",
+        "pathWithNamespace": "team/repo-front",
+        "branch": "main",
+        "commit": "frozen-commit",
+    }
+    binding = await service.rebind_frozen(
+        repository=pin,
+        binding=profile_binding(),
+        project_id="p",
+        user_id="another-user",
+        gitlab_connection_id="ui-conn",
+    )
+    assert binding["headCommit"] == "frozen-commit"
+    assert binding["connectionId"] == "ui-conn"
+    connections.get_gitlab_project.assert_awaited_once_with(
+        "ui-conn", "p", "repo-front", user_id="another-user"
+    )
+    connections.resolve_gitlab_commit.assert_not_awaited()
+    connections.get_gitlab_project.return_value["pathWithNamespace"] = "another/repo"
+    with pytest.raises(AppError, match="路径已变化"):
+        await service.rebind_frozen(
+            repository=pin,
+            binding=profile_binding(),
+            project_id="p",
+            user_id="another-user",
+        )
+    connections.get_gitlab_project.reset_mock()
+    row = db.query(SoftwareRepository).filter_by(software_repository_id="repo-front").one()
+    row.repository_project_id = "different-repository"
+    db.flush()
+    with pytest.raises(AppError):
+        await service.rebind_frozen(
+            repository=pin,
+            binding=profile_binding(),
+            project_id="p",
+            user_id="another-user",
+        )
+    connections.get_gitlab_project.assert_not_awaited()
+
+
 @pytest.fixture(autouse=True)
 def ui_access(monkeypatch):
     from testing_agent.services import ui_generation_source as module
@@ -162,163 +283,28 @@ def ui_access(monkeypatch):
     )
 
 
-async def test_options_expose_frontend_candidates_and_default_latest(db):  # noqa: F811
-    seed_profile(
-        db,
-        [
-            (
-                repository_profile(
-                    profile_repository("repo-front", "frontend", confidence=0.7),
-                    profile_repository("repo-back", "backend", confidence=0.99),
-                ),
-                [
-                    profile_binding("repo-front", commit="sha-old"),
-                    {**profile_binding("repo-back"), "headCommit": "sha-back"},
-                ],
-            ),
-            (
-                repository_profile(profile_repository("repo-front", "frontend", confidence=0.91)),
-                [profile_binding("repo-front", commit="sha-new")],
-            ),
-        ],
+def test_current_options_exposes_only_current_profile_and_safe_repositories():
+    current = SimpleNamespace(
+        candidate_id="profile-current",
+        created_at=None,
+        profile=repository_profile(
+            profile_repository("repo-front", "frontend", confidence=0.7),
+            profile_repository("repo-back", "backend", confidence=0.99),
+        ),
+        bindings=[profile_binding("repo-front", commit="sha-new"), profile_binding("repo-back")],
     )
-    service, _ = source_service(db)
-    options = await service.options("r")
-
-    assert options["defaultProfileVersionId"] == "profile-attempt-2"
+    options = UiGenerationSourceService.current_options(current)
+    assert options["currentProfile"]["candidateId"] == "profile-current"
     assert options["defaultRepositoryId"] == "repo-front"
-    assert [item["versionId"] for item in options["profileVersions"]] == [
-        "profile-attempt-2",
-        "profile-attempt-1",
-    ]
-    latest = options["profileVersions"][0]
-    assert latest["versionNo"] == 2
-    assert latest["repositories"][0]["isFrontend"] is True
-    assert latest["repositories"][0]["available"] is True
-    assert latest["repositories"][0]["commit"] == "sha-new"
-    assert latest["repositories"][0]["branch"] == "main"
-    assert "cloneUrl" not in latest["repositories"][0]
-    assert "connectionId" not in latest["repositories"][0]
+    repo = options["currentProfile"]["repositories"][0]
+    assert repo["isFrontend"] and repo["available"]
+    assert repo["commit"] == "sha-new" and repo["branch"] == "main"
+    assert "cloneUrl" not in repo and "connectionId" not in repo
 
 
-async def test_options_return_empty_without_profile_task(db):  # noqa: F811
-    seed_task(db)
-    service, _ = source_service(db)
-    assert await service.options("r") == {
-        "profileVersions": [],
-        "defaultProfileVersionId": "",
-        "defaultRepositoryId": "",
-    }
-
-
-async def test_resolve_profile_pin_uses_ui_initiator_connection(db):  # noqa: F811
-    seed_profile(
-        db,
-        [
-            (
-                repository_profile(profile_repository("repo-front", "frontend")),
-                [profile_binding()],
-            )
-        ],
-    )
-    service, connections = source_service(db)
-    resolved = await service.resolve(
-        requirement_id="r",
-        project_id="p",
-        user_id="u",
-        profile_version_id="profile-attempt-1",
-        repository_id="repo-front",
-    )
-
-    assert resolved.profile_version_no == 1
-    assert resolved.repository["commit"] == "sha-profile"
-    assert resolved.repository["commitMode"] == "profile"
-    assert resolved.binding["connectionId"] == "ui-conn"
-    assert resolved.binding["headCommit"] == "sha-profile"
-    connections.resolve_gitlab_commit.assert_not_called()
-    connections.get_gitlab_project.assert_awaited_once_with(
-        "ui-conn", "p", "repo-front", user_id="u"
-    )
-
-
-async def test_resolve_latest_head_freezes_resolved_sha(db):  # noqa: F811
-    seed_profile(
-        db,
-        [
-            (
-                repository_profile(profile_repository("repo-front", "frontend")),
-                [profile_binding()],
-            )
-        ],
-    )
-    service, connections = source_service(db, head_commit="sha-head")
-    resolved = await service.resolve(
-        requirement_id="r",
-        project_id="p",
-        user_id="u",
-        profile_version_id="profile-attempt-1",
-        repository_id="repo-front",
-        commit_mode="latest",
-    )
-
-    assert resolved.repository["commit"] == "sha-head"
-    assert resolved.repository["commitMode"] == "latest"
-    assert resolved.binding["headCommit"] == "sha-head"
-    connections.resolve_gitlab_commit.assert_awaited_once_with(
-        "ui-conn", "p", "repo-front", "main", user_id="u"
-    )
-
-
-async def test_resolve_rejects_missing_profile_and_non_frontend(db):  # noqa: F811
-    service, _ = source_service(db)
-    with pytest.raises(AppError, match="请先生成仓库画像"):
-        await service.resolve(
-            requirement_id="r",
-            project_id="p",
-            user_id="u",
-            profile_version_id="missing",
-            repository_id="repo-front",
-        )
-
-    seed_profile(
-        db,
-        [
-            (
-                repository_profile(profile_repository("repo-back", "backend")),
-                [profile_binding("repo-back")],
-            )
-        ],
-    )
-    service, _ = source_service(db)
-    with pytest.raises(AppError, match="不是前端或全栈仓库"):
-        await service.resolve(
-            requirement_id="r",
-            project_id="p",
-            user_id="u",
-            profile_version_id="profile-attempt-1",
-            repository_id="repo-back",
-        )
-
-
-async def test_resolve_rejects_binding_profile_error(db):  # noqa: F811
-    seed_profile(
-        db,
-        [
-            (
-                repository_profile(profile_repository("repo-front", "frontend")),
-                [{**profile_binding(), "profileError": "GitLab 仓库不可访问"}],
-            )
-        ],
-    )
-    service, _ = source_service(db)
-    with pytest.raises(AppError, match="GitLab 仓库不可访问"):
-        await service.resolve(
-            requirement_id="r",
-            project_id="p",
-            user_id="u",
-            profile_version_id="profile-attempt-1",
-            repository_id="repo-front",
-        )
+def test_current_options_without_profile_is_empty():
+    options = UiGenerationSourceService.current_options(None)
+    assert options["currentProfile"] is None
 
 
 async def test_source_check_reports_branch_drift_without_mutation(db):  # noqa: F811
@@ -332,11 +318,14 @@ async def test_source_check_reports_branch_drift_without_mutation(db):  # noqa: 
         ],
     )
     service, connections = source_service(db, head_commit="sha-new-head")
-    result = await service.check(
-        requirement_id="r",
+    current = SimpleNamespace(
+        profile=repository_profile(profile_repository("repo-front", "frontend")),
+        bindings=[profile_binding()],
+    )
+    result = await service.check_current(
+        current=current,
         project_id="p",
         user_id="u",
-        profile_version_id="profile-attempt-1",
         repository_id="repo-front",
         pinned_commit="sha-profile",
     )
@@ -355,11 +344,7 @@ def seed_ui_task(session, *, case_contents: list[dict] | None = None):
     task = session.query(AiGenerateTask).filter_by(task_id="task").one()
     task.task_type = "ui_case_generate"
     task.source_type = "repository"
-    session.add(
-        AiGenerationStage(
-            id="ui-surface", task_id=task.task_id, stage="ui_surface", next_version_no=1
-        )
-    )
+    session.add(AiGenerationStage(id="ui-surface", task_id=task.task_id, stage="ui_surface"))
     session.add(FunctionTestSuite(suite_id="suite", requirement_id="r", name="功能"))
     session.flush()
     for index, content in enumerate(
@@ -375,167 +360,6 @@ def seed_ui_task(session, *, case_contents: list[dict] | None = None):
         )
     session.commit()
     return task
-
-
-async def test_start_ui_surface_freezes_repository_and_worker_payload(db, monkeypatch):  # noqa: F811
-    from support.generation import generation_services
-
-    from testing_agent.services.stage_storage import run_command
-
-    task = seed_ui_task(db)
-    session = AsyncSessionAdapter(db)
-    bundle = generation_services(AiGenerateTaskRepository(session))
-    resolved = ResolvedUiSource(
-        profile_version_id="profile-attempt-1",
-        profile_version_no=1,
-        repository={
-            "bindingId": "binding-1",
-            "repositoryId": "repo-front",
-            "instanceUrl": "https://gitlab.example.com",
-            "pathWithNamespace": "team/repo-front",
-            "branch": "main",
-            "commit": "sha-profile",
-            "commitMode": "latest",
-            "resolvedAt": "2026-11-09T00:00:00+00:00",
-        },
-        binding={
-            "bindingId": "binding-1",
-            "repositoryId": "repo-front",
-            "instanceUrl": "https://gitlab.example.com",
-            "pathWithNamespace": "team/repo-front",
-            "branch": "main",
-            "headCommit": "sha-profile",
-            "cloneUrl": "https://gitlab.example.com/team/repo-front.git",
-            "connectionId": "ui-conn",
-            "profileError": "",
-        },
-    )
-    bundle.chain.ui_sources.resolve = AsyncMock(return_value=resolved)
-    monkeypatch.setattr(run_command, "require_personal_connection", AsyncMock())
-
-    attempt = await run_command.start_stage(
-        bundle.chain,
-        task,
-        "ui",
-        "ui_surface",
-        GenerationChainRunRequest(
-            connectionId="llm",
-            functionCaseIds=["C1"],
-            sourceProfileVersionId="profile-attempt-1",
-            sourceRepositoryId="repo-front",
-            sourceCommitMode="latest",
-            gitlabConnectionId="ui-conn",
-        ),
-        "u",
-    )
-
-    bundle.chain.ui_sources.resolve.assert_awaited_once_with(
-        requirement_id="r",
-        project_id="p",
-        user_id="u",
-        profile_version_id="profile-attempt-1",
-        repository_id="repo-front",
-        commit_mode="latest",
-        gitlab_connection_id="ui-conn",
-    )
-    source = attempt.input_snapshot_json["source"]
-    assert source["sourceKind"] == "repository"
-    assert source["sourceType"] == "repository"
-    assert source["sourceProfileVersionId"] == "profile-attempt-1"
-    assert source["sourceProfileVersionNo"] == 1
-    assert source["sourceRepository"]["commit"] == "sha-profile"
-    assert source["sourceRepository"]["commitMode"] == "latest"
-    assert source["bindings"][0]["connectionId"] == "ui-conn"
-    assert source["functionalCases"][0]["caseId"] == "C1"
-    assert "sourceArchiveFileId" not in source
-    assert task.source_type == "repository"
-
-    queue = WorkerTask(
-        domain="ai",
-        task_id=attempt.worker_task_id,
-        task_type="ui_case_generate",
-        run_id=attempt.id,
-        status="claimed",
-    )
-    authority = DirectWorkerAuthority(
-        "ui-surface", attempt.id, "u", task, attempt.input_snapshot_json, None
-    )
-    _, payload = worker_payloads(authority, queue, stage_name="ui_surface", lease_seconds=30)
-    run = payload["run"]
-    assert run["sourceKind"] == "repository"
-    assert run["sourceRepository"]["commit"] == "sha-profile"
-    assert run["gitlabCredentialsUrl"] == (
-        f"/internal/ai-worker/tasks/{attempt.worker_task_id}/gitlab-credentials"
-    )
-    assert "sourceArchiveDownloadUrl" not in run
-
-
-async def test_start_ui_surface_requires_source_fields(db, monkeypatch):  # noqa: F811
-    from support.generation import generation_services
-
-    from testing_agent.services.stage_storage import run_command
-
-    task = seed_ui_task(db)
-    bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
-    monkeypatch.setattr(run_command, "require_personal_connection", AsyncMock())
-    with pytest.raises(AppError, match="请选择仓库画像版本和前端仓库"):
-        await run_command.start_stage(
-            bundle.chain,
-            task,
-            "ui",
-            "ui_surface",
-            GenerationChainRunRequest(connectionId="llm", functionCaseIds=["C1"]),
-            "u",
-        )
-
-
-async def test_chain_view_exposes_repository_source_and_case_drift(db):  # noqa: F811
-    from testing_agent.services.stage_storage.chain_view import build_chain_view
-
-    task = seed_ui_task(db)
-    stage = db.scalar(select(AiGenerationStage).where(AiGenerationStage.task_id == task.task_id))
-    stage.source_batch_id = "batch-1"
-    stage.source_snapshot_json = {
-        "sourceKind": "repository",
-        "sourceType": "repository",
-        "sourceProfileVersionId": "profile-attempt-1",
-        "sourceProfileVersionNo": 1,
-        "sourceRepository": {
-            "repositoryId": "repo-front",
-            "pathWithNamespace": "team/repo-front",
-            "branch": "main",
-            "commit": "sha-profile",
-            "commitMode": "profile",
-            "resolvedAt": "2026-11-09T00:00:00+00:00",
-        },
-        "bindings": [ui_binding()],
-        "functionalCases": [
-            {
-                "caseId": "C1",
-                "suiteId": "suite",
-                "suiteName": "功能",
-                "module": "",
-                "title": "用例1",
-                "priority": "",
-                "caseType": "",
-                "content": {"preconditions": [], "steps": [{"action": "打开", "expected": "显示"}]},
-            }
-        ],
-    }
-    db.commit()
-
-    view = await build_chain_view(AsyncSessionAdapter(db), "r", "ui", task, detail=True)
-    assert view.source_inputs is not None
-    assert view.source_inputs.source_kind == "repository"
-    assert view.source_inputs.repository.commit == "sha-profile"
-    assert view.source_inputs.repository.profile_version_id == "profile-attempt-1"
-    assert view.source_changed is False
-
-    case = db.scalar(select(FunctionTestCase).where(FunctionTestCase.case_id == "C1"))
-    case.title = "已修改标题"
-    db.commit()
-    changed = await build_chain_view(AsyncSessionAdapter(db), "r", "ui", task, detail=True)
-    assert changed.source_changed is True
 
 
 async def test_worker_authorization_rechecks_ui_initiator_gitlab_connection(db, monkeypatch):
@@ -637,7 +461,7 @@ def test_ui_source_routes_replace_archive_endpoints():
     assert "/internal/ai-worker/tasks/{taskId}/source-archive" not in paths
 
 
-async def test_source_options_and_check_handlers_return_safe_payloads():
+async def test_source_options_and_check_handlers_return_safe_payloads(monkeypatch):
     from types import SimpleNamespace
 
     from testing_agent.handlers.generation_chain import (
@@ -645,25 +469,27 @@ async def test_source_options_and_check_handlers_return_safe_payloads():
         get_ui_generation_source_options,
     )
     from testing_agent.schemas.generation_chain import UiGenerationSourceCheckRequest
+    from testing_agent.services.repository_profile_current import RepositoryProfileCurrent
+
+    current = SimpleNamespace(
+        candidate_id="profile-attempt-1", snapshot_id="snapshot", current_token="token"
+    )
+    monkeypatch.setattr(RepositoryProfileCurrent, "read", AsyncMock(return_value=current))
 
     options = {
-        "profileVersions": [
-            {
-                "versionId": "profile-attempt-1",
-                "versionNo": 1,
-                "label": "v1",
-                "repositories": [
-                    {
-                        "repositoryId": "repo-front",
-                        "role": "frontend",
-                        "isFrontend": True,
-                        "available": True,
-                    }
-                ],
-                "defaultRepositoryId": "repo-front",
-            }
-        ],
-        "defaultProfileVersionId": "profile-attempt-1",
+        "currentProfile": {
+            "candidateId": "profile-attempt-1",
+            "label": "当前画像",
+            "repositories": [
+                {
+                    "repositoryId": "repo-front",
+                    "role": "frontend",
+                    "isFrontend": True,
+                    "available": True,
+                }
+            ],
+            "defaultRepositoryId": "repo-front",
+        },
         "defaultRepositoryId": "repo-front",
     }
     checked = {
@@ -675,24 +501,26 @@ async def test_source_options_and_check_handlers_return_safe_payloads():
     }
     service = SimpleNamespace(
         scope=AsyncMock(),
+        repository=SimpleNamespace(candidate_chain_task=AsyncMock(return_value=None)),
         tasks=SimpleNamespace(
+            session=None,
             get_requirement=AsyncMock(return_value=SimpleNamespace(sprint_id="s")),
             get_sprint=AsyncMock(return_value=SimpleNamespace(project_id="p")),
         ),
         ui_sources=SimpleNamespace(
-            options=AsyncMock(return_value=options),
-            check=AsyncMock(return_value=checked),
+            current_options=lambda value: options if value is current else {},
+            check_current=AsyncMock(return_value=checked),
         ),
     )
     listed = await get_ui_generation_source_options("r", user_id="u", service=service)
     data = listed["data"].model_dump(by_alias=True)
-    assert data["defaultProfileVersionId"] == "profile-attempt-1"
-    assert data["profileVersions"][0]["repositories"][0]["repositoryId"] == "repo-front"
+    assert data["currentProfile"]["candidateId"] == "profile-attempt-1"
+    assert data["currentProfile"]["repositories"][0]["repositoryId"] == "repo-front"
 
     result = await check_ui_generation_source(
         "r",
         UiGenerationSourceCheckRequest(
-            profileVersionId="profile-attempt-1",
+            profileCandidateId="profile-attempt-1",
             repositoryId="repo-front",
             pinnedCommit="sha-old",
         ),
@@ -700,11 +528,10 @@ async def test_source_options_and_check_handlers_return_safe_payloads():
         service=service,
     )
     assert result["data"].model_dump(by_alias=True) == checked
-    service.ui_sources.check.assert_awaited_once_with(
-        requirement_id="r",
+    service.ui_sources.check_current.assert_awaited_once_with(
+        current=current,
         project_id="p",
         user_id="u",
-        profile_version_id="profile-attempt-1",
         repository_id="repo-front",
         pinned_commit="sha-old",
         gitlab_connection_id="",
@@ -718,6 +545,13 @@ async def test_direct_attempt_view_hides_ui_repository_bindings(db):  # noqa: F8
     from testing_agent.services.stage_storage.run_view import direct_attempt_view
 
     task = seed_ui_task(db)
+    from testing_agent.models.generation_candidates import RequirementGenerationChain
+
+    db.add(
+        RequirementGenerationChain(
+            chain_id="ui-chain", requirement_id=task.requirement_id, kind="ui", task_id=task.task_id
+        )
+    )
     stage = db.scalar(select(AiGenerationStage).where(AiGenerationStage.task_id == task.task_id))
     attempt = AiGenerationAttempt(
         id="ui-run-view",
@@ -730,8 +564,7 @@ async def test_direct_attempt_view_hides_ui_repository_bindings(db):  # noqa: F8
         input_snapshot_json={
             "source": {
                 "sourceKind": "repository",
-                "sourceProfileVersionId": "profile-attempt-1",
-                "sourceProfileVersionNo": 1,
+                "sourceProfileCandidateId": "profile-attempt-1",
                 "sourceRepository": {
                     "repositoryId": "repo-front",
                     "pathWithNamespace": "team/repo-front",

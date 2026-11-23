@@ -1,16 +1,25 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
   ArrowUpOutlined,
   DeleteOutlined,
+  CopyOutlined,
+  CodeOutlined,
   InfoCircleOutlined,
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
-import { Button, Dropdown, Input, InputNumber, Popconfirm, Select, Space, Tabs, Tag, Tooltip } from 'antd'
+import { Button, Dropdown, Input, InputNumber, Modal, Popconfirm, Select, Space, Tabs, Tag, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { message } from '@/shared/utils/feedback'
+import requestStyles from '@/shared/components/request-editor/request-editor.module.css'
+import { RequestJsonValidity } from '@/shared/components/request-editor/RequestJsonValidity'
+import { RequestBodyStatus } from '@/shared/components/request-editor/RequestBodyStatus'
+import { RequestHeaderToolbar } from '@/shared/components/request-editor/RequestHeaderToolbar'
+import { requestHeaderPresets } from '@/shared/components/request-editor/requestHeaderPresets'
+import { RequestBodyToolbar, requestBodyVariableClass } from '@/shared/components/request-editor/RequestBodyToolbar'
+import { JsonEditor, type JsonEditorCursor, type JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import {
   createPerfCheckRow,
   createPerfExtractRow,
@@ -24,6 +33,8 @@ import {
   type PerfHttpMethod,
   type PerfStepFormValues,
 } from '../utils/perfCaseForm'
+
+const fieldLabelClass = 'grid gap-1 text-xs text-app-surface-text-muted'
 
 const CHECK_TYPE_OPTIONS: { value: PerfCheckType; label: string }[] = [
   { value: 'status', label: '状态码' },
@@ -48,13 +59,7 @@ const STATUS_CHECK_OPS: PerfCheckOp[] = ['eq', 'ne', 'gte', 'lte']
 const METHOD_OPTIONS = (['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] satisfies PerfHttpMethod[])
   .map(method => ({ value: method, label: method }))
 
-const HEADER_PRESETS = [
-  { label: 'Content-Type', name: 'Content-Type', value: 'application/json' },
-  { label: 'Accept', name: 'Accept', value: 'application/json' },
-  { label: 'X-Tenant', name: 'X-Tenant', value: '{{env.tenant}}' },
-]
-
-const BODY_MODES = [['none', '无'], ['json', 'JSON'], ['text', '文本']] as const
+const BODY_MODES = [{ value: 'none', label: 'none' }, { value: 'json', label: 'JSON' }, { value: 'text', label: 'raw' }] as const
 
 function updateAt<T>(items: T[], index: number, next: T): T[] {
   return items.map((item, itemIndex) => itemIndex === index ? next : item)
@@ -83,7 +88,7 @@ function NumericInput({
   disabled?: boolean
   onChange: (value: number) => void
 }) {
-  return <label className="grid gap-1 text-xs text-app-surface-text-muted">
+  return <label className={fieldLabelClass}>
     <span>{label}</span>
     <InputNumber
       aria-label={label}
@@ -112,14 +117,19 @@ function TabLabel({ label, count, dot }: { label: string; count?: number; dot?: 
 function RequestHeadersPanel({
   stepIndex,
   rows,
+  variables,
   disabled,
   onChange,
 }: {
   stepIndex: number
   rows: PerfHeaderRow[]
+  variables: string[]
   disabled?: boolean
   onChange: (rows: PerfHeaderRow[]) => void
 }) {
+  const [rawOpen, setRawOpen] = useState(false)
+  const [rawText, setRawText] = useState('')
+  const [draft, setDraft] = useState({ name: '', value: '' })
   const update = (index: number, patch: Partial<PerfHeaderRow>) =>
     onChange(updateAt(rows, index, { ...rows[index], ...patch }))
 
@@ -127,65 +137,60 @@ function RequestHeadersPanel({
     onChange([...rows, { ...createPerfHeaderRow(), ...preset }])
   }
 
-  return <div className="pt-3 pb-4">
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-app-surface-text-muted">快捷注入:</span>
-        {HEADER_PRESETS.map(preset => <button
-          key={preset.label}
-          type="button"
-          disabled={disabled}
-          className="rounded border border-app-surface-border bg-app-surface px-2 py-0.5 text-[11px] text-app-surface-text-muted transition-colors hover:border-app-accent-border hover:bg-app-accent-surface hover:text-app-accent disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => addHeader(preset)}
-        >
-          <span className="mr-1 font-bold text-app-accent">+</span>{preset.label}
-        </button>)}
-      </div>
-      <span className="text-[11px] text-app-surface-text-muted">已配置 {rows.length} 个</span>
-    </div>
+  return <div className="flex min-w-0 flex-col">
+    <RequestHeaderToolbar presets={requestHeaderPresets} disabled={disabled}
+      onAdd={preset => addHeader({ name: preset.key, value: preset.value })}
+      actions={<button type="button" disabled={disabled} className="inline-flex cursor-pointer items-center gap-1 rounded-[4px] border-0 bg-transparent px-2 py-1 text-[11px] leading-4 text-[var(--srf-text-secondary)] transition-colors hover:bg-[var(--srf-card)] hover:text-[var(--srf-accent-strong)] disabled:cursor-not-allowed disabled:opacity-45" onClick={() => {
+        setRawText(rows.map(row => `${row.name}: ${row.value}`).join('\n'))
+        setRawOpen(true)
+      }}><CodeOutlined aria-hidden="true" />批量编辑 / 格式转换 (RAW)</button>} />
 
-    <table className="mt-2 w-full table-fixed border-collapse">
+    <table className={`${requestStyles.headerTable} w-full table-fixed border-collapse`}>
       <colgroup>
-        <col className="w-[30%]" />
+        <col className="w-[26%]" />
         <col />
-        <col className="w-14" />
+        <col className="w-[84px]" />
       </colgroup>
       <thead>
-        <tr className="border-b border-app-surface-border text-left text-[11px] text-app-surface-text-muted">
-          <th className="px-2 py-1.5 font-medium">请求头名称 (Header Key)</th>
-          <th className="px-2 py-1.5 font-medium">请求头值 (Header Value)</th>
-          <th className="px-2 py-1.5 text-right font-medium">操作</th>
+        <tr>
+          <th>请求头名称 (Header Key)</th>
+          <th>请求头值 (Header Value)</th>
+          <th className="text-right">操作</th>
         </tr>
       </thead>
       <tbody>
-        {rows.length === 0 ? <tr>
-          <td colSpan={3} className="px-2 py-5 text-center text-xs text-app-surface-text-muted">暂无请求头</td>
-        </tr> : rows.map((row, index) => <tr key={row.id} className="border-b border-[var(--app-surface-divider)]">
-          <td className="px-1 py-1">
+        {rows.map((row, index) => <tr key={row.id} className="group hover:bg-[var(--srf-hover)]">
+          <td>
             <Input
               aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 名称`}
-              variant="borderless"
-              size="small"
-              className="font-mono text-[11px]"
+              className={`${requestStyles.headerInput} ${requestStyles.headerInputKey}`}
               placeholder="Header"
               value={row.name}
               disabled={disabled}
               onChange={event => update(index, { name: event.target.value })}
             />
           </td>
-          <td className="px-1 py-1">
+          <td>
+            <div className="flex items-center gap-1">
             <Input
               aria-label={`步骤 ${stepIndex + 1} 请求头 ${index + 1} 值`}
-              variant="borderless"
-              size="small"
-              className="font-mono text-[11px]"
+              className={requestStyles.headerInput}
               placeholder="Value"
               value={row.value}
               disabled={disabled}
               onChange={event => update(index, { value: event.target.value })}
             />
+            <Dropdown disabled={disabled || variables.length === 0} trigger={['click']} menu={{
+              items: variables.map(name => ({ key: name, label: `{{var.${name}}}` })),
+              onClick: ({ key }) => update(index, { value: `${row.value}{{var.${key}}}` }),
+            }}><Button type="text" size="small" aria-label={`请求头 ${index + 1} 插入变量`} icon={<CodeOutlined />} disabled={disabled || variables.length === 0} /></Dropdown>
+            </div>
           </td>
-          <td className="px-1 py-1 text-right">
+          <td className="text-right">
+            <Tooltip title="复制请求头">
+              <Button type="text" size="small" aria-label={`复制步骤 ${stepIndex + 1} 请求头 ${index + 1}`} icon={<CopyOutlined />}
+                disabled={disabled} onClick={() => addHeader({ name: row.name, value: row.value })} />
+            </Tooltip>
             <Tooltip title="删除请求头">
               <Button
                 type="text"
@@ -199,19 +204,25 @@ function RequestHeadersPanel({
             </Tooltip>
           </td>
         </tr>)}
+        <tr className="bg-[var(--srf-hover)]">
+          <td><Input aria-label="添加请求头名称" className={`${requestStyles.headerInput} ${requestStyles.headerInputDraft}`} placeholder="添加新的请求头 (键)..." value={draft.name} disabled={disabled} onChange={event => setDraft({ ...draft, name: event.target.value })} onPressEnter={() => { if (draft.name.trim() || draft.value.trim()) { addHeader(draft); setDraft({ name: '', value: '' }) } }} /></td>
+          <td><Input aria-label="添加请求头值" className={`${requestStyles.headerInput} ${requestStyles.headerInputDraft}`} placeholder="值 (支持 {{变量}} 语法)..." value={draft.value} disabled={disabled} onChange={event => setDraft({ ...draft, value: event.target.value })} onPressEnter={() => { if (draft.name.trim() || draft.value.trim()) { addHeader(draft); setDraft({ name: '', value: '' }) } }} /></td>
+          <td className="px-1 text-right text-[11px] text-[var(--srf-text-muted)]">回车添加</td>
+        </tr>
       </tbody>
     </table>
 
-    <Button
-      type="text"
-      size="small"
-      className="mt-2 px-1 text-app-accent"
-      icon={<PlusOutlined />}
-      disabled={disabled}
-      onClick={() => addHeader()}
-    >
-      添加请求头
-    </Button>
+    <Modal title="批量编辑请求头" open={rawOpen} okText="应用" cancelText="取消" onCancel={() => setRawOpen(false)} onOk={() => {
+      if (!rawText.trim()) { message.warning('批量编辑内容为空，已保留原有请求头'); setRawOpen(false); return }
+      onChange(rawText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const separator = line.indexOf(':')
+        return { ...createPerfHeaderRow(), name: (separator < 0 ? line : line.slice(0, separator)).trim(), value: separator < 0 ? '' : line.slice(separator + 1).trim() }
+      }).filter(row => row.name))
+      setRawOpen(false)
+    }}>
+      <p>每行一个请求头，格式为「名称: 值」；应用后按输入顺序替换当前请求头。</p>
+      <Input.TextArea rows={8} aria-label="请求头批量编辑内容" value={rawText} onChange={event => setRawText(event.target.value)} />
+    </Modal>
   </div>
 }
 
@@ -452,6 +463,8 @@ export function PerfStepEditor({
   onChange: (patch: Partial<PerfStepFormValues>) => void
 }) {
   const [activeTab, setActiveTab] = useState('headers')
+  const bodyEditorRef = useRef<JsonEditorRef>(null)
+  const [bodyCursor, setBodyCursor] = useState<JsonEditorCursor>({ line: 1, column: 1 })
   const bodyHasContent = step.bodyMode !== 'none'
   const postCount = step.checks.length + step.extract.length
   const jsonInvalid = useMemo(
@@ -482,6 +495,7 @@ export function PerfStepEditor({
       children: <RequestHeadersPanel
         stepIndex={stepIndex}
         rows={step.headers}
+        variables={variables}
         disabled={!canWrite}
         onChange={headers => onChange({ headers })}
       />,
@@ -489,54 +503,26 @@ export function PerfStepEditor({
     {
       key: 'body',
       label: <TabLabel label="请求体" dot={bodyHasContent} />,
-      children: <div className="pt-3 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-app-surface-border bg-app-surface-hover px-3 py-2">
-          <div className="flex flex-wrap items-center gap-1">
-            {BODY_MODES.map(([mode, label]) => <Button
-              key={mode}
-              size="small"
-              type={step.bodyMode === mode ? 'primary' : 'text'}
-              disabled={!canWrite}
-              onClick={() => onChange({ bodyMode: mode })}
-            >{label}</Button>)}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Button size="small" disabled={!canWrite || step.bodyMode !== 'json'} onClick={formatBody}>格式化</Button>
-            <Button size="small" disabled={!canWrite || step.bodyMode !== 'json'} onClick={compressBody}>压缩</Button>
-            <Dropdown
-              disabled={!canWrite || variables.length === 0}
-              trigger={['click']}
-              menu={{
-                items: variables.map(name => ({ key: name, label: `{{var.${name}}}` })),
-                onClick: ({ key }) => onChange({ bodyText: `${step.bodyText}{{var.${key}}}` }),
-              }}
-            >
-              <Button size="small" disabled={!canWrite || variables.length === 0}>插入变量</Button>
-            </Dropdown>
-            {step.bodyMode === 'json' ? <Tag color={jsonInvalid ? 'error' : 'success'} className="m-0">
-              {jsonInvalid ? 'JSON 语法错误' : 'JSON 合法'}
-            </Tag> : null}
-          </div>
+      children: <div className={`${requestStyles.body} flex min-w-0 flex-col`} data-tab-motion-scope>
+        <RequestBodyToolbar options={BODY_MODES} value={step.bodyMode} onChange={bodyMode => onChange({ bodyMode })}
+          disabled={!canWrite} json={step.bodyMode === 'json'} onFormat={formatBody} onCompress={compressBody}
+          variableControl={step.bodyMode === 'json' ? <Dropdown disabled={!canWrite || variables.length === 0} trigger={['click']} menu={{
+            items: variables.map(name => ({ key: name, label: `{{var.${name}}}` })),
+            onClick: ({ key }) => bodyEditorRef.current?.insertText(`{{var.${key}}}`),
+          }}><button type="button" className={requestBodyVariableClass} disabled={!canWrite || variables.length === 0}><CodeOutlined aria-hidden="true" />插入变量 {'{{var}}'}</button></Dropdown> : null}
+          validity={step.bodyMode === 'json' ? <RequestJsonValidity valid={!jsonInvalid} /> : null} />
+        <div data-tab-motion-panel>
+          {step.bodyMode === 'none' ? <div className="px-4 py-8 text-center text-xs text-app-surface-text-muted">当前请求没有请求体</div>
+            : step.bodyMode === 'json' ? <JsonEditor ref={bodyEditorRef} value={step.bodyText} onChange={bodyText => onChange({ bodyText })} readOnly={!canWrite} minHeight={260} toolbar={null} onCursorChange={setBodyCursor} ariaLabel={`步骤 ${stepIndex + 1} 请求体`} />
+              : <Input.TextArea aria-label={`步骤 ${stepIndex + 1} 请求体`} className="font-mono text-xs" autoSize={{ minRows: 8, maxRows: 18 }} value={step.bodyText} disabled={!canWrite} onChange={event => onChange({ bodyText: event.target.value })} />}
         </div>
-        {step.bodyMode === 'none' ? <div className="mt-3 rounded-lg border border-dashed border-app-surface-border px-3 py-8 text-center text-xs text-app-surface-text-muted">
-          当前请求没有请求体
-        </div> : <Input.TextArea
-          aria-label={`步骤 ${stepIndex + 1} 请求体`}
-          className="mt-3 font-mono text-xs"
-          autoSize={{ minRows: 8, maxRows: 18 }}
-          value={step.bodyText}
-          disabled={!canWrite}
-          onChange={event => onChange({ bodyText: event.target.value })}
-        />}
-        {step.bodyMode !== 'none' ? <div className="mt-1 text-[11px] text-app-surface-text-muted">
-          Content-Type: {step.bodyMode === 'json' ? 'application/json' : 'text/plain'} · {step.bodyText.length} 字符
-        </div> : null}
+        <RequestBodyStatus json={step.bodyMode === 'json'} valid={!jsonInvalid} value={step.bodyMode === 'none' ? '' : step.bodyText} cursor={<span className="font-mono">行 {bodyCursor.line}, 列 {bodyCursor.column} (光标聚焦)</span>} />
       </div>,
     },
     {
       key: 'post',
       label: <TabLabel label="后置操作" count={postCount} />,
-      children: <div className="grid gap-4 pt-3 pb-4">
+      children: <div className="grid gap-4 px-4 pt-3 pb-4">
         <div>
           <div className="text-xs font-bold text-app-surface-text">后置操作</div>
           <div className="mt-0.5 text-[11px] text-app-surface-text-muted">统一管理断言与提取规则，提取结果供后续步骤使用。</div>
@@ -560,8 +546,14 @@ export function PerfStepEditor({
     {
       key: 'settings',
       label: '设置',
-      children: <div className="grid gap-3 pt-3 pb-4 md:grid-cols-2">
-        <label className="grid gap-1 text-xs text-app-surface-text-muted">
+      children: <div className="grid gap-3 px-4 pt-3 pb-4 md:grid-cols-2">
+        <label className={fieldLabelClass}>
+          <span>预期状态码（留空接受所有 2xx）</span>
+          <Select mode="tags" value={step.expectedStatuses.map(String)} disabled={!canWrite}
+            tokenSeparators={[',']} placeholder="例如 200, 202"
+            onChange={(values: string[]) => onChange({ expectedStatuses: values.map(Number) })} />
+        </label>
+        <label className={fieldLabelClass}>
           <span>失败后</span>
           <Select
             aria-label={`步骤 ${stepIndex + 1} 失败后`}
@@ -703,7 +695,7 @@ export function PerfStepEditor({
     {errorsAlert ? <div className="flex-none border-b border-[var(--app-surface-divider)] px-4 py-3">{errorsAlert}</div> : null}
 
     <Tabs
-      className="flex min-h-0 flex-1 flex-col px-4 pt-1 [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content-holder]:overflow-auto [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav]:flex-none [&_.shared-tab-motion-indicator]:[clip-path:inset(7px_0_round_8px)]"
+      className="flex min-h-0 flex-1 flex-col pt-1 [&>.ant-tabs-nav]:px-4 [&>.ant-tabs-nav_.ant-tabs-tab]:px-2 [&>.ant-tabs-nav_.ant-tabs-tab+.ant-tabs-tab]:ml-1 [&_.ant-tabs-content-holder]:min-h-0 [&_.ant-tabs-content-holder]:flex-1 [&_.ant-tabs-content-holder]:overflow-auto [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav]:flex-none [&>.ant-tabs-nav_.shared-tab-motion-indicator]:[clip-path:inset(7px_0_round_8px)]"
       activeKey={activeTab}
       onChange={setActiveTab}
       tabBarExtraContent={tabBarExtraContent}

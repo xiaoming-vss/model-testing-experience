@@ -1,8 +1,8 @@
 import { Typography } from 'antd'
 
-export { isYamlFileName, type CaseImportMode } from '@/shared/utils/caseImport'
+export { isYamlFileName } from '@/shared/utils/caseImport'
 
-export const { Text, Title } = Typography
+export const { Text } = Typography
 
 export type UiTemplateFieldKey = 'locatorValue' | 'operationValue'
 

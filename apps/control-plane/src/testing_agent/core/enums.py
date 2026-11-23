@@ -23,10 +23,6 @@ class RunStatus(StrEnum):
     CANCELED = "canceled"
     SKIPPED = "skipped"
 
-    @classmethod
-    def values(cls) -> set[str]:
-        return {item.value for item in cls}
-
 
 class SprintStatus(StrEnum):
     """迭代状态。"""
@@ -47,26 +43,7 @@ class PerfRunStatus(StrEnum):
     STOPPED = "stopped"
     CANCELED = "canceled"
 
-    @classmethod
-    def values(cls) -> set[str]:
-        return {item.value for item in cls}
 
-
-class PerfRunOutcome(StrEnum):
-    """Worker 回传的判定事实；控制面后续可增加更细的达标判定。"""
-
-    PASSED = "passed"
-    THRESHOLD_FAILED = "threshold_failed"
-    INCONCLUSIVE = "inconclusive"
-    EXECUTION_ERROR = "execution_error"
-    STOPPED = "stopped"
-
-    @classmethod
-    def values(cls) -> set[str]:
-        return {item.value for item in cls}
-
-
-PERF_RUN_ACTIVE_STATUSES = {PerfRunStatus.QUEUED.value, PerfRunStatus.RUNNING.value}
 PERF_RUN_TERMINAL_STATUSES = {
     PerfRunStatus.COMPLETED.value,
     PerfRunStatus.FAILED.value,
@@ -169,10 +146,6 @@ class BugActivityKind(StrEnum):
     EDIT = "edit"
     ATTACHMENT = "attachment"
 
-    @classmethod
-    def values(cls) -> set[str]:
-        return {item.value for item in cls}
-
 
 class ConnectionStatus(StrEnum):
     """集成连接状态。"""
@@ -186,21 +159,6 @@ class BindingStatus(StrEnum):
 
     ACTIVE = "active"
     UNBOUND = "unbound"
-
-
-class StageStatus(StrEnum):
-    """AI 生成任务阶段状态。"""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    WAITING_REVIEW = "waiting_review"
-    EMPTY = ""
-
-    @classmethod
-    def values(cls) -> set[str]:
-        return {item.value for item in cls}
 
 
 class TestOrderStatus(StrEnum):

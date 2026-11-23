@@ -46,10 +46,7 @@ class WorkerConfig:
     request_timeout_ms: int
     heartbeat_interval_ms: int
     artifacts_root_dir: str
-    default_headless: bool
-    default_slow_mo_ms: int
     trace_enabled: bool
-    screenshot_on_failure: bool
     snapshot_file: str
     redis_url: str = ""
 

@@ -32,7 +32,11 @@ async def test_api_collection_import_accepts_go_generated_yaml_sample(monkeypatc
 
         async def get_collection(self, collection_id):
             assert collection_id == "collection-1"
-            return SimpleNamespace(collection_id="collection-1", requirement_id="requirement-1")
+            return SimpleNamespace(
+                collection_id="collection-1",
+                project_id="project-1",
+                requirement_id="requirement-1",
+            )
 
         async def get_requirement(self, requirement_id):
             return SimpleNamespace(sprint_id="sprint-1")
@@ -130,7 +134,11 @@ async def test_api_collection_import_rejects_body_json_for_none_like_go():
         session = AuthorizationDatabase()
 
         async def get_collection(self, collection_id):
-            return SimpleNamespace(collection_id="collection-1", requirement_id="requirement-1")
+            return SimpleNamespace(
+                collection_id="collection-1",
+                project_id="project-1",
+                requirement_id="requirement-1",
+            )
 
         async def get_requirement(self, requirement_id):
             return SimpleNamespace(sprint_id="sprint-1")

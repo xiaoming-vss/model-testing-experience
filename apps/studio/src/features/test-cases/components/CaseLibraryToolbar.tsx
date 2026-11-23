@@ -2,6 +2,7 @@ import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Alert, Popconfirm, Select, Space, Tooltip } from 'antd'
 import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import { SprintFilterSelect } from '@/domain/projects/components/SprintFilterSelect'
 import { CASE_TYPE_PRESETS } from '../utils/caseTone'
 import { getErrorMessage } from '@/utils/format'
 import { suiteCaseCount, type CaseLibraryPageModel } from '../hooks/useCaseLibraryPage'
@@ -21,6 +22,9 @@ function CaseLibraryFilterGroup({ page }: { page: CaseLibraryPageModel }) {
     selectedSprintId,
     allRequirements,
     selectRequirement,
+    sprintFilterOptions,
+    selectSprint,
+    sprintsQuery,
     setSuiteId,
     setPage,
     caseType,
@@ -34,6 +38,8 @@ function CaseLibraryFilterGroup({ page }: { page: CaseLibraryPageModel }) {
   return (
     <div className="api-filter-group case-library-filters flex flex-wrap items-center gap-2">
       <h1 className="tp-list-title">用例库</h1>
+      <SprintFilterSelect value={selectedSprintId ?? 'all'} options={sprintFilterOptions}
+        loading={sprintsQuery.isLoading} onChange={selectSprint} />
       <div className="api-filter-field">
         <span className="api-filter-field-label">需求</span>
         <Select
@@ -91,6 +97,7 @@ function CaseLibraryToolbarActions({ page }: { page: CaseLibraryPageModel }) {
     setCaseImportOpen,
     openZentaoImport,
     selectedCaseIds,
+    batchInvalidateCasesMutation,
     batchDeleteCasesMutation,
     openCreateCase,
   } = page
@@ -136,6 +143,24 @@ function CaseLibraryToolbarActions({ page }: { page: CaseLibraryPageModel }) {
         </Space>
       ) : null}
 
+      <ProjectActionButton
+        action="write"
+        className="action-btn-update"
+        disabled={selectedCaseIds.length === 0}
+        loading={batchInvalidateCasesMutation.isPending}
+        onClick={() => batchInvalidateCasesMutation.mutate(true)}
+      >
+        标记失效{selectedCaseIds.length > 0 ? `（${selectedCaseIds.length}）` : ''}
+      </ProjectActionButton>
+      <ProjectActionButton
+        action="write"
+        className="action-btn-update"
+        disabled={selectedCaseIds.length === 0}
+        loading={batchInvalidateCasesMutation.isPending}
+        onClick={() => batchInvalidateCasesMutation.mutate(false)}
+      >
+        恢复有效{selectedCaseIds.length > 0 ? `（${selectedCaseIds.length}）` : ''}
+      </ProjectActionButton>
       <Popconfirm
         title={`确认删除「${selectedSuite?.name ?? '当前测试集'}」中选中的 ${selectedCaseIds.length} 条用例？`}
         description="删除后不可恢复。"

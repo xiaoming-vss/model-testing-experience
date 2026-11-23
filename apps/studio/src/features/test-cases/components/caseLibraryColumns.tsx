@@ -2,6 +2,7 @@ import { Popconfirm, Space, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { useMemo } from 'react'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
+import { CaseInvalidatedTag } from '@/shared/components/CaseInvalidatedTag'
 import { formatCasePriority } from '../utils/casePriority'
 import { caseTypeTone } from '../utils/caseTone'
 import { priorityTone } from '@/shared/utils/priorityTone'
@@ -32,6 +33,7 @@ export function useCaseLibraryColumns(page: CaseLibraryPageModel) {
               <Tooltip title={item.title}>
                 <Text ellipsis>{item.title}</Text>
               </Tooltip>
+              <CaseInvalidatedTag invalidatedAt={item.invalidatedAt} className="flex-none" />
             </Space>
           )
         },

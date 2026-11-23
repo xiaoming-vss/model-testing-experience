@@ -160,7 +160,7 @@ export function RichTextEditor({
   }, [editor])
 
   useEffect(() => {
-    if (!editor) return
+    if (!editor || editor.isDestroyed) return
     editor.setEditable(!disabled, false)
     if (stripImageSources(editor.getHTML()) !== value) {
       editor.commands.setContent(value || '', { emitUpdate: false })

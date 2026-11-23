@@ -1,19 +1,18 @@
 import type {
   UiGenerationSourceCommitMode,
   UiGenerationSourceOptions,
-  UiGenerationSourceProfileVersion,
+  UiGenerationSourceCurrentProfile,
   UiGenerationSourceRepository,
 } from '../api/generationChain.api'
 
 export type UiGenerationSourceSelection = {
-  profileVersionId: string
   repositoryId: string
   commitMode: UiGenerationSourceCommitMode
 }
 
 export type UiGenerationSourceBlocker = {
   kind:
-    | 'no_profile_version'
+    | 'no_profile'
     | 'no_frontend_repository'
     | 'repository_required'
     | 'repository_unavailable'
@@ -23,8 +22,7 @@ export type UiGenerationSourceBlocker = {
 }
 
 export type ResolvedUiGenerationSource = {
-  versions: UiGenerationSourceProfileVersion[]
-  version?: UiGenerationSourceProfileVersion
+  profile?: UiGenerationSourceCurrentProfile
   repositories: UiGenerationSourceRepository[]
   frontendRepositories: UiGenerationSourceRepository[]
   repository?: UiGenerationSourceRepository
@@ -43,20 +41,16 @@ export function isFrontendRepository(repository: UiGenerationSourceRepository) {
 }
 
 /**
- * Resolve the currently effective profile version and repository without inventing defaults.
- * The latest version comes from the API; a single frontend repository can be confirmed implicitly,
+ * Resolve the current profile and repository without inventing defaults.
+ * A single frontend repository can be confirmed implicitly,
  * while multiple candidates stay unselected until the user chooses one.
  */
 export function resolveUiGenerationSource(
   options: UiGenerationSourceOptions | undefined,
   selection: UiGenerationSourceSelection,
 ): ResolvedUiGenerationSource {
-  const versions = options?.profileVersions ?? []
-  const version =
-    versions.find(item => item.versionId === selection.profileVersionId) ??
-    versions.find(item => item.versionId === options?.defaultProfileVersionId) ??
-    versions[0]
-  const repositories = version?.repositories ?? []
+  const profile = options?.currentProfile ?? undefined
+  const repositories = profile?.repositories ?? []
   const frontendRepositories = repositories.filter(isFrontendRepository)
   const repository =
     frontendRepositories.find(item => item.repositoryId === selection.repositoryId) ??
@@ -69,11 +63,11 @@ export function resolveUiGenerationSource(
   )[0]?.repositoryId
 
   const blocker = (() => {
-    if (!versions.length) {
+    if (!profile) {
       return {
-        kind: 'no_profile_version' as const,
-        title: '尚未生成仓库画像',
-        description: 'UI 生成需要成功的仓库画像版本。请先在需求分析分组运行仓库画像。',
+        kind: 'no_profile' as const,
+        title: '尚未采用仓库画像',
+        description: '请先生成并采用一份仓库画像。',
         repositories,
       }
     }
@@ -82,7 +76,7 @@ export function resolveUiGenerationSource(
         kind: 'no_frontend_repository' as const,
         title: '画像未识别出前端仓库',
         description:
-          '该画像版本没有 frontend/fullstack 仓库。请检查需求关联的软件仓库，或重新生成仓库画像。',
+          '当前画像没有 frontend/fullstack 仓库。请检查需求关联的软件仓库，或重新生成仓库画像。',
         repositories,
       }
     }
@@ -108,13 +102,12 @@ export function resolveUiGenerationSource(
   })()
 
   return {
-    versions,
-    version,
+    profile,
     repositories,
     frontendRepositories,
     repository,
     recommendedRepositoryId,
     blocker,
-    ready: Boolean(version && repository && !blocker),
+    ready: Boolean(profile && repository && !blocker),
   }
 }

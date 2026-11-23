@@ -24,15 +24,16 @@ def _mysql_fixture(revision):
         config = migration_config(connection)
         command.upgrade(config, revision)
         connection.commit()
-        yield engine
-        # The database was checked empty and has a test-only name, so discard
-        # its schema after the module finishes instead of relying on downgrade.
-        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=0")
-        for name in sa.inspect(connection).get_table_names():
-            quoted = connection.dialect.identifier_preparer.quote(name)
-            connection.exec_driver_sql(f"DROP TABLE {quoted}")
-        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=1")
-        connection.commit()
+        try:
+            yield engine
+        finally:
+            # Keep later modules isolated even if a test or its cleanup fails.
+            connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=0")
+            for name in sa.inspect(connection).get_table_names():
+                quoted = connection.dialect.identifier_preparer.quote(name)
+                connection.exec_driver_sql(f"DROP TABLE {quoted}")
+            connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=1")
+            connection.commit()
     engine.dispose()
 
 

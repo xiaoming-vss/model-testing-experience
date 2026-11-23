@@ -2,6 +2,7 @@ import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessSc
 import { ApiCollectionOverlays } from '../components/ApiCollectionOverlays'
 import { ApiCollectionWorkspace } from '../components/ApiCollectionWorkspace'
 import { useApiCollectionDetailPage } from '../hooks/useApiCollectionDetailPage'
+import '@/shared/styles/surface-tokens.css'
 import shellStyles from '../styles/api-detail-shell.module.css'
 import rulesStyles from '../styles/api-detail-rules.module.css'
 

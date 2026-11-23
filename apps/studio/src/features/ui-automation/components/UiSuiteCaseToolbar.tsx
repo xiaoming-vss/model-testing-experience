@@ -19,7 +19,6 @@ export function UiSuiteCaseToolbar({ page }: { page: UiTestSuiteCasePageModel })
     createCaseMutation,
     updateCaseMutation,
     reorderCasesMutation,
-    uiTestCases,
     resolvedEnvironmentId,
     activeCaseId,
     isCreatingCase,
@@ -27,7 +26,11 @@ export function UiSuiteCaseToolbar({ page }: { page: UiTestSuiteCasePageModel })
     showEditorForm,
     orderedCases,
     canReorder,
+    invalidatedCaseCount,
+    hasRunnableCases,
+    setCaseStatusOpen,
     can,
+    projectId,
     environmentOptions,
     environmentsQuery,
     caseSerial,
@@ -56,8 +59,12 @@ export function UiSuiteCaseToolbar({ page }: { page: UiTestSuiteCasePageModel })
     runningSuite={runSuiteMutation.isPending}
     debugging={debugRunMutation.isPending}
     saving={createCaseMutation.isPending || updateCaseMutation.isPending || reorderCasesMutation.isPending}
-    canRun={Boolean(suiteId) && uiTestCases.length > 0 && Boolean(resolvedEnvironmentId) && !reorderCasesMutation.isPending}
-    canDebug={Boolean(activeCaseId) && !isCreatingCase && Boolean(resolvedEnvironmentId)}
+    canRun={Boolean(suiteId) && hasRunnableCases && Boolean(resolvedEnvironmentId) && !reorderCasesMutation.isPending}
+    canDebug={Boolean(activeCaseId) && !isCreatingCase && Boolean(resolvedEnvironmentId) && !editingCase?.invalidatedAt}
+    canManageCases={can('write') && Boolean(projectId)}
+    invalidatedCount={invalidatedCaseCount}
+    caseInvalidatedAt={editingCase?.invalidatedAt}
+    onOpenCaseStatus={() => setCaseStatusOpen(true)}
     showDebug={flowLevel === 'steps' && showEditorForm}
     showSuiteActions={flowLevel === 'cases'}
     canSave={flowLevel === 'cases' && orderedCases.length > 0 ? canReorder && !reorderCasesMutation.isPending : showEditorForm}

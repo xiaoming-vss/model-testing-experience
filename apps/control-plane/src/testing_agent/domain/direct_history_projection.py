@@ -10,10 +10,10 @@ from testing_agent.domain.ai_execution_format import FIELDS
 def project_direct_history(rows, counts, pending, latest, imports) -> dict[str, Any]:
     sources: dict[str, list[Any]] = defaultdict(list)
     for item in imports:
-        sources[item.version_id].append(item)
+        sources[item.candidate_id].append(item)
 
     def summarize(row: Any) -> dict[str, Any]:
-        associated = sources.get(row.version_id, [])
+        associated = sources.get(row.candidate_id, [])
         targets = list(dict.fromkeys((item.target_type, item.target_id) for item in associated))
         start, end = row.started_at, row.finished_at
         if start and end:
@@ -34,11 +34,11 @@ def project_direct_history(rows, counts, pending, latest, imports) -> dict[str, 
             "checkpointEnabled": True,
             "generationChainManaged": True,
             "currentStage": row.stage,
-            "stageStatus": ("completed" if row.version_id else "waiting_review")
+            "stageStatus": ("completed" if row.candidate_id else "waiting_review")
             if row.status == "success"
             else row.status,
             "reviewStatus": "approved"
-            if row.version_id
+            if row.candidate_id
             else "rejected"
             if row.invalidated_reason == "审核未通过，候选产物已丢弃"
             else "pending",

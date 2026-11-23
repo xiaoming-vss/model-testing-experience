@@ -1,13 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { usePaneActive } from '@/shared/ui/paneActivity'
-import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { bugsApi } from '../api/bugs.api'
 
 /** Bug-only members receive labels, never full sprint or project-member resources. */
 export function useBugScope(projectId: string | undefined, enabled: boolean) {
-  const storedSprintId = useWorkbenchStore((state) => state.activeSprintId)
-  const storedProjectId = useWorkbenchStore((state) => state.activeSprintProjectId)
-  const setActiveSprintId = useWorkbenchStore((state) => state.setActiveSprintId)
   // 隐藏的标签页不刷新迭代/成员选项，切回来后的下一个周期恢复。
   const paneActive = usePaneActive()
   const optionsQuery = useQuery({
@@ -17,12 +13,9 @@ export function useBugScope(projectId: string | undefined, enabled: boolean) {
     refetchInterval: enabled && paneActive ? 30_000 : false,
   })
   const sprints = optionsQuery.data?.sprints ?? []
-  const activeSprintId = storedProjectId === projectId && sprints.some((sprint) => sprint.sprintId === storedSprintId)
-    ? storedSprintId ?? undefined : undefined
   return {
-    optionsQuery, members: optionsQuery.data?.members ?? [], sprints, activeSprintId,
-    sprintsQuery: optionsQuery,
-    sprintSelectorOptions: [{ label: '全部迭代', value: 'all' }, ...sprints.map((sprint) => ({ label: sprint.name, value: sprint.sprintId }))],
-    selectSprint: (value?: string | null) => setActiveSprintId(!value || value === 'all' ? null : value),
+    optionsQuery,
+    members: optionsQuery.data?.members ?? [],
+    sprints,
   }
 }

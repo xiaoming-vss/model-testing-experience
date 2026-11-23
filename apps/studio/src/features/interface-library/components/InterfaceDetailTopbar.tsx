@@ -3,13 +3,14 @@ import {
   DeleteOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SaveOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button, Tag, Tooltip } from 'antd'
-import { MethodBadge } from '@/shared/components/MethodBadge'
-import { formatTime } from '@/utils/format'
+import { Button, Tooltip } from 'antd'
 import type { InterfaceDetailPageModel } from '../hooks/useInterfaceDetailPage'
+
+const MOBILE_ACTION_LABEL = 'max-[760.01px]:hidden'
 
 export function InterfaceDetailTopbar({ page }: { page: InterfaceDetailPageModel }) {
   const {
@@ -17,10 +18,13 @@ export function InterfaceDetailTopbar({ page }: { page: InterfaceDetailPageModel
     interfaceId,
     isCreate,
     canWrite,
+    dirty,
     navigate,
     interfaceQuery,
     repositories,
     selectedRepository,
+    interfaceInActiveProject,
+    saveMutation,
     setImportOpen,
     confirmDelete,
   } = page
@@ -28,9 +32,19 @@ export function InterfaceDetailTopbar({ page }: { page: InterfaceDetailPageModel
 
   if (!draft) return null
 
+  const repositoryName =
+    draft.softwareRepositoryName || selectedRepository?.name || ''
+  const firstTag = draft.tags[0] ?? ''
+  const saveDisabled =
+    !draft.name.trim() ||
+    !draft.path.trim() ||
+    !draft.softwareRepositoryId ||
+    !interfaceInActiveProject ||
+    (!isCreate && draft.interfaceId !== interfaceId)
+
   return (
-    <header className="if-detail-topbar flex min-h-[60px] flex-none items-center justify-between gap-3 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-3.5 py-2 max-[760.01px]:flex-col max-[760.01px]:items-start">
-      <div className="if-detail-topbar-main flex min-w-0 items-center gap-2">
+    <header className="if-detail-topbar flex min-h-14 flex-none flex-wrap items-center justify-between gap-2.5 rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-4 py-2 max-[760.01px]:items-stretch">
+      <div className="if-detail-topbar-main flex min-w-0 flex-auto items-center gap-2">
         <Tooltip title="返回接口库">
           <Button
             type="text"
@@ -39,23 +53,32 @@ export function InterfaceDetailTopbar({ page }: { page: InterfaceDetailPageModel
             onClick={() => navigate(-1)}
           />
         </Tooltip>
-        <div className="if-detail-heading flex min-w-0 flex-col gap-0.5">
-          <div className="if-detail-title-row flex min-w-0 items-center gap-2">
-            <h1 className="m-0 max-w-[520px] overflow-hidden text-ellipsis whitespace-nowrap text-[16px] font-[650] leading-6 text-[var(--srf-text)] max-[760.01px]:max-w-[70vw]">{draft.name.trim() || (isCreate ? '新建接口' : '未命名接口')}</h1>
-            {isCreate ? <Tag>草稿</Tag> : null}
-            {!canWrite ? <Tag>只读成员 · 不可编辑</Tag> : null}
-          </div>
-          <div className="if-detail-meta flex min-w-0 items-center gap-1.5 text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
-            <MethodBadge method={draft.method} />
-            <code className="text-[11px] text-[var(--srf-text-secondary)]">{draft.path || '未填写路径'}</code>
-            <span className="if-meta-dot text-[var(--srf-text-muted)]">·</span>
-            <span>{draft.softwareRepositoryName || selectedRepository?.name || '未选择软件仓库'}</span>
-            <span className="if-meta-dot">·</span>
-            <span>{draft.updatedAt ? `更新于 ${formatTime(draft.updatedAt)}` : '尚未保存'}</span>
-          </div>
-        </div>
+        <h1 className="tp-list-title m-0">接口库</h1>
+        <span className="text-[var(--srf-text-muted)]" aria-hidden>/</span>
+        {isCreate ? (
+          <span className="text-[13px] font-semibold text-[var(--srf-text)]">新建接口</span>
+        ) : (
+          <span
+            className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold text-[var(--srf-text)]"
+            title={repositoryName}
+          >
+            {repositoryName || '未选择软件仓库'}
+          </span>
+        )}
+        {firstTag ? (
+          <>
+            <span className="text-[var(--srf-text-muted)]" aria-hidden>/</span>
+            <span
+              className="max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-[var(--srf-text-secondary)]"
+              title={firstTag}
+            >
+              {firstTag}
+            </span>
+          </>
+        ) : null}
       </div>
-      <div className="if-detail-topbar-actions flex flex-none items-center gap-2">
+
+      <div className="if-detail-topbar-actions flex flex-none flex-wrap items-center justify-end gap-1.5 max-[760.01px]:w-full max-[760.01px]:justify-start">
         <Tooltip title="刷新">
           <Button
             aria-label="刷新接口"
@@ -68,31 +91,51 @@ export function InterfaceDetailTopbar({ page }: { page: InterfaceDetailPageModel
         </Tooltip>
         {canWrite && !isCreate ? (
           <Button
+            aria-label="新建接口"
             icon={<PlusOutlined />}
             onClick={() =>
-              navigate(`/asset-library/interfaces/new?softwareRepositoryId=${encodeURIComponent(draft.softwareRepositoryId)}`)
+              navigate(
+                `/asset-library/interfaces/new?softwareRepositoryId=${encodeURIComponent(draft.softwareRepositoryId)}`,
+              )
             }
           >
-            新建接口
+            <span className={MOBILE_ACTION_LABEL}>新建接口</span>
           </Button>
         ) : null}
         {canWrite ? (
           <Button
+            aria-label="导入 OpenAPI"
             icon={<UploadOutlined />}
             disabled={!repositories.length}
             onClick={() => setImportOpen(true)}
           >
-            导入 OpenAPI
+            <span className={MOBILE_ACTION_LABEL}>导入 OpenAPI</span>
           </Button>
         ) : null}
         {canWrite && !isCreate ? (
           <Button
             danger
+            aria-label="删除接口"
             icon={<DeleteOutlined />}
             disabled={draft.interfaceId !== interfaceId}
             onClick={confirmDelete}
           >
-            删除
+            <span className={MOBILE_ACTION_LABEL}>删除</span>
+          </Button>
+        ) : null}
+        {canWrite ? (
+          <Button
+            type="primary"
+            aria-label={isCreate ? '创建接口' : '保存接口'}
+            className="if-save-button"
+            icon={<SaveOutlined />}
+            loading={saveMutation.isPending}
+            disabled={saveDisabled}
+            onClick={() => saveMutation.mutate()}
+          >
+            <span className={MOBILE_ACTION_LABEL}>
+              {isCreate ? '创建接口' : dirty ? '保存更改' : '保存'}
+            </span>
           </Button>
         ) : null}
       </div>

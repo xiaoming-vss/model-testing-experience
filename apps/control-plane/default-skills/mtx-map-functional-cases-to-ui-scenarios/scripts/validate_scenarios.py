@@ -4,26 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import unicodedata
 from pathlib import Path
 from jsonschema import Draft202012Validator
-
-from validate_legacy_scenarios import normalize
 
 from execution_profile import load_profile
 
 DEFAULT_CAPABILITIES = load_profile()["capabilities"]
 
-def validate(report, *, cases, surface=None, requirements=None, capabilities=None, execution_profile=None):
-    if isinstance(report, dict) and report.get("schemaVersion") == "ui_test_scenarios/1.0":
-        from validate_legacy_scenarios import validate as legacy
 
-        return legacy(
-            report,
-            cases=cases,
-            surface=surface or {},
-            requirements=requirements,
-            capabilities=capabilities,
-        )
+def normalize(text):
+    text = re.sub(r'^\s*\d+(?:\.(?!\d)|[、．)])\s*','',str(text))
+    return ''.join(c for c in text if not c.isspace() and (c in '-+/%<>=≤≥' or not unicodedata.category(c).startswith('P')))
+
+
+def validate(report, *, cases, surface=None, requirements=None, capabilities=None, execution_profile=None):
     schema = json.loads((Path(__file__).resolve().parent.parent / 'references/output.schema.json').read_text())
     errors = [f'{e.json_path}: {e.message}' for e in Draft202012Validator(schema).iter_errors(report)]
     if errors:
@@ -260,21 +256,12 @@ def main():
     parser.add_argument("--requirements", type=Path)
     parser.add_argument("--capabilities", type=Path)
     parser.add_argument("--execution-profile", type=Path)
-    parser.add_argument(
-        "--finalize",
-        action="store_true",
-        help="Legacy v1 normalization only; v2 designs are never stripped",
-    )
     args = parser.parse_args()
     report = json.loads(args.artifact.read_text())
 
     def read(path):
         return json.loads(path.read_text()) if path else None
 
-    if args.finalize and report.get("schemaVersion") == "ui_test_scenarios/1.0":
-        from validate_legacy_scenarios import normalize_handoff
-
-        report, _ = normalize_handoff(report, read(args.surface))
     errors = validate(
         report,
         cases=read(args.cases),
@@ -285,10 +272,6 @@ def main():
     )
     if errors:
         raise SystemExit("\n".join(errors))
-    if args.finalize:
-        args.artifact.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n"
-        )
     print(
         "OK: source actions, prerequisites, expected clauses, capability exclusions and design coverage"
     )

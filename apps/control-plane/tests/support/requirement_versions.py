@@ -1,13 +1,10 @@
-"""Approved requirement-understanding inputs for generation scenarios."""
+"""Adopted requirement-understanding inputs for generation scenarios."""
 
 import asyncio
 import json
 from pathlib import Path
 
 from sqlalchemy import select
-
-from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
-from testing_agent.models.ai_generate_task import AiGenerateTask
 
 ARTIFACT_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures/requirement_artifacts"
 
@@ -61,112 +58,95 @@ def points_artifact() -> dict:
     }
 
 
-def understanding_version(session, requirement_id="r", version_no=1, content="versioned source"):
-    task_id = f"understanding-{requirement_id}"
-    task = session.query(AiGenerateTask).filter_by(task_id=task_id).first()
-    if task is None:
-        task = AiGenerateTask(
-            task_id=task_id,
-            task_type="requirement_analysis",
-            name="需求分析",
-            project_id="p",
-            sprint_id="s",
-            requirement_id=requirement_id,
-            creator_user_id="u",
-            source_type="requirement",
-            source_content="",
-        )
-        session.add(task)
-        session.flush()
-    version = AiGenerateStageVersion(
-        version_id=f"understanding-{requirement_id}-v{version_no}",
-        task_id=task_id,
-        stage="feature_understanding",
-        version_no=version_no,
-        attempt_id=f"understanding-attempt-{requirement_id}-{version_no}",
-        artifact_content=content,
-        artifact_format="text",
-        reviewer_user_id="u",
-        upstream_versions_json={},
-    )
-    session.add(version)
-    session.commit()
-    return version
-
-
-def material_version(session, requirement_id="r", version_no=1, content=None):
-    if content is None:
-        content = json.dumps(material_artifact(), ensure_ascii=False)
-    version = understanding_version(session, requirement_id, version_no, content)
-    version.stage = "extracting_text"
-    version.artifact_format = "json"
-    session.commit()
-    return version
-
-
-def approve_material_version(
+def adopt_material(
     client,
     requirement_id,
     *,
+    headers,
     project_id=None,
     sprint_id=None,
     content=None,
-    version_no=1,
 ):
-    """Insert an approved material-extraction version for API-level tests."""
+    """Create and adopt material through the candidate workflow for API tests."""
+    from uuid import uuid4
+
+    from support.project_api import seed_requirement_source
+    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.models.requirement import Requirement
     from testing_agent.models.sprint import Sprint
+    from testing_agent.models.worker_task import WorkerTask
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 
-    task_id = f"understanding-{requirement_id}"
     artifact = (
         content if content is not None else json.dumps(material_artifact(), ensure_ascii=False)
     )
 
-    async def insert():
+    async def find_project():
         async with client.app.state.test_sessions() as session:
-            project, sprint = project_id, sprint_id
-            if project is None or sprint is None:
-                requirement = await session.scalar(
-                    select(Requirement).where(Requirement.requirement_id == requirement_id)
-                )
-                sprint = sprint or requirement.sprint_id
-                resolved = await session.scalar(select(Sprint).where(Sprint.sprint_id == sprint))
-                project = project or resolved.project_id
-            task = await session.scalar(
-                select(AiGenerateTask).where(AiGenerateTask.task_id == task_id)
+            requirement = await session.scalar(
+                select(Requirement).where(Requirement.requirement_id == requirement_id)
             )
-            if task is None:
-                task = AiGenerateTask(
-                    task_id=task_id,
-                    task_type="requirement_analysis",
-                    name="需求分析",
-                    project_id=project,
-                    sprint_id=sprint,
-                    requirement_id=requirement_id,
-                    creator_user_id="u",
-                    source_type="requirement",
-                    source_content="",
-                )
-                session.add(task)
-                await session.flush()
-            session.add(
-                AiGenerateStageVersion(
-                    version_id=f"understanding-{requirement_id}-v{version_no}",
-                    task_id=task_id,
-                    stage="extracting_text",
-                    version_no=version_no,
-                    attempt_id=f"understanding-attempt-{requirement_id}-{version_no}",
-                    artifact_content=artifact,
-                    artifact_format="json",
-                    reviewer_user_id="u",
-                    upstream_versions_json={},
-                )
+            sprint = await session.scalar(
+                select(Sprint).where(Sprint.sprint_id == (sprint_id or requirement.sprint_id))
             )
+            return project_id or sprint.project_id
+
+    project = asyncio.run(find_project())
+    seed_requirement_source(client, requirement_id)
+    connection = client.post(
+        f"/v1/projects/{project}/integrations/llm/connections",
+        headers=headers,
+        json={
+            "name": f"material-{uuid4()}",
+            "baseUrl": "https://llm.example",
+            "apiKey": "test",
+            "modelId": "test",
+        },
+    )
+    assert connection.status_code == 200, connection.text
+    base = (
+        f"/v1/requirements/{requirement_id}/generation/requirement_analysis/stages/extracting_text"
+    )
+    launched = client.post(
+        base + "/candidate-run",
+        headers=headers,
+        json={"connectionId": connection.json()["data"]["connectionId"]},
+    )
+    assert launched.status_code == 200, launched.text
+    run = launched.json()["data"]
+
+    async def finish():
+        async with client.app.state.test_sessions() as session:
+            attempt = await session.get(AiGenerationAttempt, run["attemptId"])
+            await StageWorkerTransitions(session).completed(
+                attempt.stage_id,
+                attempt.id,
+                run["requestId"],
+                content=artifact,
+                output_format="json",
+                output_context=None,
+            )
+            queue = await session.scalar(
+                select(WorkerTask).where(WorkerTask.task_id == run["requestId"])
+            )
+            queue.status = "success"
             await session.commit()
 
-    asyncio.run(insert())
-    return f"understanding-{requirement_id}-v{version_no}"
-
-
-def approve_material(client, requirement_id, **kwargs):
-    return approve_material_version(client, requirement_id, **kwargs)
+    asyncio.run(finish())
+    candidates = client.get(base + "/candidates", headers=headers).json()["data"]["items"]
+    candidate = next(item for item in candidates if item["currentAttemptId"] == run["attemptId"])
+    current = client.get(base + "/current", headers=headers).json()["data"]
+    adopted = client.post(
+        base + "/adoption",
+        headers=headers,
+        json={
+            "action": "adopt",
+            "candidateId": candidate["candidateId"],
+            "expectedCandidateToken": candidate["candidateToken"],
+            "expectedAttemptId": run["attemptId"],
+            "expectedCurrentToken": current["currentToken"],
+            "requestId": str(uuid4()),
+        },
+    )
+    assert adopted.status_code == 200, adopted.text
+    return candidate["candidateId"]

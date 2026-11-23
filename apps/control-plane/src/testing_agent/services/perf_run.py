@@ -17,6 +17,7 @@ from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
     ErrForbidden,
+    ErrPerfCaseInvalidated,
     ErrPerfCaseNotFound,
     ErrPerfDataFileMissing,
     ErrPerfRunEnvironmentMismatch,
@@ -32,6 +33,7 @@ from testing_agent.repositories.api_environment import ApiEnvironmentRepository
 from testing_agent.repositories.monitoring_connection import MonitoringConnectionRepository
 from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_run import PerfRunRepository
+from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.schemas.perf_run import (
     PerfRunCreate,
     PerfRunMonitoringSnapshot,
@@ -178,8 +180,16 @@ class PerfRunService:
         case: PerfCase,
         body: PerfRunCreate | PerfSuiteRunCreate,
         run_id: str,
+        suite_run_id: str = "",
     ) -> tuple[dict[str, Any], dict[str, Any], str, list[str], list[dict[str, Any]]]:
         parsed = parse_case_yaml(case.yaml)
+        sprint = None
+        if body.sprint_id:
+            sprint = await SprintRepository(self.repository.session).get_active_by_id(
+                body.sprint_id
+            )
+            if sprint is None or sprint.project_id != case.project_id:
+                raise ErrBadRequest()
         environment = await self.environments.get_environment(body.environment_id)
         if environment is None or environment.project_id != case.project_id:
             raise ErrPerfRunEnvironmentMismatch()
@@ -202,6 +212,10 @@ class PerfRunService:
             "specVersion": "1.0",
             "runId": run_id,
             "projectId": case.project_id,
+            "caseId": case.case_id,
+            "sprintId": sprint.sprint_id if sprint else "",
+            "suiteId": case.suite_id or "",
+            "suiteRunId": suite_run_id,
             "case": case_spec,
             "environment": {"baseUrl": base_url, "variables": variables},
             "remoteWrite": {
@@ -233,6 +247,8 @@ class PerfRunService:
             run_id=run.run_id,
             case_id=run.case_id,
             project_id=run.project_id,
+            sprint_id=run.sprint_id,
+            sprint_name=run.sprint_name,
             case_version=run.case_version,
             case_name=run.case_name,
             environment_id=run.environment_id,
@@ -297,10 +313,16 @@ class PerfRunService:
         case: PerfCase,
         body: PerfRunCreate | PerfSuiteRunCreate,
         run_id: str,
+        suite_run_id: str = "",
     ) -> PerfRun:
         """Freeze one case run without queueing its Worker task."""
         public_spec, _spec, private_payload, _secrets, data_files = await self._build_spec(
-            user_id, case, body, run_id
+            user_id, case, body, run_id, suite_run_id
+        )
+        sprint = (
+            await SprintRepository(self.repository.session).get_active_by_id(body.sprint_id)
+            if body.sprint_id
+            else None
         )
         environment = await self.environments.get_environment(body.environment_id)
         connection = await self.monitoring.get_connection(body.monitoring_connection_id)
@@ -310,6 +332,8 @@ class PerfRunService:
             run_id=run_id,
             case_id=case.case_id,
             project_id=case.project_id,
+            sprint_id=sprint.sprint_id if sprint else None,
+            sprint_name=sprint.name if sprint else "",
             case_version=case.version,
             case_name=case.name,
             environment_id=environment.environment_id,
@@ -344,6 +368,8 @@ class PerfRunService:
         await require_project_id(
             self.repository.session, user_id, case.project_id, action="execute"
         )
+        if case.invalidated_at is not None:
+            raise ErrPerfCaseInvalidated()
         run = await self.prepare(user_id, case, body, new_id())
         self.repository.add(run)
         self.enqueue(run.run_id)

@@ -103,7 +103,7 @@ export function ThemeProvider({ children, layer = false }: { children: ReactNode
   useLayoutEffect(startThemeSync, [])
   const content = (
     <ConfigProvider theme={resolvedTheme === 'dark' ? darkThemeConfig : themeConfig}>
-      <AntdApp component="div">
+      <AntdApp component="div" message={{ top: 64, maxCount: 3, pauseOnHover: true }}>
         <FeedbackProvider>{children}</FeedbackProvider>
       </AntdApp>
     </ConfigProvider>

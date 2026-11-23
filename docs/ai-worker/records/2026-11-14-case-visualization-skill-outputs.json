@@ -1,0 +1,608 @@
+[
+  {
+    "name": "runtime-interval",
+    "output": {
+      "schemaVersion": "1.0",
+      "status": "ready",
+      "executionEntryId": "57d5a3f1-6ed3-40a8-bd9d-06ec029e5f19",
+      "summary": {
+        "text": "三段各 ≥3 秒的有效区间分别产出 1 个 Segment，时间范围一致，共 3 个，且不拆分、不跨段合并。",
+        "sourceIds": [
+          "e0",
+          "e2"
+        ]
+      },
+      "sources": [
+        {
+          "id": "p0",
+          "field": "precondition",
+          "index": 0
+        },
+        {
+          "id": "p1",
+          "field": "precondition",
+          "index": 1
+        },
+        {
+          "id": "p2",
+          "field": "precondition",
+          "index": 2
+        },
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        },
+        {
+          "id": "a1",
+          "field": "action",
+          "index": 1
+        },
+        {
+          "id": "e1",
+          "field": "expected",
+          "index": 1
+        },
+        {
+          "id": "a2",
+          "field": "action",
+          "index": 2
+        },
+        {
+          "id": "e2",
+          "field": "expected",
+          "index": 2
+        }
+      ],
+      "entities": [
+        {
+          "id": "mark",
+          "kind": "action",
+          "label": "标注切除区间",
+          "sourceIds": [
+            "a0"
+          ]
+        },
+        {
+          "id": "save_slice",
+          "kind": "action",
+          "label": "保存并切片",
+          "sourceIds": [
+            "a1"
+          ]
+        },
+        {
+          "id": "compare",
+          "kind": "action",
+          "label": "核对切片结果",
+          "sourceIds": [
+            "a2"
+          ]
+        },
+        {
+          "id": "interval_1",
+          "kind": "interval",
+          "label": "保留区间①",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "durationConstraint": {
+            "operator": "gte",
+            "value": 3,
+            "unit": "秒",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        },
+        {
+          "id": "output_1",
+          "kind": "object",
+          "label": "Segment ①",
+          "sourceIds": [
+            "e2"
+          ],
+          "countConstraint": {
+            "operator": "eq",
+            "value": 1,
+            "unit": "个",
+            "sourceIds": [
+              "e2"
+            ]
+          }
+        },
+        {
+          "id": "removed_1",
+          "kind": "interval",
+          "label": "切除区间①",
+          "sourceIds": [
+            "a0"
+          ]
+        },
+        {
+          "id": "interval_2",
+          "kind": "interval",
+          "label": "保留区间②",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "durationConstraint": {
+            "operator": "gte",
+            "value": 3,
+            "unit": "秒",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        },
+        {
+          "id": "output_2",
+          "kind": "object",
+          "label": "Segment ②",
+          "sourceIds": [
+            "e2"
+          ],
+          "countConstraint": {
+            "operator": "eq",
+            "value": 1,
+            "unit": "个",
+            "sourceIds": [
+              "e2"
+            ]
+          }
+        },
+        {
+          "id": "removed_2",
+          "kind": "interval",
+          "label": "切除区间②",
+          "sourceIds": [
+            "a0"
+          ]
+        },
+        {
+          "id": "interval_3",
+          "kind": "interval",
+          "label": "保留区间③",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "durationConstraint": {
+            "operator": "gte",
+            "value": 3,
+            "unit": "秒",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        },
+        {
+          "id": "output_3",
+          "kind": "object",
+          "label": "Segment ③",
+          "sourceIds": [
+            "e2"
+          ],
+          "countConstraint": {
+            "operator": "eq",
+            "value": 1,
+            "unit": "个",
+            "sourceIds": [
+              "e2"
+            ]
+          }
+        }
+      ],
+      "relations": [
+        {
+          "id": "produce_1",
+          "kind": "produces",
+          "from": "interval_1",
+          "to": "output_1",
+          "polarity": "positive",
+          "sourceIds": [
+            "e2"
+          ]
+        },
+        {
+          "id": "produce_2",
+          "kind": "produces",
+          "from": "interval_2",
+          "to": "output_2",
+          "polarity": "positive",
+          "sourceIds": [
+            "e2"
+          ]
+        },
+        {
+          "id": "produce_3",
+          "kind": "produces",
+          "from": "interval_3",
+          "to": "output_3",
+          "polarity": "positive",
+          "sourceIds": [
+            "e2"
+          ]
+        }
+      ],
+      "assertions": [
+        {
+          "id": "valid_intervals",
+          "text": "保留 3 段连续有效区间，各段长度 ≥3 秒。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "interval_1",
+            "interval_2",
+            "interval_3"
+          ]
+        },
+        {
+          "id": "matching_outputs",
+          "text": "每段有效区间只对应 1 个 Segment，时间范围逐段一致，共生成 3 个 Segment。",
+          "sourceIds": [
+            "e2"
+          ],
+          "entityIds": [
+            "interval_1",
+            "interval_2",
+            "interval_3",
+            "output_1",
+            "output_2",
+            "output_3"
+          ]
+        },
+        {
+          "id": "no_split_or_merge",
+          "text": "同一区间不拆分为多个 Segment，跨区间不合并。",
+          "sourceIds": [
+            "e2"
+          ],
+          "entityIds": [
+            "interval_1",
+            "interval_2",
+            "interval_3",
+            "output_1",
+            "output_2",
+            "output_3"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "focus",
+          "kind": "interval",
+          "title": "切开后独立产出",
+          "sourceIds": [
+            "a0",
+            "e0",
+            "e2"
+          ],
+          "entityIds": [
+            "interval_1",
+            "output_1",
+            "removed_1",
+            "interval_2",
+            "output_2",
+            "removed_2",
+            "interval_3",
+            "output_3"
+          ],
+          "relationIds": [
+            "produce_1",
+            "produce_2",
+            "produce_3"
+          ],
+          "assertionIds": [
+            "valid_intervals",
+            "matching_outputs",
+            "no_split_or_merge"
+          ],
+          "isSchematic": true,
+          "notes": [
+            {
+              "kind": "action_check",
+              "text": "记录三段区间的时间范围，核对 Segment 数量及各段时间范围。",
+              "sourceIds": [
+                "a0",
+                "a2"
+              ]
+            }
+          ],
+          "data": {
+            "orderedSegments": [
+              {
+                "entityId": "interval_1",
+                "role": "keep",
+                "sourceIds": [
+                  "a0",
+                  "e0"
+                ]
+              },
+              {
+                "entityId": "removed_1",
+                "role": "remove",
+                "sourceIds": [
+                  "a0"
+                ]
+              },
+              {
+                "entityId": "interval_2",
+                "role": "keep",
+                "sourceIds": [
+                  "a0",
+                  "e0"
+                ]
+              },
+              {
+                "entityId": "removed_2",
+                "role": "remove",
+                "sourceIds": [
+                  "a0"
+                ]
+              },
+              {
+                "entityId": "interval_3",
+                "role": "keep",
+                "sourceIds": [
+                  "a0",
+                  "e0"
+                ]
+              }
+            ],
+            "orderSourceIds": [
+              "a0"
+            ],
+            "distinctOutputEntityIds": [
+              "output_1",
+              "output_2",
+              "output_3"
+            ],
+            "distinctOutputSourceIds": [
+              "e2"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    }
+  },
+  {
+    "name": "options",
+    "output": {
+      "schemaVersion": "1.0",
+      "status": "ready",
+      "executionEntryId": "entry-example",
+      "summary": {
+        "text": "处理动作仅允许切片、保留两种选项。",
+        "sourceIds": [
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "open_picker",
+          "kind": "action",
+          "label": "打开动作选择框",
+          "sourceIds": [
+            "a0"
+          ]
+        },
+        {
+          "id": "choices",
+          "kind": "group",
+          "label": "处理动作",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "slice",
+          "kind": "value",
+          "label": "切片",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "retain",
+          "kind": "value",
+          "label": "保留",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [],
+      "assertions": [
+        {
+          "id": "only_two_options",
+          "text": "处理动作仅允许切片、保留。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "choices",
+            "slice",
+            "retain"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "focus",
+          "kind": "options",
+          "title": "允许的处理动作",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "choices",
+            "slice",
+            "retain"
+          ],
+          "relationIds": [],
+          "assertionIds": [
+            "only_two_options"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "ownerEntityId": "choices",
+            "optionEntityIds": [
+              "slice",
+              "retain"
+            ],
+            "completeness": "exhaustive",
+            "availability": "allowed",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    }
+  },
+  {
+    "name": "state",
+    "output": {
+      "schemaVersion": "1.0",
+      "status": "ready",
+      "executionEntryId": "entry-example",
+      "summary": {
+        "text": "待处理时点击保存，状态保持待处理且不启动切片。",
+        "sourceIds": [
+          "a0",
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "save",
+          "kind": "action",
+          "label": "保存",
+          "sourceIds": [
+            "a0"
+          ]
+        },
+        {
+          "id": "pending",
+          "kind": "state",
+          "label": "待处理",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ]
+        },
+        {
+          "id": "slicing",
+          "kind": "event",
+          "label": "启动切片",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "id": "does_not_start",
+          "kind": "triggers",
+          "from": "save",
+          "to": "slicing",
+          "polarity": "negative",
+          "sourceIds": [
+            "e0"
+          ],
+          "condition": {
+            "text": "在待处理状态点击保存",
+            "sourceIds": [
+              "a0"
+            ]
+          }
+        }
+      ],
+      "assertions": [
+        {
+          "id": "save_preserves_state",
+          "text": "点击保存后状态仍为待处理，不启动切片。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "save",
+            "pending",
+            "slicing"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "focus",
+          "kind": "state",
+          "title": "保存不触发切片",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "entityIds": [
+            "save",
+            "pending",
+            "slicing"
+          ],
+          "relationIds": [
+            "does_not_start"
+          ],
+          "assertionIds": [
+            "save_preserves_state"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "actionEntityId": "save",
+            "beforeEntityId": "pending",
+            "afterEntityId": "pending",
+            "change": "unchanged",
+            "sourceIds": [
+              "a0",
+              "e0"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    }
+  }
+]

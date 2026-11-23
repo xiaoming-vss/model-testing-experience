@@ -7,7 +7,6 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useLogout } from '@/features/auth/hooks/useLogout'
 import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
 import { AppNavigationBrand, AppSidebar } from './AppSidebar'
 import { navigationIndex } from './navigation'
 import { useNavigationTransition } from './useNavigationTransition'
@@ -18,7 +17,6 @@ import '@/shared/styles/tab-motion.css'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
 import { isBugOnlyProject, useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
-import { useBugScope } from '@/features/bugs/hooks/useBugScope'
 import { ProjectRouteGuard } from '../router/guards/ProjectRouteGuard'
 import { RouteSuspense } from '../router/RouteSuspense'
 
@@ -61,10 +59,7 @@ export function AppShell() {
     navigationIndex(location.pathname, location.search, bugOnly),
     location.pathname,
   )
-  const sprintScope = useActiveSprint(access.can('read'))
-  const bugScope = useBugScope(activeProjectId, bugOnly)
-  const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
-  const prepareScopeTransition = useScopeTransition(contentRef, activeProjectId, activeSprintId)
+  const prepareScopeTransition = useScopeTransition(contentRef, activeProjectId)
   const showWorkbenchHeader = !['/profile', '/change-password', '/admin/users', '/admin/ldap'].some((path) => location.pathname.startsWith(path))
 
   const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}${location.pathname.startsWith('/requirements/') ? ' app-shell-requirement-detail' : ''}`
@@ -127,33 +122,12 @@ export function AppShell() {
                     options={projects.map((project) => ({ label: project.name, value: normalizeProjectId(project) }))}
                     onChange={id => {
                       if (id === activeProjectId || !canNavigateAway()) return
-                      prepareScopeTransition('project', activeProjectId, id, projects.map(normalizeProjectId))
+                      prepareScopeTransition(activeProjectId, id, projects.map(normalizeProjectId))
                       setActiveProjectId(id)
                       if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
                     }}
                     variant="borderless"
                   />
-                  {activeProjectId ? (
-                    <>
-                      <span className="project-scope-separator text-[var(--mac-glass-muted)]" aria-hidden="true">/</span>
-                      <Select
-                        className="project-select sprint-select"
-                        popupMatchSelectWidth={false}
-                        loading={sprintsQuery.isLoading}
-                        value={activeSprintId ?? 'all'}
-                        placeholder="全部迭代"
-                        suffixIcon={<DownOutlined />}
-                        options={sprintSelectorOptions}
-                        onChange={id => {
-                          if (id === (activeSprintId ?? 'all') || !canNavigateAway()) return
-                          prepareScopeTransition('sprint', activeSprintId, id, sprintSelectorOptions.map(option => option.value))
-                          selectSprint(id)
-                          if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
-                        }}
-                        variant="borderless"
-                      />
-                    </>
-                  ) : null}
                 </div>
               </div>
             ) : null}

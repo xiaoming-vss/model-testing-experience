@@ -14,7 +14,7 @@ from testing_agent.services.api_collection import ApiCollectionService
 
 async def test_file_import_with_rules_respects_foreign_keys(db):  # noqa: F811
     seed_task(db)
-    db.add(ApiCollection(collection_id="target", requirement_id="r", name="target"))
+    db.add(ApiCollection(collection_id="target", project_id="p", requirement_id="r", name="target"))
     db.commit()
     service = ApiCollectionService(ApiCollectionRepository(AsyncSessionAdapter(db)))
     result = await service.import_cases(

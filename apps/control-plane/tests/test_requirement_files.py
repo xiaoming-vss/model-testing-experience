@@ -155,6 +155,11 @@ async def test_requirement_creation_initializes_generation_before_commit():
 
 
 def test_default_generation_tasks_belong_to_new_requirement():
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+    from testing_agent.models.generation_candidates import (
+        AiGenerationStageContent,
+        RequirementGenerationChain,
+    )
     from testing_agent.models.requirement import Requirement
     from testing_agent.services.requirement_generation_defaults import add_default_generation_tasks
 
@@ -174,10 +179,12 @@ def test_default_generation_tasks_belong_to_new_requirement():
         document_content="",
     )
     add_default_generation_tasks(session, requirement, "project", "user")
-    assert {task.task_type for task in session.tasks} == {
+    tasks = [item for item in session.tasks if isinstance(item, AiGenerateTask)]
+    assert {task.task_type for task in tasks} == {
         "requirement_analysis",
         "functional_case_generate",
     }
-    assert all(
-        task.requirement_id == "req" and task.project_id == "project" for task in session.tasks
-    )
+    assert all(task.requirement_id == "req" and task.project_id == "project" for task in tasks)
+    chains = [item for item in session.tasks if isinstance(item, RequirementGenerationChain)]
+    slots = [item for item in session.tasks if isinstance(item, AiGenerationStageContent)]
+    assert len(chains) == 2 and len(slots) == 5

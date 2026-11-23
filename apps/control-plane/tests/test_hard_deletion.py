@@ -80,7 +80,8 @@ async def count(db, model):
 )
 async def test_child_first_and_name_reuse(db, suite_model, case_model, case_args):
     key = "collection_id" if suite_model is m.ApiCollection else "suite_id"
-    suite = await add(db, suite_model(**{key: "suite"}, requirement_id="r", name="same"))
+    project = {"project_id": "p"} if suite_model in (m.ApiCollection, m.UiTestSuite) else {}
+    suite = await add(db, suite_model(**project, **{key: "suite"}, requirement_id="r", name="same"))
     case = await add(db, case_model(**{key: "suite"}, case_id="case", **case_args))
     await db.commit()
     with pytest.raises(AppError) as blocked:
@@ -93,7 +94,7 @@ async def test_child_first_and_name_reuse(db, suite_model, case_model, case_args
     await db.commit()
     assert await count(db, case_model) == 0
     assert await count(db, suite_model) == 0
-    await add(db, suite_model(**{key: "new"}, requirement_id="r", name="same"))
+    await add(db, suite_model(**project, **{key: "new"}, requirement_id="r", name="same"))
     await db.commit()
 
 
@@ -128,7 +129,9 @@ async def test_pending_business_child_blocks_parent_deletion(db):
 
 
 async def test_api_case_cleans_rules_runs_and_queue(db):
-    await add(db, m.ApiCollection(collection_id="col", requirement_id="r", name="api"))
+    await add(
+        db, m.ApiCollection(collection_id="col", project_id="p", requirement_id="r", name="api")
+    )
     case = await add(
         db,
         m.ApiCase(case_id="case", collection_id="col", name="case", method="GET", url_template="/"),
@@ -152,7 +155,11 @@ async def test_api_case_cleans_rules_runs_and_queue(db):
     await add(
         db,
         m.ApiCollectionRun(
-            collection_run_id="cr", collection_id="col", environment_id="env", trigger_user_id="u"
+            collection_run_id="cr",
+            collection_id="col",
+            project_id="p",
+            environment_id="env",
+            trigger_user_id="u",
         ),
     )
     await add(
@@ -162,6 +169,7 @@ async def test_api_case_cleans_rules_runs_and_queue(db):
             case_id="case",
             collection_id="col",
             collection_run_id="cr",
+            project_id="p",
             environment_id="env",
             trigger_user_id="u",
         ),
@@ -255,12 +263,18 @@ async def test_shared_service_removes_all_authorizations_and_connections(db):
 
 
 async def test_ui_case_deletes_aggregate_history_and_worker_without_deleting_suite(db):
-    await add(db, m.UiTestSuite(suite_id="suite", requirement_id="r", name="UI"))
+    await add(db, m.UiTestSuite(suite_id="suite", project_id="p", requirement_id="r", name="UI"))
     case = await add(db, m.UiTestCase(case_id="case", suite_id="suite", name="case", steps_json=[]))
     await add(
-        db, m.UiTestCaseRun(run_id="run", case_id="case", suite_id="suite", trigger_user_id="u")
+        db,
+        m.UiTestCaseRun(
+            run_id="run", case_id="case", suite_id="suite", project_id="p", trigger_user_id="u"
+        ),
     )
-    await add(db, m.UiTestSuiteRun(suite_run_id="sr", suite_id="suite", trigger_user_id="u"))
+    await add(
+        db,
+        m.UiTestSuiteRun(suite_run_id="sr", suite_id="suite", project_id="p", trigger_user_id="u"),
+    )
     await add(db, m.UiTestSuiteRunItem(item_id="i", suite_run_id="sr", case_id="case"))
     for key in ("run", "sr"):
         await add(db, m.WorkerTask(task_id=key, domain="ui", task_type="ui", run_id=key))

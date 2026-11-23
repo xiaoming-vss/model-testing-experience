@@ -116,28 +116,44 @@ async def require_file_resource(session: AsyncSession, row: StoredFile) -> None:
         if task is None:
             raise ErrNotFound()
         if task.task_type == "suite_run":
-            query = (
-                select(UiTestSuiteRun.suite_run_id)
+            run_query = (
+                select(UiTestSuiteRun.requirement_id)
                 .join(UiTestSuite, UiTestSuite.suite_id == UiTestSuiteRun.suite_id)
-                .where(UiTestSuiteRun.suite_run_id == task.run_id)
+                .where(
+                    UiTestSuiteRun.suite_run_id == task.run_id,
+                    UiTestSuiteRun.project_id == row.project_id,
+                    UiTestSuite.project_id == row.project_id,
+                )
             )
         elif task.task_type == "case_debug":
-            query = (
-                select(UiTestCaseRun.run_id)
+            run_query = (
+                select(UiTestCaseRun.requirement_id)
                 .join(UiTestCase, UiTestCase.case_id == UiTestCaseRun.case_id)
                 .join(UiTestSuite, UiTestSuite.suite_id == UiTestCase.suite_id)
                 .where(
                     UiTestCaseRun.run_id == task.run_id,
-                    UiTestCaseRun.suite_id == UiTestCase.suite_id,
+                    UiTestCaseRun.project_id == row.project_id,
+                    UiTestSuite.project_id == row.project_id,
                 )
             )
         else:
             raise ErrNotFound()
-        query = (
-            query.join(Requirement, Requirement.requirement_id == UiTestSuite.requirement_id)
-            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-            .where(Sprint.project_id == row.project_id)
-        )
+        run = (await session.execute(run_query)).one_or_none()
+        if run is None:
+            raise ErrNotFound()
+        # 需求关联在运行快照里非空的，仍要求需求与迭代存活；项目级运行没有这层约束。
+        if run.requirement_id is not None:
+            requirement_exists = await session.scalar(
+                select(Requirement.requirement_id)
+                .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+                .where(
+                    Requirement.requirement_id == run.requirement_id,
+                    Sprint.project_id == row.project_id,
+                )
+            )
+            if requirement_exists is None:
+                raise ErrNotFound()
+        return
     else:
         # New resource kinds must define their ownership rules explicitly.
         raise ErrNotFound()

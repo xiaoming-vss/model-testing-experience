@@ -15,13 +15,15 @@
 
 [需求维度测试设计接口](requirement-design.md)
 
-[生成链、阶段版本与正式资产导入来源](generation-chain.md)
+[生成链、候选与当前内容及正式资产导入来源](generation-chain.md)
 
 [统一 AI 执行模型与切换前历史清理 ADR](adr/0010-unified-ai-execution.md)
 
 [UI 生成仓库画像源码 ADR](adr/0011-ui-generation-repository-source.md)
 
 [项目级接口库 ADR](adr/0012-project-interface-library.md)
+
+[本地开发库性能运行字段升级记录](records/2026-11-20-perf-run-local-db-upgrade.md)
 
 ## 运行时与依赖
 
@@ -57,11 +59,11 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `ai_task_scope.py` / GenerationAccess | 当前成员动作、任务/运行归属、父资源先于子资源的锁顺序；不提交事务 |
 | `ai_task_queries.py` / GenerationQueries | 任务列表/详情、运行详情与分页历史；代码风险详情保留 report，历史摘要不读取正文 |
 | `ai_task_commands.py` / GenerationTaskCommands | 任务创建、修改、删除与运行删除；业务命令保留各自提交点 |
-| `repository_profile.py` / RepositoryProfileService | 冻结已审核需求理解版本与全部仓库工作分支 HEAD，组装画像快照；不解析基线、不生成 diff |
+| `repository_profile.py` / RepositoryProfileService | 冻结当前采用的需求材料与全部仓库工作分支 HEAD，组装画像快照；不解析基线、不生成 diff |
 | `ai_run_launcher.py` / GenerationRunLauncher | 准备快照、重查权限、发起运行；阶段派发使用 `stage_storage/dispatch.py` 的显式写入 |
 | `ai_stage_workflow.py` / GenerationStageWorkflow | 阶段保存、审核、修订、重试和图谱派发 |
-| `ai_candidate_review.py` / GenerationCandidateReview | 整次候选运行的内容编辑与审核，不创建正式资产 |
-| `generation_chain.py` / GenerationChainService | 需求生成链全景、阶段草稿/版本、单步运行、审核、版本删除与版本级正式资产导入 |
+| `generation_candidate_commands.py` / GenerationCandidateCommands | 候选编辑、派生、优化与处置；不创建正式资产 |
+| `generation_chain.py` / GenerationChainService | 需求生成链全景与阶段视图；读取候选和当前采用内容，不导入正式资产 |
 | `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
 | `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |
 | `function_generate_import.py`、`ui_generate_import.py`、`requirement_generate_import.py` | 功能/UI 候选正式导入、需求增强文本采纳；各入口负责原有提交与回滚语义 |
@@ -167,13 +169,12 @@ UI 套件运行历史 `GET /v1/ui-test-suites/{suite_id}/runs` 与 API 集合运
 ```toml
 env = "local"                     # local 时开启 uvicorn reload
 [http]                            # host、port
-[security.jwt]                    # key、expire_hours
+[security.jwt]                    # key、user_expire_hours、super_admin_expire_hours
 [security.integration]            # key，用于集成凭据加解密
 [security.worker]                 # key，Worker 调用内部接口的令牌
 [data.db.user]                    # driver、dsn
-[storage]                         # uploads_dir
+[storage.s3]                      # 对象存储连接与签名参数
 [integrations.zentao_service]     # base_url
-[code_overview]                   # cache_ttl_seconds
 ```
 
 ## 命令
@@ -187,12 +188,6 @@ uv run --locked --extra dev alembic upgrade head
 ```
 
 检查与测试命令（`scripts/check.py`、pytest、Ruff、mypy）统一见[命令矩阵](../commands.md#control-plane)。也可在仓库根目录用 `python3 scripts/manage.py run control-plane` 和 `python3 scripts/manage.py migrate`，由统一配置生成 `config/local.toml`。
-
-`sql/` 存放一次性的数据订正脚本，需人工对着目标库执行，默认干跑、执行前自动备份受影响行。已有的脚本见下表。
-
-| 脚本 | 用途 |
-| --- | --- |
-| `backfill_function_case_ids.sql` | 给历史功能用例候选结果补 `case_id`（审核页编号与导入沿用的编号） |
 
 ## 对外接口
 
@@ -215,6 +210,16 @@ uv run --locked --extra dev alembic upgrade head
 - 禅道：通过项目保存的 MCP 端点访问，实际实例由 MCP 提供；只使用操作人本人的 Token
 - GitLab：直连 `/api/v4/*`，使用操作人的个人访问令牌
 - LLM：按任务向 AI Worker 下发 `/internal/ai-worker/tasks/{id}/llm-credentials`
+
+## 正式用例失效
+
+功能、API、UI 和性能用例统一用 `invalidated_at` 表示生命周期：空值有效，非空已失效。失效不是 `enabled` 执行开关，也不是软删除；用例仍占用名称/标题并保留在原测试集或 Collection，历史运行、测试单条目、执行结果和冻结 AI 快照不变。结构与决策见[数据库结构](database-schema.md#正式用例失效标记)和 [ADR 0026](adr/0026-case-invalidation-marker.md)。
+
+- 四类列表接口接受可选 `invalidated`（`true` / `false` / 省略），响应返回 `invalidatedAt`；功能用例库分页查询同样在服务端筛选。
+- 项目级批量端点 `POST /v1/projects/{project_id}/{function-test-cases|api-cases|ui-test-cases|perf-cases}/batch-invalidation` 接收 `{caseIds, invalidated}`，要求项目 `write` 权限，按项目范围整体成功或失败；重复失效保留首次时间。
+- 新的 API/UI/性能单用例运行拒绝失效用例；Collection、UI 测试集和性能测试集运行在控制面过滤失效用例，全部失效时返回“没有有效用例”。控制面在创建任务前完成过滤，四个 Worker 的执行协议不变。
+- 测试单新加入失效用例整体拒绝并返回 `invalidCaseIds`；既有执行条目仍可分配、执行和记录结果。
+- 代码风险分析与 UI 生成的用例输入只读取有效用例；生成候选导入覆盖同名用例时清空失效标记。API 每日统计的用例分母只统计有效用例，功能/UI 历史统计不重算。
 
 ## 迭代每日统计
 
@@ -245,6 +250,9 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 - [用例推送到禅道 MCP](zentao-mcp-case-push.md)：推送规则、部分失败和连接器退出。
 
 - [禅道/GitLab 连接的传输安全](adr/0023-external-connection-transport-security.md)：HTTPS 默认校验证书，自部署 HTTP 需显式允许，跳过校验记录 WARNING。
+- [生成链多候选与唯一当前结果](adr/0024-generation-candidates-current.md)：每阶段多候选、最多一份当前内容，试生成冻结来源。
+- [阶段采用是独立指针](adr/0025-independent-stage-adoption.md)：采用和导入只校验内容自身的冻结来源，上游换采用不影响下游。
+- [API/UI 测试集归项目所有](adr/0027-project-owned-api-ui-test-suites.md)：需求改为可选关联，运行冻结项目、需求与迭代快照，CI 只凭测试集运行。
 
 ## 文件存储验收与恢复
 

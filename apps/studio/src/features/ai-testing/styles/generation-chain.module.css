@@ -23,7 +23,6 @@
 
 .scope :global(.gc-node:hover) { border-color: var(--gc-blue); box-shadow: 0 5px 16px var(--app-accent-soft); transform: translateY(-1px); }
 .scope :global(.gc-node:focus-visible) { outline: 2px solid var(--gc-blue); outline-offset: 2px; }
-.scope :global(.gc-node-version.is-muted) { opacity: 0.7; }
 
 .scope :global(.gc-node.is-approved) { border-color: color-mix(in srgb, var(--app-result-success) 28%, var(--gc-line)); background: linear-gradient(180deg, var(--app-testing-success-tag-bg), transparent 68%), var(--gc-surface); }
 .scope :global(.gc-node.is-approved .gc-node-state) { color: var(--app-result-success-text); }
@@ -31,8 +30,8 @@
 .scope :global(.gc-node.is-imported .gc-node-state) { color: var(--app-result-success-text); }
 .scope :global(.gc-node.is-draft) { border-color: color-mix(in srgb, var(--app-task-status-warning) 42%, var(--gc-line)); background: linear-gradient(180deg, var(--app-status-warning-bg), transparent 70%), var(--gc-surface); }
 .scope :global(.gc-node.is-draft .gc-node-state) { color: var(--app-status-warning-text); font-weight: 600; }
-.scope :global(.gc-node.is-rejected) { border-color: color-mix(in srgb, var(--app-task-status-danger) 34%, var(--gc-line)); background: linear-gradient(180deg, var(--app-danger-surface-soft), transparent 70%), var(--gc-surface); }
-.scope :global(.gc-node.is-rejected .gc-node-state) { color: var(--app-profile-danger-text); }
+.scope :global(.gc-node.is-invalid) { border-color: color-mix(in srgb, var(--app-task-status-danger) 34%, var(--gc-line)); background: linear-gradient(180deg, var(--app-danger-surface-soft), transparent 70%), var(--gc-surface); }
+.scope :global(.gc-node.is-invalid .gc-node-state) { color: var(--app-profile-danger-text); }
 .scope :global(.gc-node.is-running) {
   border-color: var(--app-surface-accent-strong);
   background: var(--app-surface-accent-strong);
@@ -59,7 +58,7 @@
 .scope :global(.generation-chain-modal .ant-modal-footer) { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
 .scope :global(.generation-chain-modal .ant-modal-close) { top: 16px; right: 20px; }
 
-/* 阶段操作挂在标题栏：标题保持原样，版本/上游/对比/历史和显示模式开关同排。 */
+/* 阶段操作挂在标题栏：标题保持原样，版本/上游/历史和显示模式开关同排。 */
 .scope :global(.generation-chain-modal .ant-modal-header.ai-artifact-mode-heading) { flex-wrap: wrap; gap: 8px 16px; }
 .scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 2; }
 .scope :global(.gc-state.is-ok) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
@@ -67,24 +66,7 @@
 .scope :global(.gc-state.is-danger) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
 .scope :global(.gc-state.is-muted) { background: var(--app-surface-chip); }
 
-.scope :global(.gc-upstream-field .ant-select) { width: 100%; }
 .scope :global(.gc-artifact-scroll) { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 2px 0 10px; border-top: 1px solid var(--app-surface-divider); }
-/* 首次运行尚无产物时只显示加载状态，不进入内容解析。 */
-.scope :global(.gc-stage-loading .ant-spin-dot-item) { background-color: var(--app-generation-running-accent); }
-/* 原文视图沿用阶段产物弹框的 CodeMirror：带行号，由编辑器自己滚动。 */
-.scope :global(.gc-artifact-scroll.is-raw) { overflow: hidden; padding: 0; }
-.scope :global(.gc-raw-editor) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.scope :global(.gc-raw-editor :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor)) {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0%;
-  height: 100%;
-  min-height: 0;
-  max-height: none;
-  min-width: 0;
-  overflow: hidden;
-}
-.scope :global(.gc-raw-editor .cm-scroller) { flex: 1 1 0%; min-height: 0; overflow: auto; }
 /* 阶段弹框沿用对应页签产物弹窗的尺寸与内部滚动规则。 */
 .scope :global(.generation-chain-modal :is(.ant-modal-container, .ant-modal-content)) {
   display: flex;
@@ -106,7 +88,6 @@
 .scope :global(.gc-artifact-scroll:is(.is-requirement-analysis, .is-case-names, .is-api-cases, .is-api-design)) { overflow: auto; padding: 12px 24px; }
 .scope :global(.gc-artifact-scroll.is-case-names) { display: flex; flex-direction: column; overflow: hidden; }
 .scope :global(.gc-artifact-scroll.is-case-names .ai-case-name-tree) { flex: 1 1 0%; min-height: 0; }
-.scope :global(.gc-artifact-scroll.is-detailed-cases > .ai-generated-case-browser) { height: 100%; }
 .scope :global(.gc-artifact-scroll.is-ui-stage) { display: flex; flex-direction: column; padding: 12px 24px; }
 /* UI 阶段视觉工作台在页签弹窗里由 ui-generation.css 提供高度链，这里补齐同样的伸缩规则。 */
 .scope :global(.gc-artifact-scroll.is-ui-stage > .ui-generation-stage-visual) {
@@ -126,8 +107,7 @@
 .scope :global(.gc-trace-chip.is-ok) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
 
 @media (max-width: 1024px) {
-  /* 标题栏放不下时阶段操作独占一行，标题与显示模式开关留在第一行。 */
-  .scope :global(.generation-chain-modal .gc-header-tools-slot) { flex: 1 1 100%; order: 2; }
+  /* 标题栏放不下时，显示模式开关留在第一行。 */
   .scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 1; }
 }
 
@@ -140,40 +120,22 @@
   .scope :global(.generation-chain-modal .ant-modal-header) { padding: 12px 56px 12px 16px; }
   .scope :global(.generation-chain-modal .ant-modal-footer) { padding: 10px 16px; }
   .scope :global(.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage)) { margin: 0 -16px; }
-  .scope :global(.gc-workspace.is-revising) { flex-direction: column; overflow: auto; }
-  .scope :global(.gc-workspace.is-revising > .gc-source) { flex: 0 0 auto; width: auto; min-height: 320px; }
-  .scope :global(.gc-workspace.is-revising > .revision-side-panel) { margin: 10px 16px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .scope :global(.gc-node) { transition: none; }
 }
 
-/* Version import provenance */
-.scope :global(.generation-chain-import-modal .ant-modal-content) { background: var(--app-surface); }
-.scope :global(.gc-import-record > .gc-import-case-ids) code { padding: 1px 5px; border-radius: 4px; background: var(--app-surface-chip); color: var(--app-surface-text); font-size: 10px; }
-.scope :global(.gc-import-record > .gc-import-case-ids) small { color: var(--app-surface-text-muted); font-size: 10px; }
 
-/* 继续优化侧栏：宽度拖拽、附件与问题分页保持独立状态样式。
-   工作区与侧栏的 flex 骨架同时是 jsdom 布局契约，保留基础声明。 */
-.scope :global(.revision-workspace) { display: flex; height: 100%; min-height: 0; min-width: 0; gap: 0; }
+/* 继续优化侧栏：附件与问题分页保持独立状态样式。 */
 .scope :global(.revision-side-panel) { display: flex; flex: 1; flex-direction: column; min-width: 240px; min-height: 0; gap: 12px; padding: 16px; overflow: auto; }
-.scope :global(.revision-workspace.is-revising > .revision-source) { width: var(--revision-source-width, 60%); min-width: 35%; max-width: 75%; overflow: auto; flex-shrink: 0; }
 .scope :global(.revision-attachment) { position: relative; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; overflow: hidden; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 8px; background: var(--ai-panel, var(--app-revision-bg)); color: var(--ai-text-secondary, var(--app-list-label)); }
 .scope :global(.revision-attachment img) { width: 100%; height: 100%; object-fit: cover; }
 .scope :global(.revision-attachment button) { position: absolute; top: 2px; right: 2px; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--app-revision-attachment-scrim); color: var(--app-revision-attachment-on-scrim); font-size: 13px; line-height: 1; cursor: pointer; }
 .scope :global(.revision-attachment button:disabled) { cursor: not-allowed; opacity: 0.5; }
 @media (max-width: 800px) {
- .scope :global(.revision-workspace.is-revising) { flex-direction: column; overflow: auto; }
- .scope :global(.revision-workspace.is-revising > .revision-source) { width: 100%; max-width: none; min-height: 320px; height: 50%; resize: none; }
  .scope :global(.revision-side-panel) { flex-shrink: 0; min-height: 400px; }
 }
-.scope :global(.revision-workspace.is-revising) { gap: 0; }
-.scope :global(.revision-workspace.is-revising > .revision-source) { resize: none; }
-.scope :global(.revision-divider::after) { content: ''; position: absolute; top: 40%; bottom: 40%; left: 8px; width: 4px; border-radius: 4px; background: var(--ai-border, var(--app-revision-divider)); }
-.scope :global(.revision-divider:hover::after),
-.scope :global(.revision-divider:focus-visible::after) { background: var(--app-revision-divider-hover); }
-@media (max-width: 800px) { .scope :global(.revision-divider) { display: none; } .scope :global(.revision-workspace.is-revising) { gap: 16px; } }
 
 .scope :global(.revision-question-nav button.is-current) { border-color: var(--ant-color-primary); color: var(--ant-color-primary); }
 .scope :global(.revision-question-nav button.is-answered) { font-weight: 700; }

@@ -1,13 +1,9 @@
 import copy
-import tempfile
 import unittest
-from unittest.mock import Mock
 
 import yaml
 
-from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import _validate_ui_cases_yaml
-from tests.unit.tasks.ui_case_generate import test_repair
 
 
 def draft():
@@ -41,15 +37,6 @@ def draft():
 
 
 class MissingFieldsTests(unittest.TestCase):
-    def test_generation_returns_draft_without_repairing_away_missing_content(self):
-        output = yaml.safe_dump(draft())
-        runner = Mock(return_value=output)
-        with tempfile.TemporaryDirectory() as root:
-            result = test_repair.UiRepairTests().execute(root, runner, [])
-        self.assertEqual(result.status, TaskStatus.SUCCESS)
-        self.assertEqual(result.output_yaml, output)
-        runner.assert_called_once()
-
     def test_draft_accepted_without_mutation(self):
         data = draft()
         before = copy.deepcopy(data)

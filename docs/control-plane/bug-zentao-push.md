@@ -115,7 +115,7 @@ GET 的 `ready` 表示本人配置和本地绑定满足条件；实际发起仍�
 | 最终附件镜像的临时容器二进制验收 | 通过，临时容器已清理 |
 | 根目录编排检查及平台 Compose 配置 | 16 项通过，2 项显式容器测试默认跳过；Compose 配置通过 |
 
-附件版镜像已发布为 `crpi-dkip02fuesikq3zy.cn-hangzhou.personal.cr.aliyuncs.com/xiaoming-x/zentao-mcp:2026-10-04-attachments`，远端摘要 `sha256:9b576d52c5bcb3fdfbd1c787ac3ce40b3cbf71ecae7b031fba794a8b8d3fd7ef`，部署模板已固定此摘要。本机 MCP 已升级，数据库已到 `20261004_0027`，五个 Bug 附件的容器内 S3 下载与大小、SHA-256 校验通过；真实禅道上传、查看/下载验收仍待完成，详见[部署记录](zentao-mcp-deployment.md#本机升级与发布核对2026-10-04)。
+附件版镜像已发布为 `crpi-dkip02fuesikq3zy.cn-hangzhou.personal.cr.aliyuncs.com/xiaoming-x/zentao-mcp:2026-10-04-attachments`，远端摘要 `sha256:9b576d52c5bcb3fdfbd1c787ac3ce40b3cbf71ecae7b031fba794a8b8d3fd7ef`，部署模板已固定此摘要。本机 MCP 已升级，数据库已到 `20261004_0027`，五个 Bug 附件的容器内 S3 下载与大小、SHA-256 校验通过；真实禅道上传、查看/下载验收仍待完成，详见[部署记录](zentao-mcp-deployment.md#本机升级与发布核对2026-10-04历史记录)。
 
 ## 正文图片补齐（2026-10-04）
 

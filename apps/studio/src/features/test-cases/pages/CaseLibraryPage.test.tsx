@@ -12,21 +12,8 @@ import { CaseLibraryPage } from './CaseLibraryPage'
 const testScope = vi.hoisted(() => ({ sprintId: 'sprint-1', requirementId: undefined as string | undefined }))
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
-  useActiveSprint: () => ({
-    activeSprintId: 'sprint-1',
-    sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
-    sprintsQuery: { isLoading: false, error: null },
-    selectSprint: vi.fn(),
-    sprintSelectorOptions: [
-      { label: '全部迭代', value: 'all' },
-      { label: 'V1.0.0 迭代', value: 'sprint-1' },
-    ],
-  }),
-}))
 vi.mock('@/domain/projects/hooks/useSprintRequirementScope', () => ({
   useSprintRequirementScope: () => ({
-    currentSprintSelection: null,
     currentRequirementSelection: null,
     resolvedSelectedSprintId: testScope.sprintId,
     resolvedSelectedRequirementId: testScope.requirementId,
@@ -93,6 +80,14 @@ function checkbox(label: string) {
   return node as HTMLInputElement
 }
 
+/** 快速过滤栏里优先级与状态各有一个「全部」，状态组在后，取最后一个。 */
+function statusChip(label: '全部' | '有效' | '已失效') {
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('.case-library-quickbar .tp-chip')]
+  const node = chips.filter((chip) => chip.textContent === label).at(-1)
+  if (!node) throw new Error(`找不到状态胶囊：${label}`)
+  return node
+}
+
 function listResponse<T>(items: T[]) {
   return Object.assign([...items], { items, total: items.length })
 }
@@ -121,7 +116,7 @@ async function openCaseRow(title: string) {
 beforeEach(() => {
   testScope.sprintId = 'sprint-1'
   testScope.requirementId = undefined
-  useWorkbenchStore.setState({ activeProjectId: 'project-1', activeSprintId: 'sprint-1' })
+  useWorkbenchStore.setState({ activeProjectId: 'project-1' })
 })
 
 afterEach(() => {
@@ -661,5 +656,55 @@ it('不重复展示模块列，数字优先级与快速筛选使用一致标签'
   await screen.findByText(loginCase.title)
   expect(screen.queryByText('模块', { selector: 'th' })).toBeNull()
   expect(container.querySelector('.case-library-priority')).toHaveTextContent('P2')
+  client.clear()
+})
+
+it('状态胶囊筛选失效用例，列表行显示失效标签', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  const cases = vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(
+    listResponse([{ ...loginCase, invalidatedAt: '2026-11-22T02:30:00Z' }]),
+  )
+  const client = buildClient()
+  renderPage(client)
+
+  expect(await screen.findByText(/已失效/, { selector: '.tp-tone-tag' })).toBeInTheDocument()
+
+  await userEvent.click(statusChip('已失效'))
+  await waitFor(() =>
+    expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ invalidated: true }),
+  )
+
+  await userEvent.click(statusChip('有效'))
+  await waitFor(() =>
+    expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ invalidated: false }),
+  )
+
+  await userEvent.click(statusChip('全部'))
+  await waitFor(() => expect(statusChip('全部')).toHaveAttribute('aria-pressed', 'true'))
+  client.clear()
+})
+
+it('勾选用例后可以批量标记失效与恢复有效', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
+  const batch = vi
+    .spyOn(api, 'batchInvalidateFunctionTestCases')
+    .mockResolvedValue({ caseIds: ['case-1'], updatedCount: 1 })
+  const client = buildClient()
+  renderPage(client)
+
+  await screen.findByText(loginCase.title)
+  await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
+  await userEvent.click(button('标记失效（1）'))
+  await waitFor(() =>
+    expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], true),
+  )
+  await waitFor(() => expect(button('标记失效')).toBeDisabled())
+
+  await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
+  await userEvent.click(button('恢复有效（1）'))
+  await waitFor(() =>
+    expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], false),
+  )
   client.clear()
 })

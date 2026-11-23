@@ -98,13 +98,37 @@ async def test_worker_rejects_legacy_code_risk_completion(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_repeated_runs_create_distinct_records_without_overwrite(db):  # noqa: F811
+async def test_repeated_runs_create_distinct_records_without_overwrite(  # noqa: F811
+    db,
+    monkeypatch,
+    approved_understanding,  # noqa: F811
+):
+    from unittest.mock import AsyncMock
+
     from sqlalchemy import select
 
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+    from testing_agent.models.generation_candidates import RequirementGenerationChain
+    from testing_agent.services import ai_run_launcher as launcher_module
     from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 
     service = real_risk_service(db)
+    db.add(
+        RequirementGenerationChain(
+            chain_id="material-chain",
+            requirement_id="r",
+            kind="requirement_analysis",
+            task_id="understanding-r",
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        service.launcher,
+        "_prepare_current_material",
+        AsyncMock(return_value=(object(), approved_understanding)),
+    )
+    monkeypatch.setattr(launcher_module, "lock_prepared_requirement_root", AsyncMock())
+    monkeypatch.setattr(launcher_module, "lock_current_material", AsyncMock())
     run_body = {"connectionId": "llm", "triggerType": "manual"}
     first = await service.launcher.launch("code_risk_analysis", "task", run_body, "u")
     with pytest.raises(AppError, match="代码风险正在生成中"):

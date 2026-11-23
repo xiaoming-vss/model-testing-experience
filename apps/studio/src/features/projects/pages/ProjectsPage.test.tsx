@@ -10,8 +10,8 @@ import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.restoreAllMocks() })
 
-function mount(board: string, selectedSprint: string | null = 's1', documentType = 'word') {
-  useWorkbenchStore.setState({ activeProjectId: 'p1', activeSprintId: selectedSprint, activeSprintProjectId: 'p1', projectModalOpen: false, editingProject: null })
+function mount(board: string, sprintId?: string, documentType = 'word') {
+  useWorkbenchStore.setState({ activeProjectId: 'p1', projectModalOpen: false, editingProject: null })
   const paths: string[] = []
   const project = { projectId: 'p1', name: '项目', role: 'owner', permissions: ['read', 'write', 'manage'] }
   const binding = { provider: 'zentao', bindingId: 'b1', status: 'active', remoteResourceId: '301', remoteNameSnapshot: '绑定对象' }
@@ -26,13 +26,13 @@ function mount(board: string, selectedSprint: string | null = 's1', documentType
     const data = path === '/v1/projects' ? { items: [project], total: 1 }
       : path === '/v1/projects/p1' ? project
         : path.endsWith('/sprints') ? { items: sprints, total: 3 }
-          : url.pathname.endsWith('/requirements') ? { items: requirements, total: selectedSprint ? 8 : 21 }
+          : url.pathname.endsWith('/requirements') ? { items: requirements, total: 21 }
             : { items: [], total: 0 }
     return new Response(JSON.stringify({ code: 0, message: 'ok', data }))
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   clients.push(client)
-  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/projects?board=${board}`]}><ProjectsPage /></MemoryRouter></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/projects?board=${board}${sprintId ? `&sprint=${sprintId}` : ''}`]}><ProjectsPage /></MemoryRouter></QueryClientProvider>)
   return { paths, client }
 }
 
@@ -55,29 +55,26 @@ it.each(['sprints', 'requirements'])('进入 %s 列表不逐条查询绑定，�
   } else expect(screen.getAllByText('禅道 已绑定')).toHaveLength(1)
 })
 
-it('全部迭代使用项目级分页，翻页后只展示服务器返回的本页', async () => {
-  const { paths, client } = mount('requirements', null)
+it('需求板按 URL 恢复迭代范围，切换后重置分页', async () => {
+  const { paths, client } = mount('requirements', 's2')
   await screen.findByText('需求1-0')
   await waitFor(() => expect(client.isFetching()).toBe(0))
-  expect(paths).toContain('/v1/projects/p1/requirements?page=1&pageSize=20')
+  expect(paths).toContain('/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s2')
   fireEvent.click(document.querySelector('.ant-pagination-item-2')!)
   await screen.findByText('需求2-0')
   expect(screen.queryByText('需求1-0')).not.toBeInTheDocument()
-  expect(paths).toContain('/v1/projects/p1/requirements?page=2&pageSize=20')
+  expect(paths).toContain('/v1/projects/p1/requirements?page=2&pageSize=20&sprintId=s2')
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('combobox', { name: '筛选迭代' }))
+  await user.click(await screen.findByText('迭代3', { selector: '.ant-select-item-option-content' }))
+  await waitFor(() => expect(paths).toContain('/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s3'))
+  expect(paths).not.toContain('/v1/projects/p1/requirements?page=2&pageSize=20&sprintId=s3')
   expect(
     paths.filter(path => {
       const { pathname } = new URL(path, 'http://localhost')
       return pathname.endsWith('/bindings') || pathname.endsWith('/software-repositories')
     }),
   ).toEqual([])
-  act(() => useWorkbenchStore.getState().setActiveSprintId('s2'))
-  await waitFor(() => expect(paths).toContain('/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s2'))
-  expect(paths).not.toContain('/v1/projects/p1/requirements?page=2&pageSize=20&sprintId=s2')
-  await screen.findByText('需求1-0')
-  act(() => useWorkbenchStore.getState().setActiveSprintId(null))
-  await waitFor(() => expect(client.isFetching()).toBe(0))
-  expect(screen.queryByText('需求2-0')).not.toBeInTheDocument()
-  expect(paths.filter(path => path === '/v1/projects/p1/requirements?page=2&pageSize=20')).toHaveLength(1)
 })
 
 
@@ -103,13 +100,13 @@ it('列表编辑缺失原文时允许切换 Word，旧下载结果不再阻塞�
   expect(update).not.toHaveBeenCalled()
 })
 
-it('需求列表使用卡片和全局迭代范围，不重复显示局部迭代筛选', async () => {
+it('需求列表使用卡片和页面级迭代筛选', async () => {
   mount('requirements')
   await screen.findByText('需求1-0')
   expect(screen.getAllByRole('article')).toHaveLength(8)
   expect(screen.getByRole('link', { name: '需求1-0' })).toHaveAttribute('href', '/requirements/s1-r1-0')
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
-  expect(screen.queryByText('筛选迭代')).not.toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: '筛选迭代' })).toBeInTheDocument()
   expect(screen.getByText('软件仓库 已关联（2）')).toBeInTheDocument()
   expect(screen.getAllByText('2026/10/13 13:21')).toHaveLength(8)
   expect(screen.queryByText('迭代1 · 8 条需求')).not.toBeInTheDocument()
@@ -118,6 +115,6 @@ it('需求列表使用卡片和全局迭代范围，不重复显示局部迭代�
   expect(screen.getByText('需求说明.docx')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '刷新' })).toBeInTheDocument()
   const pageHeader = screen.getByRole('heading', { name: '需求' }).closest('.requirements-list-page-header')!
-  expect(pageHeader).toHaveTextContent('共 8 条')
+  expect(pageHeader).toHaveTextContent('共 21 条')
   expect(pageHeader.closest('.requirements-list-panel')).toBeNull()
 })

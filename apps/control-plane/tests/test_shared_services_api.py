@@ -182,9 +182,7 @@ def test_shared_service_http_flags_reach_personal_connection(api):
         json={"accessToken": "personal-token"},
     )
     assert authorized.status_code == 200, authorized.text
-    connections = api.get(
-        f"/v1/projects/{pid}/integrations/gitlab/connections", headers=owner
-    )
+    connections = api.get(f"/v1/projects/{pid}/integrations/gitlab/connections", headers=owner)
     assert connections.status_code == 200
     personal = connections.json()["data"]["items"][0]
     assert personal["allowHttp"] is True

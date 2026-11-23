@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button, Result } from 'antd'
+import { isChunkLoadError } from '@/shared/utils/chunkLoadRecovery'
 
 type AppErrorBoundaryState = {
   error: Error | null
@@ -23,7 +24,9 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, AppErro
       <Result
         status="error"
         title="页面加载失败"
-        subTitle={this.state.error.message || '发生了未处理的错误，请重新加载页面。'}
+        subTitle={isChunkLoadError(this.state.error)
+          ? '页面版本已更新，请重新加载以获取最新内容。'
+          : this.state.error.message || '发生了未处理的错误，请重新加载页面。'}
         extra={<Button type="primary" onClick={() => window.location.reload()}>重新加载</Button>}
       />
     </main>

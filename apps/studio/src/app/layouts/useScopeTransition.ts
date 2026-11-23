@@ -1,20 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import { APP_MOTION } from '@/shared/ui/motion'
 
-type Scope = 'project' | 'sprint'
-type PendingTransition = { scope: Scope; target: string }
-
-/** Animate only explicit changes in the project/sprint selectors. */
-export function useScopeTransition(contentRef: RefObject<HTMLElement | null>, projectId: string | undefined, sprintId: string | undefined) {
-  const pending = useRef<PendingTransition | null>(null)
+/** Animate the content only when the project selector changes explicitly. */
+export function useScopeTransition(contentRef: RefObject<HTMLElement | null>, projectId: string | undefined) {
+  const pending = useRef<string | null>(null)
   const running = useRef<Animation | null>(null)
   useEffect(() => () => { running.current?.cancel() }, [])
 
   useLayoutEffect(() => {
-    const change = pending.current
-    if (!change) return
-    const current = change.scope === 'project' ? projectId : sprintId ?? 'all'
-    if (current !== change.target) return
+    const target = pending.current
+    if (target === null || projectId !== target) return
     pending.current = null
     const element = contentRef.current
     if (!element || typeof element.animate !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -26,12 +21,12 @@ export function useScopeTransition(contentRef: RefObject<HTMLElement | null>, pr
     )
     animation.id = 'app-page-transition'
     running.current = animation
-  }, [contentRef, projectId, sprintId])
+  }, [contentRef, projectId])
 
-  function prepare(scope: Scope, current: string | undefined, target: string, validValues: string[]) {
-    const currentValue = current ?? (scope === 'sprint' ? 'all' : '')
+  function prepare(current: string | undefined, target: string, validValues: string[]) {
+    const currentValue = current ?? ''
     const isValid = validValues.includes(currentValue) && validValues.includes(target)
-    pending.current = isValid && currentValue !== target ? { scope, target } : null
+    pending.current = isValid && currentValue !== target ? target : null
   }
 
   return prepare

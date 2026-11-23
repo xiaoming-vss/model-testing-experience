@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
+import { useSprintFilter } from '@/domain/projects/hooks/useSprintFilter'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { api, listItems, listTotal } from '@/services/api'
 import type { Bug, BugAction, BugSortField } from '../types'
@@ -14,10 +14,19 @@ export function useBugList() {
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const access = useProjectAccess(activeProjectId)
   const bugOnly = isBugOnlyProject(access.project)
-  const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
-  const { activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions } =
-    bugOnly ? bugScope : sprintScope
+  const sprintFilter = useSprintFilter(activeProjectId, {
+    allowAll: true,
+    enabled: access.can('read') && !bugOnly,
+    sprints: bugOnly ? bugScope.sprints : undefined,
+    defaultSelection: bugOnly ? 'all' : 'latest',
+  })
+  const { selectedSprintId: activeSprintId, sprints } = sprintFilter
+  // Bug-only 成员的迭代选项来自 /bugs/options，加载态和错误也以它为准。
+  const sprintsQuery = bugOnly ? bugScope.optionsQuery : sprintFilter.sprintsQuery
+  const visibleSprintFilter = bugOnly
+    ? { ...sprintFilter, loading: bugScope.optionsQuery.isLoading, error: bugScope.optionsQuery.error }
+    : sprintFilter
 
   const [status, setStatus] = useState<string>('')
   const [confirmed, setConfirmed] = useState<boolean | undefined>()
@@ -100,5 +109,5 @@ export function useBugList() {
     onEdit: (bug) => setEditBug(bug),
     sort })
 
-  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, sort, setSort, createOpen, setCreateOpen, importOpen, setImportOpen, transition, setTransition, editBug, setEditBug, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
+  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, sprintFilter: visibleSprintFilter, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, sort, setSort, createOpen, setCreateOpen, importOpen, setImportOpen, transition, setTransition, editBug, setEditBug, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
 }

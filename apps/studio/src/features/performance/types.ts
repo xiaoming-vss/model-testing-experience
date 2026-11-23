@@ -15,6 +15,7 @@ export type PerfCaseSummary = {
   dataFiles: PerfDataFile[]
   createdAt?: string
   updatedAt?: string
+  invalidatedAt?: string | null
 }
 
 export type PerfSuiteCase = PerfCaseSummary & {
@@ -141,6 +142,8 @@ export type PerfSuiteRunSummary = {
   suiteRunId: string
   suiteId: string
   projectId: string
+  sprintId?: string | null
+  sprintName?: string
   suiteName: string
   environmentId: string
   environmentName: string
@@ -184,7 +187,7 @@ export type PerfSuiteRun = PerfSuiteRunSummary & {
   items: PerfSuiteRunItem[]
 }
 
-export type StartPerfSuiteRunPayload = StartPerfRunPayload
+export type StartPerfSuiteRunPayload = StartPerfRunPayload & { sprintId: string }
 
 export type MonitoringAuthType = 'none' | 'basic' | 'bearer' | 'headers'
 

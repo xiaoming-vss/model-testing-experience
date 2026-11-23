@@ -11,8 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrBadRequest
+from testing_agent.db.savepoint import ensure_outer_transaction
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
+from testing_agent.services.generation_candidate_completion import publish_candidate_attempt
+from testing_agent.services.repository_profile_candidates import publish_profile_candidate
 from testing_agent.services.stage_storage import DirectStageStorage
 from testing_agent.services.stage_storage.module_progress import accept_module_progress
 
@@ -66,18 +69,23 @@ class StageWorkerTransitions:
         output_format: str,
         output_context: dict[str, Any] | None,
     ) -> AiGenerationAttempt:
-        _, attempt = await self.current(stage_id, attempt_id, worker_task_id)
-        previous = (attempt.output_context_json or {}).get("moduleGeneration")
-        if previous is not None:
-            output_context = {**(output_context or {}), "moduleGeneration": previous}
-        return await self.storage.publish(
-            stage_id,
-            attempt_id=attempt_id,
-            worker_task_id=worker_task_id,
-            content=content,
-            output_format=output_format,
-            output_context=output_context,
-        )
+        await self.session.run_sync(ensure_outer_transaction)
+        async with self.session.begin_nested():
+            stage, attempt = await self.current(stage_id, attempt_id, worker_task_id)
+            previous = (attempt.output_context_json or {}).get("moduleGeneration")
+            if previous is not None:
+                output_context = {**(output_context or {}), "moduleGeneration": previous}
+            attempt = await self.storage.publish(
+                stage_id,
+                attempt_id=attempt_id,
+                worker_task_id=worker_task_id,
+                content=content,
+                output_format=output_format,
+                output_context=output_context,
+            )
+            await publish_candidate_attempt(self.session, stage=stage, attempt=attempt)
+            await publish_profile_candidate(self.session, stage=stage, attempt=attempt)
+            return attempt
 
     async def failed(
         self,

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
@@ -32,10 +32,14 @@ vi.mock('@/features/requirements/components/RequirementDocumentPreviewModal', ()
   RequirementDocumentPreviewContent: () => <div>需求正文内容</div>,
 }))
 const clients: QueryClient[] = []
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks(); useWorkbenchStore.setState({ activeProjectId: undefined, activeSprintId: undefined }) })
+function ProjectsListProbe() {
+  const [params] = useSearchParams()
+  return <div>需求列表页面 {params.get('board')} {params.get('sprint')}</div>
+}
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks(); useWorkbenchStore.setState({ activeProjectId: undefined }) })
 function response(data: unknown, status = 200) { return new Response(JSON.stringify({ code: status === 200 ? 0 : status, message: status === 200 ? 'ok' : '无权访问需求', data }), { status, headers: { 'Content-Type': 'application/json' } }) }
 function mount(forbidden = false, entry = '/requirements/req', documentType = 'docx') {
-  useWorkbenchStore.setState({ activeProjectId: 'other-project', activeSprintId: 'other-sprint' })
+  useWorkbenchStore.setState({ activeProjectId: 'other-project' })
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const path = new URL(String(input), 'http://localhost').pathname
     if (path === '/v1/requirements/req') return forbidden ? response({}, 403) : response({ requirementId: 'req', sprintId: 'sprint', name: '登录需求', documentType, documentFilename: 'prd.docx' })
@@ -44,7 +48,7 @@ function mount(forbidden = false, entry = '/requirements/req', documentType = 'd
     return response({ items: [], total: 0 })
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client)
-  render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter initialEntries={[entry]}><Routes><Route path="/projects" element={<div>需求列表页面</div>} /><Route path="/requirements/:requirementId" element={<RequirementDetailPage />} /></Routes></MemoryRouter></QueryClientProvider></TestThemeProvider>)
+  render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter initialEntries={[entry]}><Routes><Route path="/projects" element={<ProjectsListProbe />} /><Route path="/requirements/:requirementId" element={<RequirementDetailPage />} /></Routes></MemoryRouter></QueryClientProvider></TestThemeProvider>)
 }
 it('进入需求直接展示生成全景，文档交给工作区在画布内打开', async () => {
   mount()
@@ -57,7 +61,7 @@ it('进入需求直接展示生成全景，文档交给工作区在画布内打�
   expect(screen.queryByRole('tablist', { name: '需求工作区' })).not.toBeInTheDocument()
   expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   expect(screen.queryByText('需求正文内容')).not.toBeInTheDocument()
-  await waitFor(() => expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project', activeSprintId: 'sprint' }))
+  await waitFor(() => expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project' }))
   await userEvent.setup().click(screen.getByRole('button', { name: '查看需求文档' }))
   expect(await screen.findByRole('dialog', { name: '需求文档' })).toBeInTheDocument()
   const crumbs = document.querySelector('.requirement-detail-crumbs')
@@ -126,13 +130,12 @@ it('从富文本切换 Word 后必须上传新文件，再同时保存名称与�
 })
 
 
-it('从生成全景返回需求列表，保留当前项目与迭代范围', async () => {
+it('从生成全景返回需求列表，带回需求所属迭代', async () => {
   mount()
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: '查看需求文档' }))
   await user.click(screen.getByRole('button', { name: '返回需求列表' }))
-  expect(await screen.findByText('需求列表页面')).toBeInTheDocument()
-  expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project', activeSprintId: 'sprint' })
+  expect(await screen.findByText(/需求列表页面 requirements sprint/)).toBeInTheDocument()
 })
 
 it('需求读取失败可就地重试恢复正文', async () => {

@@ -5,11 +5,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { api } from '@/services/api'
 import { aiTestingApi } from '../api/aiTesting.api'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { FunctionalCaseRelationsModal } from './FunctionalCaseRelationsModal'
 
 vi.mock('@/services/api', () => ({ api: { getFunctionalCaseGenerateTask: vi.fn(), getFunctionalCaseGenerateTaskRun: vi.fn() } }))
 vi.mock('../api/aiTesting.api', () => ({ aiTestingApi: { generateFunctionalCaseRelationAnalysis: vi.fn() } }))
+vi.mock('../api/generationCandidates.api', () => ({ generationCandidatesApi: { relations: vi.fn(), runRelations: vi.fn() } }))
 vi.mock('@/domain/projects/components/ProjectAccessScope', () => ({ ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children }))
 vi.mock('./FunctionalCaseRelationsGraph', () => ({ FunctionalCaseRelationsGraph: ({ content }: { content: string }) => <div data-testid="relations-content">{content}</div> }))
 
@@ -54,9 +56,31 @@ it('图谱任务失败时展示失败原因并允许重试', async () => {
   expect(screen.getByRole('button', { name: '重新生成图谱' })).toBeEnabled()
 })
 
-it('完整用例尚未审核通过时禁止生成图谱', async () => {
+it('完整用例尚未采用时禁止生成图谱', async () => {
   vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue({ ...ready, reviewStatus: 'pending' })
   mount()
   expect(await screen.findByText('当前运行尚未生成用例图谱')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '生成图谱' })).toBeDisabled()
+})
+
+it('候选模式以当前完整用例令牌生成和读取图谱', async () => {
+  let submitted = false
+  vi.mocked(generationCandidatesApi.relations).mockImplementation(async () => ({
+    candidateId: 'candidate', snapshotId: 'snapshot', currentToken: 'current-token', sourceAttemptId: 'run',
+    resultYaml: '[]', status: submitted ? 'success' : 'not_started', attemptId: submitted ? 'graph' : null,
+    errorMessage: '', caseRelations: submitted ? relations : null,
+  }))
+  vi.mocked(generationCandidatesApi.runRelations).mockImplementation(async () => {
+    submitted = true
+    return { attemptId: 'graph', replayed: false }
+  })
+  render(<TestThemeProvider><QueryClientProvider client={client}>
+    <FunctionalCaseRelationsModal embedded open taskId="task" runId="run" onClose={() => {}} chooseConnection={async () => 'llm'} candidate={{ requirementId: 'req', currentToken: 'current-token' }} />
+  </QueryClientProvider></TestThemeProvider>)
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '生成图谱' }))
+  await waitFor(() => expect(generationCandidatesApi.runRelations).toHaveBeenCalledWith('req', expect.objectContaining({ currentToken: 'current-token', connectionId: 'llm', requestId: expect.any(String) })))
+  expect(await screen.findByTestId('relations-content')).toHaveTextContent('P01')
+  expect(api.getFunctionalCaseGenerateTaskRun).not.toHaveBeenCalled()
+  expect(aiTestingApi.generateFunctionalCaseRelationAnalysis).not.toHaveBeenCalled()
 })

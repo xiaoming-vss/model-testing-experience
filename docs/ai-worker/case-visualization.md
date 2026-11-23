@@ -68,7 +68,7 @@ python3 scripts/evaluate_case_visualization.py \
 
 本次只调整 `SKILL.md` 的生成指导，1.0 Schema、校验器和 Worker 执行协议不变。已生成产物不会被自动改写；后续新生成或用户手动重新生成时获取当前已发布 Skill。独立代理试跑只能验证这次指令在有限样例上的行为，不替代运行环境实际模型的再生成，也不代表前述 50 条人工验收门槛已经通过。
 
-调整后的独立代理试跑使用原运行产物对应的三段有效区间输入，以及选项集合、保存不触发切片两条输入：三条均通过 `validate_artifact`。区间样例生成 1 个 interval 主图、3 条核验断言、3 个步骤 action 短标签，保留 ≥3 秒、总量 3、一一对应、不拆分和不跨段合并；选项与否定触发样例各 1 个图块。输出保存在本地 `.scratch/test-order-case-visualization/skill-refinement/outputs-v2.json`，不属于运行环境模型的新产物。`test_case_visualization_contract.py` 与 `test_project_skill_space.py` 合计 37 项通过，Skill 元数据校验及协议副本同步检查通过。
+调整后的独立代理试跑使用原运行产物对应的三段有效区间输入，以及选项集合、保存不触发切片两条输入：三条均通过 `validate_artifact`。区间样例生成 1 个 interval 主图、3 条核验断言、3 个步骤 action 短标签，保留 ≥3 秒、总量 3、一一对应、不拆分和不跨段合并；选项与否定触发样例各 1 个图块。[历史试跑记录和输出](records/2026-11-14-case-visualization-skill-trial.md)不属于运行环境模型的新产物。`test_case_visualization_contract.py` 与 `test_project_skill_space.py` 合计 37 项通过，Skill 元数据校验及协议副本同步检查通过。
 
 已通过既有发布服务更新运行环境的单个系统默认技能，并同步到 `/home/xiaoming/下载/skills/default-skill-new-11-14/mtx-analyze-case-visualization/`。4 个文件均回读 S3 比对内容、大小与 SHA-256；其他技能不变。此次 `SKILL.md` SHA-256 为 `f8cee6e3e76304c7e9c27c591a3b45c6f4a3db3eb1f3a74179e7e1456cb12c5f`。未重新生成或覆盖既有业务图解。
 

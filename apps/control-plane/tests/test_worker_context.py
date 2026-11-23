@@ -70,8 +70,8 @@ def test_context_resolves_domain_owner_without_adding_queue_fields(
     seed_task(db)
     db.add_all(
         [
-            ApiCollection(collection_id="ac", requirement_id="r", name="API"),
-            UiTestSuite(suite_id="us", requirement_id="r", name="UI"),
+            ApiCollection(collection_id="ac", project_id="p", requirement_id="r", name="API"),
+            UiTestSuite(suite_id="us", project_id="p", requirement_id="r", name="UI"),
         ]
     )
     db.flush()
@@ -89,6 +89,7 @@ def test_context_resolves_domain_owner_without_adding_queue_fields(
             ApiCollectionRun(
                 collection_run_id="ac-run",
                 collection_id="ac",
+                project_id="p",
                 environment_id="",
                 trigger_user_id="u",
             ),
@@ -97,11 +98,16 @@ def test_context_resolves_domain_owner_without_adding_queue_fields(
                 case_id="api",
                 collection_id="ac",
                 collection_run_id="ac-run",
+                project_id="p",
                 environment_id="",
                 trigger_user_id="u",
             ),
-            UiTestSuiteRun(suite_run_id="us-run", suite_id="us", trigger_user_id="u"),
-            UiTestCaseRun(run_id="ui-run", case_id="ui", suite_id="us", trigger_user_id="u"),
+            UiTestSuiteRun(
+                suite_run_id="us-run", suite_id="us", project_id="p", trigger_user_id="u"
+            ),
+            UiTestCaseRun(
+                run_id="ui-run", case_id="ui", suite_id="us", project_id="p", trigger_user_id="u"
+            ),
         ]
     )
     task = WorkerTask(domain=domain, task_type=task_type, task_id="dispatch", run_id=run_id)

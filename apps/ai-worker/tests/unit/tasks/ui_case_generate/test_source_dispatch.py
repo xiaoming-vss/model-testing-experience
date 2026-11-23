@@ -116,44 +116,10 @@ class _RecordingPreparer:
 
 
 class UiCaseSourceDispatchTests(unittest.TestCase):
-    def test_repository_source_uses_preparer_and_reports_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as root:
-            agent_config = PiConfig(runtime_root=root)
-            task = _task()
-            run_root = task_run_root(agent_config, task)
-            preparer = _RecordingPreparer(run_root)
-            fetcher = Mock(return_value=_credentials())
-            progress = []
-            executor = UiCaseExecutor(
-                agent_config=agent_config,
-                repository_source_preparer=preparer,
-                credentials_fetcher=fetcher,
-                skill_runner=lambda **kwargs: VALID_YAML,
-            )
-
-            result = executor.execute(task, datetime.now().astimezone(), progress.append)
-
-            self.assertEqual(TaskStatus.SUCCESS, result.status)
-            fetcher.assert_called_once_with(task)
-            self.assertEqual(TOKEN, preparer.calls[0]["credentials"][0].access_token)
-            self.assertFalse(run_root.exists())
-
-        intermediate = json.loads(result.intermediate_json_text)
-        self.assertEqual("repo-1", intermediate["sourceRepository"]["repositoryId"])
-        self.assertEqual(COMMIT, intermediate["sourceRepository"]["commit"])
-        self.assertEqual(COMMIT, intermediate["sourceCommit"])
-        self.assertNotIn(TOKEN, result.intermediate_json_text)
-
-        self.assertEqual(1, len(progress))
-        progress_payload = json.loads(progress[0].intermediate_json_text)
-        self.assertEqual("repo-1", progress_payload["sourceRepository"]["repositoryId"])
-        self.assertEqual(COMMIT, progress_payload["sourceCommit"])
-        self.assertNotIn(TOKEN, progress[0].intermediate_json_text)
-
     def test_repository_source_failure_retains_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             agent_config = PiConfig(runtime_root=root)
-            task = _task()
+            task = _task(three_stage=True)
             run_root = task_run_root(agent_config, task)
             executor = UiCaseExecutor(
                 agent_config=agent_config,
@@ -172,7 +138,7 @@ class UiCaseSourceDispatchTests(unittest.TestCase):
 
     def test_repository_source_without_credentials_fails_before_clone(self) -> None:
         with tempfile.TemporaryDirectory() as root:
-            task = _task()
+            task = _task(three_stage=True)
             preparer = Mock()
             executor = UiCaseExecutor(
                 agent_config=PiConfig(runtime_root=root),

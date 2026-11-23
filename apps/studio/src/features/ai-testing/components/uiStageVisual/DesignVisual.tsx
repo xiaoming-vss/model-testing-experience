@@ -72,7 +72,7 @@ function StepInspector({ step, limitations }: { step: DesignStep; limitations: s
     <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>拆解操作 <span className={uisvInspectorSectionCountClass}>{step.actions.length}</span></h4>{step.actions.length ? step.actions.map((action: DesignAction, index) => <TraceItem key={action.actionId} index={index + 1} operation={action.operation} target={action.target} value={action.value} status={action.status} reason={action.reason} />) : <p className={cx('uisv-muted', uisvInspectorParagraphClass)}>没有拆解出操作。</p>}</section>
     <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>可执行断言 <span className={uisvInspectorSectionCountClass}>{step.expectations.length}</span></h4>{step.expectations.length ? step.expectations.map((expectation: DesignExpectation, index) => <TraceItem key={expectation.expectationId} index={index + 1} assertion={expectation.assertion} target={expectation.target} value={expectation.value} status={expectation.status} reason={expectation.reason} />) : <p className={cx('uisv-muted', uisvInspectorParagraphClass)}>没有拆解出断言。</p>}</section>
     {limitations.length ? <section className={uisvInspectorSectionClass}><h4 className={uisvInspectorSectionTitleClass}>本用例限制 <span className={uisvInspectorSectionCountClass}>{limitations.length}</span></h4>{limitations.slice(0, 2).map(limitation => <div className={cx(uisvNoteBoxClass, uisvNoteBoxAmberClass, uisvNoteBoxIconClass)} key={limitation}><WarningFilled /><span>{limitation}</span></div>)}</section> : null}
-    <div className={uisvInspectorNoteClass}><LinkOutlined /> 每个操作和断言都保留 sourceQuote；审核时可直接对照源功能用例，不需要在 JSON 和页面之间来回切换。</div>
+    <div className={uisvInspectorNoteClass}><LinkOutlined /> 每个操作和断言都保留 sourceQuote；采用前可直接对照源功能用例，不需要在 JSON 和页面之间来回切换。</div>
   </div>
 }
 
@@ -134,7 +134,7 @@ export function DesignVisual({ content, onShowRaw }: { content: string; onShowRa
         <span><strong>{activeCase.steps.reduce((total, step) => total + step.actions.length, 0)}</strong> 操作</span>
         <span><strong>{activeCase.steps.reduce((total, step) => total + step.expectations.length, 0)}</strong> 断言</span>
         <span className={excludedCount ? 'warn' : ''}><strong>{excludedCount}</strong> 排除</span>
-        <em>所有步骤均保留 sourceQuote；排除项需在审核备注中说明。</em>
+        <em>所有步骤均保留 sourceQuote；排除项需说明原因。</em>
       </div>
       <div className="uisv-table-foot flex flex-[0_0_32px] items-center justify-between border-t border-[var(--uisv-eef2f7)] bg-[var(--uisv-fbfcfe)] px-3 text-[11px] text-[var(--uisv-94a3b8)]"><span>步骤 {activeCase.steps.length} 个</span><span>点击步骤查看原文映射</span></div>
     </main>

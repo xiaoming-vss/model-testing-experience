@@ -62,7 +62,7 @@ def seed(db):
             end_time=now + timedelta(days=1),
         ),
         row(Requirement, requirement_id="req", sprint_id="s1"),
-        row(UiTestSuite, suite_id="suite", requirement_id="req"),
+        row(UiTestSuite, suite_id="suite", project_id="p1", requirement_id="req"),
         row(UiTestCase, case_id="case", suite_id="suite", steps_json=[]),
         row(
             SprintDailyMetrics,

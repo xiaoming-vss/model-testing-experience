@@ -150,17 +150,3 @@ async def generate_design_batches(
 def _validate_batch(raw: str, extraction: dict[str, Any], batch: list[str]) -> dict[str, Any]:
     subset = {name: extraction[name] for name in batch}
     return validate_design_json(raw, subset)
-
-
-def current_design_subset(
-    current_design: dict[str, Any] | None, names: list[str]
-) -> dict[str, Any] | None:
-    if current_design is None:
-        return None
-    interfaces = current_design.get("interfaces")
-    if not isinstance(interfaces, dict):
-        return None
-    return {
-        "schemaVersion": DESIGN_SCHEMA_VERSION,
-        "interfaces": {name: deepcopy(interfaces[name]) for name in names if name in interfaces},
-    }

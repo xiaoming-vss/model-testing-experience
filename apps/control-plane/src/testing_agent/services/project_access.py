@@ -10,7 +10,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.core.errors import ErrForbidden, ErrNotFound
+from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.domain.project_policy import (
     ProjectAction as ProjectAction,
 )
@@ -66,6 +66,34 @@ async def require_project_id(
         raise ErrNotFound()
     await require_project_access(session, user_id, project, action)
     return project
+
+
+async def require_requirement_in_project(
+    repository: RequirementAccessRepository,
+    user_id: str,
+    requirement_id: str,
+    project_id: str,
+    *,
+    action: ProjectAction = "write",
+) -> Requirement:
+    """Validate a requirement association against the owning project.
+
+    The caller already owns a project-scoped asset; the requirement must exist,
+    belong to that project, and the actor must hold the requested project action.
+    """
+    requirement = await repository.get_requirement(requirement_id)
+    if requirement is None:
+        raise ErrNotFound()
+    sprint = await repository.get_sprint(requirement.sprint_id)
+    if sprint is None:
+        raise ErrNotFound()
+    project = await repository.get_project(sprint.project_id)
+    if project is None:
+        raise ErrNotFound()
+    await require_project_access(repository.session, user_id, project, action)
+    if sprint.project_id != project_id:
+        raise ErrBadRequest()
+    return requirement
 
 
 async def require_requirement_access(

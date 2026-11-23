@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Form, type InputRef } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
 import { useProjectRequirementOptions } from '@/domain/projects/hooks/useProjectRequirementOptions'
 import { useSprintRequirementScope } from '@/domain/projects/hooks/useSprintRequirementScope'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
@@ -20,6 +19,10 @@ import {
   type FunctionTestCase,
   type FunctionTestSuite,
 } from '@/services/api'
+import {
+  invalidatedFilterParam,
+  type CaseInvalidationFilter,
+} from '@/shared/utils/caseInvalidation'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import type { CaseImportMode } from '@/shared/utils/caseImport'
 import { isJsonFileName } from '@/shared/utils/caseImport'
@@ -75,11 +78,11 @@ function getFunctionCaseErrorMessage(error: unknown) {
 export function useCaseLibraryPage() {
   const queryClient = useQueryClient()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
-  const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
 
   const [suiteId, setSuiteId] = useState<string | null>(null)
   const [priority, setPriority] = useState<string | null>(null)
   const [caseType, setCaseType] = useState<string | null>(null)
+  const [invalidatedFilter, setInvalidatedFilter] = useState<CaseInvalidationFilter>('all')
   const [suiteFilter, setSuiteFilter] = useState('')
   const [keyword, setKeyword] = useState('')
   const [searchResetKey, setSearchResetKey] = useState(0)
@@ -114,14 +117,15 @@ export function useCaseLibraryPage() {
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
+    selectSprint,
+    sprintFilterOptions,
     sprints,
     sprintsQuery,
   } = useSprintRequirementScope({
     activeProjectId,
     includeAllRequirementOption: true,
     includeAllSprintOption: true,
-    defaultToAllWhenIncluded: true,
-    sprintScope: { value: globalSprintId, onChange: selectGlobalSprint },
+    defaultRequirementSelection: 'all',
     requirementOptions: allRequirements,
     requirementOptionsLoading: allRequirementsQuery.isLoading,
   })
@@ -132,7 +136,7 @@ export function useCaseLibraryPage() {
   // 翻页保留选择，业务范围变化则清空，避免把旧测试集的 ID 提交给新范围。
   useEffect(() => {
     setSelectedCaseIds([])
-  }, [activeProjectId, selectedSprintId, selectedRequirementId, suiteId])
+  }, [activeProjectId, selectedSprintId, selectedRequirementId, suiteId, invalidatedFilter])
 
   const displayRequirementFilterOptions = useMemo(() => {
     if (selectedSprintId) return requirementFilterOptions
@@ -185,6 +189,7 @@ export function useCaseLibraryPage() {
       suiteId,
       priority,
       caseType,
+      invalidatedFilter,
       keyword,
       page,
       pageSize,
@@ -196,6 +201,7 @@ export function useCaseLibraryPage() {
         suiteId: suiteId ?? '',
         priority: priority ?? '',
         caseType: caseType ?? '',
+        invalidated: invalidatedFilterParam(invalidatedFilter),
         keyword,
         page,
         pageSize,
@@ -205,7 +211,7 @@ export function useCaseLibraryPage() {
   })
   const cases = listItems(casesQuery.data)
   const total = listTotal(casesQuery.data)
-  const hasCaseFilters = Boolean(priority || caseType || keyword)
+  const hasCaseFilters = Boolean(priority || caseType || invalidatedFilter !== 'all' || keyword)
   const hasSuiteData = suitesQuery.data !== undefined
   const hasCaseData = casesQuery.data !== undefined
   const noSuites = suitesQuery.isSuccess && suites.length === 0
@@ -214,6 +220,7 @@ export function useCaseLibraryPage() {
   function clearCaseFilters() {
     setPriority(null)
     setCaseType(null)
+    setInvalidatedFilter('all')
     setSearchResetKey((current) => current + 1)
     setKeyword('')
     setPage(1)
@@ -335,6 +342,21 @@ export function useCaseLibraryPage() {
       queryClient.invalidateQueries({ queryKey: ['caseLibraryCases'] })
       queryClient.invalidateQueries({ queryKey: ['caseLibrarySuites'] })
       forgetDeletedCases(result?.deletedIds ?? selectedCaseIds)
+    },
+    onError: (error) => message.error(getFunctionCaseErrorMessage(error)),
+  })
+
+  const batchInvalidateCasesMutation = useMutation({
+    mutationFn: (invalidated: boolean) =>
+      api.batchInvalidateFunctionTestCases(activeProjectId!, selectedCaseIds, invalidated),
+    onSuccess: (result, invalidated) => {
+      message.success(
+        invalidated
+          ? `已标记失效 ${result?.updatedCount ?? 0} 条用例`
+          : `已恢复有效 ${result?.updatedCount ?? 0} 条用例`,
+      )
+      queryClient.invalidateQueries({ queryKey: ['caseLibraryCases'] })
+      setSelectedCaseIds([])
     },
     onError: (error) => message.error(getFunctionCaseErrorMessage(error)),
   })
@@ -493,14 +515,16 @@ export function useCaseLibraryPage() {
   return {
     queryClient,
     activeProjectId,
-    globalSprintId,
-    selectGlobalSprint,
+    sprintFilterOptions,
+    selectSprint,
     suiteId,
     setSuiteId,
     priority,
     setPriority,
     caseType,
     setCaseType,
+    invalidatedFilter,
+    setInvalidatedFilter,
     suiteFilter,
     setSuiteFilter,
     keyword,
@@ -571,6 +595,7 @@ export function useCaseLibraryPage() {
     deleteCaseMutation,
     saveCaseMutation,
     batchDeleteCasesMutation,
+    batchInvalidateCasesMutation,
     deleteSuiteMutation,
     importFunctionCasesMutation,
     forgetDeletedCases,

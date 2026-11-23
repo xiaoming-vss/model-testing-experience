@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import '@/shared/styles/surface-tokens.css'
 import {
   AppstoreOutlined,
   ArrowLeftOutlined,
   DownOutlined,
-  EditOutlined,
   HistoryOutlined,
   PlusOutlined,
   SaveOutlined,
@@ -19,6 +19,7 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Tag,
@@ -26,7 +27,13 @@ import {
   Typography,
 } from 'antd'
 import type { UploadProps } from 'antd'
+import { CaseInvalidatedTag } from '@/shared/components/CaseInvalidatedTag'
+import { CaseInvalidationModal } from '@/shared/components/CaseInvalidationModal'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
+import {
+  isCaseInvalidated,
+  type CaseInvalidationFilter,
+} from '@/shared/utils/caseInvalidation'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
@@ -57,7 +64,6 @@ import { PerfCaseDataSection } from '../components/PerfCaseWorkbench'
 import { PerfContractToggle, type PerfContractView } from '../components/PerfContractToggle'
 import { PerfLoadModelForm } from '../components/PerfLoadModelForm'
 import { PerfStepEditor } from '../components/PerfStepsEditor'
-import { PerfSuiteDrawer, type PerfSuiteFormValues } from '../components/PerfSuiteDrawer'
 import { StartPerfSuiteRunModal } from '../components/StartPerfSuiteRunModal'
 
 const { Text } = Typography
@@ -76,8 +82,23 @@ export function PerformanceSuiteDetailPage() {
   const projectId = suite?.projectId
   const { can } = useProjectAccess(projectId ?? '')
   const canWrite = can('write')
+  const [invalidatedFilter, setInvalidatedFilter] = useState<CaseInvalidationFilter>('all')
+  const [caseStatusOpen, setCaseStatusOpen] = useState(false)
   const requestedCaseId = searchParams.get('case') ?? ''
-  const activeCase = suite?.cases.find((item) => item.caseId === requestedCaseId) ?? suite?.cases[0]
+  const visibleCases = useMemo(
+    () =>
+      (suite?.cases ?? []).filter((item) => {
+        if (invalidatedFilter === 'valid') return !isCaseInvalidated(item)
+        if (invalidatedFilter === 'invalid') return isCaseInvalidated(item)
+        return true
+      }),
+    [invalidatedFilter, suite?.cases],
+  )
+  const invalidatedCount = useMemo(
+    () => (suite?.cases ?? []).filter((item) => isCaseInvalidated(item)).length,
+    [suite?.cases],
+  )
+  const activeCase = visibleCases.find((item) => item.caseId === requestedCaseId) ?? visibleCases[0]
   const activeCaseId = activeCase?.caseId ?? ''
   const requestedStepParam = searchParams.get('step')
   const requestedStepIndex = requestedStepParam !== null && /^\d+$/.test(requestedStepParam)
@@ -91,12 +112,26 @@ export function PerformanceSuiteDetailPage() {
   const [collapsedCaseIds, setCollapsedCaseIds] = useState<Set<string>>(() => new Set())
   const [contractView, setContractView] = useState<PerfContractView>('visual')
   const [runOpen, setRunOpen] = useState(false)
-  const [suiteDrawerOpen, setSuiteDrawerOpen] = useState(false)
   const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | undefined>(undefined)
   const [uploading, setUploading] = useState(false)
   const [createCaseOpen, setCreateCaseOpen] = useState(false)
   const [createCaseForm] = Form.useForm<{ name: string }>()
+
+  const batchInvalidateCasesMutation = useMutation({
+    mutationFn: ({ caseIds, invalidated }: { caseIds: string[]; invalidated: boolean }) =>
+      api.batchInvalidatePerfCases(projectId!, caseIds, invalidated),
+    onSuccess: (result, { invalidated }) => {
+      message.success(
+        invalidated
+          ? `已标记失效 ${result?.updatedCount ?? 0} 条用例`
+          : `已恢复有效 ${result?.updatedCount ?? 0} 条用例`,
+      )
+      queryClient.invalidateQueries({ queryKey: ['perfSuite', suiteId] })
+      setCaseStatusOpen(false)
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
 
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', projectId, 'perf'],
@@ -294,20 +329,6 @@ export function PerformanceSuiteDetailPage() {
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const updateSuiteMutation = useMutation({
-    mutationFn: (values: PerfSuiteFormValues) => api.updatePerfSuite(suiteId, {
-      name: values.name.trim(),
-      description: values.description?.trim() ?? '',
-    }),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(['perfSuite', suiteId], updated)
-      queryClient.invalidateQueries({ queryKey: ['perfSuites', updated.projectId] })
-      setSuiteDrawerOpen(false)
-      message.success('测试集信息已更新')
-    },
-    onError: (error) => message.error(getErrorMessage(error)),
-  })
-
   const createCaseMutation = useMutation({
     mutationFn: (values: { name: string }) => {
       if (!projectId) throw new Error('项目尚未就绪')
@@ -329,6 +350,35 @@ export function PerformanceSuiteDetailPage() {
       next.delete('step')
       setSearchParams(next, { replace: true })
       message.success('性能用例已创建')
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
+
+  const deleteCaseMutation = useMutation({
+    mutationFn: (caseId: string) => api.deletePerfCase(caseId),
+    onSuccess: async (_result, caseId) => {
+      clearPerfCaseDraft(caseId)
+      setCollapsedCaseIds(current => {
+        const next = new Set(current)
+        next.delete(caseId)
+        return next
+      })
+      queryClient.setQueryData<PerfSuite>(['perfSuite', suiteId], current => current ? {
+        ...current,
+        cases: current.cases.filter(item => item.caseId !== caseId),
+      } : current)
+      if (caseId === activeCaseId) {
+        setHydratedCaseId('')
+        const next = new URLSearchParams(searchParams)
+        next.delete('case')
+        next.delete('step')
+        setSearchParams(next, { replace: true })
+      }
+      await queryClient.invalidateQueries({ queryKey: ['perfSuite', suiteId] })
+      queryClient.invalidateQueries({ queryKey: ['perfSuites', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['perfSuiteRuns'] })
+      queryClient.invalidateQueries({ queryKey: ['perfSuiteRun'] })
+      message.success('性能用例已删除')
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -394,9 +444,11 @@ export function PerformanceSuiteDetailPage() {
     ? '测试集加载中'
     : suite.cases.length === 0
       ? '测试集没有用例'
-      : !resolvedEnvironmentId
-        ? '请先选择性能环境'
-        : ''
+      : !suite.cases.some((item) => !isCaseInvalidated(item))
+        ? '测试集没有有效用例'
+        : !resolvedEnvironmentId
+          ? '请先选择性能环境'
+          : ''
   const formErrorsAlert = errors.length > 0 ? <Alert
     type="error"
     showIcon
@@ -419,7 +471,7 @@ export function PerformanceSuiteDetailPage() {
                 <h1 className="tp-list-title max-w-[280px] shrink-0 truncate" title={suite?.name ?? '性能测试集'}>
                   {suite?.name ?? '性能测试集'}
                 </h1>
-                {suite ? <Tag className="m-0 shrink-0">{suite.cases.length} 个用例</Tag> : null}
+                {suite ? <Tag className="m-0 shrink-0">{suite.cases.length} 个用例{invalidatedCount > 0 ? ` · ${invalidatedCount} 已失效` : ''}</Tag> : null}
                 <span
                   className="min-w-0 truncate text-xs text-app-surface-text-muted"
                   title={suite ? `${suite.description || '暂无测试集描述'} · 最近更新 ${formatTime(suite.updatedAt)}` : undefined}
@@ -453,9 +505,6 @@ export function PerformanceSuiteDetailPage() {
                 <Button icon={<HistoryOutlined />} onClick={() => navigate(`/performance/runs?suiteId=${suiteId}`)}>
                   运行记录
                 </Button>
-                <Button icon={<EditOutlined />} disabled={!suite || !canWrite} onClick={() => setSuiteDrawerOpen(true)}>
-                  编辑信息
-                </Button>
                 <Tooltip title={runBlockedReason}>
                   <ProjectActionButton
                     action="execute"
@@ -479,18 +528,40 @@ export function PerformanceSuiteDetailPage() {
                 className="flex h-full min-h-0 flex-col"
                 styles={{ body: { display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 } }}
                 title={<span className="inline-flex items-center gap-2"><AppstoreOutlined />用例与接口</span>}
-                extra={<Tooltip title="新增用例"><Button type="text" size="small" icon={<PlusOutlined />} aria-label="新增用例" disabled={!canWrite} onClick={() => setCreateCaseOpen(true)} /></Tooltip>}
+                extra={<Space size={4}>
+                  <Tooltip title="管理用例状态"><Button type="text" size="small" disabled={!canWrite || !projectId} onClick={() => setCaseStatusOpen(true)}>用例状态</Button></Tooltip>
+                  <Tooltip title="新增用例"><Button type="text" size="small" icon={<PlusOutlined />} aria-label="新增用例" disabled={!canWrite} onClick={() => setCreateCaseOpen(true)} /></Tooltip>
+                </Space>}
               >
                 <div className="min-h-0 flex-1 overflow-auto pr-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2 px-1 text-[12px] text-app-surface-text-muted">
+                  <span>状态:</span>
+                  {([
+                    ['all', '全部'],
+                    ['valid', '有效'],
+                    ['invalid', '已失效'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`tp-chip${invalidatedFilter === value ? ' active' : ''}`}
+                      aria-pressed={invalidatedFilter === value}
+                      onClick={() => setInvalidatedFilter(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div className="grid gap-2">
-                  {suite.cases.map((item, index) => {
+                  {visibleCases.map((item) => {
+                    const index = suite.cases.findIndex((entry) => entry.caseId === item.caseId)
                     const form = formForCase(item)
                     const steps = form?.steps ?? []
                     const collapsed = collapsedCaseIds.has(item.caseId)
                     const selected = item.caseId === activeCaseId
                     const context = selected && selectedStepIndex !== null
-                    return <div key={item.caseId}>
-                      <div className={`flex items-center gap-1 rounded-lg border px-1 py-1 transition-colors ${
+                    return <div key={item.caseId} className="min-w-0">
+                      <div className={`flex min-w-0 items-center gap-1 rounded-lg border px-1 py-1 transition-colors ${
                         selected
                           ? context
                             ? 'border-transparent'
@@ -515,10 +586,37 @@ export function PerformanceSuiteDetailPage() {
                             <span className={`block truncate text-xs font-semibold ${selected ? 'text-app-accent' : 'text-app-surface-text'}`}>{item.name}</span>
                             <span className="mt-0.5 block truncate text-[11px] text-app-surface-text-muted">{form ? formatPerfLoadSummary(form.load) : '未配置负载'} · {steps.length} 个接口</span>
                           </span>
+                          <CaseInvalidatedTag invalidatedAt={item.invalidatedAt} className="flex-none" />
                           <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-app-surface-hover px-1.5 text-[10px] text-app-surface-text-muted">{steps.length}</span>
                         </button>
+                        {selected ? <Popconfirm
+                          title="确认删除该用例？"
+                          description="用例及其性能运行记录会一并删除，且无法恢复。"
+                          okText="删除"
+                          cancelText="取消"
+                          okButtonProps={{ danger: true }}
+                          disabled={!canWrite}
+                          onConfirm={() => deleteCaseMutation.mutate(item.caseId)}
+                        >
+                          <Tooltip title="删除用例">
+                            <ProjectActionButton
+                              action="write"
+                              projectId={projectId}
+                              title="删除用例"
+                              type="text"
+                              shape="circle"
+                              size="small"
+                              className="action-btn-delete shrink-0"
+                              operation="delete"
+                              iconOnly
+                              danger
+                              aria-label={`删除用例 ${item.name}`}
+                              loading={deleteCaseMutation.isPending && deleteCaseMutation.variables === item.caseId}
+                            />
+                          </Tooltip>
+                        </Popconfirm> : null}
                       </div>
-                      {collapsed ? null : <div className="ml-4 mt-1 grid gap-0.5 border-l border-app-surface-border pl-2">
+                      {collapsed ? null : <div className="ml-4 mt-1 grid min-w-0 gap-0.5 border-l border-app-surface-border pl-2">
                         {steps.length === 0 ? <div className="px-2 py-1.5 text-[11px] text-app-surface-text-muted">还没有步骤</div> : steps.map((step, stepIndex) => {
                           const activeStep = selected && selectedStepIndex === stepIndex
                           return <button
@@ -526,7 +624,7 @@ export function PerformanceSuiteDetailPage() {
                             type="button"
                             disabled={contractView === 'yaml'}
                             onClick={() => selectStep(item.caseId, stepIndex)}
-                            className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors disabled:cursor-default disabled:opacity-60 ${
+                            className={`flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors disabled:cursor-default disabled:opacity-60 ${
                               activeStep
                                 ? 'border-app-accent-border bg-app-accent-surface'
                                 : 'border-transparent bg-transparent hover:bg-app-surface-hover disabled:hover:bg-transparent'
@@ -550,7 +648,7 @@ export function PerformanceSuiteDetailPage() {
                       </div>}
                     </div>
                   })}
-                  {suite.cases.length === 0 ? <div className="rounded-lg border border-dashed border-app-surface-border px-3 py-5 text-center text-xs text-app-surface-text-muted">还没有用例。</div> : null}
+                  {visibleCases.length === 0 ? <div className="rounded-lg border border-dashed border-app-surface-border px-3 py-5 text-center text-xs text-app-surface-text-muted">{suite.cases.length === 0 ? '还没有用例。' : '没有匹配的用例。'}</div> : null}
                 </div>
                 </div>
                 <ProjectActionButton
@@ -719,18 +817,20 @@ export function PerformanceSuiteDetailPage() {
         </Form>
       </Modal>
 
-      <PerfSuiteDrawer
-        open={suiteDrawerOpen}
-        editing={suite ?? null}
-        saving={updateSuiteMutation.isPending}
-        onClose={() => setSuiteDrawerOpen(false)}
-        onSubmit={async (values) => {
-          try {
-            await updateSuiteMutation.mutateAsync(values)
-          } catch {
-            // mutation.onError 已经给出反馈。
-          }
-        }}
+      <CaseInvalidationModal
+        open={caseStatusOpen}
+        scopeLabel={`${suite?.name ?? '当前性能测试集'} · ${suite?.cases.length ?? 0} 条用例`}
+        cases={(suite?.cases ?? []).map((item) => ({
+          id: item.caseId,
+          name: item.name,
+          invalidatedAt: item.invalidatedAt,
+        }))}
+        canWrite={canWrite && Boolean(projectId)}
+        pending={batchInvalidateCasesMutation.isPending}
+        onClose={() => setCaseStatusOpen(false)}
+        onSubmit={(caseIds, invalidated) =>
+          batchInvalidateCasesMutation.mutate({ caseIds, invalidated })
+        }
       />
       <StartPerfSuiteRunModal
         open={runOpen}

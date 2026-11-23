@@ -195,6 +195,7 @@ export function PerformanceRunDetailPage() {
 
           {runQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(runQuery.error)} className="m-4" /> : null}
           {run?.errorMessage ? <Alert showIcon type="error" title={run.errorMessage} className="m-4" /> : null}
+          {items.some((item) => item.flags?.includes('remote_write_error')) ? <Alert showIcon type="warning" title="部分用例的监控数据写入失败" className="m-4" /> : null}
           {runQuery.isPending ? <div className="p-10"><Empty description="运行详情加载中..." /></div> : run ? <>
             <div className="grid grid-cols-2 gap-3 px-4 pt-4 md:grid-cols-4 xl:grid-cols-7">
               {statCards.map((card) => <Card key={card.label} size="small">
@@ -244,6 +245,7 @@ export function PerformanceRunDetailPage() {
                 <Card size="small" title="运行信息">
                   <Descriptions size="small" column={1} items={[
                     { key: 'suite', label: '测试集', children: run.suiteName },
+                    { key: 'sprint', label: '迭代', children: run.sprintName || run.sprintId || '未关联' },
                     { key: 'run', label: '运行 ID', children: <span className="break-all font-mono text-[11px]">{run.suiteRunId}</span> },
                     { key: 'environment', label: '环境', children: run.environmentName || '-' },
                     { key: 'monitoring', label: '监控接入', children: run.monitoringConnectionName || '-' },

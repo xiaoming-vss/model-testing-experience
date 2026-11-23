@@ -16,7 +16,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ListSurface } from '@/shared/components/ListSurface'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
+import { SprintFilterSelect } from '@/domain/projects/components/SprintFilterSelect'
+import { useSprintFilter } from '@/domain/projects/hooks/useSprintFilter'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import { api, listItems, type TestOrder } from '@/services/api'
@@ -56,8 +57,8 @@ export function TestOrderPage() {
   const navigate = useNavigate()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const queryClient = useQueryClient()
-  const { activeSprintId, sprints, sprintsQuery, sprintSelectorOptions } =
-    useActiveSprint()
+  const sprintFilter = useSprintFilter(activeProjectId, { allowAll: true })
+  const { selectedSprintId: activeSprintId, sprints, sprintsQuery, filterOptions: sprintOptions } = sprintFilter
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [searchResetKey, setSearchResetKey] = useState(0)
@@ -257,6 +258,8 @@ export function TestOrderPage() {
             <div className="panel-header api-panel-header tp-list-toolbar">
               <div className="api-filter-group flex flex-wrap items-center gap-2">
                 <h1 className="tp-list-title">测试单</h1>
+                <SprintFilterSelect value={sprintFilter.selectValue} options={sprintFilter.filterOptions}
+                  loading={sprintFilter.loading} onChange={sprintFilter.selectSprint} />
                 <div className="api-filter-field searchField min-w-0 w-[300px] max-narrow:w-full">
                   <DebouncedSearchInput
                     inputRef={keywordInputRef}
@@ -371,7 +374,7 @@ export function TestOrderPage() {
         open={drawerOpen}
         order={editingOrder}
         projectId={activeProjectId}
-        sprintOptions={sprintSelectorOptions.filter((option) => option.value !== 'all')}
+        sprintOptions={sprintOptions.filter((option) => option.value !== 'all')}
         defaultSprintId={activeSprintId}
         onClose={() => setDrawerOpen(false)}
       />

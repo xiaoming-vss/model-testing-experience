@@ -10,36 +10,6 @@ import { formatTime } from '@/utils/format'
 import { UiAutomationPage } from './UiAutomationPage'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
-  useActiveSprint: () => ({
-    activeSprintId: 'sprint-1',
-    sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
-    sprintsQuery: { isLoading: false, error: null },
-    selectSprint: vi.fn(),
-    sprintSelectorOptions: [
-      { label: '全部迭代', value: 'all' },
-      { label: 'V1.0.0 迭代', value: 'sprint-1' },
-    ],
-  }),
-}))
-vi.mock('@/domain/projects/hooks/useSprintRequirementScope', () => ({
-  useSprintRequirementScope: () => ({
-    currentSprintSelection: null,
-    currentRequirementSelection: null,
-    resolvedSelectedSprintId: 'sprint-1',
-    resolvedSelectedRequirementId: undefined,
-    sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
-    sprintsQuery: { isLoading: false, error: null },
-    requirementsQuery: { data: [], isLoading: false, error: null },
-    sprintFilterOptions: [
-      { label: '全部迭代', value: 'all' },
-      { label: 'V1.0.0 迭代', value: 'sprint-1' },
-    ],
-    requirementFilterOptions: [{ label: '全部需求', value: 'all' }],
-    selectRequirement: vi.fn(),
-    selectSprint: vi.fn(),
-  }),
-}))
 vi.mock('@/domain/projects/hooks/useProjectRequirementOptions', () => ({
   useProjectRequirementOptions: () => ({
     allRequirements: [{ requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1' }],
@@ -86,7 +56,7 @@ function buildClient() {
 }
 
 beforeEach(() => {
-  useWorkbenchStore.setState({ activeProjectId: 'project-1', activeSprintId: 'sprint-1' })
+  useWorkbenchStore.setState({ activeProjectId: 'project-1' })
 })
 
 afterEach(() => {
@@ -96,7 +66,7 @@ afterEach(() => {
 })
 
 it('列出测试集，卡片徽标展示运行配置', async () => {
-  vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite]))
+  vi.spyOn(api, 'getProjectUiTestSuites').mockImplementation(async () => listResponse([suite]))
   const client = buildClient()
   renderPage(client)
 
@@ -108,9 +78,9 @@ it('列出测试集，卡片徽标展示运行配置', async () => {
     '/ui-automation/suites/suite-1',
   )
 
-  // 所属迭代 / 需求是卡片 meta 的两列。
-  expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()
+  // 所属需求 / 范围是卡片 meta 的两列。
   expect(screen.getByText('安装部署')).toBeInTheDocument()
+  expect(screen.getByText('需求关联')).toBeInTheDocument()
 
   // 运行配置徽标：可视 / 视口 / 超时 + 截图策略
   expect(screen.getByText('可视')).toBeInTheDocument()
@@ -126,7 +96,9 @@ it('列出测试集，卡片徽标展示运行配置', async () => {
 
 it('搜索按名称与描述在本地过滤，清空后恢复', async () => {
   const other = { ...suite, suiteId: 'suite-2', name: 'xm-test', description: '' }
-  vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite, other]))
+  vi.spyOn(api, 'getProjectUiTestSuites').mockImplementation(async () =>
+    listResponse([suite, other]),
+  )
   const client = buildClient()
   renderPage(client)
 
@@ -145,7 +117,7 @@ it('搜索按名称与描述在本地过滤，清空后恢复', async () => {
 })
 
 it('搜索无结果时空态给出清空入口，而不是新建入口', async () => {
-  vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite]))
+  vi.spyOn(api, 'getProjectUiTestSuites').mockImplementation(async () => listResponse([suite]))
   const client = buildClient()
   renderPage(client)
 
@@ -163,7 +135,9 @@ it('搜索无结果时空态给出清空入口，而不是新建入口', async (
 })
 
 it('工具栏的刷新按钮重新拉取测试集列表', async () => {
-  const list = vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite]))
+  const list = vi
+    .spyOn(api, 'getProjectUiTestSuites')
+    .mockImplementation(async () => listResponse([suite]))
   const client = buildClient()
   renderPage(client)
 
@@ -172,5 +146,19 @@ it('工具栏的刷新按钮重新拉取测试集列表', async () => {
 
   await userEvent.setup().click(screen.getByLabelText('刷新测试集列表'))
   await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+  client.clear()
+})
+
+it('未关联需求的项目级测试集在卡片上显示项目级归属', async () => {
+  vi.spyOn(api, 'getProjectUiTestSuites').mockImplementation(async () =>
+    listResponse([{ ...suite, requirementId: null }]),
+  )
+  const client = buildClient()
+  renderPage(client)
+
+  await screen.findByText('xiaoming')
+  expect(screen.getByText('所属需求')).toBeInTheDocument()
+  // 需求列和范围列都显示项目级，表示没有需求关联。
+  expect(screen.getAllByText('项目级')).toHaveLength(2)
   client.clear()
 })

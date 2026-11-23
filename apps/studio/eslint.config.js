@@ -15,7 +15,7 @@ const featureBoundaryBudget = JSON.parse(
 const featureNames = fs.readdirSync(path.join(root, 'src/features'), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
-const boundaryBaselineFiles = Object.keys(featureBoundaryBudget.files ?? {})
+const boundaryBaselineFiles = [...new Set(Object.keys(featureBoundaryBudget.violations ?? {}).map(key => key.split(' -> ')[0]))]
 const featureInternalDirs = [
   'components', 'pages', 'hooks', 'utils', 'styles', 'config', 'constants',
   'store', 'workers', 'fixtures', '__fixtures__',
@@ -46,6 +46,8 @@ export default defineConfig([
     },
     rules: {
       'react-hooks/set-state-in-effect': 'off',
+      // 解构时用 rest 剔除不传给底层组件的 props 是常见写法，不应算未使用变量。
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
   {

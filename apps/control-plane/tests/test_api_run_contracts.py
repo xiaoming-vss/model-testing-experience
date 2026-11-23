@@ -121,6 +121,7 @@ async def test_api_case_run_persists_rendered_request_snapshot():
             self.api_case = SimpleNamespace(
                 case_id="case-1",
                 collection_id="collection-1",
+                invalidated_at=None,
                 method="GET",
                 url_template="/ping/{{token}}",
                 headers_json={"X-Token": "{{token}}"},
@@ -132,13 +133,17 @@ async def test_api_case_run_persists_rendered_request_snapshot():
             )
             self.collection = SimpleNamespace(
                 collection_id="collection-1",
+                project_id="project-1",
                 requirement_id="requirement-1",
             )
             self.requirement = SimpleNamespace(
                 requirement_id="requirement-1",
+                name="requirement",
                 sprint_id="sprint-1",
             )
-            self.sprint = SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
+            self.sprint = SimpleNamespace(
+                sprint_id="sprint-1", name="sprint", project_id="project-1"
+            )
             self.project = SimpleNamespace(project_id="project-1", user_id="user-1")
             self.environment = SimpleNamespace(
                 environment_id="env-1",
@@ -204,6 +209,7 @@ async def test_api_case_run_response_uses_go_pending_worker_contract():
             self.api_case = SimpleNamespace(
                 case_id="case-1",
                 collection_id="collection-1",
+                invalidated_at=None,
                 method="GET",
                 url_template="/ping",
                 headers_json={},
@@ -215,13 +221,17 @@ async def test_api_case_run_response_uses_go_pending_worker_contract():
             )
             self.collection = SimpleNamespace(
                 collection_id="collection-1",
+                project_id="project-1",
                 requirement_id="requirement-1",
             )
             self.requirement = SimpleNamespace(
                 requirement_id="requirement-1",
+                name="requirement",
                 sprint_id="sprint-1",
             )
-            self.sprint = SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
+            self.sprint = SimpleNamespace(
+                sprint_id="sprint-1", name="sprint", project_id="project-1"
+            )
             self.project = SimpleNamespace(project_id="project-1", user_id="user-1")
             self.environment = SimpleNamespace(
                 environment_id="env-1",
@@ -278,13 +288,17 @@ async def test_api_collection_run_response_uses_go_pending_worker_contract():
             self.rows = []
             self.collection = SimpleNamespace(
                 collection_id="collection-1",
+                project_id="project-1",
                 requirement_id="requirement-1",
             )
             self.requirement = SimpleNamespace(
                 requirement_id="requirement-1",
+                name="requirement",
                 sprint_id="sprint-1",
             )
-            self.sprint = SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
+            self.sprint = SimpleNamespace(
+                sprint_id="sprint-1", name="sprint", project_id="project-1"
+            )
             self.project = SimpleNamespace(project_id="project-1", user_id="user-1")
             self.environment = SimpleNamespace(
                 environment_id="env-1",
@@ -292,7 +306,14 @@ async def test_api_collection_run_response_uses_go_pending_worker_contract():
                 kind="api",
                 base_url="https://api.example.test",
             )
-            self.cases = [SimpleNamespace(case_id="case-1", order_no=1, continue_on_failure=False)]
+            self.cases = [
+                SimpleNamespace(
+                    case_id="case-1",
+                    order_no=1,
+                    continue_on_failure=False,
+                    invalidated_at=None,
+                )
+            ]
 
         async def get_collection(self, collection_id):
             return self.collection

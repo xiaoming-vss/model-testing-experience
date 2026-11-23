@@ -57,6 +57,22 @@ async def test_runner_maps_threshold_exit_code(tmp_path: Path) -> None:
     assert execution.error_message == ""
 
 
+async def test_remote_write_failure_survives_log_tail_truncation(tmp_path: Path) -> None:
+    body = """
+print('Failed to send the time series data to the endpoint', file=sys.stderr, flush=True)
+print('x' * 10000, file=sys.stderr, flush=True)
+Path("summary.json").write_text(json.dumps({"metrics": {}}))
+"""
+    fake = write_fake_k6(tmp_path, "fake-remote-error.py", body)
+    workspace = _workspace(tmp_path)
+    execution = await K6Runner(make_settings(tmp_path, fake)).run(
+        make_compiled_plan(workspace), workspace
+    )
+    assert execution.exit_code == 0
+    assert execution.remote_write_error is True
+    assert "Failed to send" not in execution.log_tail
+
+
 async def test_runner_reports_execution_error(tmp_path: Path) -> None:
     fake = write_fake_k6(tmp_path, "fake-error.py", fake_error_body())
     settings = make_settings(tmp_path, fake)

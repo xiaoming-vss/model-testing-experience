@@ -494,17 +494,6 @@ def main() -> None:
         help="Required target origin, e.g. http://10.9.103.80:30080",
     )
     parser.add_argument(
-        "--bundle", type=Path, help="Frozen stage-one/two inputs and execution context"
-    )
-    parser.add_argument(
-        "--trace", type=Path, help="Internal trace sidecar, never part of the YAML"
-    )
-    parser.add_argument(
-        "--repair",
-        type=Path,
-        help="Evidence-backed completion proposal for non-ready input",
-    )
-    parser.add_argument(
         "--allow-localhost",
         action="store_true",
         help="Allow localhost/127.0.0.1 open URLs (only for a local target)",
@@ -519,35 +508,6 @@ def main() -> None:
     )
 
     evidence = False
-    if args.bundle:
-        from handoff import (
-            effective_bundle,
-            preflight,
-            evidenced_locators,
-            validate_handoff,
-            HandoffError,
-        )
-
-        try:
-            bundle = effective_bundle(
-                json.loads(args.bundle.read_text()),
-                json.loads(args.repair.read_text()) if args.repair else None,
-            )
-            preflight(bundle)
-            require(args.trace is not None, "--bundle requires --trace")
-            require(isinstance(data, list), "scenario handoff requires a YAML list")
-            require(
-                not args.base_url
-                or args.base_url == bundle["context"]["targetBaseUrl"],
-                "--base-url differs from the frozen context",
-            )
-            args.base_url = bundle["context"]["targetBaseUrl"]
-            validate_handoff(cases, bundle, json.loads(args.trace.read_text()))
-            evidence = evidenced_locators(bundle)
-        except HandoffError as exc:
-            fail(str(exc))
-    else:
-        require(not args.trace and not args.repair, "--trace/--repair require --bundle")
     for index, case in enumerate(cases, start=1):
         validate_case(
             case,

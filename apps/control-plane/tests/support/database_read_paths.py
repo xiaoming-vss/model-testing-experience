@@ -106,10 +106,12 @@ class CapturingSession:
 def seed_cases(session, size):
     session.add_all(
         [
-            ApiCollection(collection_id="ac", requirement_id="req", name="api"),
+            ApiCollection(collection_id="ac", project_id="p", requirement_id="req", name="api"),
             FunctionTestSuite(suite_id="fc", requirement_id="req", name="function"),
-            UiTestSuite(suite_id="uc", requirement_id="req", name="ui"),
-            ApiCollection(collection_id="foreign", requirement_id="other", name="foreign"),
+            UiTestSuite(suite_id="uc", project_id="p", requirement_id="req", name="ui"),
+            ApiCollection(
+                collection_id="foreign", project_id="p", requirement_id="other", name="foreign"
+            ),
         ]
     )
     session.flush()
@@ -135,6 +137,11 @@ def seed_cases(session, size):
                         run_id=f"api-{i}-{j}",
                         case_id=f"api-{i}",
                         collection_id="ac",
+                        project_id="p",
+                        requirement_id="req",
+                        requirement_name="req",
+                        sprint_id="s",
+                        sprint_name="s",
                         environment_id="e",
                         trigger_user_id="u",
                         status=status,
@@ -146,6 +153,11 @@ def seed_cases(session, size):
                         run_id=f"ui-{i}-{j}",
                         case_id=f"ui-{i}",
                         suite_id="uc",
+                        project_id="p",
+                        requirement_id="req",
+                        requirement_name="req",
+                        sprint_id="s",
+                        sprint_name="s",
                         trigger_user_id="u",
                         status=status,
                         created_at=NOW,
@@ -168,6 +180,11 @@ def seed_cases(session, size):
             UiTestSuiteRun(
                 suite_run_id="old",
                 suite_id="uc",
+                project_id="p",
+                requirement_id="req",
+                requirement_name="req",
+                sprint_id="s",
+                sprint_name="s",
                 trigger_user_id="u",
                 created_at=NOW,
                 total_count=7,
@@ -177,6 +194,11 @@ def seed_cases(session, size):
             UiTestSuiteRun(
                 suite_run_id="new",
                 suite_id="uc",
+                project_id="p",
+                requirement_id="req",
+                requirement_name="req",
+                sprint_id="s",
+                sprint_name="s",
                 trigger_user_id="u",
                 created_at=NOW,
                 total_count=3,

@@ -20,11 +20,12 @@ from testing_agent.models.sprint import Sprint
 from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.schemas.generation_chain import GenerationChainRunRequest
+from testing_agent.repositories.deletion import delete_owned_data
+from testing_agent.schemas.generation_candidates import CandidateRunRequest
 from testing_agent.schemas.requirement_design import (
     RequirementDesignConfigurationRequest as Configuration,
 )
-from testing_agent.services.stage_storage.commands import DirectStageCommands
+from testing_agent.services.generation_dispatch_application import CandidateDispatchApplication
 
 
 async def test_concurrent_default_configuration_and_same_request_run(mysql):  # noqa: F811
@@ -109,17 +110,17 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
         async def start():
             async with sessions() as session:
                 bundle = generation_services(AiGenerateTaskRepository(session))
-                return await DirectStageCommands(bundle.chain).run(
-                    rid,
-                    "api",
-                    "interface_extract",
-                    GenerationChainRunRequest(requestId=request_id, connectionId=llm),
-                    uid,
+                return await CandidateDispatchApplication(bundle.chain).run(
+                    requirement_id=rid,
+                    kind="api",
+                    stage="interface_extract",
+                    request=CandidateRunRequest(requestId=request_id, connectionId=llm),
+                    actor_id=uid,
                 )
 
         runs = await asyncio.gather(start(), start(), start(), return_exceptions=True)
         assert not any(isinstance(row, BaseException) for row in runs), runs
-        attempt_ids = {row.stages[0].active_run_id for row in runs}
+        attempt_ids = {row.attempt_id for row in runs}
         assert len(attempt_ids) == 1
         attempt_id = next(iter(attempt_ids))
         async with sessions() as session:
@@ -140,7 +141,8 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
     finally:
         async with sessions() as session:
             await session.execute(delete(WorkerTask).where(WorkerTask.task_id == str(request_id)))
-            await session.execute(delete(Task).where(Task.requirement_id == rid))
+            for task in await session.scalars(select(Task).where(Task.requirement_id == rid)):
+                await delete_owned_data(session, task)
             await session.execute(
                 delete(ApiInterface).where(ApiInterface.interface_id == interface_id)
             )

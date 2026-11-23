@@ -127,7 +127,6 @@ class HttpClaimTaskSource:
             task = self._to_domain_task(
                 claimed_task,
                 snapshot_response,
-                raw_claim=claim_payload,
                 raw_snapshot=snapshot_payload,
             )
 
@@ -177,7 +176,6 @@ class HttpClaimTaskSource:
         claimed_task: PlatformClaimTask,
         snapshot_response: PlatformSnapshotResponse,
         *,
-        raw_claim: dict[str, object],
         raw_snapshot: dict[str, object],
     ) -> Task:
         """把平台 claim/snapshot 响应映射成内部任务模型。
@@ -257,6 +255,11 @@ class HttpClaimTaskSource:
             checkpoint_enabled=checkpoint_enabled,
             current_stage=current_stage,
             config_json=config_json,
+            candidate_input=(
+                snapshot_response.candidate_input.model_dump(mode="json", by_alias=True)
+                if snapshot_response.candidate_input is not None
+                else None
+            ),
             requirement_input=(
                 RequirementInput.model_validate(requirement_payload)
                 if requirement_payload
@@ -311,10 +314,6 @@ class HttpClaimTaskSource:
                     "sourceCommit": source_commit,
                 },
             ),
-            raw={
-                "claim": raw_claim,
-                "snapshot": raw_snapshot,
-            },
         )
 
     @staticmethod

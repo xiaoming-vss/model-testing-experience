@@ -15,7 +15,6 @@ from testing_agent.repositories.requirement_software_repository import (
 )
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.repositories.worker_task import WorkerTaskRepository
-from testing_agent.services.ai_candidate_review import GenerationCandidateReview
 from testing_agent.services.ai_report import TestReportWorkflow
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
@@ -32,7 +31,6 @@ from testing_agent.services.repository_profile import RepositoryProfileService
 from testing_agent.services.requirement_design import RequirementDesignService
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
 from testing_agent.services.ui_generation_source import UiGenerationSourceService
-from testing_agent.services.ui_generation_workflow import UiGenerationWorkflow
 from testing_agent.services.worker_task import WorkerTaskService
 
 
@@ -64,6 +62,7 @@ def get_generation_launcher(
     access: GenerationAccess = Depends(get_generation_access),
     metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
     settings: Settings = Depends(get_settings),
+    files=Depends(get_file_service),
 ) -> GenerationRunLauncher:
     session = access.repository.session
     cipher = IntegrationCredentialCipher(settings.integration_key)
@@ -87,6 +86,7 @@ def get_generation_launcher(
             connections,
             cipher,
         ),
+        files=files,
     )
 
 
@@ -102,18 +102,11 @@ def get_generation_reports(
     )
 
 
-def get_generation_review(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationCandidateReview:
-    return GenerationCandidateReview(access.repository, access.owned_run)
-
-
 def get_generation_api_importer(
     access: GenerationAccess = Depends(get_generation_access),
 ) -> ApiCandidateImporter:
     return ApiCandidateImporter(
         repository=access.repository,
-        owned_run=access.owned_run,
         ensure_collection_access=access.ensure_collection_access,
     )
 
@@ -157,24 +150,10 @@ def get_ui_worker_artifact_service(
 
 def get_generation_stages(
     access: GenerationAccess = Depends(get_generation_access),
-    files=Depends(get_file_service),
 ) -> GenerationStageWorkflow:
     return GenerationStageWorkflow(
         repository=access.repository,
         owned_run=access.owned_run,
-        files=files,
-        access=access,
-    )
-
-
-def get_ui_generation_stages(
-    access: GenerationAccess = Depends(get_generation_access),
-    files=Depends(get_file_service),
-) -> UiGenerationWorkflow:
-    return UiGenerationWorkflow(
-        repository=access.repository,
-        owned_run=access.owned_run,
-        files=files,
     )
 
 

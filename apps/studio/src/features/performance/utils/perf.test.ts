@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildDefaultPerfYaml,
-  isPerfRunActive,
-  perfMetricsFromSummary,
-  perfThresholdsFromSummary,
-} from './perf'
+import { buildDefaultPerfYaml, isPerfRunActive, perfMetricsFromSummary } from './perf'
 
 describe('performance utilities', () => {
   it('builds a valid starter YAML with the case name', () => {
@@ -20,7 +15,7 @@ describe('performance utilities', () => {
     expect(yaml).toContain('name: "下单: 压测 #1"')
   })
 
-  it('extracts k6 summary metrics and thresholds', () => {
+  it('extracts k6 summary metrics', () => {
     const summary = {
       metrics: {
         http_reqs: { values: { rate: 18.4, count: 1240 } },
@@ -28,12 +23,6 @@ describe('performance utilities', () => {
         http_req_failed: { values: { rate: 0 } },
         vus: { values: { value: 2 } },
         iterations: { values: { count: 620 } },
-        http_req_duration_threshold: {
-          thresholds: {
-            'p(95)<500': { ok: true },
-            'p(99)<1000': { ok: false },
-          },
-        },
       },
     }
     expect(perfMetricsFromSummary(summary)).toEqual({
@@ -45,10 +34,6 @@ describe('performance utilities', () => {
       requests: 1240,
       iterations: 620,
     })
-    expect(perfThresholdsFromSummary(summary)).toEqual([
-      { metric: 'http_req_duration_threshold', expression: 'p(95)<500', passed: true },
-      { metric: 'http_req_duration_threshold', expression: 'p(99)<1000', passed: false },
-    ])
   })
 
   it('recognizes active run states', () => {

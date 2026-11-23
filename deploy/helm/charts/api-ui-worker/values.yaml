@@ -54,10 +54,7 @@ config:
   ui:
     # 与 Deployment 挂载的 emptyDir 路径保持一致。
     artifacts_dir: /app/artifacts
-    headless: true
-    slow_mo_ms: 0
     trace_enabled: true
-    screenshot_on_failure: true
 
   once:
     snapshot_file: ""

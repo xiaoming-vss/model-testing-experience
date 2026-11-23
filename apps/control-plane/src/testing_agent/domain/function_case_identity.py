@@ -16,10 +16,16 @@ from testing_agent.core.sid import new_id
 CASE_ID_LENGTH = 64
 
 
-async def pinned_case_id(repository: Any, candidate: Any) -> str:
+async def pinned_case_id(repository: Any, candidate: Any, *, for_update: bool = False) -> str:
     """Return the candidate ID when it can become a stored case ID, otherwise a fresh one."""
 
     value = str(candidate or "").strip()
-    if value and len(value) <= CASE_ID_LENGTH and await repository.get_case(value) is None:
-        return value
+    if value and len(value) <= CASE_ID_LENGTH:
+        existing = (
+            await repository.get_case(value, for_update=True)
+            if for_update
+            else await repository.get_case(value)
+        )
+        if existing is None:
+            return value
     return new_id()

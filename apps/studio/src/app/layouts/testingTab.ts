@@ -8,8 +8,6 @@ export const TESTING_TAB_OPTIONS = [
   { key: 'perf', label: '性能测试' },
 ] as const satisfies readonly { key: Exclude<TestingTab, 'bugs'>; label: string }[]
 
-export type TestingWorkspaceTab = (typeof TESTING_TAB_OPTIONS)[number]['key']
-
 export function resolveTestingTab(tab?: string | null): TestingTab {
   if (tab === 'orders' || tab === 'bugs' || tab === 'ui' || tab === 'api' || tab === 'perf') return tab
   return 'orders'

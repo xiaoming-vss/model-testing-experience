@@ -42,11 +42,9 @@ def worker_settings() -> Settings:
         http_host="127.0.0.1",
         http_port=8000,
         jwt_key="test-jwt",
-        jwt_expire_hours=1,
         integration_key="test-integration",
         worker_key="worker-token",
         database_url="sqlite+aiosqlite:///:memory:",
-        uploads_dir="storage/test-uploads",
     )
 
 

@@ -38,7 +38,6 @@ from testing_agent.core.errors import (
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.repositories.requirement_software_repository import (
     RequirementRepositoryBinding,
@@ -46,6 +45,7 @@ from testing_agent.repositories.requirement_software_repository import (
     unique_by_git_repository,
 )
 from testing_agent.schemas.requirement import normalize_document_type
+from testing_agent.services.generation_current_material import CurrentMaterial
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import (
@@ -53,9 +53,8 @@ from testing_agent.services.repo_gitlab_access import (
     resolve_repo_gitlab_access,
 )
 from testing_agent.services.requirement_material_source import (
-    approved_material,
+    material_reference_fields,
     material_source,
-    material_version_ref,
 )
 
 FUNCTION_CASE_NO_RUN_NOTE = "功能用例暂无执行记录"
@@ -208,18 +207,14 @@ class CodeRiskAnalysisService:
         *,
         user_id: str,
         connection_ids: dict[str, str] | None = None,
-        material_version_id: str = "",
+        current_material: CurrentMaterial | None = None,
     ) -> dict[str, Any]:
         """组装 code_risk_analysis 任务的 run 快照(创建时固化)。"""
         requirement = await self.task_repository.get_requirement(task.requirement_id)
         if requirement is None:
             raise ErrNotFound()
 
-        material = await approved_material(
-            GenerationChainRepository(self.task_repository.session),
-            task.requirement_id,
-            material_version_id,
-        )
+        material = current_material
         if material is None:
             raise dynamic_error(ErrBadRequest, "请先审核通过材料整理，再进行代码风险分析")
         document_content = material_source(material)
@@ -251,7 +246,7 @@ class CodeRiskAnalysisService:
                 "documentType": document_type,
                 "documentContent": document_content,
             },
-            "requirementMaterialVersion": material_version_ref(material),
+            **material_reference_fields(material),
             "bindings": [
                 self._binding_entry(
                     binding, pins[binding.association.software_repository_id], repo_access

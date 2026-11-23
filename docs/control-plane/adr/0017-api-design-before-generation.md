@@ -3,7 +3,7 @@
 - 状态：已接受
 - 日期：2026-11-15
 - 取代：[ADR 0013](0013-software-repository-and-interface-library-api-generation.md) 中两阶段 API 工作流和 `api_two_stage/2.0` 标记的部分
-- 被取代：—
+- 被取代：[ADR 0024](0024-generation-candidates-current.md)（需求关联链的业务版本选择；实施切换前仍按本文执行）
 - 关联：[ADR 0013](0013-software-repository-and-interface-library-api-generation.md)
 
 2026-11-15。API 生成链从「接口配置提取 → API 用例生成」扩展为「接口配置提取 → 接口用例设计 → API 用例生成」。本决策取代 [ADR 0013](0013-software-repository-and-interface-library-api-generation.md) 中关于两阶段工作流和 `api_two_stage/2.0` 标记的部分；软件仓库、接口库输入和安全信息处理保持不变。

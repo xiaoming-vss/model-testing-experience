@@ -126,11 +126,12 @@ async def live():
 
 
 async def upload(files, content=b"Live S3 P1 evidence", purpose="attachment"):
+    filename = "evidence.html" if purpose == "requirement" else "evidence.txt"
     ticket = await files.initiate(
         "owner",
         FileUploadRequest(
             project_id="p",
-            filename="evidence.txt",
+            filename=filename,
             purpose=purpose,
             size=len(content),
             sha256=hashlib.sha256(content).hexdigest(),
@@ -140,7 +141,7 @@ async def upload(files, content=b"Live S3 P1 evidence", purpose="attachment"):
         response = await client.post(
             ticket["upload"]["url"],
             data=ticket["upload"]["fields"],
-            files={"file": ("evidence.txt", content)},
+            files={"file": (filename, content)},
         )
     assert response.status_code == 204
     return ticket["fileId"]
@@ -631,14 +632,18 @@ async def test_live_queue_claims_are_unique_and_expired_leases_fail_closed(live)
         await session.flush()
         session.add(Requirement(requirement_id="r", sprint_id="s", name="r"))
         await session.flush()
-        session.add(UiTestSuite(suite_id="suite", requirement_id="r", name="suite"))
+        session.add(UiTestSuite(suite_id="suite", project_id="p", requirement_id="r", name="suite"))
         await session.flush()
         session.add(UiTestCase(case_id="case", suite_id="suite", name="case", steps_json=[]))
         await session.flush()
         for index in range(2):
             session.add(
                 UiTestCaseRun(
-                    run_id=f"run-{index}", case_id="case", suite_id="suite", trigger_user_id="owner"
+                    run_id=f"run-{index}",
+                    case_id="case",
+                    suite_id="suite",
+                    project_id="p",
+                    trigger_user_id="owner",
                 )
             )
             session.add(
@@ -665,8 +670,8 @@ async def test_live_queue_claims_are_unique_and_expired_leases_fail_closed(live)
             task.lease_expires_at = utcnow() - timedelta(seconds=1)
         await session.commit()
         await WorkerTaskService(WorkerTaskRepository(session)).expire_leases("ui")
-        assert {task.status for task in await session.scalars(select(WorkerTask))} == {"failed"}
-        assert {run.status for run in await session.scalars(select(UiTestCaseRun))} == {"failed"}
+        assert {task.status for task in await session.scalars(select(WorkerTask))} == {"error"}
+        assert {run.status for run in await session.scalars(select(UiTestCaseRun))} == {"error"}
     assert await claim("worker-4") is None
 
 

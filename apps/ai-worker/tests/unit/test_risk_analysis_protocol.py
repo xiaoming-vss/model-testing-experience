@@ -412,26 +412,6 @@ class GitlabCredentialsParsingTests(unittest.TestCase):
 
 
 class CodeRiskAnalysisConfigTests(unittest.TestCase):
-    def test_gitlab_timeout_seconds_defaults_to_120(self) -> None:
-        settings = Settings()
-
-        self.assertEqual(120.0, settings.code_risk_analysis.gitlab_timeout_seconds)
-
-    def test_gitlab_timeout_seconds_overridable_via_toml(self) -> None:
-        import tempfile
-
-        from testing_agent_ai_worker.config.loader import load_settings
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
-            f.write("[code_risk_analysis]\ngitlab_timeout_seconds = 45\n")
-            config_path = f.name
-        try:
-            settings = load_settings(config_path)
-        finally:
-            Path(config_path).unlink(missing_ok=True)
-
-        self.assertEqual(45.0, settings.code_risk_analysis.gitlab_timeout_seconds)
-
     def test_code_workspace_limits_have_safe_defaults(self) -> None:
         config = Settings().code_risk_analysis
 

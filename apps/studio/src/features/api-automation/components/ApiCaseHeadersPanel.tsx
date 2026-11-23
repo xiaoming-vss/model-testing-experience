@@ -1,4 +1,7 @@
-import { headerQuickInjectPresets } from '@/features/api-automation/config/collectionConfig'
+import requestStyles from '@/shared/components/request-editor/request-editor.module.css'
+import { RequestHeaderToolbar } from '@/shared/components/request-editor/RequestHeaderToolbar'
+import { requestHeaderPresets } from '@/shared/components/request-editor/requestHeaderPresets'
+import { KV_SECTION_COUNT_CLASS, KV_SECTION_HINT_CLASS } from '@/shared/ui/keyValueTable'
 import type { TemplatesProps } from '@/features/api-automation/components/apiCaseEditorProps'
 import type { ApiCaseFormValues } from '@/features/api-automation/utils/apiCaseEditor'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
@@ -63,21 +66,19 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
     <Form.List name="headers">
       {(fields, { add, remove }) => (
         <div className="api-wb-hdr-panel -mx-4 flex min-w-0 flex-col">
-          <div className="api-wb-hdr-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-[var(--srf-card-border)] bg-[var(--srf-hover)] px-4 py-2">
-            <div className="api-wb-hdr-toolbar-main flex flex-wrap items-center gap-1.5">
-              <span className="api-wb-hdr-toolbar-label mr-1 text-[11px] font-medium leading-4 text-[var(--srf-text-muted)]">快捷注入:</span>
-              {headerQuickInjectPresets.map((preset) => (
-                <button
-                  key={preset.key}
-                  type="button"
-                  className="api-wb-hdr-preset inline-flex cursor-pointer items-center rounded-[4px] border border-[var(--srf-card-border)] bg-[var(--srf-card)] px-2 py-0.5 text-[11px] leading-4 text-[var(--srf-chip-text)] transition-colors hover:border-[var(--srf-accent-border)] hover:bg-[var(--srf-accent-soft)] hover:text-[var(--srf-accent-strong)]"
-                  onClick={() => add({ enabled: true, key: preset.key, value: preset.value })}
-                >
-                  <span className="api-wb-hdr-preset-plus mr-1 font-bold text-[var(--srf-accent)]">+</span>
-                  {preset.label}
-                </button>
-              ))}
+          <div className="api-wb-hdr-head flex flex-wrap items-start justify-between gap-2 px-4 pb-2 pt-1">
+            <div className="min-w-0">
+              <div className="text-[12px] font-semibold leading-[18px] text-[var(--srf-text)]">请求头</div>
+              <p className={KV_SECTION_HINT_CLASS}>
+                发送请求时随请求带入，值支持 {'{{变量}}'} 模板。
+              </p>
             </div>
+            <span className={KV_SECTION_COUNT_CLASS}>
+              {enabledCount} / {filledRows.length} 已启用
+            </span>
+          </div>
+          <div className="api-wb-hdr-card mx-4 overflow-hidden rounded-[var(--srf-radius-control)] border border-[var(--srf-card-border)] bg-[var(--srf-card)]">
+          <RequestHeaderToolbar presets={requestHeaderPresets} onAdd={preset => add({ enabled: true, key: preset.key, value: preset.value })} actions={
             <div className="api-wb-hdr-toolbar-side flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
@@ -101,10 +102,10 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                 清空未启用
               </button>
             </div>
-          </div>
+          } />
 
           <div className="api-wb-hdr-table-wrap">
-            <table className="api-wb-hdr-table w-full table-fixed border-collapse">
+            <table className={`${requestStyles.headerTable} w-full table-fixed border-collapse`}>
               <colgroup>
                 <col className="api-wb-hdr-col-check w-10" />
                 <col className="api-wb-hdr-col-key w-[26%]" />
@@ -143,14 +144,14 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                       </td>
                       <td>
                         <Form.Item {...fieldProps} name={[field.name, 'key']} noStyle>
-                          <Input className="api-wb-hdr-input is-key" placeholder="Header 名称" />
+                          <Input className={`${requestStyles.headerInput} ${requestStyles.headerInputKey}`} placeholder="Header 名称" />
                         </Form.Item>
                       </td>
                       <td>
                         <div className="api-wb-hdr-value-cell flex items-center gap-1">
                           <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
                             <Input
-                              className="api-wb-hdr-input"
+                              className={requestStyles.headerInput}
                               ref={(node) => setEnvVarInputRef(`headers:${field.key}:value`, node)}
                               placeholder="Header 值"
                             />
@@ -202,7 +203,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                   </td>
                   <td>
                     <Input
-                      className="api-wb-hdr-input is-draft"
+                      className={`${requestStyles.headerInput} ${requestStyles.headerInputDraft}`}
                       placeholder="添加新的请求头 (键)..."
                       value={draftRow.key}
                       onChange={(event) => setDraftRow((prev) => ({ ...prev, key: event.target.value }))}
@@ -216,7 +217,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                   </td>
                   <td>
                     <Input
-                      className="api-wb-hdr-input is-draft"
+                      className={`${requestStyles.headerInput} ${requestStyles.headerInputDraft}`}
                       placeholder="值 (支持 {{变量}} 语法)..."
                       value={draftRow.value}
                       onChange={(event) => setDraftRow((prev) => ({ ...prev, value: event.target.value }))}
@@ -234,6 +235,7 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
                 </tr>
               </tbody>
             </table>
+          </div>
           </div>
 
           <Modal

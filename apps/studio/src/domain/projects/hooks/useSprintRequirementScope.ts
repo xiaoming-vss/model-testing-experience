@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { RequirementOption } from '@/domain/requirements/types'
 import { useQuery } from '@tanstack/react-query'
-import { api, type Requirement, type Sprint } from '@/services/api'
+import { api, type Requirement } from '@/services/api'
 import { normalizeRequirementId, normalizeSprintId, pickCreatedAt } from '@/utils/format'
 import { REQUIREMENTS_STALE_TIME, SPRINTS_STALE_TIME, requirementsQueryKey, fetchSprintRequirements } from './requirementQueries'
+import { pickDefaultSprintId } from './useSprintFilter'
 
 type ProjectScopedSelection = {
   projectId?: string
@@ -14,19 +15,12 @@ type ProjectScopedSelection = {
 const UNSET_SELECTION = Symbol('unset-selection')
 type ScopeSelectionValue = string | null | typeof UNSET_SELECTION
 
-type SprintScopeController = {
-  value?: string | null
-  onChange?: (sprintId: string | null) => void
-}
-
 type UseSprintRequirementScopeOptions = {
   activeProjectId?: string
   includeAllSprintOption?: boolean
   includeAllRequirementOption?: boolean
-  defaultToAllWhenIncluded?: boolean
-  initialSprintId?: string | null
-  initialRequirementId?: string | null
-  sprintScope?: SprintScopeController
+  /** 未选需求时的默认范围；用例库默认展示当前迭代的全部需求。 */
+  defaultRequirementSelection?: 'latest' | 'all'
   /** 已由 useProjectRequirementOptions 取回的项目级摘要；传入时不再请求 sprint 全量列表。 */
   requirementOptions?: RequirementOption[]
   requirementOptionsLoading?: boolean
@@ -45,10 +39,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     activeProjectId,
     includeAllSprintOption = false,
     includeAllRequirementOption = false,
-    defaultToAllWhenIncluded = false,
-    initialSprintId,
-    initialRequirementId,
-    sprintScope,
+    defaultRequirementSelection = 'latest',
     requirementOptions,
     requirementOptionsLoading = false,
   } = options
@@ -63,23 +54,10 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
   })
 
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data])
-  const latestSprint = useMemo(() => pickLatestItem<Sprint>(sprints, pickCreatedAt), [sprints])
-  const currentSprintSelection: ScopeSelectionValue = sprintScope
-    ? sprintScope.value ?? null
-    : sprintSelection.projectId === activeProjectId
-      ? (sprintSelection.value ?? null)
-      : UNSET_SELECTION
-  const resolvedSelectedSprintId = sprintScope
-    ? sprintScope.value ?? undefined
-    : currentSprintSelection === UNSET_SELECTION
-      ? initialSprintId !== undefined
-        ? initialSprintId ?? undefined
-        : defaultToAllWhenIncluded && includeAllSprintOption
-          ? undefined
-          : latestSprint
-            ? normalizeSprintId(latestSprint)
-            : undefined
-      : currentSprintSelection ?? undefined
+  const defaultSprintId = useMemo(() => pickDefaultSprintId(sprints), [sprints])
+  const resolvedSelectedSprintId = sprintSelection.projectId === activeProjectId
+    ? sprintSelection.value ?? undefined
+    : defaultSprintId
 
   const requirementsQuery = useQuery({
     queryKey: requirementsQueryKey(resolvedSelectedSprintId),
@@ -103,19 +81,18 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     requirementSelection.projectId === activeProjectId && requirementSelection.sprintId === resolvedSelectedSprintId ? (requirementSelection.value ?? null) : UNSET_SELECTION
   const resolvedSelectedRequirementId =
     currentRequirementSelection === UNSET_SELECTION
-      ? initialRequirementId !== undefined
-        ? initialRequirementId ?? undefined
-        : defaultToAllWhenIncluded && includeAllRequirementOption
-          ? undefined
-          : latestRequirement
-            ? normalizeRequirementId(latestRequirement)
-            : undefined
+      ? defaultRequirementSelection === 'all' && includeAllRequirementOption
+        ? undefined
+        : latestRequirement
+          ? normalizeRequirementId(latestRequirement)
+          : undefined
       : currentRequirementSelection ?? undefined
 
   const sprintFilterOptions = useMemo(
     () => [
       ...(includeAllSprintOption ? [{ label: '全部迭代', value: 'all' }] : []),
-      ...sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
+      ...sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) }))
+        .filter((option) => option.value),
     ],
     [includeAllSprintOption, sprints],
   )
@@ -129,21 +106,13 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
   )
 
   function selectSprint(value?: string | null) {
-    if (sprintScope) {
-      sprintScope.onChange?.(value ?? null)
-      setRequirementSelection({
-        sprintId: value ?? undefined,
-        projectId: activeProjectId,
-        value: null,
-      })
-      return
-    }
+    const next = !value || value === 'all' ? null : value
     setSprintSelection({
       projectId: activeProjectId,
-      value: value ?? null,
+      value: next,
     })
     setRequirementSelection({
-      sprintId: value ?? undefined,
+      sprintId: next ?? undefined,
       projectId: activeProjectId,
       value: null,
     })
@@ -159,7 +128,6 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
 
   return {
     currentRequirementSelection,
-    currentSprintSelection,
     requirementFilterOptions,
     requirements,
     requirementsLoading,

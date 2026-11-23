@@ -1,4 +1,5 @@
-import { Button, Input, Select, Tag } from 'antd'
+import { CopyOutlined } from '@ant-design/icons'
+import { Button, Input, Select, Tag, Tooltip } from 'antd'
 import { InterfaceBodyPanel } from './InterfaceBodyPanel'
 import { InterfaceHeadersPanel } from './InterfaceHeadersPanel'
 import { InterfaceParamsPanel } from './InterfaceParamsPanel'
@@ -6,51 +7,102 @@ import { InterfaceResponsePanel } from './InterfaceResponsePanel'
 import { InterfaceSettingsPanel } from './InterfaceSettingsPanel'
 import { INTERFACE_METHODS, methodTone } from '../utils/interfaceForm'
 import { formatTime } from '@/utils/format'
+import { message } from '@/shared/utils/feedback'
+import titleStyles from '@/shared/styles/editor-title-input.module.css'
 import type { InterfaceDetailPageModel } from '../hooks/useInterfaceDetailPage'
+
+function requestAddress(basePath: string, path: string) {
+  if (!basePath) return path
+  if (!path) return basePath
+  return `${basePath.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
 
 function InterfaceEditorHeader({ page }: { page: InterfaceDetailPageModel }) {
   const {
     draft,
     isCreate,
     canWrite,
+    dirty,
     repositories,
     selectedRepository,
+    saveMutation,
     patch,
     changeRepository,
   } = page
   if (!draft) return null
 
+  const repositoryName =
+    draft.softwareRepositoryName || selectedRepository?.name || ''
+  const stateLabel = saveMutation.isPending
+    ? '保存中…'
+    : isCreate
+      ? dirty
+        ? '有未保存的修改'
+        : '新建接口'
+      : dirty
+        ? '有未保存的修改'
+        : '已保存'
+  const stateDot = saveMutation.isPending
+    ? 'bg-[var(--srf-accent)]'
+    : isCreate && !dirty
+      ? 'bg-[var(--srf-text-muted)]'
+      : dirty
+        ? 'bg-[var(--app-status-warning-text)]'
+        : 'bg-[var(--srf-result-passed)]'
+
   return (
-    <div className="if-editor-head flex flex-none flex-col gap-[5px] px-4 pb-[9px] pt-[13px]">
-      <Input
-        className="if-name-input"
-        value={draft.name}
-        maxLength={120}
-        disabled={!canWrite}
-        placeholder="接口名称，例如：查询订单详情"
-        aria-label="接口名称"
-        onChange={event => patch({ name: event.target.value })}
-      />
-      <div className="if-editor-meta flex min-w-0 items-center gap-[7px] text-[11px] leading-5 text-[var(--srf-text-muted)]">
-        <span>所属软件仓库</span>
-        {isCreate ? (
-          <Select
-            className="if-app-select min-w-40"
-            aria-label="所属软件仓库"
-            value={draft.softwareRepositoryId || undefined}
-            placeholder="选择软件仓库"
+    <div className="if-editor-head flex flex-none flex-col gap-1 px-4 pb-2 pt-3">
+        <div className="if-editor-title-row flex min-w-0 flex-wrap items-center gap-2">
+        <div
+          className="min-w-0 max-w-full flex-none"
+          style={{ width: `${Math.min(520, Math.max(220, draft.name.length * 24 + 56))}px` }}
+        >
+          <Input
+            className={titleStyles.titleInput}
+            value={draft.name}
+            maxLength={120}
             disabled={!canWrite}
-            options={repositories.map(repository => ({
-              label: repository.name,
-              value: repository.softwareRepositoryId,
-            }))}
-            onChange={changeRepository}
+            placeholder={isCreate ? '输入接口名称' : '接口名称'}
+            aria-label="接口名称"
+            onChange={event => patch({ name: event.target.value })}
           />
+        </div>
+        {isCreate ? <Tag className="m-0">草稿</Tag> : null}
+        {!canWrite ? <Tag className="m-0">只读成员 · 不可编辑</Tag> : null}
+        <span
+          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--srf-text-muted)]"
+          role="status"
+          aria-live="polite"
+        >
+          <i className={`h-1.5 w-1.5 flex-none rounded-full ${stateDot}`} aria-hidden />
+          {stateLabel}
+        </span>
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] leading-5 text-[var(--srf-text-muted)]">
+        {isCreate ? (
+          <>
+            <span>所属软件仓库</span>
+            <Select
+              className="if-app-select min-w-40"
+              aria-label="所属软件仓库"
+              value={draft.softwareRepositoryId || undefined}
+              placeholder="选择软件仓库"
+              disabled={!canWrite}
+              options={repositories.map(repository => ({
+                label: repository.name,
+                value: repository.softwareRepositoryId,
+              }))}
+              onChange={changeRepository}
+            />
+            <span aria-hidden>·</span>
+          </>
         ) : (
-          <span className="if-editor-app font-semibold text-[var(--srf-text)]">{draft.softwareRepositoryName || selectedRepository?.name || '—'}</span>
+          <>
+            <span>{repositoryName || '未选择软件仓库'}</span>
+            <span aria-hidden>·</span>
+          </>
         )}
-        <span className="if-meta-dot">·</span>
-        <span>{draft.updatedAt ? formatTime(draft.updatedAt) : '新建'}</span>
+        <span>{draft.updatedAt ? `更新于 ${formatTime(draft.updatedAt)}` : '尚未保存'}</span>
       </div>
     </div>
   )
@@ -59,12 +111,8 @@ function InterfaceEditorHeader({ page }: { page: InterfaceDetailPageModel }) {
 function InterfaceRequestBar({ page }: { page: InterfaceDetailPageModel }) {
   const {
     draft,
-    isCreate,
-    interfaceId,
     canWrite,
-    interfaceInActiveProject,
     selectedRepository,
-    saveMutation,
     patch,
     changePath,
   } = page
@@ -72,9 +120,19 @@ function InterfaceRequestBar({ page }: { page: InterfaceDetailPageModel }) {
 
   const repositoryBasePath = selectedRepository?.basePath || ''
   const methodToneClass = methodTone(draft.method)
+  const address = requestAddress(repositoryBasePath, draft.path)
+
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(address)
+      message.success('请求地址已复制')
+    } catch {
+      message.error('复制失败，请手动选择路径')
+    }
+  }
 
   return (
-    <div className="if-request-bar flex flex-none items-center gap-2 border-b border-[var(--srf-divider)] px-4 pb-[13px] pt-2 max-[760.01px]:flex-wrap max-[760.01px]:items-stretch">
+    <div className="if-request-bar flex flex-none items-center gap-2 border-b border-[var(--srf-divider)] px-4 pb-[13px] pt-1 max-[760.01px]:flex-wrap max-[760.01px]:items-stretch">
       <Select
         className={`if-method-select if-method-${methodToneClass} w-[104px] flex-none max-[760.01px]:w-[96px]`}
         aria-label="请求方法"
@@ -97,25 +155,16 @@ function InterfaceRequestBar({ page }: { page: InterfaceDetailPageModel }) {
           onBlur={() => changePath(draft.path.trim())}
         />
       </div>
-      {canWrite ? (
+      <Tooltip title="复制请求地址">
         <Button
-          type="primary"
-          className="if-save-button min-w-[86px] flex-none max-[760.01px]:ms-auto"
-          loading={saveMutation.isPending}
-          disabled={
-            !draft.name.trim() ||
-            !draft.path.trim() ||
-            !draft.softwareRepositoryId ||
-            !interfaceInActiveProject ||
-            (!isCreate && draft.interfaceId !== interfaceId)
-          }
-          onClick={() => saveMutation.mutate()}
-        >
-          {isCreate ? '创建接口' : '保存'}
-        </Button>
-      ) : (
-        <Tag className="if-readonly-tag">只读</Tag>
-      )}
+          className="if-copy-address flex-none"
+          size="small"
+          aria-label="复制请求地址"
+          icon={<CopyOutlined />}
+          disabled={!address.trim()}
+          onClick={() => void copyAddress()}
+        />
+      </Tooltip>
     </div>
   )
 }

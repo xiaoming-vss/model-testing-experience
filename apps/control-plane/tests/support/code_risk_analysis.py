@@ -87,16 +87,30 @@ def understanding_version(content: str | None = None) -> SimpleNamespace:
 
 @pytest.fixture(autouse=True)
 def approved_understanding(monkeypatch):
-    """代码风险分析读取已审核的需求理解版本；快照测试用固定版本替身。"""
-    from testing_agent.services import code_risk_analysis as module
+    """Provide an adopted material to snapshot tests unless explicitly omitted."""
+    from testing_agent.services.generation_current_material import CurrentMaterial
 
-    version = understanding_version()
+    material = CurrentMaterial(
+        candidate_id="candidate",
+        snapshot_id="snapshot",
+        candidate_token="token",
+        current_token="current-token",
+        task_id="understanding-task",
+        attempt_id="understanding-attempt",
+        content=json.dumps(material_artifact(), ensure_ascii=False),
+        content_hash="hash",
+        basis_hash="basis",
+        lineage_hash="lineage",
+        document_root_hash="document",
+    )
+    original = CodeRiskAnalysisService.build_snapshot
 
-    async def resolve(repository, requirement_id, version_id=""):
-        return version
+    async def build_with_material(self, *args, **kwargs):
+        kwargs.setdefault("current_material", material)
+        return await original(self, *args, **kwargs)
 
-    monkeypatch.setattr(module, "approved_material", resolve)
-    return version
+    monkeypatch.setattr(CodeRiskAnalysisService, "build_snapshot", build_with_material)
+    return material
 
 
 def make_requirement() -> SimpleNamespace:
@@ -376,12 +390,12 @@ class StubCodeRiskAnalysisService:
         *,
         user_id,
         connection_ids=None,
-        material_version_id="",
+        current_material=None,
     ):
         return {
             "taskId": task.task_id,
             "runId": run_id,
-            "requirementMaterialVersion": {"versionId": "understanding-r-v1"},
+            "requirementMaterialCurrent": {"candidateId": current_material.candidate_id},
         }
 
 
@@ -392,9 +406,20 @@ def real_risk_service(session_db):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 
     seed_task(session_db)
-    from support.requirement_versions import material_version
-
-    material_version(session_db)
+    session_db.add(
+        AiGenerateTask(
+            task_id="understanding-r",
+            task_type="requirement_analysis",
+            name="需求分析",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="r",
+            creator_user_id="u",
+            source_type="requirement",
+            source_content="",
+        )
+    )
+    session_db.flush()
     task = session_db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     task.task_type = "code_risk_analysis"
     session_db.commit()
@@ -449,11 +474,9 @@ def worker_settings() -> Settings:
         http_host="127.0.0.1",
         http_port=8000,
         jwt_key="test-jwt",
-        jwt_expire_hours=1,
         integration_key="test-integration",
         worker_key="worker-token",
         database_url="sqlite+aiosqlite:///:memory:",
-        uploads_dir="storage/test-uploads",
     )
 
 

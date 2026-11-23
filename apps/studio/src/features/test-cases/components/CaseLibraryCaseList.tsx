@@ -132,6 +132,8 @@ function CaseLibraryQuickBar({ page }: { page: CaseLibraryPageModel }) {
   const {
     priority,
     setPriority,
+    invalidatedFilter,
+    setInvalidatedFilter,
     setPage,
     selectedCaseIds,
     setSelectedCaseIds,
@@ -171,6 +173,25 @@ function CaseLibraryQuickBar({ page }: { page: CaseLibraryPageModel }) {
             }}
           >
             {level}
+          </button>
+        ))}
+        <span className="tp-quick-label ml-2 text-[12px] text-[var(--srf-text-secondary)]">状态:</span>
+        {([
+          ['all', '全部'],
+          ['valid', '有效'],
+          ['invalid', '已失效'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={`tp-chip${invalidatedFilter === value ? ' active' : ''}`}
+            aria-pressed={invalidatedFilter === value}
+            onClick={() => {
+              setInvalidatedFilter(value)
+              setPage(1)
+            }}
+          >
+            {label}
           </button>
         ))}
       </div>

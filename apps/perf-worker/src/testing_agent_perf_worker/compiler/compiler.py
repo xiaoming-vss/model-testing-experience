@@ -26,7 +26,7 @@ from ..core.io import write_secure_bytes, write_secure_text
 from .data import Dataset, load_datasets, write_datasets
 
 PLAN_VERSION = "1.0"
-TEMPLATE_VERSION = "1.0.0"
+TEMPLATE_VERSION = "1.1.0"
 
 _TEMPLATE_RE = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
 _BUILTINS = frozenset({"uuid", "timestamp", "iteration", "vu"})
@@ -248,7 +248,21 @@ def _build_options(spec: RunSpec, stop_grace_seconds: int) -> dict[str, Any]:
     options: dict[str, Any] = {
         "scenarios": {"main": scenario},
         "tags": {"run_id": spec.run_id},
+        "systemTags": [
+            "status",
+            "method",
+            "expected_response",
+            "scenario",
+            "error_code",
+            "check",
+            "group",
+            "proto",
+        ],
     }
+    for key in ("project_id", "sprint_id", "suite_id", "suite_run_id", "case_id"):
+        value = getattr(spec, key)
+        if value:
+            options["tags"][key] = value
     if spec.case.acceptance.criteria:
         options["thresholds"] = {
             metric: list(expressions)

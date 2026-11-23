@@ -92,34 +92,6 @@ export function perfMetricsFromSummary(
   }
 }
 
-export type PerfThresholdResult = {
-  metric: string
-  expression: string
-  passed: boolean
-}
-
-export function perfThresholdsFromSummary(
-  summary: Record<string, unknown> | null | undefined,
-): PerfThresholdResult[] {
-  const metrics = summary?.metrics
-  if (!metrics || typeof metrics !== 'object') return []
-  const results: PerfThresholdResult[] = []
-  for (const [metric, raw] of Object.entries(metrics as Record<string, unknown>)) {
-    if (!raw || typeof raw !== 'object') continue
-    const thresholds = (raw as Record<string, unknown>).thresholds
-    if (!thresholds || typeof thresholds !== 'object') continue
-    for (const [expression, value] of Object.entries(thresholds as Record<string, unknown>)) {
-      if (!value || typeof value !== 'object') continue
-      results.push({
-        metric,
-        expression,
-        passed: Boolean((value as Record<string, unknown>).ok),
-      })
-    }
-  }
-  return results
-}
-
 export function formatPerfDuration(durationMs: number) {
   if (!Number.isFinite(durationMs) || durationMs <= 0) return '-'
   const seconds = Math.round(durationMs / 1000)

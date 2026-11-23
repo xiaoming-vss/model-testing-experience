@@ -41,8 +41,6 @@ thinking_level = "off"
 
 # 当前仅支持 Pi 后端；[agent].backend 为 nanobot 时任务会明确失败。
 [code_risk_analysis]
-# 兼容旧配置；代码拉取与本地 diff 使用下方 git_timeout_seconds
-gitlab_timeout_seconds = 120
 # 单次 git 命令超时;代码拉取、checkout 与本地 diff 共用
 git_timeout_seconds = 300
 # 失败 run 的代码工作区保留时长;成功 run 立即删除

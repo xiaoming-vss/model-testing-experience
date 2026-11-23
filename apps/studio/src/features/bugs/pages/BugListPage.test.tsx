@@ -10,16 +10,19 @@ import { api } from '@/services/api'
 import { BugListPage } from './BugListPage'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
-vi.mock('@/domain/projects/hooks/useActiveSprint', () => ({
-  useActiveSprint: () => ({
-    activeSprintId: 'sprint-1',
-    sprints: [{ sprintId: 'sprint-1', name: 'V2.3 迭代' }],
+vi.mock('@/domain/projects/hooks/useSprintFilter', () => ({
+  useSprintFilter: () => ({
+    sprints: [{ sprintId: 'sprint-1', name: 'V2.3 迭代', status: 'running' }],
     sprintsQuery: { isLoading: false, error: null },
-    selectSprint: vi.fn(),
-    sprintSelectorOptions: [
+    filterOptions: [
       { label: '全部迭代', value: 'all' },
       { label: 'V2.3 迭代', value: 'sprint-1' },
     ],
+    loading: false,
+    error: null,
+    selectedSprintId: 'sprint-1',
+    selectValue: 'sprint-1',
+    selectSprint: vi.fn(),
   }),
 }))
 
@@ -63,7 +66,7 @@ function renderPage(client: QueryClient, initialEntries?: string[]) {
 }
 
 beforeEach(() => {
-  useWorkbenchStore.setState({ activeProjectId: 'project-1', activeSprintId: 'sprint-1' })
+  useWorkbenchStore.setState({ activeProjectId: 'project-1' })
   useAuthStore.setState({ user: { userId: 'user-1', name: 'owner' } })
 })
 

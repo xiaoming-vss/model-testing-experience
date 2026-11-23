@@ -26,7 +26,6 @@ export function UiGenerationSourceConfig({
   selection,
   resolved,
   disabled = false,
-  onProfileVersionChange,
   onRepositoryChange,
   onCommitModeChange,
   onOpenProfile,
@@ -36,7 +35,6 @@ export function UiGenerationSourceConfig({
   selection: UiGenerationSourceSelection
   resolved: ResolvedUiGenerationSource
   disabled?: boolean
-  onProfileVersionChange: (versionId: string) => void
   onRepositoryChange: (repositoryId: string) => void
   onCommitModeChange: (mode: UiGenerationSourceCommitMode) => void
   onOpenProfile?: () => void
@@ -46,14 +44,14 @@ export function UiGenerationSourceConfig({
   const [checkResult, setCheckResult] = useState<UiGenerationSourceCheck>()
   const [checkError, setCheckError] = useState<unknown>()
 
-  const versionId = resolved.version?.versionId ?? ''
+  const profileCandidateId = resolved.profile?.candidateId ?? ''
   const repositoryId = resolved.repository?.repositoryId ?? ''
-  const checkKey = `${versionId}:${repositoryId}`
+  const checkKey = `${profileCandidateId}:${repositoryId}`
   const activeCheck = checkedKey === checkKey ? checkResult : undefined
   const activeCheckError = checkedKey === checkKey ? checkError : undefined
 
   async function runSourceCheck() {
-    if (!versionId || !repositoryId || !resolved.repository?.commit || disabled) return
+    if (!profileCandidateId || !repositoryId || !resolved.repository?.commit || disabled) return
     setCheckedKey(checkKey)
     setChecking(true)
     setCheckResult(undefined)
@@ -61,7 +59,7 @@ export function UiGenerationSourceConfig({
     try {
       setCheckResult(
         await generationChainApi.uiSourceCheck(requirementId, {
-          profileVersionId: versionId,
+          profileCandidateId,
           repositoryId,
           pinnedCommit: resolved.repository?.commit ?? '',
         }),
@@ -77,7 +75,7 @@ export function UiGenerationSourceConfig({
     return (
       <div className="ui-source-config flex min-w-0 flex-col gap-3.5" aria-busy="true">
         <p className="ui-source-state m-0 flex items-center gap-2 text-[12px] text-[var(--app-surface-text-muted)]">
-          <Spin size="small" /> 正在读取仓库画像版本
+          <Spin size="small" /> 正在读取仓库画像
         </p>
       </div>
     )
@@ -102,44 +100,16 @@ export function UiGenerationSourceConfig({
     )
   }
 
-  const latestVersionId =
-    optionsState.data?.defaultProfileVersionId || resolved.versions[0]?.versionId
-
   return (
     <div className="ui-source-config flex min-w-0 flex-col gap-3.5">
-      {resolved.versions.length ? (
-        <section className="ui-source-block flex min-w-0 flex-col gap-2" aria-label="画像版本">
-          <h4 className="m-0 text-[12px] font-semibold">画像版本</h4>
-          <div className="ui-source-version-list flex min-w-0 flex-wrap gap-1.5" role="group" aria-label="选择仓库画像版本">
-            {resolved.versions.map(version => {
-              const active = version.versionId === resolved.version?.versionId
-              return (
-                <button
-                  type="button"
-                  key={version.versionId}
-                  className={`ui-source-version-button inline-flex min-h-[26px] cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'is-active border-[var(--app-accent-border)] bg-[var(--app-accent-surface)] font-semibold text-[var(--app-accent)]' : 'border-[var(--app-surface-border)] bg-[var(--app-surface)] text-[var(--app-surface-text)] hover:border-[var(--app-accent-border)] hover:text-[var(--app-accent)]'}`}
-                  aria-pressed={active}
-                  disabled={disabled}
-                  onClick={() => onProfileVersionChange(version.versionId)}
-                >
-                  {version.label}
-                  {version.versionId === latestVersionId ? (
-                    <span className="ui-source-version-latest text-[10px] font-normal text-[var(--app-surface-text-muted)]">最新</span>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-          {resolved.version?.requirementMaterialVersion?.versionNo ? (
-            <p className="ui-source-note m-0 text-[11px] leading-[1.7] text-[var(--app-surface-text-muted)]">
-              该画像使用材料整理 v
-              {resolved.version.requirementMaterialVersion.versionNo}
-            </p>
-          ) : null}
+      {resolved.profile ? (
+        <section className="ui-source-block flex min-w-0 flex-col gap-2" aria-label="当前画像">
+          <h4 className="m-0 text-[12px] font-semibold">当前画像</h4>
+          <div><Tag color="success">当前已采用</Tag></div>
         </section>
       ) : null}
 
-      {resolved.blocker?.kind === 'no_profile_version' ? (
+      {resolved.blocker?.kind === 'no_profile' ? (
         <Alert
           showIcon
           type="warning"
@@ -155,10 +125,10 @@ export function UiGenerationSourceConfig({
         />
       ) : null}
 
-      {resolved.versions.length ? (
+      {resolved.profile ? (
         <section className="ui-source-block flex min-w-0 flex-col gap-2" aria-label="前端仓库">
           <h4 className="m-0 text-[12px] font-semibold">前端仓库</h4>
-          {resolved.blocker && resolved.blocker.kind !== 'no_profile_version' ? (
+          {resolved.blocker && resolved.blocker.kind !== 'no_profile' ? (
             <Alert
               showIcon
               type={resolved.blocker.kind === 'repository_unavailable' ? 'error' : 'warning'}
@@ -241,7 +211,7 @@ export function UiGenerationSourceConfig({
         </section>
       ) : null}
 
-      {resolved.version && resolved.frontendRepositories.length ? (
+      {resolved.profile && resolved.frontendRepositories.length ? (
         <section className="ui-source-block flex min-w-0 flex-col gap-2" aria-label="Commit 模式">
           <h4 className="m-0 text-[12px] font-semibold">Commit 模式</h4>
           <div className="ui-source-commit-modes flex flex-wrap gap-x-3.5 gap-y-2" role="radiogroup" aria-label="选择 commit 模式">
@@ -280,7 +250,7 @@ export function UiGenerationSourceConfig({
                       <code>{resolved.repository.commit || '未记录'}</code>
                     </p>
                     <p className="ui-source-note m-0 text-[11px] leading-[1.7] text-[var(--app-surface-text-muted)]">
-                      启动时使用所选画像版本冻结的 commit，不再解析分支。
+                      启动时使用当前画像冻结的 commit，不再解析分支。
                     </p>
                   </>
                 ) : (

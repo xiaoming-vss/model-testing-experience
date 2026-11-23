@@ -35,7 +35,7 @@ async def test_live_ui_debug_result_is_private_but_manual_result_remains_shared(
 
 
 @pytest.mark.asyncio
-async def test_scope_move_updates_permissions_and_live_metrics_not_saved_daily_counts(db):
+async def test_run_snapshot_survives_requirement_move(db):
     seed(db)
     service = UiTestCaseRunService(UiTestCaseRunRepository(AsyncSessionAdapter(db)))
     single = await service.debug_run_case(
@@ -43,22 +43,22 @@ async def test_scope_move_updates_permissions_and_live_metrics_not_saved_daily_c
     )
     suite = await service.run_suite("u1", "suite", RunUiSuiteRequest(environmentId="ui-env"))
     assert single["projectId"] == suite["projectId"] == "p1"
-    assert single["requirementId"] == "req" and suite["sprintId"] == "s1"
+    assert single["requirementId"] == suite["requirementId"] == "req"
+    assert single["sprintId"] == suite["sprintId"] == "s1"
     metrics = SprintDailyMetricsRepository(AsyncSessionAdapter(db))
     assert len(await metrics.list_latest_ui_suite_runs("s1")) == 1
     req = db.scalar(select(Requirement))
     req.sprint_id = "s2"
     db.commit()
+    # Sprint metrics stay requirement-scoped; permissions and run snapshots do not move.
     assert await metrics.list_latest_ui_suite_runs("s1") == []
     assert len(await metrics.list_latest_ui_suite_runs("s2")) == 1
+    assert (await service.get_case_run("u1", single["runId"]))["sprintId"] == "s1"
+    assert (await service.suite_report("u1", suite["suiteRunId"]))["sprintId"] == "s1"
     with pytest.raises(type(ErrForbidden)):
-        await service.get_case_run("u1", single["runId"])
+        await service.get_case_run("u2", single["runId"])
     with pytest.raises(type(ErrForbidden)):
-        await service.suite_report("u1", suite["suiteRunId"])
-    moved = await service.get_suite_run("u2", suite["suiteRunId"])
-    assert moved["sprintId"] == "s2" and moved["projectId"] == "p2"
-    moved_case = await service.get_case_run("u2", single["runId"])
-    assert moved_case["projectId"] == "p2"
+        await service.get_suite_run("u2", suite["suiteRunId"])
     history = await metrics.get("s1", "2026-09-10")
     assert history.ui_case_total == 7 and history.ui_case_success == 6
     from testing_agent.core.errors import ErrNotFound
@@ -71,4 +71,4 @@ async def test_scope_move_updates_permissions_and_live_metrics_not_saved_daily_c
     db.commit()
     assert await metrics.list_latest_ui_suite_runs("s2") == []
     with pytest.raises(type(ErrNotFound)):
-        await service.suite_report("u2", suite["suiteRunId"])
+        await service.suite_report("u1", suite["suiteRunId"])

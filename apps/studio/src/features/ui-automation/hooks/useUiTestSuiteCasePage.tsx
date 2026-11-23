@@ -21,6 +21,10 @@ import {
 } from '@/services/api'
 import { listTotal } from '@/shared/api/request'
 import type { CaseImportMode } from '@/shared/utils/caseImport'
+import {
+  isCaseInvalidated,
+  type CaseInvalidationFilter,
+} from '@/shared/utils/caseInvalidation'
 import { message } from '@/shared/utils/feedback'
 import { compareByOrderNo } from '@/shared/utils/order'
 import { getErrorMessage, normalizeUiTestCaseId } from '@/utils/format'
@@ -63,6 +67,8 @@ export function useUiTestSuiteCasePage() {
   const stepFlowRef = useRef<UiExecutionFlowHandle>(null)
   const caseFlowRef = useRef<UiExecutionFlowHandle>(null)
   const [flowLevel, setFlowLevel] = useState<'cases' | 'steps'>('cases')
+  const [invalidatedFilter, setInvalidatedFilter] = useState<CaseInvalidationFilter>('all')
+  const [caseStatusOpen, setCaseStatusOpen] = useState(false)
   const [selectedStepIndex, setSelectedStepIndex] = useState(0)
   const [stepConfigHost, setStepConfigHost] = useState<HTMLDivElement | null>(null)
   const [stepConfigTab, setStepConfigTab] = useState<'basic' | 'extract'>('basic')
@@ -97,7 +103,6 @@ export function useUiTestSuiteCasePage() {
     queryFn: () => api.getUiTestSuite(suiteId),
     enabled: Boolean(suiteId),
   })
-
   const requirementId = suiteQuery.data?.requirementId ?? suiteQuery.data?.requirement_id ?? ''
 
   const requirementQuery = useQuery({
@@ -114,7 +119,8 @@ export function useUiTestSuiteCasePage() {
     enabled: Boolean(sprintId),
   })
 
-  const projectId = sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''
+  // 测试集归属项目，需求/迭代只是可选的来源关联，不能再用它们反推项目。
+  const projectId = suiteQuery.data?.projectId ?? suiteQuery.data?.project_id ?? ''
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', projectId, 'ui'],
     queryFn: () => api.getApiEnvironments(projectId, 'ui'),
@@ -178,7 +184,7 @@ export function useUiTestSuiteCasePage() {
     [missingVariables],
   )
 
-  const { can } = useProjectAccess(sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? '')
+  const { can } = useProjectAccess(projectId)
   const casesQuery = useQuery({
     queryKey: ['uiTestCases', suiteId],
     queryFn: () => api.getUiTestCases(suiteId),
@@ -501,7 +507,10 @@ export function useUiTestSuiteCasePage() {
         throw new Error('请先选择 UI 环境')
       }
 
-      const body = buildUiSuiteDebugRunPayload(resolvedEnvironmentId, suiteQuery.data)
+      const body = buildUiSuiteDebugRunPayload(
+        resolvedEnvironmentId,
+        suiteQuery.data,
+      )
       let runId = ''
       try {
         const stream = await startDebugStream<UiTestCaseRun>('ui-case', activeCaseId, body, (event) => {
@@ -690,8 +699,19 @@ export function useUiTestSuiteCasePage() {
     return [...ordered, ...missing]
   }, [caseOrderIds, uiTestCases])
 
-  const caseList = useMemo(() => (draftCase ? [...orderedCases, draftCase] : orderedCases), [draftCase, orderedCases])
-  const canReorder = can('write')
+  const visibleCases = useMemo(
+    () =>
+      orderedCases.filter((item) => {
+        if (invalidatedFilter === 'valid') return !isCaseInvalidated(item)
+        if (invalidatedFilter === 'invalid') return isCaseInvalidated(item)
+        return true
+      }),
+    [invalidatedFilter, orderedCases],
+  )
+  const caseList = useMemo(() => (draftCase ? [...visibleCases, draftCase] : visibleCases), [draftCase, visibleCases])
+  const canReorder = can('write') && invalidatedFilter === 'all'
+  const hasRunnableCases = uiTestCases.some((item) => !isCaseInvalidated(item))
+  const invalidatedCaseCount = uiTestCases.filter((item) => isCaseInvalidated(item)).length
 
   const suiteRunHistory = useMemo(
     () =>
@@ -1083,7 +1103,7 @@ export function useUiTestSuiteCasePage() {
   const runningSuiteCase = runningSuiteItems.find((item) => item.caseId === activeCaseId && item.status === 'running')
   const runningStepResults = runningSuiteCase?.stepResults ?? (currentRun?.status === 'running' ? currentRun.stepResults : undefined) ?? []
   const runningStepIds = runningStepResults.filter((step) => step.status === 'running' && typeof step.orderNo === 'number' && step.orderNo > 0).map((step) => String(step.orderNo! - 1))
-  const caseFlowItems: FlowItem[] = orderedCases.map((item, index) => {
+  const caseFlowItems: FlowItem[] = visibleCases.map((item, index) => {
     const caseId = normalizeUiTestCaseId(item)
     return {
       id: caseId,
@@ -1091,6 +1111,7 @@ export function useUiTestSuiteCasePage() {
       serial: formatUiCaseSerial(index + 1),
       caption: `${getUiTestCaseStepCount(item)} 个步骤 · 点击进入`,
       enabled: item.enabled !== false,
+      invalidated: isCaseInvalidated(item),
       actions: can('write') ? [
         { key: 'open', label: '打开用例', onSelect: () => handleSelectCase(caseId) },
         { key: 'delete', label: '删除用例', danger: true, onSelect: () => confirmDeleteCase(caseId, item.name) },
@@ -1131,6 +1152,21 @@ export function useUiTestSuiteCasePage() {
     setSelectedStepIndex(Math.max(0, nextSelectedIndex))
     setExpandedStepIndexes([Math.max(0, nextSelectedIndex)])
   }
+  const batchInvalidateCasesMutation = useMutation({
+    mutationFn: ({ caseIds, invalidated }: { caseIds: string[]; invalidated: boolean }) =>
+      api.batchInvalidateUiCases(projectId, caseIds, invalidated),
+    onSuccess: (result, { invalidated }) => {
+      message.success(
+        invalidated
+          ? `已标记失效 ${result?.updatedCount ?? 0} 条用例`
+          : `已恢复有效 ${result?.updatedCount ?? 0} 条用例`,
+      )
+      queryClient.invalidateQueries({ queryKey: ['uiTestCases', suiteId] })
+      queryClient.invalidateQueries({ queryKey: ['uiTestCase'] })
+      setCaseStatusOpen(false)
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
   function handleCaseSave() {
     if (flowLevel === 'cases' && caseFlowRef.current) {
       if (!caseFlowRef.current.prepareSave()) message.warning('请先将用例连线连接成完整的执行顺序，再保存')
@@ -1278,8 +1314,16 @@ export function useUiTestSuiteCasePage() {
     importUiCasesMutation,
     draftCase,
     orderedCases,
+    visibleCases,
     caseList,
     canReorder,
+    invalidatedFilter,
+    setInvalidatedFilter,
+    caseStatusOpen,
+    setCaseStatusOpen,
+    batchInvalidateCasesMutation,
+    hasRunnableCases,
+    invalidatedCaseCount,
     suiteRunHistory,
     suiteRunHistoryTotal,
     latestSuiteRun,

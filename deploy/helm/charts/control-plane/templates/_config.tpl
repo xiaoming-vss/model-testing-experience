@@ -18,7 +18,6 @@ port = {{ int64 .Values.config.http.port }}
 
 [security.jwt]
 key = {{ .Values.config.security.jwt.key | default "" | toJson }}
-expire_hours = {{ int64 .Values.config.security.jwt.expire_hours }}
 user_expire_hours = {{ int64 .Values.config.security.jwt.user_expire_hours }}
 super_admin_expire_hours = {{ int64 .Values.config.security.jwt.super_admin_expire_hours }}
 
@@ -74,9 +73,6 @@ addressing_style = {{ .Values.config.storage.s3.addressing_style | default "path
 signature_seconds = {{ int64 .Values.config.storage.s3.signature_seconds }}
 temporary_hours = {{ int64 .Values.config.storage.s3.temporary_hours }}
 max_bytes = {{ int64 .Values.config.storage.s3.max_bytes }}
-
-[code_overview]
-cache_ttl_seconds = {{ int64 .Values.config.code_overview.cache_ttl_seconds }}
 
 [asset_import]
 max_bytes = {{ int64 .Values.config.asset_import.max_bytes }}

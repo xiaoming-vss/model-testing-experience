@@ -1,14 +1,12 @@
 import type { UiTestSuite } from '@/services/api'
 
 export type CollectionFormValues = {
-  sprintId?: string
   requirementId?: string
   name: string
   summary?: string
 }
 
 export type UiTestSuiteFormValues = {
-  sprintId?: string
   requirementId?: string
   name: string
   description?: string

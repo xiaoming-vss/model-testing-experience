@@ -23,8 +23,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { EnvironmentDrawer } from '@/domain/projects/components/EnvironmentDrawer'
 import { CollectionDrawer, type CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
 import { useProjectRequirementOptions } from '@/domain/projects/hooks/useProjectRequirementOptions'
-import { useActiveSprint } from '@/domain/projects/hooks/useActiveSprint'
-import { useSprintRequirementScope } from '@/domain/projects/hooks/useSprintRequirementScope'
 import { api, listItems, type ApiCollection, type ApiEnvironment } from '@/services/api'
 import { useWorkbenchStore } from '@/domain/projects/store/workbench.store'
 import {
@@ -32,7 +30,6 @@ import {
   getErrorMessage,
   normalizeEnvironmentId,
   normalizeRequirementId,
-  normalizeSprintId,
   pickUpdatedAt,
 } from '@/utils/format'
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
@@ -61,50 +58,37 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [keyword, setKeyword] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [drawerSprintId, setDrawerSprintId] = useState<string | undefined>(undefined)
   const [editingCollection, setEditingCollection] = useState<ApiCollection | null>(null)
   const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | undefined>(undefined)
   const [runningCollectionId, setRunningCollectionId] = useState('')
+  const [requirementFilterId, setRequirementFilterId] = useState<string | undefined>(scope?.requirementId)
   const [drawerForm] = Form.useForm<CollectionFormValues>()
   const keywordInputRef = useRef<InputRef>(null)
   const isRequirementLocked = Boolean(scope?.requirementId)
-  const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
 
-  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
+  const { allRequirements, allRequirementsQuery, requirementNameMap } =
     useProjectRequirementOptions({ activeProjectId })
 
-  const {
-    currentRequirementSelection,
-    requirementFilterOptions,
-    requirementsLoading,
-    resolvedSelectedRequirementId,
-    resolvedSelectedSprintId,
-    selectRequirement,
-    sprints,
-    sprintsQuery,
-  } = useSprintRequirementScope({
-    activeProjectId,
-    includeAllRequirementOption: true,
-    includeAllSprintOption: true,
-    defaultToAllWhenIncluded: true,
-    sprintScope: scope ? undefined : { value: globalSprintId, onChange: selectGlobalSprint },
-    requirementOptions: allRequirements,
-    requirementOptionsLoading: allRequirementsQuery.isLoading,
-  })
-  const selectedSprintId = scope?.sprintId ?? resolvedSelectedSprintId
-  const selectedRequirementId = scope?.requirementId ?? resolvedSelectedRequirementId
+  const selectedRequirementId = scope?.requirementId ?? requirementFilterId
+  const requirementFilterOptions = useMemo(
+    () => [
+      { label: '全部需求', value: 'all' },
+      ...allRequirements.map((requirement) => ({
+        label: requirement.name,
+        value: normalizeRequirementId(requirement),
+      })),
+    ],
+    [allRequirements],
+  )
+  const requirementsLoading = allRequirementsQuery.isLoading
 
-  useEffect(() => { setPage(1) }, [activeProjectId, selectedSprintId, selectedRequirementId, keyword])
+  useEffect(() => { setPage(1) }, [activeProjectId, selectedRequirementId, keyword])
 
   const collectionsQuery = useQuery({
     // 「全部需求」用项目级列表一次取回，不再按需求逐个请求；选中需求时仍走需求维度接口。
     queryKey: ['apiCollections', activeProjectId, selectedRequirementId ?? 'all'],
-    // 未锁定需求时等需求池回来，才能按迭代在前端筛选；请求本身只依赖项目。
-    enabled:
-      Boolean(activeProjectId) &&
-      !sprintsQuery.isLoading &&
-      Boolean(selectedRequirementId || isRequirementLocked || !allRequirementsQuery.isLoading),
+    enabled: Boolean(activeProjectId),
     queryFn: async () => {
       if (selectedRequirementId) {
         const collections = await api.getApiCollections(selectedRequirementId)
@@ -120,11 +104,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       }))
     },
   })
-  const collections = useMemo(() => {
-    const data = collectionsQuery.data ?? []
-    if (selectedRequirementId || !selectedSprintId) return data
-    return data.filter((collection) => requirementSprintMap.get(collection.requirementId ?? collection.requirement_id ?? '') === selectedSprintId)
-  }, [collectionsQuery.data, requirementSprintMap, selectedRequirementId, selectedSprintId])
+  const collections = useMemo(() => collectionsQuery.data ?? [], [collectionsQuery.data])
 
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', activeProjectId, 'api'],
@@ -140,27 +120,30 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
 
 
-  const drawerSprintOptions = useMemo(
-    () => sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
-    [sprints],
-  )
-
   const drawerRequirementOptions = useMemo(
-    () => allRequirements
-      .filter((requirement) => !drawerSprintId || requirement.sprintId === drawerSprintId)
-      .map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) })),
-    [allRequirements, drawerSprintId],
+    () =>
+      allRequirements.map((requirement) => ({
+        label: requirement.name,
+        value: normalizeRequirementId(requirement),
+      })),
+    [allRequirements],
   )
 
   const saveCollectionMutation = useMutation({
     mutationFn: (values: CollectionFormValues) => {
-      if (!values.requirementId) throw new Error('请选择所属需求')
       const editingCollectionId = editingCollection?.collectionId ?? editingCollection?.collection_id
 
       if (editingCollectionId && editingCollection) {
         return api.updateApiCollection(editingCollectionId, buildApiCollectionUpdatePayload(editingCollection, values))
       }
-      return api.createApiCollection(values.requirementId, {
+      if (!activeProjectId) throw new Error('请先选择项目')
+      if (values.requirementId) {
+        return api.createApiCollection(values.requirementId, {
+          name: values.name,
+          description: values.summary,
+        })
+      }
+      return api.createProjectApiCollection(activeProjectId, {
         name: values.name,
         description: values.summary,
       })
@@ -173,7 +156,6 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       message.success(editingCollection ? 'API测试集已更新' : 'API测试集已创建')
       setDrawerOpen(false)
       setEditingCollection(null)
-      setDrawerSprintId(undefined)
       drawerForm.resetFields()
       queryClient.invalidateQueries({ queryKey: ['apiCollections'] })
     },
@@ -232,9 +214,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
   function openCreateDrawer() {
     setEditingCollection(null)
-    setDrawerSprintId(scope?.sprintId ?? resolvedSelectedSprintId)
     drawerForm.setFieldsValue({
-      sprintId: scope?.sprintId ?? resolvedSelectedSprintId,
       requirementId: selectedRequirementId,
       name: '',
       summary: '',
@@ -243,13 +223,10 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }
 
   function openEditDrawer(collection: ApiCollection) {
-    const requirementId = collection.requirementId ?? collection.requirement_id
-    const sprintId = scope?.sprintId ?? (requirementId ? requirementSprintMap.get(requirementId) : undefined)
+    const requirementId = collection.requirementId ?? collection.requirement_id ?? undefined
 
     setEditingCollection(collection)
-    setDrawerSprintId(sprintId)
     drawerForm.setFieldsValue({
-      sprintId,
       requirementId,
       name: collection.name,
       summary: collection.description,
@@ -280,17 +257,14 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
     const collectionId = collection.collectionId ?? collection.collection_id ?? ''
     const requirementId = collection.requirementId ?? collection.requirement_id
     const requirementName =
-      scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '-')
-    const sprintIdForCollection = scope?.sprintId ?? (requirementId ? requirementSprintMap.get(requirementId) : undefined)
-    const sprintName =
-      scope?.sprintName || (sprintIdForCollection ? sprintNameMap.get(sprintIdForCollection) ?? sprintIdForCollection : '-')
+      scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '项目级')
     const collectionDescription = collection.description || '暂无API测试集描述'
 
-    return { collectionDescription, collectionId, requirementName, sprintName }
+    return { collectionDescription, collectionId, requirementId, requirementName }
   }
 
   function renderCollectionCard(collection: ApiCollection) {
-    const { collectionDescription, collectionId, requirementName, sprintName } =
+    const { collectionDescription, collectionId, requirementId, requirementName } =
       getCollectionRowContext(collection)
     const title = collectionId ? (
       <Link to={`/api-automation/collections/${collectionId}`} title={collection.name}>
@@ -303,8 +277,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         key={collectionId || collection.name}
         title={title}
         meta={[
-          { label: '所属迭代', value: sprintName },
           { label: '所属需求', value: requirementName },
+          { label: '范围', value: requirementId ? '需求关联' : '项目级' },
         ]}
         footerNote={<>最近更新 {formatTime(pickUpdatedAt(collection))}</>}
         actions={
@@ -379,13 +353,13 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                       <span className="api-filter-field-label font-medium text-[var(--srf-text-muted)]">需求</span>
                       <Select
                         className="api-filter-select business-filter-select"
-                        value={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
+                        value={selectedRequirementId ?? 'all'}
                         options={requirementFilterOptions}
                         loading={requirementsLoading}
                         placeholder="筛选需求"
-                        disabled={!selectedSprintId && sprints.length === 0}
+                        disabled={!activeProjectId}
                         onChange={(value: string) => {
-                          selectRequirement(value === 'all' ? null : value)
+                          setRequirementFilterId(value === 'all' ? undefined : value)
                           setPage(1)
                         }}
                       />
@@ -438,7 +412,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                   type="primary"
                   className="action-btn-create"
                   operation="create"
-                  disabled={!activeProjectId || sprints.length === 0}
+                  disabled={!activeProjectId}
                   onClick={openCreateDrawer}
                 >
                   新建API测试集
@@ -449,7 +423,6 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
           </div>
 
-          {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
           {collectionsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionsQuery.error)} /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
@@ -457,9 +430,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
           <div className="api-test-card-body tp-list-body">
             <div className="flex min-h-0 flex-col p-4 api-test-card-scroll tp-list-scroll">
-              {sprintsQuery.isLoading ? (
-                <ListEmptyState description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              ) : !activeProjectId ? (
+              {!activeProjectId ? (
                 <ListEmptyState description="请先选择项目" />
               ) : isRequirementLocked && !selectedRequirementId ? (
                 <ListEmptyState description="当前需求不可用" />
@@ -478,7 +449,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                     {keyword.trim() ? (
                       <Button onClick={() => setKeyword('')}>清空搜索</Button>
                     ) : (
-                      <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" disabled={!activeProjectId || sprints.length === 0} onClick={openCreateDrawer}>
+                      <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" disabled={!activeProjectId} onClick={openCreateDrawer}>
                         新建API测试集
                       </ProjectActionButton>
                     )}
@@ -511,17 +482,11 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         form={drawerForm}
         loading={saveCollectionMutation.isPending}
         error={saveCollectionMutation.error ?? allRequirementsQuery.error}
-        sprintOptions={drawerSprintOptions}
         requirementOptions={drawerRequirementOptions}
         showScopeFields={!isRequirementLocked}
-        onSprintChange={(nextSprintId) => {
-          setDrawerSprintId(nextSprintId)
-          drawerForm.setFieldValue('requirementId', undefined)
-        }}
         onClose={() => {
           setDrawerOpen(false)
           setEditingCollection(null)
-          setDrawerSprintId(undefined)
           drawerForm.resetFields()
         }}
         onFinish={(values) => saveCollectionMutation.mutate(values)}

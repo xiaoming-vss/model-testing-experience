@@ -6,5 +6,5 @@ def test_ui_confirmed_suite_import_route_is_public():
 
     assert (
         "post"
-        in paths["/v1/requirements/{requirementId}/generation/{kind}/versions/{versionId}/import"]
+        in paths["/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/current/import"]
     )

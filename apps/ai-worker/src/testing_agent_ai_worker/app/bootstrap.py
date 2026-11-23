@@ -135,7 +135,6 @@ def build_task_runner(
                 agent_config=settings.agent.active,
                 code_risk_config=settings.code_risk_analysis,
                 client=resolved_client,
-                timeout_seconds=settings.code_risk_analysis.gitlab_timeout_seconds,
             ),
             repository_profile_executor=RepositoryProfileExecutor(
                 agent_config=settings.agent.active,

@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.models.ai_execution import AiExecution as Execution
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
-from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport as Import
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt as Attempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage as Stage
+from testing_agent.repositories.standalone_import import standalone_imports
 
 
 def _last_attempt(stage_expr: Any, *, successful: bool = False):
@@ -70,6 +70,7 @@ async def standalone_history_rows(
     )
     final_id = _last_attempt(final_stage, successful=True)
     current_id = _last_attempt(current_stage)
+    imports_view = await standalone_imports(session)
     review = (
         select(Attempt.review_status)
         .where(Attempt.id == final_id)
@@ -77,7 +78,10 @@ async def standalone_history_rows(
         .scalar_subquery()
     )
     imported = (
-        select(Import.id).where(Import.attempt_id == final_id).correlate(Execution, Task).exists()
+        select(imports_view.c.import_id)
+        .where(imports_view.c.attempt_id == final_id)
+        .correlate(Execution, Task)
+        .exists()
     )
     active_final = (
         select(Attempt.id)
@@ -213,9 +217,14 @@ async def standalone_history_rows(
     imports = (
         (
             await session.execute(
-                select(Import.attempt_id, Import.target_type, Import.target_id, Import.imported_at)
-                .where(Import.attempt_id.in_(final_ids))
-                .order_by(Import.imported_at, Import.id)
+                select(
+                    imports_view.c.attempt_id,
+                    imports_view.c.target_type,
+                    imports_view.c.target_id,
+                    imports_view.c.imported_at,
+                )
+                .where(imports_view.c.attempt_id.in_(final_ids))
+                .order_by(imports_view.c.imported_at, imports_view.c.import_id)
             )
         ).all()
         if final_ids

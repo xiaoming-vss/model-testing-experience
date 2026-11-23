@@ -40,6 +40,8 @@ def build_result(spec: RunSpec, compiled: CompiledPlan, execution: K6Execution) 
         flags.append(ResultFlag.SUMMARY_MISSING)
     if execution.log_truncated:
         flags.append(ResultFlag.LOG_TRUNCATED)
+    if execution.remote_write_error:
+        flags.append(ResultFlag.REMOTE_WRITE_ERROR)
 
     return RunResult(
         run_id=spec.run_id,

@@ -9,7 +9,6 @@ from testing_agent.domain.worker_context import WorkerExecutionContext
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
-from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
@@ -169,14 +168,6 @@ class WorkerTaskRepository(BaseRepository):
                     )
                 )
             ).all()
-        )
-
-    async def get_llm_connection(self, connection_id: str) -> IntegrationConnection | None:
-        return await self.session.scalar(
-            select(IntegrationConnection).where(
-                IntegrationConnection.connection_id == connection_id,
-                IntegrationConnection.provider == "llm",
-            )
         )
 
     async def get_requirement(self, requirement_id: str) -> Requirement | None:

@@ -78,13 +78,6 @@ def test_generation_callers_cannot_reintroduce_the_aggregate_facade():
                 assert all(alias.name != "get_ai_generate_task_service" for alias in node.names)
             if isinstance(node, ast.ClassDef):
                 assert node.name != "AiGenerateTaskService"
-    for node in ast.walk(ast.parse((root / "services/ai_candidate_review.py").read_text())):
-        if isinstance(node, ast.ImportFrom):
-            assert node.module not in {
-                "testing_agent.services.function_generate_import",
-                "testing_agent.services.ui_generate_import",
-                "testing_agent.services.api_generate_import",
-            }, "Candidate review must not silently create formal assets"
 
 
 def test_generation_queries_do_not_write_or_depend_on_task_command_facade():
@@ -362,7 +355,6 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
     }
     paths = [
         root / "services/ai_task_commands.py",
-        root / "services/ai_candidate_review.py",
         root / "services/api_generate_import.py",
         root / "services/ui_generate_import.py",
         root / "services/function_generate_import.py",
@@ -727,10 +719,7 @@ def test_pure_read_migration_backlog_is_classified():
     assert classified == {
         "services/code_risk_analysis.py",
         "services/environment_access.py",
-        "services/repository_profile_versions.py",
         "services/stage_storage/chain_view.py",
-        "services/stage_storage/version_views.py",
-        "services/stage_storage/views.py",
         "services/standalone_worker_authorization.py",
         "services/stored_file_access.py",
         "services/ui_generation_source.py",

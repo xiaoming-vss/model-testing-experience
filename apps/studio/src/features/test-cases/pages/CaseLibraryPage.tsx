@@ -7,6 +7,7 @@ import { CaseLibraryToolbar } from '../components/CaseLibraryToolbar'
 import { FunctionCaseImportModal } from '../components/FunctionCaseImportModal'
 import { SuiteDrawer } from '../components/SuiteDrawer'
 import { useCaseLibraryPage } from '../hooks/useCaseLibraryPage'
+import '@/shared/styles/surface-tokens.css'
 import caseLibraryStyles from '../styles/case-library.module.css'
 
 /**

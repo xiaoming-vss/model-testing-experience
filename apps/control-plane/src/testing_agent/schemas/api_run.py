@@ -22,6 +22,7 @@ def json_text(value: Any, default: str = "{}") -> str:
 class RunApiCaseRequest(StrictRequest):
     environment_id: str = Field()
     live_debug: bool = False
+    sprint_id: str | None = Field(default=None, min_length=1, max_length=64)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
@@ -35,6 +36,11 @@ class ApiCaseRunResponse(BaseModel):
     case_id: str = Field()
     collection_id: str = Field()
     collection_run_id: str | None = Field(default=None)
+    requirement_id: str | None = Field(default=None)
+    requirement_name: str = Field(default="")
+    sprint_id: str | None = Field(default=None)
+    sprint_name: str = Field(default="")
+    project_id: str = Field(default="")
     environment_id: str = Field()
     status: str
     success: bool = False
@@ -75,8 +81,10 @@ class ApiCaseRunResponse(BaseModel):
 class ApiCollectionRunResponse(BaseModel):
     collection_run_id: str = Field()
     collection_id: str = Field()
-    requirement_id: str = Field()
-    sprint_id: str = Field()
+    requirement_id: str | None = Field(default=None)
+    requirement_name: str = Field(default="")
+    sprint_id: str | None = Field(default=None)
+    sprint_name: str = Field(default="")
     project_id: str = Field()
     environment_id: str = Field()
     trigger_user_id: str = Field()

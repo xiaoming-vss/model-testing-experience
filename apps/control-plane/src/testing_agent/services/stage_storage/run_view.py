@@ -20,13 +20,13 @@ async def direct_attempt_view(
     rows = await direct_attempt_rows(session, attempt_id, task_id)
     if rows is None:
         raise ErrNotFound()
-    attempt, stage, task, version, imports = rows
+    attempt, stage, task, imports, candidate, review = rows
     snapshot = attempt.input_snapshot_json or {}
     config = deepcopy(snapshot.get("config") or {}) if isinstance(snapshot, dict) else {}
     if not isinstance(config, dict):
         config = {}
-    content = version.artifact_content if version else attempt.output_content or ""
-    fmt = version.artifact_format if version else attempt.output_format
+    content = attempt.output_content or ""
+    fmt = attempt.output_format
     field = FIELDS.get(stage.stage)
     result = ""
     if field and content:
@@ -47,7 +47,7 @@ async def direct_attempt_view(
         end = finished if finished.tzinfo else finished.replace(tzinfo=UTC)
         duration = max(0, int((end - start).total_seconds() * 1000))
     state = attempt.status
-    stage_status = ("completed" if version else "waiting_review") if state == "success" else state
+    stage_status = ("completed" if review else "waiting_review") if state == "success" else state
     public_source = attempt_source(attempt)
     if task.task_type == "ui_case_generate":
         public_source = public_ui_source_snapshot(public_source)
@@ -71,13 +71,14 @@ async def direct_attempt_view(
         "resultSummaryJson": deepcopy(attempt.output_context_json or {}),
         "errorMessage": attempt.error_message or "",
         "reviewStatus": "approved"
-        if version
+        if review
         else "rejected"
-        if attempt.invalidated_reason == "审核未通过，候选产物已丢弃"
+        if (candidate is not None and candidate.disposition in {"rejected", "discarded"})
+        or attempt.invalidated_reason == "审核未通过，候选产物已丢弃"
         else "pending",
-        "reviewerUserId": version.reviewer_user_id if version else "",
-        "reviewedAt": version.reviewed_at if version else None,
-        "reviewComment": version.review_comment if version else "",
+        "reviewerUserId": review.actor_id if review else "",
+        "reviewedAt": review.created_at if review else None,
+        "reviewComment": (review.comment or "") if review else "",
         "importStatus": "imported" if imports else "pending",
         "importedTargets": [
             {"targetType": kind, "targetId": identity} for kind, identity in targets
