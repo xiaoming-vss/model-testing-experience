@@ -43,6 +43,7 @@
 
 ### studio
 
+- [2026-11-23 完整用例正式导入入口核对](../studio/records/2026-11-23-final-cases-import-sidebar.md)
 - [2026-11-22 候选工作区独立采用视觉验收](../studio/records/2026-11-22-independent-adoption-visual-check.md)
 - [2026-11-21 候选侧栏视觉验收](../studio/records/2026-11-21-candidate-sidebar-visual-check.md)
 - [2026-11-20 EntityCard 颜色回归验收](../studio/records/2026-11-20-entity-card-visual-check.md)

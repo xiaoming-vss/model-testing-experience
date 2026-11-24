@@ -37,7 +37,11 @@ vi.mock('../api/generationCandidates.api', () => ({
 beforeEach(() => {
   vi.spyOn(api, 'getLlmConnections').mockResolvedValue({ items: [{ connectionId: 'llm', name: '本人模型', modelId: 'model', status: 'active' }], total: 1 } as never)
 })
-afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => {
+  cleanup()
+  document.querySelectorAll('[data-test-inspector]').forEach(element => element.remove())
+  vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals()
+})
 const stage: GenerationChainStage = { stage: 'extracting_text', label: '材料整理', order: 1, state: 'approved',  upstreamStages: [] }
 const current: CurrentStage = { stage: 'extracting_text', currentToken: 'current-token', candidateId: 'old', content: 'current body', format: 'text', invalidatedAt: null, invalidatedReason: null, active: false }
 const candidate: CandidateSummary = { candidateId: 'candidate-b', snapshotId: 'snapshot-b', candidateToken: 'token-b', currentAttemptId: 'attempt-b', derivedFromCandidateId: null, disposition: 'available', generationMode: 'trial', frozenAt: null, createdBy: 'u', createdAt: '2026-11-20T10:00:00Z', isCurrent: false }
@@ -567,9 +571,52 @@ it('shows both sides of an import conflict before confirming the overwrite', asy
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
-  fireEvent.click(await screen.findByRole('button', { name: '预览导入' }))
+  fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
   expect(await screen.findByText('登录')).toBeInTheDocument()
   expect(screen.getByText(/已有用例/, { selector: 'pre' })).toBeInTheDocument()
   expect(screen.getByText(/新用例/, { selector: 'pre' })).toBeInTheDocument()
   expect(generationCandidatesApi.importCurrent).not.toHaveBeenCalled()
+})
+
+it('requires a formal target before previewing an API import', async () => {
+  const final: GenerationChainStage = { ...stage, stage: 'generate', label: 'API 用例生成', upstreamStages: [] }
+  vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: 'generate', content: 'name: example', format: 'yaml' })
+  vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
+  vi.spyOn(api, 'getApiCollections').mockResolvedValue({ items: [{ collectionId: 'collection-a', name: '接口用例集' }] } as never)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+
+  fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
+  expect(await screen.findByRole('combobox', { name: '正式导入目标' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '预览导入' })).toBeDisabled()
+  expect(generationCandidatesApi.previewImport).not.toHaveBeenCalled()
+})
+
+it('moves the final-stage import entry into the sidebar footer and previews in a modal', async () => {
+  const final: GenerationChainStage = { ...stage, stage: 'detailed_cases', label: '完整用例', upstreamStages: [] }
+  vi.mocked(generationCandidatesApi.current).mockResolvedValue({
+    ...current, stage: 'detailed_cases',
+    content: JSON.stringify({ cases: [{ case_module: '导出', case_name: '导出成功', priority: 'P0', steps: '1. 点击导出', expected: '成功' }] }),
+    format: 'json',
+  })
+  vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
+  vi.mocked(generationCandidatesApi.previewImport).mockResolvedValue({
+    currentToken: 'current-token', fullLineageHash: 'lineage', contentHash: 'content', basisHash: 'basis',
+    candidateId: 'old', targetId: '', previewToken: 'preview',
+    previewExpiresAt: Math.floor(Date.now() / 1000) + 60, requiresConfirmation: true,
+    conflicts: [{ normalizedName: '登录', existingCase: { title: '已有用例' }, generatedCase: { title: '新用例' } }],
+  })
+  const inspector = document.createElement('div')
+  inspector.dataset.testInspector = 'true'
+  document.body.append(inspector)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded
+    inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+
+  const trigger = await within(inspector).findByRole('button', { name: '预览并导入' })
+  expect(within(inspector).getByRole('region', { name: '导入正式用例' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '预览导入' })).not.toBeInTheDocument()
+  fireEvent.click(trigger)
+  expect(await screen.findByText('登录')).toBeInTheDocument()
+  expect(generationCandidatesApi.previewImport).toHaveBeenCalledWith('req', 'function', 'detailed_cases', { expectedCurrentToken: 'current-token', targetId: '' })
 })

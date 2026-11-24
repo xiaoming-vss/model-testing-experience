@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import type { GeneratedCasesSelection } from '../utils/generatedCasesGraph'
@@ -70,12 +70,17 @@ function selectionOf() {
 afterEach(cleanup)
 
 describe('GeneratedCasesReviewView', () => {
-  it('渲染用例索引与总览，点击用例后在图内选中', async () => {
+  it('渲染用例索引与总览，画布内提供展开、适应画布和保存图谱', async () => {
     render(<GeneratedCasesReviewView content={content} />)
-    expect(screen.getByRole('heading', { name: '完整用例图谱' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '完整用例图谱' })).toHaveClass('sr-only')
     expect(screen.getByText('用例索引')).toBeInTheDocument()
     expect(screen.getByText('模块A')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /功能测试/ })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '搜索用例、模块或类型' })).not.toBeInTheDocument()
+    const canvas = screen.getByRole('main', { name: '完整用例图谱' })
+    expect(within(canvas).getByRole('button', { name: '全部展开' })).toBeInTheDocument()
+    expect(within(canvas).getByRole('button', { name: '适应画布' })).toBeInTheDocument()
+    expect(within(canvas).getByRole('button', { name: '保存图谱' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: '选中用例详情' })).not.toBeInTheDocument()
     await waitFor(() => expect(selectionOf()).toEqual({ kind: 'overview' }))
     expect(screen.getByTestId('generated-cases-graph').getAttribute('data-expanded')).toBe('')
@@ -99,19 +104,6 @@ describe('GeneratedCasesReviewView', () => {
     expect(screen.getByRole('button', { name: '收起全部' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: '收起全部' }))
     expect(graph.getAttribute('data-expanded')).toBe('')
-  })
-
-  it('搜索用例后展开对应类型并清除搜索', async () => {
-    render(<GeneratedCasesReviewView content={content} />)
-    const graph = screen.getByTestId('generated-cases-graph')
-    const search = screen.getByRole('textbox', { name: '搜索用例、模块或类型' })
-    fireEvent.change(search, { target: { value: '异常' } })
-    expect(screen.getByText('搜索结果')).toBeInTheDocument()
-    expect(screen.getByText('1 个匹配用例')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /用例丙/ }))
-    expect(search).toHaveValue('')
-    await waitFor(() => expect(selectionOf()).toMatchObject({ kind: 'case', key: '模块B:2' }))
-    expect(graph.getAttribute('data-expanded')).toContain('module-1-scene-0')
   })
 
   it('编辑用例名称更新内容并保留其他字段', async () => {

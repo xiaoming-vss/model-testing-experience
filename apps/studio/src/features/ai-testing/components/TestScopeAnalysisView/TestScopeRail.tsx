@@ -4,10 +4,9 @@ import {
   InboxOutlined,
   LockOutlined,
   QuestionCircleOutlined,
-  SearchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { useEffect, useId, useRef, type RefObject } from 'react'
+import { useEffect, useRef } from 'react'
 import { cx } from '@/shared/utils/cx'
 import {
   SCOPE_STATUS,
@@ -18,10 +17,19 @@ import {
   type ScopeStatusKey,
 } from '../../utils/testScopeAnalysis'
 import {
-  CLEAR_BUTTON,
-  FILTER_BUTTON,
-  FILTER_BUTTON_SELECTED,
-  FILTER_GRID,
+  CAT_BAR,
+  CAT_BAR_SEGMENT,
+  CAT_NAME,
+  CAT_NAV,
+  CAT_ROW,
+  CAT_ROW_ATTENTION,
+  CAT_ROW_SELECTED,
+  CAT_TOTAL,
+  FILTER_CHIP,
+  FILTER_CHIP_SELECTED,
+  FILTER_CHIPS,
+  FILTER_LABEL,
+  FILTER_ROW,
   FILTER_SUMMARY,
   LIST,
   LIST_GROUP_TITLE,
@@ -32,17 +40,6 @@ import {
   RAIL_BODY,
   RAIL_FOOTER,
   RAIL_PANEL,
-  SCOPE_BAR,
-  SCOPE_BAR_SEGMENT,
-  SCOPE_CELL,
-  SCOPE_CELL_ATTENTION,
-  SCOPE_CELL_COUNT,
-  SCOPE_CELL_LABEL,
-  SCOPE_CELL_SELECTED,
-  SCOPE_MATRIX,
-  SEARCH_INPUT,
-  SEARCH_KBD,
-  SEARCH_WRAP,
   STATUS_BAR_TONE,
   STATUS_DOT,
   STATUS_DOT_TONE,
@@ -60,45 +57,39 @@ const CATEGORY_ICONS = {
 
 const STATUS_ORDER = ['confirmed', 'inferred', 'unconfirmed'] as const
 
-function CategoryMatrix({ categories, active, onSelect }: {
+function CategoryNav({ categories, active, onSelect }: {
   categories: ScopeCategoryView[]
   active: ScopeCategoryKey
   onSelect: (key: ScopeCategoryKey) => void
 }) {
-  return <div className={SCOPE_MATRIX} role="group" aria-label="测试范围分类">
+  return <div className={CAT_NAV} role="group" aria-label="测试范围分类">
     {categories.map((category) => {
       const selected = category.key === active
+      const attention = category.key === 'openQuestions'
       const Icon = CATEGORY_ICONS[category.key]
-      const selectedClass = selected
-        ? category.key === 'openQuestions' ? SCOPE_CELL_ATTENTION : SCOPE_CELL_SELECTED
-        : ''
-      const countClass = cx(
-        SCOPE_CELL_COUNT,
-        category.key === 'openQuestions' && 'text-app-status-warning-text',
-        selected && category.key !== 'openQuestions' && 'text-app-accent',
-      )
-      const iconClass = selected
-        ? category.key === 'openQuestions' ? 'text-app-status-warning-text' : 'text-app-accent'
-        : 'text-app-surface-text-muted'
+      const activeTextClass = attention ? 'text-app-status-warning-text' : 'text-app-accent'
       return <button
         key={category.key}
         type="button"
-        className={cx(SCOPE_CELL, selectedClass)}
+        className={cx(
+          CAT_ROW,
+          selected
+            ? attention ? CAT_ROW_ATTENTION : CAT_ROW_SELECTED
+            : 'border-y-transparent border-r-transparent border-l-transparent bg-transparent hover:border-y-app-surface-border hover:border-r-app-surface-border hover:bg-app-surface',
+        )}
         aria-pressed={selected}
         aria-label={`${category.label}，${category.items.length} 条${selected ? '，当前分类' : ''}`}
         title={category.hint}
         onClick={() => onSelect(category.key)}
       >
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Icon className={cx('shrink-0 text-[14px]', iconClass)} aria-hidden="true" />
-          <span className={SCOPE_CELL_LABEL}>{category.label}</span>
-          <span className={countClass}>{category.items.length}</span>
-        </span>
-        <span className={SCOPE_BAR} aria-hidden="true">
+        <Icon className={cx('shrink-0 text-[14px]', selected ? activeTextClass : 'text-app-surface-text-muted')} aria-hidden="true" />
+        <span className={cx(CAT_NAME, selected ? activeTextClass : 'text-app-surface-text')}>{category.label}</span>
+        <span className={cx(CAT_TOTAL, selected ? activeTextClass : 'text-app-surface-text')}>{category.items.length}</span>
+        <span className={CAT_BAR} aria-hidden="true">
           {STATUS_ORDER.map((status) => {
             const count = category.statusCounts[status]
             return count
-              ? <i key={status} className={cx(SCOPE_BAR_SEGMENT, STATUS_BAR_TONE[SCOPE_STATUS[status].tone])} style={{ flexGrow: count }} />
+              ? <i key={status} className={cx(CAT_BAR_SEGMENT, STATUS_BAR_TONE[SCOPE_STATUS[status].tone])} style={{ flexGrow: count }} />
               : null
           })}
         </span>
@@ -116,27 +107,28 @@ function FilterRow({ category, filter, onChange }: {
     { key: 'all', label: '全部', count: category.items.length },
     ...STATUS_ORDER.map((status) => ({ key: status, label: SCOPE_STATUS[status].label, count: category.statusCounts[status] })),
   ]
-  return <div className={FILTER_GRID} role="group" aria-label="按依据状态筛选">
-    {filters.map((item) => {
-      const selected = filter === item.key
-      const disabled = item.key !== 'all' && item.count === 0
-      const meta = item.key === 'all' ? null : SCOPE_STATUS[item.key]
-      return <button
-        key={item.key}
-        type="button"
-        className={cx(FILTER_BUTTON, selected && FILTER_BUTTON_SELECTED)}
-        aria-pressed={selected}
-        disabled={disabled}
-        title={disabled ? `暂无${item.label}条目` : `${item.label} ${item.count} 条`}
-        onClick={() => onChange(item.key)}
-      >
-        {meta
-          ? <span className={cx(STATUS_DOT, STATUS_DOT_TONE[meta.tone])} aria-hidden="true" />
-          : <span className="size-[5px] shrink-0 rounded-full border border-app-surface-text-muted" aria-hidden="true" />}
-        <span>{item.label}</span>
-        <b className="font-mono text-[10px] font-medium text-app-surface-text-muted">{item.count}</b>
-      </button>
-    })}
+  return <div className={FILTER_ROW}>
+    <span className={FILTER_LABEL}>状态</span>
+    <div className={FILTER_CHIPS} role="group" aria-label="按依据状态筛选">
+      {filters.map((item) => {
+        const selected = filter === item.key
+        const disabled = item.key !== 'all' && item.count === 0
+        const meta = item.key === 'all' ? null : SCOPE_STATUS[item.key]
+        return <button
+          key={item.key}
+          type="button"
+          className={cx(FILTER_CHIP, selected ? FILTER_CHIP_SELECTED : 'bg-transparent text-app-surface-text hover:border-app-surface-border hover:bg-app-surface')}
+          aria-pressed={selected}
+          disabled={disabled}
+          title={disabled ? `暂无${item.label}条目` : `${item.label} ${item.count} 条`}
+          onClick={() => onChange(item.key)}
+        >
+          {meta ? <span className={cx(STATUS_DOT, STATUS_DOT_TONE[meta.tone])} aria-hidden="true" /> : null}
+          {item.label}
+          <b className={cx('font-mono text-[10px] font-medium', selected ? 'text-app-accent' : 'text-app-surface-text-muted')}>{item.count}</b>
+        </button>
+      })}
+    </div>
   </div>
 }
 
@@ -171,13 +163,11 @@ function ScopeItem({ item, selected, onSelect }: {
   </button>
 }
 
-function ScopeList({ category, items, activeId, hasFilters, onSelect, onClear }: {
+function ScopeList({ category, items, activeId, onSelect }: {
   category: ScopeCategoryView
   items: ScopeEntryView[]
   activeId?: string
-  hasFilters: boolean
   onSelect: (id: string) => void
-  onClear: () => void
 }) {
   const listRef = useRef<HTMLElement>(null)
 
@@ -198,13 +188,11 @@ function ScopeList({ category, items, activeId, hasFilters, onSelect, onClear }:
   }, [activeId, category.key, items])
 
   if (!items.length) {
-    const Icon = hasFilters ? SearchOutlined : InboxOutlined
     return <nav ref={listRef} className={LIST} aria-label={`${category.label}列表`}>
       <div className="flex flex-col items-center justify-center gap-1.5 px-3 py-8 text-center">
-        <Icon className="text-[22px] text-app-surface-text-muted" aria-hidden="true" />
-        <strong className="text-[12px] font-semibold text-app-surface-text">{hasFilters ? '没有匹配的条目' : `暂无${category.label}`}</strong>
-        <span className="text-[11px] leading-[1.5] text-app-surface-text-muted">{hasFilters ? '换个关键词，或清除状态筛选。' : '当前产物没有这一类内容。'}</span>
-        {hasFilters ? <button type="button" className={CLEAR_BUTTON} onClick={onClear}>清除筛选</button> : null}
+        <InboxOutlined className="text-[22px] text-app-surface-text-muted" aria-hidden="true" />
+        <strong className="text-[12px] font-semibold text-app-surface-text">暂无{category.label}</strong>
+        <span className="text-[11px] leading-[1.5] text-app-surface-text-muted">当前产物没有这一类内容。</span>
       </div>
     </nav>
   }
@@ -227,26 +215,21 @@ function ScopeList({ category, items, activeId, hasFilters, onSelect, onClear }:
   </nav>
 }
 
-export function TestScopeRail({ category, categories, items, activeId, query, filter, searchRef, onCategory, onQuery, onFilter, onSelect, onClear }: {
+export function TestScopeRail({ category, categories, items, activeId, filter, onCategory, onFilter, onSelect }: {
   category: ScopeCategoryView
   categories: ScopeCategoryView[]
   items: ScopeEntryView[]
   activeId?: string
-  query: string
   filter: ScopeStatusFilter
-  searchRef: RefObject<HTMLInputElement | null>
   onCategory: (key: ScopeCategoryKey) => void
-  onQuery: (value: string) => void
   onFilter: (value: ScopeStatusFilter) => void
   onSelect: (id: string) => void
-  onClear: () => void
 }) {
-  const searchId = useId()
-  const hasFilters = Boolean(query.trim()) || filter !== 'all'
+  const filtered = filter !== 'all'
   const total = category.items.length
   const countLabel = items.length === total ? String(total) : `${items.length}/${total}`
   const pending = category.statusCounts.unconfirmed
-  const summary = hasFilters
+  const summary = filtered
     ? `共 ${total} 个 · ${items.length} 个匹配`
     : `共 ${total} 个${category.unit}`
 
@@ -260,44 +243,18 @@ export function TestScopeRail({ category, categories, items, activeId, query, fi
         <p className="mt-1 text-[11px] leading-[1.45] text-app-surface-text-muted">按对象、影响与风险审阅</p>
       </div>
 
-      <CategoryMatrix categories={categories} active={category.key} onSelect={onCategory} />
+      <CategoryNav categories={categories} active={category.key} onSelect={onCategory} />
 
       <div className="mt-2 flex min-h-[31px] items-start gap-1.5 px-0.5 text-[11px] leading-[1.5] text-app-surface-text-muted">
         <span className={cx('mt-1.5 size-1 shrink-0 rounded-full', category.key === 'openQuestions' ? 'bg-app-status-warning-text' : 'bg-app-accent')} aria-hidden="true" />
         <span>{category.hint}</span>
       </div>
 
-      <div className={SEARCH_WRAP}>
-        <SearchOutlined className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-app-surface-text-muted" aria-hidden="true" />
-        <label className="sr-only" htmlFor={searchId}>搜索当前分类条目</label>
-        <input
-          ref={searchRef}
-          id={searchId}
-          type="text"
-          autoComplete="off"
-          spellCheck={false}
-          value={query}
-          placeholder="搜索 ID、名称或描述"
-          className={SEARCH_INPUT}
-          onChange={(event) => onQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== 'Escape') return
-            if (query) {
-              onQuery('')
-              event.preventDefault()
-            } else {
-              event.currentTarget.blur()
-            }
-          }}
-        />
-        <kbd className={SEARCH_KBD}>/</kbd>
-      </div>
-
       {category.key === 'openQuestions'
         ? <QuestionSummary category={category} />
         : <FilterRow category={category} filter={filter} onChange={onFilter} />}
 
-      <ScopeList category={category} items={items} activeId={activeId} hasFilters={hasFilters} onSelect={onSelect} onClear={onClear} />
+      <ScopeList category={category} items={items} activeId={activeId} onSelect={onSelect} />
     </div>
 
     <footer className={RAIL_FOOTER}>

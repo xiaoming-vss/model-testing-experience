@@ -341,7 +341,6 @@ export type TraceablePointsGraphHandle = {
 type TraceablePointsGraphProps = {
   model: TraceablePointsModel
   mode: TraceableMode
-  query: string
   selection: TraceableSelection
   expandedSceneIds: ReadonlySet<string>
   activeGap?: TraceableGap
@@ -355,7 +354,7 @@ type TraceablePointsGraphProps = {
   onOpenEvidence: (request: TraceableEvidenceRequest) => void
 }
 
-export const TraceablePointsGraph = forwardRef<TraceablePointsGraphHandle, TraceablePointsGraphProps>(function TraceablePointsGraph({ model, mode, query, selection, expandedSceneIds, activeGap, activeIssue, rootTitle, canRenamePoints = false, onSelect, onSceneSelect, onFindPoint, onRenamePoint, onOpenEvidence }, ref) {
+export const TraceablePointsGraph = forwardRef<TraceablePointsGraphHandle, TraceablePointsGraphProps>(function TraceablePointsGraph({ model, mode, selection, expandedSceneIds, activeGap, activeIssue, rootTitle, canRenamePoints = false, onSelect, onSceneSelect, onFindPoint, onRenamePoint, onOpenEvidence }, ref) {
   const graph = useMemo(() => buildTraceablePointsGraph({
     modules: model.modules,
     rootTitle,
@@ -369,8 +368,7 @@ export const TraceablePointsGraph = forwardRef<TraceablePointsGraphHandle, Trace
     totalGaps: model.gaps.length,
     reviewStatus: model.reviewStatus,
     reviewLabel: model.reviewLabel,
-    query,
-  }), [activeGap, activeIssue, expandedSceneIds, model, mode, query, rootTitle, selection])
+  }), [activeGap, activeIssue, expandedSceneIds, model, mode, rootTitle, selection])
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const flowRef = useRef<ReactFlowInstance<TraceableFlowNode, TraceableFlowEdge> | null>(null)
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null)

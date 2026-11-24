@@ -22,11 +22,6 @@ function prefersReducedMotion() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function isEditableTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement
-    && (target.matches('input, textarea, select') || target.isContentEditable)
-}
-
 export function TestScopeAnalysisView({ analysis, materialContent }: {
   analysis: Record<string, unknown>
   materialContent?: string
@@ -34,28 +29,19 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
   const view = useMemo(() => buildTestScopeView(analysis, materialContent), [analysis, materialContent])
   const categories = useMemo(() => SCOPE_CATEGORIES.map((category) => view.categories[category.key]), [view])
   const [categoryKey, setCategoryKey] = useState<ScopeCategoryKey>('testObjects')
-  const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ScopeStatusFilter>('all')
   const [selectedIds, setSelectedIds] = useState<Partial<Record<ScopeCategoryKey, string>>>({})
-  const searchRef = useRef<HTMLInputElement>(null)
   const detailRef = useRef<HTMLDivElement>(null)
   const scrollOnSelectionRef = useRef(false)
 
   const category = view.categories[categoryKey]
-  const visibleItems = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    return category.items.filter((item) => {
-      if (categoryKey !== 'openQuestions' && filter !== 'all' && item.status !== filter) return false
-      if (!normalizedQuery) return true
-      return `${item.id} ${item.title} ${item.type} ${item.narrative}`.toLowerCase().includes(normalizedQuery)
-    })
-  }, [category, categoryKey, filter, query])
+  const visibleItems = useMemo(() => category.items.filter((item) => (
+    categoryKey === 'openQuestions' || filter === 'all' || item.status === filter
+  )), [category, categoryKey, filter])
   const activeId = selectedIds[categoryKey]
   const activeItem = visibleItems.find((item) => item.id === activeId) ?? visibleItems[0]
-  const hasFilters = Boolean(query.trim()) || filter !== 'all'
 
   useEffect(() => {
-    setQuery('')
     setFilter('all')
     setSelectedIds({})
   }, [view])
@@ -73,25 +59,9 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
     scrollOnSelectionRef.current = false
   }, [activeItem?.id, categoryKey])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '/' || isEditableTarget(event.target)) return
-      event.preventDefault()
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [])
-
   const selectCategory = (key: ScopeCategoryKey) => {
     setCategoryKey(key)
-    setQuery('')
     setFilter('all')
-  }
-
-  const selectFilter = (value: ScopeStatusFilter) => {
-    setFilter(value)
   }
 
   const selectEntry = (id: string) => {
@@ -101,16 +71,9 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
 
   const jumpTo = (targetCategory: ScopeCategoryKey, id: string) => {
     setCategoryKey(targetCategory)
-    setQuery('')
     setFilter('all')
     setSelectedIds((current) => ({ ...current, [targetCategory]: id }))
     scrollOnSelectionRef.current = true
-  }
-
-  const clearFilters = () => {
-    setQuery('')
-    setFilter('all')
-    searchRef.current?.focus()
   }
 
   const copyId = (id: string) => {
@@ -129,14 +92,10 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
       categories={categories}
       items={visibleItems}
       activeId={activeItem?.id}
-      query={query}
       filter={filter}
-      searchRef={searchRef}
       onCategory={selectCategory}
-      onQuery={setQuery}
-      onFilter={selectFilter}
+      onFilter={setFilter}
       onSelect={selectEntry}
-      onClear={clearFilters}
     />
     <div ref={detailRef} className={cx(DETAIL_SCROLL, 'scroll-mt-2')}>
       <div className={DETAIL_INNER}>
@@ -145,10 +104,8 @@ export function TestScopeAnalysisView({ analysis, materialContent }: {
           category={category}
           entry={activeItem}
           view={view}
-          hasFilters={hasFilters}
           onJump={jumpTo}
           onCopy={copyId}
-          onClear={clearFilters}
         />
       </div>
     </div>

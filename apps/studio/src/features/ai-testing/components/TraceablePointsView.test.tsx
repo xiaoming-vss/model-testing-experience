@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import type { TraceableGap, TraceableIssue } from '../utils/traceablePointsModel'
@@ -20,7 +20,6 @@ vi.mock('@/domain/projects/components/ProjectActionButton', async () => {
 
 type MockGraphProps = {
   mode: string
-  query: string
   selection: TraceableSelection
   expandedSceneIds: ReadonlySet<string>
   activeGap?: TraceableGap
@@ -40,7 +39,6 @@ vi.mock('./TraceablePointsGraph', async () => {
       return React.createElement('div', {
         'data-testid': 'traceable-graph',
         'data-mode': props.mode,
-        'data-query': props.query,
         'data-selection': JSON.stringify(props.selection),
         'data-expanded': [...props.expandedSceneIds].join(','),
         'data-issue': props.activeIssue?.issue ?? '',
@@ -85,8 +83,13 @@ describe('TraceablePointsView', () => {
   it('三页签共用图谱，左侧索引不展示测试点编号', () => {
     render(<TraceablePointsView content={content} materialContent={materialContent} />)
 
-    expect(screen.getByRole('tab', { name: /测试点/ })).toHaveAttribute('aria-selected', 'true')
+    const canvas = screen.getByRole('main', { name: '测试点图谱' })
+    expect(within(canvas).getByRole('tab', { name: /测试点/ })).toHaveAttribute('aria-selected', 'true')
+    expect(within(canvas).getByRole('tab', { name: /审查/ })).toBeInTheDocument()
     expect(screen.getByTestId('traceable-graph')).toHaveAttribute('data-mode', 'points')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '测试点图谱' })).not.toBeInTheDocument()
+    expect(within(canvas).getByRole('button', { name: '保存图片' })).toBeInTheDocument()
     expect(screen.getByText('覆盖索引')).toBeInTheDocument()
     expect(screen.getByText('配置')).toBeInTheDocument()
     expect(screen.getByText('功能场景')).toBeInTheDocument()
@@ -138,20 +141,6 @@ describe('TraceablePointsView', () => {
     fireEvent.click(screen.getByRole('button', { name: '打开证据' }))
     expect(await screen.findByText('已确认的业务要求')).toBeInTheDocument()
     expect(screen.getAllByText('【配置】验证保存').length).toBeGreaterThan(0)
-    expect(screen.queryByText('P1')).not.toBeInTheDocument()
-  })
-
-  it('搜索测试点后定位并清除搜索，不显示测试点编号', () => {
-    render(<TraceablePointsView content={content} materialContent={materialContent} />)
-    const graph = screen.getByTestId('traceable-graph')
-    const search = screen.getByRole('textbox', { name: '搜索测试点、模块或场景' })
-    fireEvent.change(search, { target: { value: '验证保存' } })
-    expect(graph).toHaveAttribute('data-query', '验证保存')
-    expect(screen.getByText('搜索结果')).toBeInTheDocument()
-    expect(screen.getByText('1 个匹配测试点')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /【配置】验证保存/ }))
-    expect(search).toHaveValue('')
-    expect(JSON.parse(graph.getAttribute('data-selection')!)).toMatchObject({ kind: 'point', id: 'P1' })
     expect(screen.queryByText('P1')).not.toBeInTheDocument()
   })
 

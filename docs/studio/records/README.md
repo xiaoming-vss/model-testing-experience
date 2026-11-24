@@ -11,6 +11,7 @@
 
 ## 记录列表
 
+- [2026-11-23 完整用例正式导入入口核对](2026-11-23-final-cases-import-sidebar.md)
 - [2026-11-21 候选侧栏视觉验收](2026-11-21-candidate-sidebar-visual-check.md)
 - [2026-10-12 测试单参考图对齐验收记录](2026-10-12-reference-image-alignment.md)
 - [2026-09-28 Bug 管理需求核对与页面整理](2026-09-28-bug-management-review.md)

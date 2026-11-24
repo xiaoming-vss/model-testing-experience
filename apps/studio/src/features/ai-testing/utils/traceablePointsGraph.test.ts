@@ -96,12 +96,11 @@ describe('traceablePointsGraph', () => {
     expect(graph.edges.some(edge => edge.source === gap.id && edge.target === issueNode.id)).toBe(true)
   })
 
-  it('没有审查问题时展示审查结果卡，搜索时收起测试点分支', () => {
+  it('没有审查问题时展示审查结果卡，测试点页展示测试点分支', () => {
     const graph = buildTraceablePointsGraph(input({ mode: 'issues' }))
     expect(graph.nodes.some(node => node.data.kind === 'review')).toBe(true)
-    expect(input().mode).toBe('points')
-    const searched = buildTraceablePointsGraph(input({ query: '保存', expandedSceneIds: new Set([model().modules[0].scenes[0].id]) }))
-    expect(searched.nodes.some(node => node.data.kind === 'point' || node.data.kind === 'detail')).toBe(false)
+    const points = buildTraceablePointsGraph(input({ expandedSceneIds: new Set([model().modules[0].scenes[0].id]) }))
+    expect(points.nodes.some(node => node.data.kind === 'point')).toBe(true)
   })
 
   it('布局为节点保留不重叠的列与纵向间距', () => {

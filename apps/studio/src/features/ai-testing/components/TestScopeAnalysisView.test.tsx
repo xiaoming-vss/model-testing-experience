@@ -58,7 +58,7 @@ describe('测试范围分析', () => {
     expect(screen.queryByText('旧内容')).not.toBeInTheDocument()
   })
 
-  it('用分类矩阵切换列表与详情，并展示反向关联和冻结材料', () => {
+  it('用分类导航切换列表与详情，并展示反向关联和冻结材料', () => {
     renderView()
 
     const objectCategory = screen.getByRole('button', { name: /测试对象，2 条/ })
@@ -100,27 +100,11 @@ describe('测试范围分析', () => {
     expect(screen.getByRole('button', { name: /测试对象，2 条/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('支持搜索、状态筛选、清除与待确认来源问题', () => {
+  it('支持状态筛选与待确认来源问题', () => {
     renderView()
     const objectList = screen.getByRole('navigation', { name: '测试对象列表' })
-    const search = screen.getByRole('textbox', { name: '搜索当前分类条目' })
-
-    fireEvent.change(search, { target: { value: '导出' } })
-    expect(within(objectList).queryByText('存量记录迁移')).not.toBeInTheDocument()
-    expect(within(objectList).getByText('结果页导出')).toBeInTheDocument()
-    expect(screen.getByText('结果页提供导出入口')).toBeInTheDocument()
-
-    fireEvent.keyDown(search, { key: 'Escape' })
-    expect(search).toHaveValue('')
-
-    fireEvent.change(search, { target: { value: '不存在' } })
-    expect(within(objectList).getByText('没有匹配的条目')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: '测试对象详情' })).toBeInTheDocument()
-    expect(screen.queryByText('暂无测试对象')).not.toBeInTheDocument()
-    fireEvent.click(within(objectList).getByRole('button', { name: '清除筛选' }))
-    expect(search).toHaveValue('')
-
     const filterGroup = screen.getByRole('group', { name: '按依据状态筛选' })
+
     fireEvent.click(within(filterGroup).getByRole('button', { name: /推测/ }))
     expect(within(filterGroup).getByRole('button', { name: /推测/ })).toHaveAttribute('aria-pressed', 'true')
     expect(within(objectList).queryByText('存量记录迁移')).not.toBeInTheDocument()
@@ -133,9 +117,6 @@ describe('测试范围分析', () => {
     expect(within(questionDetail).getByText('旧数据是否保留？')).toBeInTheDocument()
     expect(within(questionDetail).getByRole('button', { name: '查看风险 R1：历史产物可能混用' })).toBeInTheDocument()
     expect(screen.getByLabelText('待确认项的关联范围')).toHaveTextContent('涉及 1 个测试对象 · 1 个影响范围 · 1 个风险')
-
-    fireEvent.keyDown(document, { key: '/' })
-    expect(search).toHaveFocus()
   })
 
   it('复制条目 ID 后给出提示', async () => {

@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Dropdown, Empty, Input, Modal, Pagination, Radio, Select, Space, Spin, Tag } from 'antd'
-import { CheckOutlined, ClockCircleOutlined, InfoCircleOutlined, MoreOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Alert, Button, Dropdown, Empty, Input, Modal, Pagination, Radio, Select, Spin, Tag } from 'antd'
+import { CheckOutlined, ClockCircleOutlined, ImportOutlined, InfoCircleOutlined, MoreOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { api, listItems } from '@/services/api'
@@ -27,6 +27,7 @@ import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
 import { RequirementReviewView } from './RequirementReviewView'
 import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
+import { CandidateImportModal } from './CandidateImportModal'
 import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
 import { ApiDesignDiagramView } from './ApiDesignDiagramView'
 import { UiStageVisual } from './uiStageVisual/UiStageVisual'
@@ -43,6 +44,7 @@ import uiStageStyles from '../styles/ui-stage-visual.module.css'
 
 type SourceChoice = CandidateSourceSelection | CurrentSourceSelection
 const PAGE_SIZE = 20
+const FLEX_MIN = 'min-w-0 flex-1'
 const STAGE_LABELS: Record<string, string> = {
   extracting_text: '材料整理', requirement_analysis: '测试范围风险分析', case_names: '测试点',
   detailed_cases: '完整用例', interface_extract: '接口配置提取', api_design: 'API 用例设计',
@@ -114,6 +116,8 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   const [check, setCheck] = useState<AdoptionCheck | null>(null)
   const [targetId, setTargetId] = useState('')
   const [preview, setPreview] = useState<CurrentImportPreview | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
+  const importPreviewRequest = useRef(0)
   const pendingIds = useRef<Record<string, { key: string; id: string }>>({})
   const closeConfirmed = useRef(false)
   const wasActive = useRef(false)
@@ -248,6 +252,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   function perform(action: () => Promise<void>) { operation.mutate(action) }
   function changeSelection(id: string) {
     if ((editingDirty || revisionDirty) && !window.confirm('有未保存的修改，确定放弃吗？')) return
+    closeImport()
     setEdit(null); setRevisionOpen(false); setRevisionInstruction(''); setRevisionInitial(''); revisionCandidate.current = ''; revisionAttachments.clearAttachments(); setCheck(null); setUiSourceCheck(null); setSelectedId(id)
   }
   useEffect(() => {
@@ -256,6 +261,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   function close() {
     if ((editingDirty || revisionDirty) && !window.confirm('有未保存的修改，确定放弃吗？')) return
     closeConfirmed.current = true
+    closeImport()
     setEdit(null); setRevisionOpen(false); setRevisionInstruction(''); setRevisionInitial(''); revisionCandidate.current = ''; revisionAttachments.clearAttachments()
     onClose()
     queueMicrotask(() => { closeConfirmed.current = false })
@@ -387,13 +393,31 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       setUiSourceCheck({ ...result, candidateId: id })
     })
   }
+  function openImport() {
+    setPreview(null)
+    setImportOpen(true)
+    if (kind === 'function') previewImport()
+  }
+  function closeImport() {
+    importPreviewRequest.current += 1
+    setImportOpen(false)
+    setPreview(null)
+  }
+  function changeImportTarget(value: string) {
+    importPreviewRequest.current += 1
+    setTargetId(value)
+    setPreview(null)
+  }
   function previewImport() {
+    if (kind !== 'function' && !targetId) return
+    const request = ++importPreviewRequest.current
+    setPreview(null)
     perform(async () => {
       if (!current.data?.candidateId) throw new Error('请先采用要导入的内容')
       if (kind !== 'function' && !targetId) throw new Error('请先选择正式导入目标')
       const result = await generationCandidatesApi.previewImport(requirementId, kind, stage.stage,
         { expectedCurrentToken: current.data.currentToken, targetId })
-      setPreview(result)
+      if (request === importPreviewRequest.current) setPreview(result)
     })
   }
   function importCurrent() {
@@ -401,9 +425,18 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       if (!preview || preview.previewExpiresAt <= Math.floor(Date.now() / 1000) || preview.currentToken !== current.data?.currentToken) throw new Error('当前内容或预览已变化，请重新预览')
       const body = { expectedCurrentToken: preview.currentToken, expectedLineageHash: preview.fullLineageHash,
         previewToken: preview.previewToken, targetId, confirmOverwrite: preview.requiresConfirmation }
-      const result = await generationCandidatesApi.importCurrent(requirementId, kind, stage.stage, { ...body, requestId: idFor('import', body) })
-      if (result.requiresConfirmation) throw new Error('导入目标已发生冲突，请重新预览')
-      delete pendingIds.current.import; setPreview(null); notify.success({ title: '已导入正式用例', description: `共 ${result.changedCaseIds.length} 条。` })
+      try {
+        const result = await generationCandidatesApi.importCurrent(requirementId, kind, stage.stage, { ...body, requestId: idFor('import', body) })
+        if (result.requiresConfirmation) throw new Error('导入目标已发生冲突，请重新预览')
+        delete pendingIds.current.import
+        importPreviewRequest.current += 1
+        setPreview(null)
+        setImportOpen(false)
+        notify.success({ title: '已导入正式用例', description: `共 ${result.changedCaseIds.length} 条。` })
+      } catch (error) {
+        setPreview(null)
+        throw error
+      }
     })
   }
   const loading = operation.isPending
@@ -598,6 +631,25 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     </>}
     {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{STAGE_LABELS[item.stage] ?? item.stage}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
   </section> : null
+  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId)
+  const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'
+  const importDock = canImportCurrent ? <section className="gc-candidate-dock" aria-label="导入正式用例">
+    <div className="gc-candidate-dock-head">
+      <span className="gc-candidate-dock-label">导入正式用例</span>
+      <span className="gc-candidate-dock-hint">最终阶段</span>
+    </div>
+    <p className="m-0 text-[11px] leading-[1.55] text-app-surface-text-muted">{importTargetText}；先预览同名冲突，确认后写入正式用例库。</p>
+    <Button className="gc-candidate-primary" type="primary" block loading={loading} onClick={openImport}>预览并导入</Button>
+  </section> : null
+  const importBar = canImportCurrent ? <div className="flex flex-none flex-wrap items-center gap-3 border-t border-[var(--app-surface-divider)] px-4 py-3" aria-label="导入正式用例">
+    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[7px] border border-app-accent-border bg-app-accent-surface text-app-accent" aria-hidden><ImportOutlined /></span>
+    <div className={FLEX_MIN}>
+      <strong className="block text-[12px] font-semibold text-app-surface-text">导入正式用例</strong>
+      <span className="block text-[10.5px] leading-[1.45] text-app-surface-text-muted">{importTargetText}；先预览同名冲突，确认后写入正式用例库。</span>
+    </div>
+    <Button type="primary" loading={loading} onClick={openImport}>预览并导入</Button>
+  </div> : null
+  const inspectorDock = candidateActions ?? (selectedIsCurrent ? importDock : null)
   return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={close} title={`${stage.label} · 候选与当前内容`} width={ARTIFACT_MODAL_WIDTH} className={`${chainStyles.scope} ${canvasStyles.scope} ${candidateStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope} generation-chain-modal`} footer={null}>
     <div className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${edgeToEdgeRaw || edgeToEdgeScope || edgeToEdgePoints || edgeToEdgeCases ? 'p-0' : 'p-4'}`}>
       {stage.state === 'failed' ? <Alert showIcon type="error" title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
@@ -629,17 +681,27 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
             onSubmit={revise} onCancel={() => setRevisionOpen(false)} /> : null}
         </section>
       {!sidebarMode ? candidateActions : null}
-      {access.can('execute') && finalStage && current.data?.candidateId && selectedId === 'current' ? <section className="flex flex-col gap-2 border-t border-[var(--app-surface-divider)] pt-3"><strong>导入正式用例</strong>
-        {kind !== 'function' ? <Select className="w-full max-w-[420px]" aria-label="正式导入目标" placeholder="选择正式目标" value={targetId || undefined} options={targets.data} loading={targets.isPending} onChange={value => { setTargetId(value); setPreview(null) }} /> : <span>将按模块归入功能测试集。</span>}
-        {targets.error ? <Alert showIcon type="error" title={getErrorMessage(targets.error)} /> : null}
-        {preview ? <Alert showIcon type={preview.requiresConfirmation ? 'warning' : 'info'} title={preview.requiresConfirmation ? `有 ${preview.conflicts.length} 个冲突，确认后将覆盖同名用例` : '预览完成，没有同名冲突'} description={preview.conflicts.map((conflict, index) => <details key={index}><summary>{String(conflict.normalizedName || `冲突 ${index + 1}`)}</summary><div className="grid grid-cols-2 gap-2 max-[800px]:grid-cols-1"><div><strong>已有用例</strong><pre className="whitespace-pre-wrap break-words">{JSON.stringify(conflict.existingCase, null, 2)}</pre></div><div><strong>将导入的用例</strong><pre className="whitespace-pre-wrap break-words">{JSON.stringify(conflict.generatedCase, null, 2)}</pre></div></div></details>)} /> : null}
-        <Space><Button loading={loading} onClick={previewImport}>预览导入</Button>{preview ? <Button type="primary" loading={loading} onClick={importCurrent}>{preview.requiresConfirmation ? '确认覆盖并导入' : '确认导入'}</Button> : null}</Space>
-      </section> : null}
+      {!sidebarMode ? importBar : null}
     </div>
   </GenerationArtifactFrame>
     {sidebarMode && open && inspectorContainer ? createPortal(currentTools, inspectorContainer) : null}
     {sidebarMode && open && inspectorContainer && generationTools ? createPortal(generationTools, inspectorContainer) : null}
-    {sidebarMode && open && inspectorActionContainer && candidateActions ? createPortal(candidateActions, inspectorActionContainer) : null}
+    {sidebarMode && open && inspectorActionContainer && inspectorDock ? createPortal(inspectorDock, inspectorActionContainer) : null}
+    <CandidateImportModal
+      open={importOpen}
+      kind={kind}
+      candidateId={current.data?.candidateId ?? undefined}
+      targetId={targetId}
+      targetOptions={targets.data ?? []}
+      targetsLoading={targets.isPending}
+      targetsError={targets.error ? getErrorMessage(targets.error) : null}
+      preview={preview}
+      loading={loading}
+      onTargetChange={changeImportTarget}
+      onPreview={previewImport}
+      onImport={importCurrent}
+      onClose={closeImport}
+    />
     {gitlabDialog}
     {generateOpen && trialAvailable ? <Modal open centered destroyOnHidden width={520} title="生成新版本" okText="开始生成" cancelText="取消"
       onCancel={() => setGenerateOpen(false)} onOk={startGeneration} confirmLoading={loading}

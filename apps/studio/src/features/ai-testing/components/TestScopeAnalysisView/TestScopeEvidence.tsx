@@ -2,7 +2,7 @@ import { FileTextOutlined, LockOutlined, RightOutlined, TableOutlined, WarningOu
 import { useState } from 'react'
 import { cx } from '@/shared/utils/cx'
 import type { ScopeEntryView, ScopeMaterialBlockView } from '../../utils/testScopeAnalysis'
-import { MaterialBlockContent } from '../ReadableRequirementMaterial'
+import { MaterialBlockContent } from '../RequirementMaterialBlockContent'
 import {
   EVIDENCE_BODY,
   EVIDENCE_CARD,

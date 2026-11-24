@@ -37,7 +37,6 @@ export type TraceableGraphInput = {
   totalGaps: number
   reviewStatus: string
   reviewLabel: string
-  query?: string
 }
 
 const RANK_GAP = 96
@@ -105,8 +104,7 @@ export function buildTraceablePointsGraph(input: TraceableGraphInput): {
   stageHeight: number
   pointColumnX: number
 } {
-  const query = input.query?.trim().toLowerCase() ?? ''
-  const showPointBranches = input.mode === 'points' && !query
+  const showPointBranches = input.mode === 'points'
   const targetPoint = input.mode === 'issues' && input.activeIssue?.pointId
     ? input.modules.flatMap(module => module.points).find(point => point.id === input.activeIssue?.pointId)
     : undefined

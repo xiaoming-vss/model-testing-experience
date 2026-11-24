@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGeneratedCasesModel, generatedCaseMatches } from './generatedCasesModel'
+import { buildGeneratedCasesModel } from './generatedCasesModel'
 
 const content = JSON.stringify({
   cases: [
@@ -20,15 +20,6 @@ describe('generatedCasesModel', () => {
     expect(model.entries.map(entry => entry.key)).toEqual(['清洗核验:0', '清洗核验:1', '清洗核验:2', '数据切片:3'])
     expect(model.sceneByEntryKey.get('清洗核验:2')?.title).toBe('异常测试')
     expect(model.moduleByEntryKey.get('数据切片:3')?.title).toBe('数据切片')
-  })
-
-  it('搜索覆盖用例名、模块、类型和标签值', () => {
-    const model = buildGeneratedCasesModel(content)!
-    expect(generatedCaseMatches(model.entries[0], '保存')).toBe(true)
-    expect(generatedCaseMatches(model.entries[0], '清洗核验')).toBe(true)
-    expect(generatedCaseMatches(model.entries[2], '异常测试')).toBe(true)
-    expect(generatedCaseMatches(model.entries[0], 'case-a')).toBe(true)
-    expect(generatedCaseMatches(model.entries[0], '不存在')).toBe(false)
   })
 
   it('无效或空产物返回空模型', () => {

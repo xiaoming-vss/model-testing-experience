@@ -14,7 +14,6 @@ import {
   CATEGORY_DOT_TONE,
   CATEGORY_PILL,
   CATEGORY_PILL_TONE,
-  CLEAR_BUTTON,
   DETAIL_FOOT,
   DETAIL_TITLE,
   ID_CHIP,
@@ -129,22 +128,19 @@ function RelationChips({ entry, category, view, onJump }: {
   </div>
 }
 
-export function TestScopeDetail({ category, entry, view, hasFilters, onJump, onCopy, onClear }: {
+export function TestScopeDetail({ category, entry, view, onJump, onCopy }: {
   category: ScopeCategoryView
   entry?: ScopeEntryView
   view: TestScopeView
-  hasFilters: boolean
   onJump: (category: ScopeCategoryKey, id: string) => void
   onCopy: (id: string) => void
-  onClear: () => void
 }) {
   if (!entry) {
     return <section aria-label={`${category.label}详情`} className="flex min-h-[420px] flex-col items-center justify-center gap-3 px-4 py-10">
       <Empty
         image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={<span className="text-[12px] text-app-surface-text-muted">{hasFilters ? '没有匹配的条目' : `暂无${category.label}`}</span>}
+        description={<span className="text-[12px] text-app-surface-text-muted">暂无{category.label}</span>}
       />
-      {hasFilters ? <button type="button" className={CLEAR_BUTTON} onClick={onClear}>清除筛选</button> : null}
     </section>
   }
 

@@ -34,14 +34,6 @@ function caseTypeOf(testCase: GeneratedTestCase) {
     || toDisplayText(testCase.raw.type) || '未分类用例'
 }
 
-export function generatedCaseMatches(entry: GeneratedCaseEntry, query: string) {
-  const search = query.trim().toLowerCase()
-  if (!search) return false
-  return `${entry.testCase.displayName} ${entry.moduleName} ${entry.caseType} ${entry.testCase.tagFields.map(field => field.value).join(' ')}`
-    .toLowerCase()
-    .includes(search)
-}
-
 export function buildGeneratedCasesModel(content: string): GeneratedCasesModel | null {
   const groups = parseGeneratedCases(content)
   if (!groups.length) return null

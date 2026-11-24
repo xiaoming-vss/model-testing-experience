@@ -1,4 +1,4 @@
-import { CompressOutlined, DownOutlined, FileTextOutlined, MenuOutlined, MinusSquareOutlined, PictureOutlined, PlusSquareOutlined, RightOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { CompressOutlined, DownOutlined, FileTextOutlined, MenuOutlined, MinusSquareOutlined, PictureOutlined, PlusSquareOutlined, RightOutlined } from '@ant-design/icons'
 import { Empty } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
@@ -8,7 +8,6 @@ import { cx } from '@/shared/utils/cx'
 import { isJsonText } from '../utils/functionalOutput'
 import {
   buildGeneratedCasesModel,
-  generatedCaseMatches,
   type GeneratedCaseEntry,
   type GeneratedCasesModel,
 } from '../utils/generatedCasesModel'
@@ -30,18 +29,11 @@ type Props = {
 const PAGE_LABEL = '用例索引'
 
 const INLINE_GAP = 'inline-flex items-center gap-1'
-const MUTED_10 = 'text-[10px] text-app-surface-text-muted'
 const RAIL_LIST = 'flex flex-col gap-0.5'
-const SEARCH_NAME = 'line-clamp-2 text-[11.5px] leading-[1.35] text-app-surface-text [overflow-wrap:anywhere]'
 const FLEX_TRUNCATE = 'min-w-0 flex-1 truncate'
 const CHEVRON = 'text-[9px] text-app-surface-text-muted'
 const HEADER_GROUP = 'flex items-center gap-2'
 const FOCUS_LABEL = 'min-w-0 truncate'
-
-function isEditableTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement
-    && (target.matches('input, textarea, select') || target.isContentEditable)
-}
 
 function isRailOverlay() {
   return typeof window !== 'undefined'
@@ -69,11 +61,9 @@ export function GeneratedCasesReviewView({
   const [selection, setSelection] = useState<GeneratedCasesSelection>({ kind: 'overview' })
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(() => new Set())
   const [collapsedModules, setCollapsedModules] = useState<Set<string>>(() => new Set())
-  const [query, setQuery] = useState('')
   const [railOpen, setRailOpen] = useState(false)
   const [savingImage, setSavingImage] = useState(false)
   const [focusTick, setFocusTick] = useState(0)
-  const searchRef = useRef<HTMLInputElement | null>(null)
   const graphRef = useRef<GeneratedCasesGraphHandle | null>(null)
   const autoSelectedEdit = useRef(false)
 
@@ -93,7 +83,6 @@ export function GeneratedCasesReviewView({
     const scene = modelForScene.sceneByEntryKey.get(entry.key)
     if (scene) setExpandedScenes(current => new Set(current).add(scene.id))
     setSelection({ kind: 'case', key: entry.key })
-    setQuery('')
     closeRail()
     onCaseSelect?.(entry.key, entry.testCase.raw)
     if (options.focus) setFocusTick(tick => tick + 1)
@@ -167,19 +156,13 @@ export function GeneratedCasesReviewView({
     if (module) toggleModule(module)
   }, [model, toggleModule])
 
-  const findEntry = useCallback((entry: GeneratedCaseEntry) => {
-    selectEntry(entry, model, { focus: true })
-  }, [model, selectEntry])
-
   const resetSelection = () => {
-    setQuery('')
     setSelection({ kind: 'overview' })
   }
 
   const toggleAll = () => {
     setExpandedScenes(allExpanded ? new Set() : new Set(allSceneIds))
     setSelection({ kind: 'overview' })
-    setQuery('')
   }
 
   const updateCase = useCallback((entry: GeneratedCaseEntry, patch: Record<string, unknown>) => {
@@ -231,7 +214,7 @@ export function GeneratedCasesReviewView({
     setSavingImage(true)
     try {
       await graphRef.current.saveImage()
-      notify.success('图片已保存')
+      notify.success('图谱已保存')
     } catch {
       notify.error('图片导出失败，请重试')
     } finally {
@@ -241,19 +224,7 @@ export function GeneratedCasesReviewView({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === '/' && !isEditableTarget(event.target)) {
-        event.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
-      }
-      if (event.key === 'Escape') {
-        if (document.activeElement === searchRef.current) {
-          setQuery('')
-          searchRef.current?.blur()
-        } else if (railOpen) {
-          setRailOpen(false)
-        }
-      }
+      if (event.key === 'Escape' && railOpen) setRailOpen(false)
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -265,16 +236,10 @@ export function GeneratedCasesReviewView({
     </div>
   }
 
-  const normalizedQuery = query.trim().toLowerCase()
-  const matchingEntries = normalizedQuery
-    ? model.entries.filter(entry => generatedCaseMatches(entry, query))
-    : []
   const sceneCount = model.modules.reduce((sum, module) => sum + module.scenes.length, 0)
-  const railTitle = normalizedQuery ? '搜索结果' : PAGE_LABEL
-  const railCount = normalizedQuery ? matchingEntries.length : sceneCount
-  const railSubtitle = normalizedQuery
-    ? `${matchingEntries.length} 个匹配用例`
-    : `${model.modules.length} 个模块 · ${sceneCount} 个用例类型 · ${model.entries.length} 个用例`
+  const railTitle = PAGE_LABEL
+  const railCount = sceneCount
+  const railSubtitle = `${model.modules.length} 个模块 · ${sceneCount} 个用例类型 · ${model.entries.length} 个用例`
   const activeSceneId = activeScene?.id ?? (selection.kind === 'scene' ? selection.id : undefined)
   const allRailCollapsed = model.modules.length > 0 && model.modules.every(module => collapsedModules.has(module.id))
 
@@ -283,7 +248,6 @@ export function GeneratedCasesReviewView({
   }
 
   const focus = (() => {
-    if (normalizedQuery) return { label: `搜索 “${query.trim()}”`, meta: '搜索', count: matchingEntries.length }
     if (activeEntry) return { label: activeEntry.testCase.displayName, meta: '用例', count: model.entries.length }
     if (selection.kind === 'scene') {
       const scene = model.modules.flatMap(module => module.scenes).find(item => item.id === selection.id)
@@ -297,41 +261,6 @@ export function GeneratedCasesReviewView({
   })()
 
   return <div className={cx('flex min-h-0 flex-1 flex-col overflow-hidden bg-app-surface', artifactStyles.scope)}>
-    <header className="flex flex-none flex-wrap items-center gap-x-3 gap-y-2 border-b border-app-surface-border px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="inline-flex size-6 flex-none items-center justify-center rounded-[6px] border border-app-surface-border bg-app-surface-hover text-app-accent" aria-hidden><ShareAltOutlined /></span>
-        <h1 className="m-0 truncate text-[13px] font-semibold text-app-surface-text">{rootTitle}图谱</h1>
-        <span className="inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-app-surface-hover px-1.5 font-mono text-[10px] text-app-surface-text-muted">{model.entries.length}</span>
-        <span className="hidden text-[10.5px] text-app-surface-text-muted sm:inline">{model.modules.length} 个模块 · {sceneCount} 个用例类型</span>
-      </div>
-
-      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5 max-narrow-sm:w-full max-narrow-sm:justify-start">
-        <button type="button" className="hidden size-7 cursor-pointer items-center justify-center rounded-[6px] border border-app-surface-border bg-app-surface text-app-surface-text-muted hover:bg-app-surface-hover hover:text-app-surface-text max-[1180px]:inline-flex" title="打开用例索引" aria-label="打开用例索引" onClick={() => setRailOpen(true)}><MenuOutlined aria-hidden /></button>
-        <label className="relative flex h-7 w-[230px] max-w-full items-center max-narrow-sm:w-full">
-          <SearchOutlined className="pointer-events-none absolute left-2 text-[12px] text-app-surface-text-muted" aria-hidden />
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => {
-              const next = event.target.value
-              setQuery(next)
-              if (next.trim() && isRailOverlay()) setRailOpen(true)
-            }}
-            className="h-7 w-full rounded-[6px] border border-app-surface-border bg-app-surface pl-7 pr-8 text-[11.5px] text-app-surface-text outline-none placeholder:text-app-surface-text-muted focus:border-app-accent-border focus:ring-2 focus:ring-app-accent-selection"
-            aria-label="搜索用例、模块或类型"
-            placeholder="搜索用例、模块或类型"
-          />
-          <kbd className="pointer-events-none absolute right-1.5 rounded-[3px] border border-app-surface-border bg-app-surface-hover px-1 font-mono text-[9.5px] leading-[1.5] text-app-surface-text-muted">/</kbd>
-        </label>
-        <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-app-surface-border bg-app-surface px-2 text-[10.5px] text-app-surface-text hover:border-app-accent-border hover:bg-app-surface-hover" aria-pressed={allExpanded} onClick={toggleAll}>
-          {allExpanded ? <MinusSquareOutlined aria-hidden /> : <PlusSquareOutlined aria-hidden />}
-          {allExpanded ? '收起全部' : '全部展开'}
-        </button>
-        <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-app-surface-border bg-app-surface px-2 text-[10.5px] text-app-surface-text-muted hover:border-app-accent-border hover:bg-app-surface-hover hover:text-app-surface-text" title="适应画布" aria-label="适应画布" onClick={() => graphRef.current?.fitView()}><CompressOutlined aria-hidden />适应画布</button>
-        <ProjectActionButton action="write" size="small" icon={<PictureOutlined aria-hidden />} loading={savingImage} onClick={() => void saveImage()}>保存图片</ProjectActionButton>
-      </div>
-    </header>
-
     <div className="relative flex min-h-0 flex-1 overflow-hidden">
       <aside className={cx(workbenchStyles.rail, 'flex h-full w-[300px] flex-none flex-col border-r border-app-surface-border max-[1360px]:w-[272px] max-[1180px]:w-[300px]', railOpen && workbenchStyles.railOpen)} aria-label="用例索引">
         <div className="flex flex-none flex-col gap-1 px-3 pb-2 pt-3.5">
@@ -339,7 +268,7 @@ export function GeneratedCasesReviewView({
             <h2 className="m-0 text-[12px] font-semibold text-app-surface-text">{railTitle}</h2>
             <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-app-surface-hover px-1.5 font-mono text-[9.5px] text-app-surface-text-muted">{railCount}</span>
             <span className="ml-auto inline-flex items-center gap-0.5">
-              {!normalizedQuery && model.modules.length
+              {model.modules.length
                 ? <button type="button" className="inline-flex size-6 cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent text-app-surface-text-muted hover:bg-app-surface-hover hover:text-app-surface-text" title={allRailCollapsed ? '展开索引列表' : '折叠索引列表'} aria-label={allRailCollapsed ? '展开索引列表' : '折叠索引列表'} onClick={toggleRailModules}>{allRailCollapsed ? <RightOutlined aria-hidden /> : <DownOutlined aria-hidden />}</button>
                 : null}
               <button type="button" className="hidden size-6 cursor-pointer items-center justify-center rounded-[5px] border-0 bg-transparent text-[15px] leading-none text-app-surface-text-muted hover:bg-app-surface-hover hover:text-app-surface-text max-[1180px]:inline-flex" title="关闭用例索引" aria-label="关闭用例索引" onClick={() => setRailOpen(false)}><span aria-hidden>×</span></button>
@@ -349,14 +278,7 @@ export function GeneratedCasesReviewView({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-          {normalizedQuery
-            ? (matchingEntries.length
-              ? <div className={RAIL_LIST}>{matchingEntries.map(entry => <button key={entry.key} type="button" className="flex w-full cursor-pointer flex-col gap-0.5 rounded-[6px] border-0 bg-transparent px-2 py-1.5 text-left hover:bg-app-surface focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-app-accent" onClick={() => findEntry(entry)}>
-                <span className={SEARCH_NAME}>{entry.testCase.displayName}</span>
-                <span className={MUTED_10}>{entry.moduleName} · {entry.caseType}</span>
-              </button>)}</div>
-              : <div className="flex flex-col items-center gap-1 px-3 py-10 text-center text-app-surface-text-muted"><SearchOutlined aria-hidden /><strong className="text-[11.5px] text-app-surface-text">没有匹配的用例</strong><span className="text-[11px] leading-[1.5]">试试用例名、模块名或用例类型。</span></div>)
-            : <div className={RAIL_LIST}>{model.modules.map(module => {
+          <div className={RAIL_LIST}>{model.modules.map(module => {
               const collapsed = collapsedModules.has(module.id)
               return <div key={module.id}>
                 <button type="button" className={cx('flex w-full cursor-pointer items-center gap-1.5 rounded-[6px] border-0 bg-transparent px-2 py-1.5 text-left text-[11.5px] text-app-surface-text hover:bg-app-surface', selection.kind === 'module' && selection.id === module.id && 'bg-app-accent-selection ring-1 ring-inset ring-app-accent-border')} aria-expanded={!collapsed} onClick={() => {
@@ -378,7 +300,7 @@ export function GeneratedCasesReviewView({
                   <span className="font-mono text-[9.5px]">{scene.cases.length}</span>
                 </button>)}</div>}
               </div>
-            })}</div>}
+            })}</div>
         </div>
 
         <footer className="flex flex-none flex-wrap items-center gap-x-2 gap-y-1 border-t border-app-surface-border px-3 py-2 text-[10.5px] text-app-surface-text-muted">
@@ -390,6 +312,7 @@ export function GeneratedCasesReviewView({
       {railOpen ? <div className={workbenchStyles.backdrop} aria-hidden onClick={() => setRailOpen(false)} /> : null}
 
       <main className="relative flex min-h-0 min-w-0 flex-1 flex-col" aria-label="完整用例图谱">
+        <h1 className="sr-only">{rootTitle}图谱</h1>
         <GeneratedCasesGraph
           ref={graphRef}
           model={model}
@@ -408,12 +331,21 @@ export function GeneratedCasesReviewView({
           onCloseDetail={() => setSelection({ kind: 'overview' })}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-wrap items-start gap-2 p-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-wrap items-start justify-between gap-2 p-3">
           <button type="button" className="pointer-events-auto inline-flex max-w-[min(520px,calc(100%-8px))] shrink-0 cursor-pointer items-center gap-1.5 rounded-[7px] border border-app-surface-border bg-app-surface px-2.5 py-1.5 text-[11px] text-app-surface-text hover:border-app-accent-border" title="回到总览" onClick={resetSelection}>
             <span className="shrink-0 font-semibold text-app-accent">{focus.meta}</span>
             <span className={FOCUS_LABEL}>{focus.label}</span>
             <span className="shrink-0 rounded-[3px] bg-app-surface-hover px-1 font-mono text-[9.5px] text-app-surface-text-muted">{focus.count}</span>
           </button>
+          <div className="pointer-events-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+            <button type="button" className="hidden size-7 cursor-pointer items-center justify-center rounded-[6px] border border-app-surface-border bg-app-surface text-app-surface-text-muted hover:bg-app-surface-hover hover:text-app-surface-text max-[1180px]:inline-flex" title="打开用例索引" aria-label="打开用例索引" onClick={() => setRailOpen(true)}><MenuOutlined aria-hidden /></button>
+            <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-app-surface-border bg-app-surface px-2 text-[10.5px] text-app-surface-text hover:border-app-accent-border hover:bg-app-surface-hover" aria-pressed={allExpanded} onClick={toggleAll}>
+              {allExpanded ? <MinusSquareOutlined aria-hidden /> : <PlusSquareOutlined aria-hidden />}
+              {allExpanded ? '收起全部' : '全部展开'}
+            </button>
+            <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-[6px] border border-app-surface-border bg-app-surface px-2 text-[10.5px] text-app-surface-text-muted hover:border-app-accent-border hover:bg-app-surface-hover hover:text-app-surface-text" title="适应画布" aria-label="适应画布" onClick={() => graphRef.current?.fitView()}><CompressOutlined aria-hidden />适应画布</button>
+            <ProjectActionButton action="write" size="small" icon={<PictureOutlined aria-hidden />} loading={savingImage} onClick={() => void saveImage()}>保存图谱</ProjectActionButton>
+          </div>
         </div>
 
         <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex items-center gap-3 rounded-[6px] border border-app-surface-border bg-app-surface px-2.5 py-1.5 text-[10px] text-app-surface-text-muted" aria-label="图例">

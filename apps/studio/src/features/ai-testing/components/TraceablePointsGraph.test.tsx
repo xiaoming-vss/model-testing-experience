@@ -47,7 +47,6 @@ describe('TraceablePointsGraph', () => {
     render(<TraceablePointsGraph
       model={model}
       mode="points"
-      query=""
       selection={{ kind: 'point', id: 'P1' }}
       expandedSceneIds={new Set([sceneId])}
       rootTitle="测试点"

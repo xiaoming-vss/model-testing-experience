@@ -10,21 +10,6 @@
   display: none;
 }
 
-.tabActive {
-  color: var(--app-surface-text);
-}
-
-.tabActive::after {
-  position: absolute;
-  right: 10px;
-  bottom: -9px;
-  left: 10px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--app-accent);
-  content: '';
-}
-
 .canvas {
   position: relative;
   display: flex;

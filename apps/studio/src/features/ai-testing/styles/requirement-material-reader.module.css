@@ -1,0 +1,11 @@
+/* 材料阅读区使用原生 button 作为可点击条目；统一去掉浏览器按钮皮肤，
+ * 放入 base 层，选中态、边框和背景仍由组件 utility 覆盖。 */
+@layer base {
+  .root button {
+    appearance: none;
+    border: 0;
+    background-color: transparent;
+    font: inherit;
+    color: inherit;
+  }
+}
