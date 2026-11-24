@@ -2281,7 +2281,8 @@ def upgrade() -> None:
             "body_example_json",
             mysql.JSON(),
             nullable=True,
-            comment="请求体示例 JSON 值；无示例时为空",
+            comment="请求体示例 JSON 值；OpenAPI 导入时取文档示例，"
+            "文档未提供则按请求体 Schema 生成占位示例；没有示例时为空",
         ),
         sa.Column(
             "body_text",
@@ -2306,7 +2307,8 @@ def upgrade() -> None:
             "response_example_json",
             mysql.JSON(),
             nullable=True,
-            comment="响应示例 JSON 值；无示例时为空",
+            comment="响应示例 JSON 值；OpenAPI 导入时取文档示例，"
+            "文档未提供则按响应 Schema 生成占位示例；没有示例时为空",
         ),
         sa.Column(
             "security_json",

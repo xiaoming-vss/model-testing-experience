@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from testing_agent.domain.api_interface import normalize_rows
+from testing_agent.domain.openapi_example import generate_example
 from testing_agent.domain.openapi_models import (
     BODY_TEXT_MAX,
     MEDIA_FORM_TYPES,
@@ -153,8 +154,8 @@ def openapi3_body(
     if not isinstance(media, dict):
         media = {}
     schema = resolver.resolve(media.get("schema"))
-    example = media_example(resolver, media)
     body_type = _body_type_for_media(media_type)
+    example = _body_example(body_type, schema, media_example(resolver, media))
     body_text = ""
     if body_type == "raw" and example is not None:
         body_text = (
@@ -209,7 +210,7 @@ def swagger2_body(
         return {
             "body_type": body_type,
             "body_schema": body_schema_value,
-            "body_example": None,
+            "body_example": _body_example(body_type, body_schema_value, body_param.get("example")),
             "body_text": "",
             "media_type": media_type,
         }
@@ -238,11 +239,18 @@ def swagger2_body(
         return {
             "body_type": "form",
             "body_schema": body_schema,
-            "body_example": example or None,
+            "body_example": _body_example("form", body_schema, example or None),
             "body_text": "",
             "media_type": media_type,
         }
     return _empty_body()
+
+
+def _body_example(body_type: str, schema: Any, example: Any) -> Any:
+    """Keeps the documented example; structured bodies without one get a derived placeholder."""
+    if example is not None or body_type not in {"json", "form"}:
+        return example
+    return generate_example(schema)
 
 
 def _empty_body() -> dict[str, Any]:

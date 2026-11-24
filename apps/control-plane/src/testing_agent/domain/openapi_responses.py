@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from testing_agent.domain.openapi_example import generate_example
 from testing_agent.domain.openapi_models import (
     RESPONSE_DESCRIPTION_MAX,
     Resolver,
@@ -78,6 +79,9 @@ def response_definition(
             for value in examples.values():
                 example = value
                 break
+    # Keeps the documented example; a structured response without one gets a derived placeholder.
+    if example is None:
+        example = generate_example(schema)
     return {
         "status": status,
         "description": description,

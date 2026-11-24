@@ -83,7 +83,10 @@ class ApiInterface(Base):
         JSON, nullable=True, comment="请求体 JSON Schema；无 schema 时为空"
     )
     body_example_json: Mapped[Any | None] = mapped_column(
-        JSON, nullable=True, comment="请求体示例 JSON 值；无示例时为空"
+        JSON,
+        nullable=True,
+        comment="请求体示例 JSON 值；OpenAPI 导入时取文档示例，"
+        "文档未提供则按请求体 Schema 生成占位示例；没有示例时为空",
     )
     body_text: Mapped[str] = mapped_column(
         Text, nullable=False, default="", comment="Raw 请求体文本；仅 body_type=raw 时使用"
@@ -98,7 +101,10 @@ class ApiInterface(Base):
         JSON, nullable=True, comment="响应 JSON Schema；无 schema 时为空"
     )
     response_example_json: Mapped[Any | None] = mapped_column(
-        JSON, nullable=True, comment="响应示例 JSON 值；无示例时为空"
+        JSON,
+        nullable=True,
+        comment="响应示例 JSON 值；OpenAPI 导入时取文档示例，"
+        "文档未提供则按响应 Schema 生成占位示例；没有示例时为空",
     )
     security_json: Mapped[Any | None] = mapped_column(
         JSON,

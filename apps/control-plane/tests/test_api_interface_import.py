@@ -205,6 +205,74 @@ def test_reimport_preserves_library_tags_and_new_interfaces_use_document_tags(ap
     assert refund_detail["tags"] == ["退款分组"]
 
 
+def test_commit_stores_derived_examples_and_reimport_refills_a_cleared_one(api):
+    _, owner = account(api, "owner")
+    pid = project(api, owner)
+    software_repository_id = make_software_repository(api, owner, pid)
+    document = openapi_document()
+    document["paths"]["/orders"]["post"]["requestBody"]["content"]["application/json"] = {
+        "schema": {
+            "type": "object",
+            "required": ["items"],
+            "properties": {
+                "items": {"type": "array", "items": {"type": "string"}},
+                "confirmOverwrite": {"type": "boolean", "default": False},
+            },
+        }
+    }
+    document["paths"]["/orders"]["post"]["responses"]["200"]["content"]["application/json"] = {
+        "schema": {
+            "type": "object",
+            "properties": {"orderId": {"type": "integer", "minimum": 1}},
+        }
+    }
+    derived = {"items": ["string"], "confirmOverwrite": False}
+    derived_response = {"orderId": 1}
+
+    preview = upload_preview(api, owner, software_repository_id, document)
+    result = upload_commit(
+        api,
+        owner,
+        software_repository_id,
+        document,
+        digest=preview["source"]["digest"],
+        selected_keys=["POST /orders"],
+    )
+    created = next(item for item in result["interfaces"] if item["key"] == "POST /orders")
+    detail = api.get(f"/v1/api-interfaces/{created['interfaceId']}", headers=owner).json()["data"]
+    assert detail["bodyExample"] == derived
+    assert detail["responseExample"] == derived_response
+
+    # The same document derives the same examples, so they never count as a change on their own.
+    assert upload_preview(api, owner, software_repository_id, document)["summary"]["modified"] == 0
+
+    # Interfaces imported before examples were derived have none; the next import fills them in.
+    api.patch(
+        f"/v1/api-interfaces/{created['interfaceId']}",
+        headers=owner,
+        json={"bodyExample": None, "responseExample": None},
+    )
+    cleared = api.get(f"/v1/api-interfaces/{created['interfaceId']}", headers=owner).json()["data"]
+    assert cleared["bodyExample"] is None
+    assert cleared["responseExample"] is None
+    preview = upload_preview(api, owner, software_repository_id, document)
+    changed = next(item for item in preview["items"] if item["key"] == "POST /orders")
+    assert changed["changeType"] == "modified"
+    assert changed["changedFields"] == ["bodyExample", "responseExample"]
+    upload_commit(
+        api,
+        owner,
+        software_repository_id,
+        document,
+        digest=preview["source"]["digest"],
+        selected_keys=[changed["key"]],
+        expected_items={changed["key"]: changed["existingVersion"]},
+    )
+    detail = api.get(f"/v1/api-interfaces/{created['interfaceId']}", headers=owner).json()["data"]
+    assert detail["bodyExample"] == derived
+    assert detail["responseExample"] == derived_response
+
+
 def test_import_requires_expected_version_for_existing(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)

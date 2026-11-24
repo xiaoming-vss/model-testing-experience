@@ -212,6 +212,238 @@ def test_swagger2_maps_base_path_body_and_form_data():
     assert endpoint.body_example == {"note": "hello"}
 
 
+def test_structured_bodies_without_a_documented_example_get_a_derived_one():
+    document = {
+        "openapi": "3.0.1",
+        "info": {"title": "Order API", "version": "1.0"},
+        "paths": {
+            "/orders": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/CreateOrder"}
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "成功"}},
+                }
+            },
+            "/orders/form": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/x-www-form-urlencoded": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["name"],
+                                    "properties": {"name": {"type": "string"}},
+                                }
+                            }
+                        }
+                    },
+                    "responses": {"200": {"description": "成功"}},
+                }
+            },
+            "/orders/raw": {
+                "post": {
+                    "requestBody": {"content": {"text/plain": {"schema": {"type": "string"}}}},
+                    "responses": {"200": {"description": "成功"}},
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "CreateOrder": {
+                    "type": "object",
+                    "required": ["items"],
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {"$ref": "#/components/schemas/OrderItem"},
+                        },
+                        "confirmOverwrite": {"type": "boolean", "default": False},
+                    },
+                },
+                "OrderItem": {
+                    "type": "object",
+                    "required": ["sku"],
+                    "properties": {
+                        "sku": {"type": "string"},
+                        "quantity": {"type": "integer", "minimum": 1},
+                    },
+                },
+            }
+        },
+    }
+
+    endpoints = {endpoint.path: endpoint for endpoint in parse_openapi_document(document).endpoints}
+
+    assert endpoints["/orders"].body_example == {
+        "items": [{"sku": "string", "quantity": 1}],
+        "confirmOverwrite": False,
+    }
+    assert endpoints["/orders/form"].body_type == "form"
+    assert endpoints["/orders/form"].body_example == {"name": "string"}
+    # A raw body has no structure to derive from; its documented example is the only source.
+    assert endpoints["/orders/raw"].body_type == "raw"
+    assert endpoints["/orders/raw"].body_example is None
+    assert endpoints["/orders/raw"].body_text == ""
+
+
+def test_swagger2_body_example_comes_from_the_document_when_present():
+    def document(body_parameter):
+        return {
+            "swagger": "2.0",
+            "info": {"title": "Legacy", "version": "1.0"},
+            "paths": {
+                "/users": {
+                    "post": {
+                        "consumes": ["application/json"],
+                        "parameters": [body_parameter],
+                        "responses": {"200": {"description": "成功"}},
+                    }
+                }
+            },
+        }
+
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "vip": {"type": "boolean", "default": False}},
+    }
+    derived = parse_openapi_document(
+        document({"name": "body", "in": "body", "schema": schema})
+    ).endpoints[0]
+    assert derived.body_example == {"name": "string", "vip": False}
+    on_parameter = parse_openapi_document(
+        document({"name": "body", "in": "body", "schema": schema, "example": {"name": "Ada"}})
+    ).endpoints[0]
+    assert on_parameter.body_example == {"name": "Ada"}
+    in_schema = parse_openapi_document(
+        document({"name": "body", "in": "body", "schema": {**schema, "example": {"name": "Grace"}}})
+    ).endpoints[0]
+    assert in_schema.body_example == {"name": "Grace"}
+
+
+def test_swagger2_form_data_without_examples_lists_json_fields_only():
+    document = {
+        "swagger": "2.0",
+        "info": {"title": "Legacy", "version": "1.0"},
+        "paths": {
+            "/upload": {
+                "post": {
+                    "consumes": ["multipart/form-data"],
+                    "parameters": [
+                        {"name": "file", "in": "formData", "type": "file", "required": True},
+                        {"name": "note", "in": "formData", "type": "string"},
+                        {"name": "count", "in": "formData", "type": "integer"},
+                    ],
+                    "responses": {"200": {"description": "成功"}},
+                }
+            }
+        },
+    }
+
+    endpoint = parse_openapi_document(document).endpoints[0]
+
+    # File fields have no JSON value, so they are left out of the example.
+    assert endpoint.body_example == {"note": "string", "count": 1}
+
+
+def test_structured_responses_without_a_documented_example_get_a_derived_one():
+    document = {
+        "openapi": "3.0.1",
+        "info": {"title": "Order API", "version": "1.0"},
+        "paths": {
+            "/orders/{orderId}": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "description": "成功",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Order"}
+                                }
+                            },
+                        }
+                    }
+                }
+            },
+            "/orders": {
+                "post": {
+                    "responses": {
+                        "201": {
+                            "description": "创建成功",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object"},
+                                    "example": {"orderId": "o-1"},
+                                }
+                            },
+                        }
+                    }
+                }
+            },
+            "/health": {"get": {"responses": {"200": {"description": "无响应体"}}}},
+        },
+        "components": {
+            "schemas": {
+                "Order": {
+                    "type": "object",
+                    "required": ["orderId"],
+                    "properties": {
+                        "orderId": {"type": "string"},
+                        "items": {"type": "array", "items": {"type": "integer"}},
+                    },
+                }
+            }
+        },
+    }
+
+    endpoints = {endpoint.path: endpoint for endpoint in parse_openapi_document(document).endpoints}
+
+    assert endpoints["/orders/{orderId}"].response_example == {
+        "orderId": "string",
+        "items": [1],
+    }
+    # A documented example still wins over the derived placeholder.
+    assert endpoints["/orders"].response_example == {"orderId": "o-1"}
+    assert endpoints["/health"].response_example is None
+
+
+def test_swagger2_response_example_comes_from_the_document_or_the_schema():
+    def document(response):
+        return {
+            "swagger": "2.0",
+            "info": {"title": "Legacy", "version": "1.0"},
+            "paths": {"/users": {"get": {"responses": {"200": response}}}},
+        }
+
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "vip": {"type": "boolean", "default": False}},
+    }
+    derived = parse_openapi_document(document({"description": "成功", "schema": schema}))
+    assert derived.endpoints[0].response_example == {"name": "string", "vip": False}
+
+    documented = parse_openapi_document(
+        document(
+            {
+                "description": "成功",
+                "schema": schema,
+                "examples": {"application/json": {"name": "Ada"}},
+            }
+        )
+    )
+    assert documented.endpoints[0].response_example == {"name": "Ada"}
+
+    assert (
+        parse_openapi_document(document({"description": "成功"})).endpoints[0].response_example
+        is None
+    )
+
+
 def test_parser_records_non_blocking_warnings():
     document = {
         "openapi": "3.0.1",
