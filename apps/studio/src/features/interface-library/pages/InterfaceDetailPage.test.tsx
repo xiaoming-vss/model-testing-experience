@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -96,8 +96,9 @@ function dialogOf(element: Element | null): HTMLElement {
   return dialog as HTMLElement
 }
 
-async function expandRepository(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '展开订单服务' }))
+/** The navigation tree opens every repository with its tag groups collapsed. */
+async function expandGroup(user: ReturnType<typeof userEvent.setup>, tag: string) {
+  await user.click(await screen.findByRole('button', { name: `展开分组「${tag}」` }))
 }
 
 function renderPage(path: string, role: 'owner' | 'viewer' = 'owner') {
@@ -167,7 +168,6 @@ describe('InterfaceDetailPage', () => {
   it('loads an interface definition and saves edited library fields', async () => {
     const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
     const nameInput = await screen.findByLabelText('接口名称')
     expect(nameInput).toHaveValue('查询订单')
@@ -178,8 +178,9 @@ describe('InterfaceDetailPage', () => {
     expect(screen.getByRole('tab', { name: /参数/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('status')).toHaveTextContent('已保存')
     expect(await screen.findByRole('button', { name: /^订单服务/ })).toBeInTheDocument()
+    await expandGroup(user, '订单')
     expect(
-      await screen.findByRole('button', { name: /GET.*查询订单/ }),
+      screen.getByRole('button', { name: /GET.*查询订单/ }),
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /请求头/ }))
@@ -211,6 +212,21 @@ describe('InterfaceDetailPage', () => {
     )
   })
 
+  it('opens the settings tab with a read-only source rail and no duplicated update time', async () => {
+    const user = userEvent.setup()
+    renderPage('/asset-library/interfaces/api-1')
+
+    await screen.findByLabelText('接口名称')
+    await user.click(screen.getByRole('tab', { name: '设置' }))
+
+    expect(screen.getByText('来源与认证')).toBeInTheDocument()
+    expect(screen.getByText('手工创建')).toBeInTheDocument()
+    expect(screen.getByText('未声明认证')).toBeInTheDocument()
+    expect(screen.getByText('只关联需求；迭代通过需求归属自动推导。')).toBeInTheDocument()
+    expect(screen.queryByText('最近更新')).not.toBeInTheDocument()
+    expect(screen.queryByText('认证要求')).not.toBeInTheDocument()
+  })
+
   it('loads all software repository interfaces and groups untagged interfaces inside the tree', async () => {
     const user = userEvent.setup()
     const treeItems = Array.from({ length: 11 }, (_, index) => ({
@@ -240,9 +256,9 @@ describe('InterfaceDetailPage', () => {
       },
     )
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
-
     expect(await screen.findByText('未分类')).toBeInTheDocument()
+    await expandGroup(user, '未分类')
+
     expect(
       await screen.findByRole('button', { name: /GET.*接口 11/ }),
     ).toBeInTheDocument()
@@ -250,6 +266,45 @@ describe('InterfaceDetailPage', () => {
       'app-1',
       expect.objectContaining({ page: 1, pageSize: 200 }),
     )
+  })
+
+  it('keeps the tree as the user left it when another interface is opened', async () => {
+    const user = userEvent.setup()
+    const updatedInterface: ApiInterface = {
+      ...apiInterface,
+      interfaceId: 'api-2',
+      name: '更新订单',
+      method: 'PUT',
+    }
+    const treeItems = [apiInterface as ApiInterfaceListItem, updatedInterface as ApiInterfaceListItem]
+    vi.mocked(interfaceLibraryApi.getSoftwareRepositoryApiInterfaces).mockResolvedValue(
+      Object.assign([...treeItems], { items: treeItems, total: treeItems.length }),
+    )
+    vi.mocked(interfaceLibraryApi.getApiInterface).mockImplementation(async interfaceId =>
+      interfaceId === 'api-2' ? updatedInterface : apiInterface,
+    )
+    const { container } = renderPage('/asset-library/interfaces/api-1')
+    await expandGroup(user, '订单')
+    const scrollArea = container.querySelector('.if-app-tree-scroll') as HTMLElement
+    scrollArea.scrollTop = 240
+    fireEvent.scroll(scrollArea)
+
+    await user.click(await screen.findByRole('button', { name: /PUT.*更新订单/ }))
+    expect(await screen.findByLabelText('接口名称')).toHaveValue('更新订单')
+
+    expect(screen.getByRole('button', { name: '收起分组「订单」' })).toBeInTheDocument()
+    expect((container.querySelector('.if-app-tree-scroll') as HTMLElement).scrollTop).toBe(240)
+  })
+
+  it('keeps expanded groups when the create page is opened', async () => {
+    const user = userEvent.setup()
+    renderPage('/asset-library/interfaces/api-1')
+    await expandGroup(user, '订单')
+
+    await user.click(await screen.findByRole('button', { name: '新建接口' }))
+    expect(await screen.findByLabelText('接口名称')).toHaveValue('')
+
+    expect(screen.getByRole('button', { name: '收起分组「订单」' })).toBeInTheDocument()
   })
 
   it('shows the OpenAPI import entry when the library has no interfaces', async () => {
@@ -289,9 +344,8 @@ describe('InterfaceDetailPage', () => {
   it('creates a persisted group from the tree entry', async () => {
     const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await screen.findByRole('button', { name: '分组「订单」更多操作' })
     await user.click(screen.getByRole('button', { name: /新建分组/ }))
     const dialog = dialogOf(
       await screen.findByText(/分组会保存在软件仓库中，即使暂时没有接口也会保留/),
@@ -309,9 +363,8 @@ describe('InterfaceDetailPage', () => {
   it('renames a group from the tree and syncs the open interface draft', async () => {
     const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await screen.findByRole('button', { name: '分组「订单」更多操作' })
     await user.click(screen.getByRole('button', { name: '分组「订单」更多操作' }))
     await user.click(await screen.findByText('重命名分组'))
     const dialog = dialogOf(await screen.findByText(/将修改该分组下接口的首个标签/))
@@ -337,9 +390,8 @@ describe('InterfaceDetailPage', () => {
       new ApiError('目标接口分组已存在', 3819, 409),
     )
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await screen.findByRole('button', { name: '分组「订单」更多操作' })
     await user.click(screen.getByRole('button', { name: '分组「订单」更多操作' }))
     await user.click(await screen.findByText('重命名分组'))
     const dialog = dialogOf(await screen.findByText(/将修改该分组下接口的首个标签/))
@@ -357,9 +409,8 @@ describe('InterfaceDetailPage', () => {
   it('removes a group into unclassified and clears the open interface tags', async () => {
     const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await screen.findByRole('button', { name: '分组「订单」更多操作' })
     await user.click(screen.getByRole('button', { name: '分组「订单」更多操作' }))
     await user.click(await screen.findByText('移除分组'))
     const content = await screen.findByText(
@@ -381,7 +432,7 @@ describe('InterfaceDetailPage', () => {
   it('moves an interface to a new group and applies the returned tags', async () => {
     const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
+    await expandGroup(user, '订单')
 
     await screen.findByRole('button', { name: /GET.*查询订单/ })
     await user.click(screen.getByRole('button', { name: '查询订单 更多操作' }))
@@ -400,11 +451,9 @@ describe('InterfaceDetailPage', () => {
   })
 
   it('does not expose software repository maintenance in the interface library', async () => {
-    const user = userEvent.setup()
     renderPage('/asset-library/interfaces/api-1')
-    await expandRepository(user)
 
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await screen.findByRole('button', { name: '分组「订单」更多操作' })
     expect(screen.queryByRole('button', { name: '新建软件仓库' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '编辑订单服务' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '删除订单服务' })).not.toBeInTheDocument()
@@ -430,8 +479,10 @@ describe('InterfaceDetailPage', () => {
     expect(screen.queryByRole('button', { name: /保\s*存/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /删\s*除/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '新建软件仓库' })).not.toBeInTheDocument()
-    await expandRepository(user)
-    await screen.findByRole('button', { name: /GET.*查询订单/ })
+    await expandGroup(user, '订单')
+    expect(
+      screen.getByRole('button', { name: /GET.*查询订单/ }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: '分组「订单」更多操作' }),
     ).not.toBeInTheDocument()

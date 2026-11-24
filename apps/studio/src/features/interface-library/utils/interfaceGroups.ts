@@ -7,6 +7,11 @@ export type InterfaceGroup<T extends { tags?: string[] } = ApiInterfaceListItem>
   items: T[]
 }
 
+/** Identifies one tag group inside one software repository. */
+export function interfaceGroupKey(softwareRepositoryId: string, tag: string) {
+  return `${softwareRepositoryId}\u0000${tag}`
+}
+
 export function firstTag(tags?: string[] | null): string {
   for (const raw of tags ?? []) {
     const tag = String(raw ?? '').trim()

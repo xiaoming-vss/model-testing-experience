@@ -154,10 +154,10 @@
       "layoutDeclarations": 68
     },
     "src/features/interface-library/styles/interface-detail.module.css": {
-      "rules": 12,
-      "declarations": 39,
-      "selectors": 19,
-      "layoutDeclarations": 11
+      "rules": 13,
+      "declarations": 36,
+      "selectors": 17,
+      "layoutDeclarations": 14
     },
     "src/features/interface-library/styles/interface-library.module.css": {
       "rules": 11,
@@ -292,9 +292,9 @@
       "layoutDeclarations": 35
     },
     "src/shared/styles/scrollbars.css": {
-      "rules": 5,
-      "declarations": 10,
-      "selectors": 6,
+      "rules": 9,
+      "declarations": 15,
+      "selectors": 11,
       "layoutDeclarations": 2
     },
     "src/shared/styles/surface-tokens.css": {

@@ -20,6 +20,7 @@ export function InterfaceDetailWorkspace({ page }: { page: InterfaceDetailPageMo
   return (
     <div className="if-detail-shell flex min-h-0 min-w-0 flex-auto gap-3">
       <SoftwareRepositoryTree
+        view={page.treeView}
         repositories={repositories}
         loading={repositoriesQuery.isLoading}
         selectedSoftwareRepositoryId={draft.softwareRepositoryId}

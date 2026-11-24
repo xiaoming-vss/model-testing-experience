@@ -2,25 +2,28 @@ import {
   AppstoreOutlined,
   DownOutlined,
   FolderOpenOutlined,
+  FolderOutlined,
   MoreOutlined,
   PlusOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
 import { useQueries } from '@tanstack/react-query'
-import { Button, Dropdown, Empty, Input, Spin } from 'antd'
-import { useMemo, useState } from 'react'
+import { Dropdown, Empty, Spin } from 'antd'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { listItems, listTotal } from '@/services/api'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
+import type { SoftwareRepositoryTreeView } from '../hooks/useSoftwareRepositoryTreeView'
 import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
-import { MethodBadge } from '@/shared/components/MethodBadge'
 import {
   UNTAGGED_GROUP,
   groupItemsByTag,
+  interfaceGroupKey,
   withEmptyGroups,
   type InterfaceGroup,
 } from '../utils/interfaceGroups'
 
 type Props = {
+  /** Owned by the page: the tree unmounts while another interface loads and must come back as it was left. */
+  view: SoftwareRepositoryTreeView
   repositories: SoftwareRepository[]
   loading?: boolean
   selectedSoftwareRepositoryId: string
@@ -42,6 +45,18 @@ type Props = {
 
 const ALL_PAGE_SIZE = 200
 const ALL_MAX_PAGES = 50
+
+const METHOD_TEXT_TONE: Record<string, string> = {
+  get: 'text-[var(--app-http-method-get)]',
+  post: 'text-[var(--app-http-method-post)]',
+  put: 'text-[var(--app-http-method-put)]',
+  patch: 'text-[var(--app-http-method-patch)]',
+  delete: 'text-[var(--app-http-method-delete)]',
+}
+
+function methodTextTone(method: string) {
+  return METHOD_TEXT_TONE[method.toLowerCase()] ?? 'text-[var(--srf-text-secondary)]'
+}
 
 async function loadAllRepositoryInterfaces(softwareRepositoryId: string) {
   const all: ApiInterfaceListItem[] = []
@@ -66,6 +81,7 @@ async function loadAllRepositoryInterfaces(softwareRepositoryId: string) {
 
 /** 接口库左侧软件仓库树：仓库即一级分组，仓库内按 OpenAPI 标签分组。 */
 export function SoftwareRepositoryTree({
+  view,
   repositories,
   loading = false,
   selectedSoftwareRepositoryId,
@@ -80,35 +96,48 @@ export function SoftwareRepositoryTree({
   onRemoveGroup,
   onMoveInterface,
 }: Props) {
-  const [repositorySearch, setRepositorySearch] = useState('')
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    () => new Set(),
-  )
-  // Every repository starts collapsed; interfaces are fetched only after an explicit expand.
-  const [expandedRepositories, setExpandedRepositories] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const {
+    collapsedRepositories,
+    expandedGroups,
+    scrollTopRef,
+    toggleRepository,
+    toggleGroup,
+  } = view
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const scrollIdleTimerRef = useRef<number | null>(null)
+  // The tree is rebuilt whenever another interface loads; put the list back where the user left it.
+  useLayoutEffect(() => {
+    if (scrollAreaRef.current) scrollAreaRef.current.scrollTop = scrollTopRef.current
+  }, [scrollTopRef])
+  useEffect(() => () => {
+    if (scrollIdleTimerRef.current !== null) {
+      window.clearTimeout(scrollIdleTimerRef.current)
+    }
+  }, [])
 
-  const visibleRepositories = useMemo(() => {
-    const keyword = repositorySearch.trim().toLowerCase()
-    return repositories.filter(repository => {
-      if (!keyword) return true
-      return (
-        repository.name.toLowerCase().includes(keyword) ||
-        (repository.repository?.path ?? '').toLowerCase().includes(keyword)
-      )
-    })
-  }, [repositories, repositorySearch])
+  function handleTreeScroll(event: React.UIEvent<HTMLDivElement>) {
+    scrollTopRef.current = event.currentTarget.scrollTop
+    const node = event.currentTarget
+    node.dataset.scrolling = 'true'
+    if (scrollIdleTimerRef.current !== null) {
+      window.clearTimeout(scrollIdleTimerRef.current)
+    }
+    scrollIdleTimerRef.current = window.setTimeout(() => {
+      delete node.dataset.scrolling
+      scrollIdleTimerRef.current = null
+    }, 900)
+  }
 
-  const expandedVisibleRepositories = useMemo(
+  const expandedRepositories = useMemo(
     () =>
-      visibleRepositories.filter(repository =>
-        expandedRepositories.has(repository.softwareRepositoryId),
+      repositories.filter(
+        repository =>
+          !collapsedRepositories.has(repository.softwareRepositoryId),
       ),
-    [expandedRepositories, visibleRepositories],
+    [collapsedRepositories, repositories],
   )
   const childQueries = useQueries({
-    queries: expandedVisibleRepositories.map(repository => ({
+    queries: expandedRepositories.map(repository => ({
       queryKey: ['apiInterfaces', 'tree', repository.softwareRepositoryId, 'all'],
       queryFn: () => loadAllRepositoryInterfaces(repository.softwareRepositoryId),
       staleTime: 30_000,
@@ -123,7 +152,7 @@ export function SoftwareRepositoryTree({
         failed: boolean
       }
     >()
-    expandedVisibleRepositories.forEach((repository, index) => {
+    expandedRepositories.forEach((repository, index) => {
       const query = childQueries[index]
       result.set(repository.softwareRepositoryId, {
         items: listItems(query?.data) as ApiInterfaceListItem[],
@@ -132,47 +161,28 @@ export function SoftwareRepositoryTree({
       })
     })
     return result
-  }, [childQueries, expandedVisibleRepositories])
+  }, [childQueries, expandedRepositories])
 
   const totalInterfaces = repositories.reduce(
     (sum, repository) => sum + repository.interfaceCount,
     0,
   )
 
-  function toggleExpanded(softwareRepositoryId: string) {
-    setExpandedRepositories(previous => {
-      const next = new Set(previous)
-      if (next.has(softwareRepositoryId)) next.delete(softwareRepositoryId)
-      else next.add(softwareRepositoryId)
-      return next
-    })
-  }
-
   function handleRepositoryMain(repository: SoftwareRepository) {
     if (mode === 'detail') {
-      toggleExpanded(repository.softwareRepositoryId)
+      toggleRepository(repository.softwareRepositoryId)
       return
     }
     onSelectRepository(repository.softwareRepositoryId)
   }
 
-  function groupKey(softwareRepositoryId: string, tag: string) {
-    return `${softwareRepositoryId}\u0000${tag}`
-  }
-
-  function toggleGroup(softwareRepositoryId: string, tag: string) {
-    const key = groupKey(softwareRepositoryId, tag)
-    setCollapsedGroups(previous => {
-      const next = new Set(previous)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   const treeClassName = mode === 'detail'
     ? 'if-app-tree if-detail-app-tree flex flex-[0_0_var(--app-sidebar-width)] flex-col min-h-0 max-w-[var(--app-sidebar-width)] rounded-[var(--srf-radius-card)] border border-[var(--srf-card-border)] bg-[var(--srf-card)] p-3 max-[960.01px]:hidden'
     : 'if-app-tree flex flex-[0_0_var(--app-sidebar-width)] flex-col min-h-0 border-r border-[var(--srf-card-border)] bg-[color-mix(in_srgb,var(--srf-card)_94%,var(--srf-hover))] p-[14px_12px] max-[760.01px]:flex-none max-[760.01px]:max-h-[220px] max-[760.01px]:border-r-0 max-[760.01px]:border-b max-[760.01px]:border-b-[var(--srf-card-border)]'
+  // A sticky group header must paint the same surface as the rail behind it.
+  const treeSurfaceClass = mode === 'detail'
+    ? 'bg-[var(--srf-card)]'
+    : 'bg-[color-mix(in_srgb,var(--srf-card)_94%,var(--srf-hover))]'
 
   return (
     <aside className={treeClassName}>
@@ -180,45 +190,42 @@ export function SoftwareRepositoryTree({
         <div className="if-app-tree-title inline-flex min-w-0 items-center gap-1.5">
           <FolderOpenOutlined className="text-[var(--srf-accent)]" aria-hidden />
           <span>接口导航</span>
-          <span className="if-app-tree-total min-w-5 rounded-full bg-[var(--srf-chip)] px-1.5 text-center text-[10px] leading-[18px] text-[var(--srf-text-secondary)]">{repositories.length}</span>
         </div>
+        <span className="if-app-tree-total flex-none text-[10px] font-normal tabular-nums text-[var(--srf-text-muted)]">{repositories.length} 个仓库</span>
       </div>
-      <Input
-        className="if-app-search mt-2.5 mb-2"
-        allowClear
-        prefix={<SearchOutlined />}
-        placeholder="搜索软件仓库"
-        aria-label="搜索软件仓库"
-        value={repositorySearch}
-        onChange={event => setRepositorySearch(event.target.value)}
-      />
-      <div className="if-app-tree-scroll mt-0.5 flex min-h-0 flex-auto flex-col gap-0.5 overflow-auto max-[760.01px]:max-h-[150px]">
+      <div
+        ref={scrollAreaRef}
+        className={`if-app-tree-scroll app-scrollbar-overlay -mr-3 mt-1.5 flex min-h-0 flex-auto flex-col overflow-auto pr-[14px] max-[760.01px]:max-h-[150px]`}
+        onScroll={handleTreeScroll}
+      >
         <button
           type="button"
-          className={`if-app-all flex min-h-[34px] w-full cursor-pointer items-center justify-between rounded-[var(--srf-radius-control)] border-0 px-[9px] py-1.5 text-left font-[inherit] text-[13px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
+          className={`if-app-all mb-0.5 flex h-8 w-full cursor-pointer items-center justify-between rounded-[6px] border-0 px-2 py-0 text-left font-[inherit] text-[12.5px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
           onClick={onShowAll}
         >
           <span className="if-app-all-main inline-flex min-w-0 items-center gap-2">
             <AppstoreOutlined />
             <span>全部接口</span>
           </span>
-          <span className={`if-app-count min-w-[22px] flex-none rounded-full px-1.5 text-center text-[11px] leading-[18px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : ' bg-[var(--srf-chip)] text-[var(--srf-text-secondary)]'}`}>{totalInterfaces}</span>
+          <span className={`if-app-count flex-none text-[10.5px] font-normal tabular-nums ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' text-[var(--srf-accent-strong)]' : ' text-[var(--srf-text-muted)]'}`}>{totalInterfaces}</span>
         </button>
 
         {loading ? (
           <div className="if-app-tree-loading grid place-items-center py-2.5"><Spin size="small" /></div>
         ) : null}
 
-        {!loading && !visibleRepositories.length ? (
+        {!loading && !repositories.length ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={repositorySearch ? '没有匹配的软件仓库' : '还没有软件仓库'}
+            description="还没有软件仓库"
             className="if-app-tree-empty my-3"
           />
         ) : null}
 
-        {visibleRepositories.map(repository => {
-          const expanded = expandedRepositories.has(repository.softwareRepositoryId)
+        {repositories.map(repository => {
+          const expanded = !collapsedRepositories.has(
+            repository.softwareRepositoryId,
+          )
           const selected =
             selectedSoftwareRepositoryId === repository.softwareRepositoryId
           const childState = childrenByRepository.get(repository.softwareRepositoryId)
@@ -229,134 +236,147 @@ export function SoftwareRepositoryTree({
           const groupNames = groups
             .map(group => group.tag)
             .filter(tag => tag !== UNTAGGED_GROUP)
+          const selectedRow = selected && mode === 'list'
           return (
             <div
               key={repository.softwareRepositoryId}
-              className={`if-app-group flex min-w-0 flex-col rounded-[var(--srf-radius-control)] ${expanded ? ' is-expanded' : ''} ${selected ? ' is-selected' : ''}`}
+              className={`if-app-group flex min-w-0 flex-col ${expanded ? ' is-expanded' : ''} ${selected ? ' is-selected' : ''}`}
             >
-              <div className={`if-app-row flex min-w-0 items-center gap-px rounded-[var(--srf-radius-control)] px-0.5 ${selected ? ' bg-[var(--srf-accent-soft)]' : ' hover:bg-[var(--srf-hover)] focus-within:bg-[var(--srf-hover)]'}`}>
+              <div className={`if-app-row mb-[3px] flex min-w-0 items-center gap-0.5 rounded-[var(--srf-radius-control)] border-b border-[color-mix(in_srgb,var(--srf-card-border)_72%,transparent)] py-0.5 pl-[7px] pr-0.5 ${selectedRow ? ' bg-[var(--srf-accent-soft)]' : ' hover:bg-[var(--srf-hover)] focus-within:bg-[var(--srf-hover)]'}`}>
                 <button
                   type="button"
-                  className={`if-app-chevron inline-grid h-7 w-5 flex-[0_0_20px] cursor-pointer place-items-center border-0 bg-transparent p-0 text-[10px] text-[var(--srf-text-muted)] transition-transform duration-[120ms] ${expanded ? ' rotate-0' : ' -rotate-90'}`}
-                  aria-label={` ${expanded ? '收起' : '展开'}${repository.name}`}
-                  onClick={() => toggleExpanded(repository.softwareRepositoryId)}
-                >
-                  <DownOutlined />
-                </button>
-                <button
-                  type="button"
-                  className={`if-app-main flex min-h-8 min-w-0 flex-auto cursor-pointer items-center justify-between gap-2 border-0 bg-transparent px-[3px] py-1 text-left font-[inherit] text-[13px] ${selected ? ' font-semibold text-[var(--srf-accent-strong)]' : ' text-[var(--srf-text-secondary)]'}`}
+                  className={`if-app-main flex h-7 min-w-0 flex-auto cursor-pointer items-center gap-1.5 border-0 bg-transparent text-left font-[inherit] text-[13px] font-semibold ${selected ? ' text-[var(--srf-accent-strong)]' : ' text-[var(--srf-text)]'}`}
                   title={repository.name}
+                  aria-expanded={mode === 'detail' ? expanded : undefined}
                   onClick={() => handleRepositoryMain(repository)}
                 >
-                  <span className="if-app-name inline-flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap">{repository.name}</span>
-                  <span className={`if-app-count min-w-[22px] flex-none rounded-full px-1.5 text-center text-[11px] leading-[18px] ${selected ? ' bg-[var(--srf-count-badge)] text-[var(--srf-accent-strong)]' : ' bg-[var(--srf-chip)] text-[var(--srf-text-secondary)]'}`}>{repository.interfaceCount}</span>
+                  {expanded
+                    ? <FolderOpenOutlined className="flex-none text-[14px] text-[var(--srf-text-muted)]" aria-hidden />
+                    : <FolderOutlined className="flex-none text-[14px] text-[var(--srf-text-muted)]" aria-hidden />}
+                  <span className="if-app-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{repository.name}</span>
+                  <span className="if-app-count flex-none text-[10.5px] font-normal tabular-nums text-[var(--srf-text-muted)]">{repository.interfaceCount}</span>
+                </button>
+                {canManageInterfaces ? (
+                  <button
+                    type="button"
+                    className="if-app-add-group inline-grid h-[22px] w-[22px] flex-none cursor-pointer place-items-center rounded-[5px] border-0 bg-transparent p-0 text-[var(--srf-text-muted)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)] focus-visible:bg-[var(--srf-hover)] focus-visible:text-[var(--srf-text)]"
+                    aria-label="新建分组"
+                    title="新建分组"
+                    onClick={() => onCreateGroup(repository)}
+                  >
+                    <PlusOutlined />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="if-app-chevron inline-grid h-[22px] w-[22px] flex-none cursor-pointer place-items-center rounded-[5px] border-0 bg-transparent p-0 text-[10px] text-[var(--srf-text-muted)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]"
+                  aria-label={`${expanded ? '收起' : '展开'}${repository.name}`}
+                  aria-expanded={expanded}
+                  onClick={() => toggleRepository(repository.softwareRepositoryId)}
+                >
+                  <DownOutlined className={`transition-transform duration-[120ms] ${expanded ? 'rotate-0' : '-rotate-90'}`} />
                 </button>
               </div>
 
               {expanded ? (
-                <div className="if-app-children mb-[5px] ml-5 mt-px flex min-w-0 flex-col gap-px border-l border-[var(--srf-divider)] pl-[7px]">
+                <div className="if-app-children flex min-w-0 flex-col pb-[5px]">
                   {childState?.loading ? (
                     <div className="if-app-tree-loading grid place-items-center py-2.5"><Spin size="small" /></div>
                   ) : null}
                   {childState?.failed ? (
                     <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">接口加载失败</div>
                   ) : null}
-                  {canManageInterfaces ? (
-                    <button
-                      type="button"
-                      className="if-app-add-group flex min-h-[26px] cursor-pointer items-center gap-1.5 self-start rounded-[var(--srf-radius-control)] border-0 bg-transparent px-1.5 py-[3px] font-[inherit] text-[11px] text-[var(--srf-text-muted)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-accent-strong)] focus-visible:bg-[var(--srf-hover)] focus-visible:text-[var(--srf-accent-strong)]"
-                      onClick={() => onCreateGroup(repository)}
-                    >
-                      <PlusOutlined />
-                      <span>新建分组</span>
-                    </button>
-                  ) : null}
                   {!childState?.loading && !childState?.failed && !groups.length ? (
                     <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">还没有接口</div>
                   ) : null}
                   {groups.map(group => {
-                    const collapsed = collapsedGroups.has(
-                      groupKey(repository.softwareRepositoryId, group.tag),
+                    const collapsed = !expandedGroups.has(
+                      interfaceGroupKey(repository.softwareRepositoryId, group.tag),
                     )
+                    const canManageGroup =
+                      canManageInterfaces && group.tag !== UNTAGGED_GROUP
                     return (
                       <div
-                        className={`if-app-tag-group flex min-w-0 flex-col gap-px [&+&]:mt-[5px] ${collapsed ? ' is-collapsed' : ''}`}
+                        className={`if-app-tag-group flex min-w-0 flex-col [&+&]:mt-[3px] ${collapsed ? ' is-collapsed' : ''}`}
                         key={group.tag}
                       >
-                        <div className="if-app-tag-head group flex items-center justify-between gap-1.5 px-1.5 pb-0.5 pt-1 text-[10px] font-semibold tracking-[0.02em] text-[var(--srf-text-muted)]" title={group.tag}>
+                        <div className={`if-app-tag-head group sticky top-0 z-[2] flex h-[27px] min-w-0 items-center gap-0.5 rounded-[5px] ${treeSurfaceClass} px-1 text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]`} title={group.tag}>
                           <button
                             type="button"
-                            className={`if-app-chevron if-app-tag-chevron inline-grid h-[18px] w-4 flex-[0_0_16px] cursor-pointer place-items-center border-0 bg-transparent p-0 text-[8px] text-[var(--srf-text-muted)] transition-transform duration-[120ms] ${collapsed ? ' -rotate-90' : ' is-expanded rotate-0'}`}
-                            aria-label={` ${collapsed ? '展开' : '收起'}分组「${group.tag}」`}
+                            className="if-app-tag-chevron flex h-full min-w-0 flex-auto cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left font-[inherit] text-[11.5px] font-semibold tracking-[0.01em]"
+                            aria-label={`${collapsed ? '展开' : '收起'}分组「${group.tag}」`}
+                            aria-expanded={!collapsed}
                             onClick={() =>
                               toggleGroup(repository.softwareRepositoryId, group.tag)
                             }
                           >
-                            <DownOutlined />
+                            <DownOutlined className={`flex-[0_0_12px] text-[10px] text-[var(--srf-text-muted)] transition-transform duration-[120ms] ${collapsed ? '-rotate-90' : 'rotate-0'}`} />
+                            <span className="if-app-tag-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{group.tag}</span>
                           </button>
-                          <span className="if-app-tag-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{group.tag}</span>
-                          <span className="if-app-tag-meta flex items-center gap-0.5">
-                            <span className="if-app-tag-count flex-none font-normal">{group.items.length}</span>
-                            {canManageInterfaces && group.tag !== UNTAGGED_GROUP ? (
-                              <Dropdown
-                                trigger={['click']}
-                                menu={{
-                                  items: [
-                                    { key: 'rename', label: '重命名分组' },
-                                    { key: 'remove', label: '移除分组', danger: true },
-                                  ],
-                                  onClick: ({ key }) => {
-                                    if (key === 'rename') onRenameGroup(repository, group)
-                                    else onRemoveGroup(repository, group)
-                                  },
-                                }}
-                              >
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  className="if-app-tag-action opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                                  aria-label={`分组「${group.tag}」更多操作`}
-                                  icon={<MoreOutlined />}
-                                  onClick={event => event.stopPropagation()}
-                                />
-                              </Dropdown>
-                            ) : null}
-                          </span>
-                        </div>
-                        {collapsed ? null : group.items.length ? (
-                          group.items.map(item => (
-                            <div className="if-app-child-row group flex min-w-0 items-center gap-0.5" key={item.interfaceId}>
+                          <span className={`if-app-tag-count flex-none text-[10.5px] font-normal tabular-nums text-[var(--srf-text-muted)] ${canManageGroup ? ' transition-opacity duration-[100ms] group-hover:opacity-0 group-focus-within:opacity-0' : ''}`}>{group.items.length}</span>
+                          {canManageGroup ? (
+                            <Dropdown
+                              trigger={['click']}
+                              menu={{
+                                items: [
+                                  { key: 'rename', label: '重命名分组' },
+                                  { key: 'remove', label: '移除分组', danger: true },
+                                ],
+                                onClick: ({ key }) => {
+                                  if (key === 'rename') onRenameGroup(repository, group)
+                                  else onRemoveGroup(repository, group)
+                                },
+                              }}
+                            >
                               <button
                                 type="button"
-                                className={`if-app-child flex min-h-[26px] min-w-0 flex-auto cursor-pointer items-center gap-1.5 rounded-[var(--srf-radius-control)] border-0 px-1.5 py-[3px] text-left font-[inherit] text-[12px] ${item.interfaceId === selectedInterfaceId ? ' is-active bg-[var(--srf-accent-soft)] text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
-                                title={`${item.name} ${item.path}`}
-                                onClick={() => onOpenInterface(item.interfaceId)}
+                                className="if-app-tag-action absolute right-1 top-1/2 inline-grid h-5 w-5 -translate-y-1/2 cursor-pointer place-items-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--srf-text-muted)] opacity-0 hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)] group-hover:opacity-100 group-focus-within:opacity-100"
+                                aria-label={`分组「${group.tag}」更多操作`}
+                                onClick={event => event.stopPropagation()}
                               >
-                                <MethodBadge method={item.method} />
-                                <span className="if-app-child-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{item.name}</span>
+                                <MoreOutlined />
                               </button>
-                              {canManageInterfaces ? (
-                                <Dropdown
-                                  trigger={['click']}
-                                  menu={{
-                                    items: [{ key: 'move', label: '移动到分组…' }],
-                                    onClick: () =>
-                                      onMoveInterface(repository, item, groupNames),
-                                  }}
-                                >
-                                  <Button
-                                    type="text"
-                                    size="small"
-                                    className="if-app-child-action flex-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                                    aria-label={`${item.name} 更多操作`}
-                                    icon={<MoreOutlined />}
-                                    onClick={event => event.stopPropagation()}
-                                  />
-                                </Dropdown>
-                              ) : null}
-                            </div>
-                          ))
+                            </Dropdown>
+                          ) : null}
+                        </div>
+                        {collapsed ? null : group.items.length ? (
+                          <div className="flex min-w-0 flex-col gap-px pb-[5px] pt-px">
+                            {group.items.map(item => {
+                              const methodTone = methodTextTone(item.method)
+                              return (
+                                <div className="if-app-child-row group relative flex min-w-0 items-center" key={item.interfaceId}>
+                                  <button
+                                    type="button"
+                                    className={`if-app-child flex h-[30px] min-w-0 flex-auto cursor-pointer items-center gap-2 rounded-[6px] border-0 py-0 pl-2 pr-1.5 text-left font-[inherit] text-[13px] ${item.interfaceId === selectedInterfaceId ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)] shadow-[inset_2px_0_0_var(--srf-accent)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
+                                    title={`${item.name} ${item.path}`}
+                                    onClick={() => onOpenInterface(item.interfaceId)}
+                                  >
+                                    <span className={`if-app-method w-[42px] flex-[0_0_42px] shrink-0 font-[ui-monospace,SFMono-Regular,Menlo,Consolas,monospace] text-[10px] font-bold tracking-[0.02em] ${methodTone}`}>{item.method}</span>
+                                    <span className="if-app-child-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap">{item.name}</span>
+                                  </button>
+                                  {canManageInterfaces ? (
+                                    <Dropdown
+                                      trigger={['click']}
+                                      menu={{
+                                        items: [{ key: 'move', label: '移动到分组…' }],
+                                        onClick: () =>
+                                          onMoveInterface(repository, item, groupNames),
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        className="if-app-child-action absolute right-0.5 top-1/2 inline-grid h-5 w-5 -translate-y-1/2 cursor-pointer place-items-center rounded-[4px] border-0 bg-transparent p-0 text-[var(--srf-text-muted)] opacity-0 hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)] group-hover:opacity-100 group-focus-within:opacity-100"
+                                        aria-label={`${item.name} 更多操作`}
+                                        onClick={event => event.stopPropagation()}
+                                      >
+                                        <MoreOutlined />
+                                      </button>
+                                    </Dropdown>
+                                  ) : null}
+                                </div>
+                              )
+                            })}
+                          </div>
                         ) : (
                           <div className="if-app-children-note px-1.5 py-[3px] text-[11px] leading-[18px] text-[var(--srf-text-muted)]">
                             该分组还没有接口，可从接口的「更多操作」移动进来
@@ -369,7 +389,7 @@ export function SoftwareRepositoryTree({
               ) : null}
             </div>
           )
-          })}
+        })}
       </div>
     </aside>
   )

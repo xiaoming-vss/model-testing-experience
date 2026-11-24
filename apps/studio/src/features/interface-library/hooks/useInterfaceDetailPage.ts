@@ -19,6 +19,7 @@ import {
   type JsonTexts,
 } from '../utils/interfaceDetailForm'
 import { useInterfaceGroupActions } from './useInterfaceGroupActions'
+import { useSoftwareRepositoryTreeView } from './useSoftwareRepositoryTreeView'
 
 export type InterfaceDetailTab = 'params' | 'headers' | 'body' | 'response' | 'settings'
 
@@ -47,6 +48,7 @@ export function useInterfaceDetailPage() {
     setTagsText,
     projectId,
   })
+  const treeView = useSoftwareRepositoryTreeView()
 
   const interfaceQuery = useQuery({
     queryKey: ['apiInterface', projectId, interfaceId],
@@ -231,6 +233,7 @@ export function useInterfaceDetailPage() {
     changeRepository,
     confirmDelete,
     tabs,
+    treeView,
     ...groupActions,
   } as const
 }

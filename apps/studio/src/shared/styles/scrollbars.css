@@ -27,3 +27,27 @@
     scrollbar-color: var(--app-scrollbar-thumb) transparent;
   }
 }
+
+/* 需要更安静滚动条的滚动容器显式启用：6px 贴边细轨，静止透明，
+ * 悬停或滚动时显示。通过覆盖全站滚动条变量复用上面的尺寸/配色规则，
+ * Firefox 的 scrollbar-color 回退也随之生效。
+ * 组件用 data-scrolling="true" 标记滚动中的短暂状态；
+ * 侧栏的 -12px 右外边距与 14px 右内边距补偿由使用方负责。 */
+.app-scrollbar-overlay {
+  --app-scrollbar-size: 6px;
+  --app-scrollbar-thumb: transparent;
+}
+
+.app-scrollbar-overlay:hover,
+.app-scrollbar-overlay[data-scrolling='true'] {
+  --app-scrollbar-thumb: var(--app-shell-text-muted);
+}
+
+/* 6px 轨道上保留 4px 可见滑块，与全站 8px 轨道的视觉粗细一致。 */
+.app-scrollbar-overlay::-webkit-scrollbar-thumb {
+  border-width: 1px;
+}
+
+.app-scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-shell-text);
+}

@@ -153,9 +153,15 @@ describe('OpenApiImportModal', () => {
     expect(screen.getByText('查询订单')).toBeInTheDocument()
     expect(screen.getByText('删除订单')).toBeInTheDocument()
     expect(interfaceLibraryApi.previewOpenApiImport).toHaveBeenCalledWith('app-1', file)
-    const groupPreview = screen.getByLabelText('导入分组预览')
-    expect(groupPreview).toHaveTextContent('Orders · 2')
-    expect(groupPreview).not.toHaveTextContent('新建')
+    const ordersGroup = screen.getByRole('group', { name: '分组 Orders' })
+    expect(within(ordersGroup).getByText('Orders')).toBeInTheDocument()
+    expect(within(ordersGroup).getByText('3')).toBeInTheDocument()
+    expect(within(ordersGroup).queryByText('新建分组')).not.toBeInTheDocument()
+    expect(within(ordersGroup).getByRole('checkbox', { name: '选择分组 Orders' })).toBeChecked()
+    const adminGroup = screen.getByRole('group', { name: '分组 Admin' })
+    expect(within(adminGroup).getByText('仅库中存在')).toBeInTheDocument()
+    expect(within(adminGroup).getByRole('checkbox', { name: '选择分组 Admin' })).toBeDisabled()
+    expect(screen.getByRole('status', { name: '已选 2 / 2' })).toBeInTheDocument()
     expect(screen.getByText(/保留库内标签和分组/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('checkbox', { name: /同时更新软件仓库 base path/ }))
@@ -188,25 +194,52 @@ describe('OpenApiImportModal', () => {
 
     await user.click(screen.getByRole('button', { name: '预览差异' }))
     await screen.findByText('查询订单列表')
-    const groupPreview = screen.getByLabelText('导入分组预览')
-    expect(groupPreview).toHaveTextContent('Payments · 1 · 新建')
-    expect(groupPreview).toHaveTextContent('Orders · 1')
+    const paymentsGroup = screen.getByRole('group', { name: '分组 Payments' })
+    expect(within(paymentsGroup).getByText('新建分组')).toBeInTheDocument()
+    const ordersGroup = screen.getByRole('group', { name: '分组 Orders' })
+    expect(within(ordersGroup).queryByText('新建分组')).not.toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '已选 2 / 2' })).toBeInTheDocument()
 
-    const newRow = screen
+    const newRow = within(paymentsGroup)
       .getByText('查询订单列表')
-      .closest('.if-import-item') as HTMLElement
-    expect(newRow).toHaveTextContent('分组：Payments')
-    expect(newRow).toHaveTextContent('新建')
+      .closest('.if-import-row') as HTMLElement
+    expect(newRow).toHaveTextContent('查询订单列表')
 
     await user.click(within(newRow).getByRole('checkbox'))
-    expect(screen.getByLabelText('导入分组预览')).not.toHaveTextContent('Payments')
-    expect(screen.getByLabelText('导入分组预览')).toHaveTextContent('Orders · 1')
+    expect(screen.getByRole('status', { name: '已选 1 / 2' })).toBeInTheDocument()
+    expect(within(paymentsGroup).getByRole('checkbox', { name: '选择分组 Payments' })).not.toBeChecked()
 
     await user.click(within(newRow).getByRole('checkbox'))
+    expect(screen.getByRole('status', { name: '已选 2 / 2' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '导入选中 2 项' }))
     await screen.findByText('导入完成')
     expect(screen.getByText('本次新建分组')).toBeInTheDocument()
     expect(screen.getByText('Payments')).toBeInTheDocument()
+  })
+
+  it('selects a whole group and filters the grouped preview by search', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await chooseFile(user)
+
+    await user.click(screen.getByRole('button', { name: '预览差异' }))
+    await screen.findByText('查询订单列表')
+
+    const search = screen.getByRole('textbox', { name: '搜索导入分组' })
+    await user.type(search, 'Admin')
+    expect(screen.getByRole('group', { name: '分组 Admin' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '分组 Orders' })).not.toBeInTheDocument()
+    await user.clear(search)
+
+    const ordersGroup = screen.getByRole('group', { name: '分组 Orders' })
+    const ordersCheckbox = within(ordersGroup).getByRole('checkbox', { name: '选择分组 Orders' })
+    expect(ordersCheckbox).toBeChecked()
+    await user.click(ordersCheckbox)
+    expect(screen.getByRole('status', { name: '已选 0 / 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '导入选中 0 项' })).toBeDisabled()
+    await user.click(ordersCheckbox)
+    expect(screen.getByRole('status', { name: '已选 2 / 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '导入选中 2 项' })).toBeEnabled()
   })
 
   it('accepts a directly pasted JSON document through the shared editor', async () => {

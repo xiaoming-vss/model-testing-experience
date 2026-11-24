@@ -1,4 +1,4 @@
-/* 接口详情与编辑器：只保留 Ant Design 输入/选择器、键值表和导入预览的深层结构。
+/* 接口详情与编辑器：只保留 Ant Design 输入/选择器、键值表和导入弹窗的外壳深层结构。
  * 顶栏、两栏骨架、请求地址条、标签页、面板排版、导入步骤与结果已迁到组件 utility。 */
 
 
@@ -45,14 +45,13 @@
   padding: 3px 7px;
 }
 
-/* ===== 面板工具按钮 ===== */
+/* ===== 编辑画布：内容自适应时取消 CodeMirror 的默认最小高度 ===== */
 
-.scope :global(.if-editor-tools .ant-btn) {
-  height: 22px;
-  padding: 0 6px;
-  color: var(--srf-text-secondary);
-  font-size: 11px;
+.scope :global(.if-editor-canvas .json-editor-codemirror .cm-scroller) {
+  min-height: 0;
 }
+
+/* ===== 面板快捷按钮 ===== */
 
 .scope :global(.if-quick-pill.ant-btn) {
   height: 22px;
@@ -67,10 +66,28 @@
   width: 100%;
 }
 
-/* ===== OpenAPI 导入预览：AntD Tag 间距 ===== */
+/* ===== OpenAPI 导入弹窗：AntD 外壳、标题与底栏 ===== */
 
-.scope :global(.if-import-summary .ant-tag),
-.scope :global(.if-import-groups .ant-tag),
-.scope :global(.if-import-item .ant-tag) {
+.scope :global(.if-import-modal .ant-modal-container),
+.scope :global(.if-import-modal .ant-modal-content) {
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--srf-card);
+}
+
+.scope :global(.if-import-modal .ant-modal-header) {
   margin: 0;
+  padding: 18px 24px 10px;
+  background: var(--srf-card);
+}
+
+.scope :global(.if-import-modal .ant-modal-body) {
+  padding: 0 24px 20px;
+}
+
+.scope :global(.if-import-modal .ant-modal-footer) {
+  margin: 0;
+  padding: 12px 24px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
 }

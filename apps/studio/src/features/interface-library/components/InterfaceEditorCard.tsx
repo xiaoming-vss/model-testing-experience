@@ -52,25 +52,27 @@ function InterfaceEditorHeader({ page }: { page: InterfaceDetailPageModel }) {
 
   return (
     <div className="if-editor-head flex flex-none flex-col gap-1 px-4 pb-2 pt-3">
-        <div className="if-editor-title-row flex min-w-0 flex-wrap items-center gap-2">
-        <div
-          className="min-w-0 max-w-full flex-none"
-          style={{ width: `${Math.min(520, Math.max(220, draft.name.length * 24 + 56))}px` }}
-        >
-          <Input
-            className={titleStyles.titleInput}
-            value={draft.name}
-            maxLength={120}
-            disabled={!canWrite}
-            placeholder={isCreate ? '输入接口名称' : '接口名称'}
-            aria-label="接口名称"
-            onChange={event => patch({ name: event.target.value })}
-          />
+      <div className="if-editor-title-row flex min-w-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-auto flex-wrap items-center gap-2">
+          <div
+            className="min-w-0 max-w-full flex-none"
+            style={{ width: `${Math.min(520, Math.max(220, draft.name.length * 24 + 56))}px` }}
+          >
+            <Input
+              className={titleStyles.titleInput}
+              value={draft.name}
+              maxLength={120}
+              disabled={!canWrite}
+              placeholder={isCreate ? '输入接口名称' : '接口名称'}
+              aria-label="接口名称"
+              onChange={event => patch({ name: event.target.value })}
+            />
+          </div>
+          {isCreate ? <Tag className="m-0">草稿</Tag> : null}
+          {!canWrite ? <Tag className="m-0">只读成员 · 不可编辑</Tag> : null}
         </div>
-        {isCreate ? <Tag className="m-0">草稿</Tag> : null}
-        {!canWrite ? <Tag className="m-0">只读成员 · 不可编辑</Tag> : null}
         <span
-          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--srf-text-muted)]"
+          className="if-editor-save-state ml-auto inline-flex flex-none items-center gap-1.5 whitespace-nowrap text-[11px] text-[var(--srf-text-muted)]"
           role="status"
           aria-live="polite"
         >
