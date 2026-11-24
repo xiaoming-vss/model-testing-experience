@@ -83,7 +83,6 @@ export function useCaseLibraryPage() {
   const [priority, setPriority] = useState<string | null>(null)
   const [caseType, setCaseType] = useState<string | null>(null)
   const [invalidatedFilter, setInvalidatedFilter] = useState<CaseInvalidationFilter>('all')
-  const [suiteFilter, setSuiteFilter] = useState('')
   const [keyword, setKeyword] = useState('')
   const [searchResetKey, setSearchResetKey] = useState(0)
   const [page, setPage] = useState(1)
@@ -165,13 +164,6 @@ export function useCaseLibraryPage() {
     () => suites.find((suite) => normalizeFunctionTestSuiteId(suite) === suiteId) ?? null,
     [suiteId, suites],
   )
-
-  // 左栏：项目下的测试集平铺一层，不按需求分组。
-  const visibleSuites = useMemo(() => {
-    const text = suiteFilter.trim().toLowerCase()
-    if (!text) return suites
-    return suites.filter((suite) => suite.name.toLowerCase().includes(text))
-  }, [suiteFilter, suites])
 
   // 左栏的计数是「这个桶里有多少用例」，不随关键字 / 优先级变化（测试集行用的就是接口给的 caseCount）。
   // 列表那条的 total 是当前筛选下的结果数，选中测试集后会变成该测试集的，不能拿来当「全部用例」。
@@ -525,8 +517,6 @@ export function useCaseLibraryPage() {
     setCaseType,
     invalidatedFilter,
     setInvalidatedFilter,
-    suiteFilter,
-    setSuiteFilter,
     keyword,
     setKeyword,
     searchResetKey,
@@ -577,7 +567,6 @@ export function useCaseLibraryPage() {
     suitesQuery,
     suites,
     selectedSuite,
-    visibleSuites,
     allCaseCount,
     casesQuery,
     cases,

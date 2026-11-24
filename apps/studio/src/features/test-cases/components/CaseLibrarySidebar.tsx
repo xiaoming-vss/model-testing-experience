@@ -3,9 +3,8 @@ import {
   FolderOpenOutlined,
   FolderOutlined,
   PlusOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
-import { Alert, Empty, Input, Popconfirm, Tooltip } from 'antd'
+import { Alert, Empty, Popconfirm, Tooltip } from 'antd'
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
 import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { getErrorMessage, normalizeFunctionTestSuiteId } from '@/utils/format'
@@ -16,11 +15,8 @@ export function CaseLibrarySidebar({ page }: { page: CaseLibraryPageModel }) {
     suiteId,
     setSuiteId,
     setPage,
-    suiteFilter,
-    setSuiteFilter,
     suitesQuery,
     suites,
-    visibleSuites,
     hasSuiteData,
     allCaseCount,
   } = page
@@ -32,16 +28,6 @@ export function CaseLibrarySidebar({ page }: { page: CaseLibraryPageModel }) {
           <FolderOpenOutlined />
           测试集导航
         </span>
-      </div>
-      <div className="api-case-sidebar-toolbar case-library-tree-search flex items-center gap-2.5 border-b border-[var(--srf-divider)] px-5 pt-4">
-        <Input
-          allowClear
-          prefix={<SearchOutlined />}
-          aria-label="搜索测试集"
-          placeholder="搜索测试集"
-          value={suiteFilter}
-          onChange={(event) => setSuiteFilter(event.target.value)}
-        />
       </div>
       <div className="api-case-sidebar-scroll case-library-tree-scroll min-h-0 flex-1 overflow-auto px-3 pt-2.5 pb-3 max-[1180.01px]:max-h-[420px]">
         <div className="api-case-nav-list case-library-nav-list flex flex-col gap-0.5">
@@ -68,14 +54,10 @@ export function CaseLibrarySidebar({ page }: { page: CaseLibraryPageModel }) {
           ) : null}
           {suitesQuery.isLoading ? (
             <ListEmptyState className="max-[1180.01px]:min-h-24" description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          ) : suitesQuery.error && suites.length === 0 ? null : visibleSuites.length === 0 ? (
-            <ListEmptyState className="max-[1180.01px]:min-h-24" description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
-              {suiteFilter.trim() ? (
-                <ProjectActionButton action="read" onClick={() => setSuiteFilter('')}>清除测试集搜索</ProjectActionButton>
-              ) : null}
-            </ListEmptyState>
+          ) : suitesQuery.error && suites.length === 0 ? null : suites.length === 0 ? (
+            <ListEmptyState className="max-[1180.01px]:min-h-24" description="当前范围暂无测试集" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            visibleSuites.map((suite) => {
+            suites.map((suite) => {
               const id = normalizeFunctionTestSuiteId(suite)
               const active = Boolean(id) && id === suiteId
               return (

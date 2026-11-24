@@ -174,30 +174,6 @@ it('左栏平铺展示测试集，默认落在「全部用例」', async () => {
   client.clear()
 })
 
-it('测试集搜索只看测试集名称', async () => {
-  const other = { suiteId: 'suite-2', name: '数据集管理', requirementId: 'req-1', caseCount: 3 }
-  vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () =>
-    listResponse([suite, other]),
-  )
-  vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async () => listResponse([loginCase]))
-  const client = buildClient()
-  const { container } = renderPage(client)
-  const sidebar = container.querySelector('.api-case-sidebar') as HTMLElement
-  await within(sidebar).findByText('数据集管理')
-
-  const user = userEvent.setup()
-  // 需求名不再是左栏可见信息，因此也不参与筛选。
-  await user.type(within(sidebar).getByPlaceholderText('搜索测试集'), '部署流程')
-  expect(within(sidebar).queryByText('业务价值验证场景')).toBeNull()
-  expect(within(sidebar).queryByText('数据集管理')).toBeNull()
-
-  await user.clear(within(sidebar).getByPlaceholderText('搜索测试集'))
-  await user.type(within(sidebar).getByPlaceholderText('搜索测试集'), '数据')
-  expect(within(sidebar).getByText('数据集管理')).toBeInTheDocument()
-  expect(within(sidebar).queryByText('业务价值验证场景')).toBeNull()
-  client.clear()
-})
-
 it('选中测试集后只请求该测试集，并出现测试集操作', async () => {
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
   const cases = vi
@@ -218,7 +194,7 @@ it('选中测试集后只请求该测试集，并出现测试集操作', async (
   expect(iconButton('删除测试集')).toBeEnabled()
   // 用例归属测试集，选中后新建与导入才可用
   expect(button('新建用例')).toBeEnabled()
-  expect(button('用例导入')).toBeEnabled()
+  expect(button('导入')).toBeEnabled()
   // 加入测试单改在测试单里操作，用例库不再提供这个入口
   expect(screen.queryByText(/加入测试单/)).toBeNull()
   client.clear()
@@ -257,11 +233,10 @@ it('全部用例时不显示按测试集执行的那组动作', async () => {
   const { container } = renderPage(client)
 
   await screen.findByText('服务器部署判定【本地连接】')
-  // 这三个都按测试集执行，未选中测试集时整组不出现（而不是显示成禁用）
+  // 新建 / 导入按测试集执行；批量操作要先勾选用例。未选中时都不出现。
   expect(screen.queryByText('新建用例')).toBeNull()
-  expect(screen.queryByText('用例导入')).toBeNull()
-  expect(screen.queryByText('导入禅道')).toBeNull()
-  expect(container.querySelector('.case-library-main-actions')).toBeNull()
+  expect(screen.queryByText('导入')).toBeNull()
+  expect(screen.queryByText(/批量操作/)).toBeNull()
   // 编辑 / 删除测试集属于左栏底部那组，仍在，只是禁用
   const sidebar = container.querySelector('.api-case-sidebar') as HTMLElement
   expect(iconButton('编辑测试集', sidebar)).toBeDisabled()
@@ -392,9 +367,10 @@ it.each([false, true])('批量删除只提交勾选项，失败保留选择（�
 
   const user = userEvent.setup()
   await screen.findByText('用例甲')
-  expect(button('批量删除')).toBeDisabled()
+  expect(screen.queryByText(/批量操作/)).toBeNull()
   await user.click(checkbox('选择用例：用例甲'))
-  await user.click(button('批量删除（1）'))
+  await user.click(button('批量操作（1）'))
+  await user.click(await screen.findByText('批量删除'))
   expect(remove).not.toHaveBeenCalled()
 
   await user.click(await screen.findByText('确认删除').then((node) => node.closest('button')!))
@@ -402,12 +378,13 @@ it.each([false, true])('批量删除只提交勾选项，失败保留选择（�
 
   if (fail) {
     expect(checkbox('选择用例：用例甲')).toBeChecked()
+    expect(button('批量操作（1）')).toBeInTheDocument()
   } else {
     await waitFor(() =>
       expect(document.querySelector('[aria-label="选择用例：用例甲"]')).toBeNull(),
     )
     expect(checkbox('选择用例：用例乙')).not.toBeChecked()
-    expect(button('批量删除')).toBeDisabled()
+    expect(screen.queryByText(/批量操作/)).toBeNull()
   }
   client.clear()
 })
@@ -461,10 +438,12 @@ it('用例类型按精确值筛选，选择后请求带上 caseType', async () =
   await screen.findByText('服务器部署判定【本地连接】')
 
   const user = userEvent.setup()
+  await user.click(button('筛选'))
   await user.click(screen.getByText('全部类型'))
   await user.click(await screen.findByTitle('安全测试'))
 
   await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ caseType: '安全测试' }))
+  expect(button('筛选（1）')).toBeInTheDocument()
   client.clear()
 })
 
@@ -494,7 +473,8 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   const client = buildClient()
   const { container } = renderPage(client)
   await selectSuite(container)
-  await userEvent.click(button('导入禅道'))
+  await userEvent.click(button('导入'))
+  await userEvent.click(await screen.findByText('导入禅道'))
   await userEvent.click(button('预览并核对'))
   await screen.findByText('待推送用例')
   await userEvent.click(button('确认推送'))
@@ -515,15 +495,15 @@ it('切换测试集清空旧选择，返回后不恢复，并支持手动清空'
   await selectSuite(container)
   const user = userEvent.setup()
   await user.click(checkbox(`选择用例：${loginCase.title}`))
-  expect(button('批量删除（1）')).toBeEnabled()
+  expect(button('批量操作（1）')).toBeEnabled()
   await user.click(within(container.querySelector('.case-library-tree') as HTMLElement).getByText('数据集管理'))
-  await waitFor(() => expect(button('批量删除')).toBeDisabled())
+  await waitFor(() => expect(screen.queryByText(/批量操作/)).toBeNull())
   expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
   await selectSuite(container)
   expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
   await user.click(checkbox(`选择用例：${loginCase.title}`))
   await user.click(button('清空选择'))
-  expect(button('批量删除')).toBeDisabled()
+  expect(screen.queryByText(/批量操作/)).toBeNull()
   client.clear()
 })
 
@@ -614,12 +594,12 @@ it.each(['sprint', 'requirement', 'project'])('切换业务范围清空选择：
   const view = renderPage(client)
   await selectSuite(view.container)
   await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
-  expect(button('批量删除（1）')).toBeEnabled()
+  expect(button('批量操作（1）')).toBeEnabled()
   if (scope === 'sprint') testScope.sprintId = 'sprint-2'
   if (scope === 'requirement') testScope.requirementId = 'req-2'
   if (scope === 'project') seedOwnerProject(client, 'project-2')
   view.rerender(<QueryClientProvider client={client}><MemoryRouter><CaseLibraryPage /></MemoryRouter></QueryClientProvider>)
-  await waitFor(() => expect(button('批量删除')).toBeDisabled())
+  await waitFor(() => expect(screen.queryByText(/批量操作/)).toBeNull())
   await screen.findByText(loginCase.title)
   expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
   client.clear()
@@ -640,7 +620,8 @@ it('同一测试集翻页保留选择，批量提交两页的用例', async () =
   await user.click(container.querySelector('.ant-pagination-next button')!)
   await screen.findByText('第二页用例')
   await user.click(checkbox('选择用例：第二页用例'))
-  await user.click(button('批量删除（2）'))
+  await user.click(button('批量操作（2）'))
+  await user.click(await screen.findByText('批量删除'))
   await user.click(button('确认删除'))
   await waitFor(() => expect(remove).toHaveBeenCalledWith('suite-1', ['case-1', 'case-2']))
   client.clear()
@@ -695,14 +676,16 @@ it('勾选用例后可以批量标记失效与恢复有效', async () => {
 
   await screen.findByText(loginCase.title)
   await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
-  await userEvent.click(button('标记失效（1）'))
+  await userEvent.click(button('批量操作（1）'))
+  await userEvent.click(await screen.findByText('标记失效'))
   await waitFor(() =>
     expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], true),
   )
-  await waitFor(() => expect(button('标记失效')).toBeDisabled())
+  await waitFor(() => expect(screen.queryByText(/批量操作/)).toBeNull())
 
   await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
-  await userEvent.click(button('恢复有效（1）'))
+  await userEvent.click(button('批量操作（1）'))
+  await userEvent.click(await screen.findByText('恢复有效'))
   await waitFor(() =>
     expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], false),
   )

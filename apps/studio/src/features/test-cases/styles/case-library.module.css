@@ -8,12 +8,6 @@
   font-size: 16px;
 }
 
-.root :global(.case-library-tree-search) :global(.ant-input-affix-wrapper) {
-  border-radius: 6px;
-  background: var(--srf-hover);
-  font-size: 11px;
-}
-
 /* ===== 用例编辑弹窗 ===== */
 
 .root :global(.case-editor-section-title)::before {
