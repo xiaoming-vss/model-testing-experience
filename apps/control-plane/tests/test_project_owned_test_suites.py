@@ -2,10 +2,9 @@
 
 import asyncio
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from support.project_api import account, api, project, requirement  # noqa: F401
 
-from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.ui_test_suite import UiTestSuite
 
@@ -19,17 +18,6 @@ def _set_effective_import(app, model, identity_column, identity, import_id):
             await session.commit()
 
     asyncio.run(update())
-
-
-def _clear_requirement_tasks(app, requirement_id):
-    async def clear():
-        async with app.app.state.test_sessions() as session:
-            await session.execute(
-                delete(AiGenerateTask).where(AiGenerateTask.requirement_id == requirement_id)
-            )
-            await session.commit()
-
-    asyncio.run(clear())
 
 
 def test_project_level_suites_do_not_require_requirement(api):  # noqa: F811
@@ -170,7 +158,6 @@ def test_requirement_delete_detaches_suites_and_project_delete_blocks(api):  # n
         f"/v1/requirements/{rid}/ui-test-suites", headers=owner, json={"name": "ui"}
     ).json()["data"]["suiteId"]
 
-    _clear_requirement_tasks(api, rid)
     deleted = api.delete(f"/v1/requirements/{rid}", headers=owner)
     assert deleted.status_code == 200, deleted.text
     detached_api = api.get(f"/v1/api-collections/{collection_id}", headers=owner).json()["data"]

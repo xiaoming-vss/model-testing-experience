@@ -245,18 +245,17 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
                 await _delete_owned_child(session, connection)
             await _erase(session, m.ProjectMember, m.ProjectMember.project_id == value)
     if isinstance(obj, m.Requirement):
-        # Auxiliary run containers do not block requirement deletion; remove them explicitly
-        # because this cleanup is otherwise only wired for project/sprint parents.
-        auxiliaries = list(
+        # 生成任务是需求自己的设计容器：随需求一并清理，候选与阶段内容按外键级联。
+        # 正式资产和自包含导入回执不在此删除。
+        tasks = list(
             await session.scalars(
                 select(m.AiGenerateTask).where(
-                    m.AiGenerateTask.requirement_id == obj.requirement_id,
-                    m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES),
+                    m.AiGenerateTask.requirement_id == obj.requirement_id
                 )
             )
         )
-        for auxiliary in auxiliaries:
-            await _delete_owned_child(session, auxiliary)
+        for task in tasks:
+            await _delete_owned_child(session, task)
     await session.delete(obj)
     await session.flush()
 

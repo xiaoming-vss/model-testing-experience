@@ -96,14 +96,16 @@ async def _blockers(session, obj):
     ):
         if isinstance(obj, model):
             value = getattr(obj, key)
-            checks.append(
-                (
-                    m.AiGenerateTask,
-                    (getattr(m.AiGenerateTask, key) == value)
-                    & (~m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES)),
-                    "AI 任务",
+            if not isinstance(obj, m.Requirement):
+                # 需求的生成任务随需求一并删除，不算独立子资源。
+                checks.append(
+                    (
+                        m.AiGenerateTask,
+                        (getattr(m.AiGenerateTask, key) == value)
+                        & (~m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES)),
+                        "AI 任务",
+                    )
                 )
-            )
             checks.append(
                 (
                     m.ResourceBinding,

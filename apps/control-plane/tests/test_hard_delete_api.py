@@ -42,7 +42,7 @@ def test_http_child_first_delete_and_recreate(api, suite_path, suite_key, case_p
     assert recreated.json()["data"][suite_key] != sid
 
 
-def test_code_risk_task_can_be_deleted_before_requirement(api):
+def test_requirement_delete_removes_its_generation_tasks(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
@@ -53,19 +53,15 @@ def test_code_risk_task_can_be_deleted_before_requirement(api):
     )
     assert response.status_code == 200, response.text
     tid = response.json()["data"]["taskId"]
-    blocked = api.delete(f"/v1/requirements/{rid}", headers=owner)
-    assert blocked.status_code == 409
-    assert blocked.json()["data"]["blockers"][0]["count"] == 3
-    response = api.delete(f"/v1/code-risk-analysis-tasks/{tid}", headers=owner)
-    assert response.status_code == 200, response.text
+    assert api.get(f"/v1/code-risk-analysis-tasks/{tid}", headers=owner).status_code == 200
+
+    deleted = api.delete(f"/v1/requirements/{rid}", headers=owner)
+    assert deleted.status_code == 200, deleted.text
+    assert api.get(f"/v1/requirements/{rid}", headers=owner).status_code == 404
     assert api.get(f"/v1/code-risk-analysis-tasks/{tid}", headers=owner).status_code == 404
-    # New requirements automatically own the analysis and functional chains.
-    remaining = api.delete(f"/v1/requirements/{rid}", headers=owner)
-    assert remaining.status_code == 409
-    assert remaining.json()["data"]["blockers"][0]["count"] == 2
 
 
-def test_repository_profile_task_does_not_block_requirement_deletion(api):
+def test_requirement_delete_removes_repository_profile_task(api):
     _, owner = account(api, "profile-delete-owner")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
@@ -80,11 +76,9 @@ def test_repository_profile_task_does_not_block_requirement_deletion(api):
     assert tasks.status_code == 200, tasks.text
     assert [item["taskId"] for item in tasks.json()["data"]["items"]] == [tid]
 
-    blocked = api.delete(f"/v1/requirements/{rid}", headers=owner)
-    assert blocked.status_code == 409
-    blockers = blocked.json()["data"]["blockers"]
-    ai_blocker = next(item for item in blockers if item["name"] == "AI 任务")
-    assert ai_blocker["count"] == 2
+    deleted = api.delete(f"/v1/requirements/{rid}", headers=owner)
+    assert deleted.status_code == 200, deleted.text
+    assert api.get(f"/v1/requirements/{rid}", headers=owner).status_code == 404
 
 
 def test_deleting_running_case_rejects_late_worker_result(api):
