@@ -19,10 +19,14 @@ def main() -> None:
     try:
         settings = load_settings(args.config)
     except ValidationError as error:
+        if args.healthcheck:
+            raise SystemExit(1) from None
         fields = [".".join(str(part) for part in item["loc"]) for item in error.errors()]
         print("Invalid integration configuration fields: " + ", ".join(fields), file=sys.stderr)
         raise SystemExit(2) from None
     except (OSError, ValueError):
+        if args.healthcheck:
+            raise SystemExit(1) from None
         print("Cannot read a valid integration configuration file", file=sys.stderr)
         raise SystemExit(2) from None
     if args.healthcheck:

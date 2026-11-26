@@ -36,7 +36,7 @@ def _noop():
     return None
 
 
-def build_poller(handler):
+def build_poller(workflow):
     claim = ClaimJob(
         jobId="job",
         jobStatus="claimed",
@@ -56,7 +56,7 @@ def build_poller(handler):
     )
     poller = Poller(
         control_plane,
-        SimpleNamespace(handle=handler),
+        SimpleNamespace(run=workflow),
         SimpleNamespace(replay_evidence=_replay_evidence),
         settings,
         SimpleNamespace(progress=_noop, stop=_noop),

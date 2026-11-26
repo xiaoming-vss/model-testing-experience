@@ -2,7 +2,6 @@ import asyncio
 import signal
 
 from testing_agent_integration_worker.gateways.zentao import ZentaoGateway
-from testing_agent_integration_worker.handlers.jobs import JobHandler
 from testing_agent_integration_worker.repositories.control_plane import ControlPlaneRepository
 from testing_agent_integration_worker.repositories.evidence import EvidenceRepository
 from testing_agent_integration_worker.services.bug_sync import BugWorkflow
@@ -17,7 +16,7 @@ def create_worker(settings, *, control_plane=None, gateway_factory=ZentaoGateway
     evidence = EvidenceRepository(settings.worker.evidence_file)
     steps = StepExecution(repository, gateway_factory, evidence, progress=health.progress)
     workflow = BugWorkflow(repository, gateway_factory, steps)
-    return Poller(repository, JobHandler(workflow), steps, settings.worker, health)
+    return Poller(repository, workflow, steps, settings.worker, health)
 
 
 async def run_worker(settings) -> None:

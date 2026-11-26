@@ -4,7 +4,7 @@
 
 integration-worker 是拉取式执行进程。控制面管理数据库、权限、个人授权、冻结输入、写入意图和结果事务；Worker 通过内部 HTTP 领取任务，通过 MCP 做只读复核及一次远端写入。它没有数据库连接、长期 S3 密钥或公开监听端口。执行决策见 [ADR 0006](../control-plane/adr/0006-independent-integration-execution.md)，总体切换步骤见[切换流程](rollout.md)。
 
-源码使用 control-plane 风格的 src layout。`main/app` 负责启动及装配，`worker` 负责主循环和租约，`handlers` 分派两类任务，`services` 执行创建/附件/正文/字段工作流，`repositories` 实现控制面 HTTP Adapter，`gateways` 实现 MCP 传输和禅道工具，`domain` 保存纯规则，`schemas` 保存协议模型。
+源码使用 control-plane 风格的 src layout。`main/app` 负责启动及装配，`worker` 负责主循环、租约和任务分派，`services` 执行创建/附件/正文/字段工作流，`repositories` 实现控制面 HTTP Adapter，`gateways` 实现 MCP 传输和禅道工具，`domain` 保存纯规则，`schemas` 保存协议模型。
 
 配置由根目录 `scripts/manage.py` 从 `config/platform.toml` 生成。命令及配置入口见 [应用 README](../../apps/integration-worker/README.md)。专用令牌与 AI/API/UI Worker 令牌分别管理；Worker ID 由主机、进程和随机启动标识生成。扩大副本前确认控制面已升级及数据库迁移完成。
 

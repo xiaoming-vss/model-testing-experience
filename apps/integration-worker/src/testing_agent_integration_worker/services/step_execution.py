@@ -8,6 +8,7 @@ from testing_agent_integration_worker.core.errors import (
     ControlPlaneError,
     LeaseLost,
     WriteUncertain,
+    safe_traceback,
 )
 from testing_agent_integration_worker.domain.bug_description import (
     canonical,
@@ -154,10 +155,14 @@ class StepExecution:
                     status = "failed" if outcome.error_code == "remote_rejected" else "succeeded"
             except McpCallError as error:
                 uncertain = write_confirmed or error.uncertain
-                status = "unknown" if uncertain else "failed"
-                outcome = RemoteResult(
-                    error_code="remote_uncertain" if uncertain else "remote_rejected"
-                )
+                if uncertain:
+                    status, outcome = "unknown", RemoteResult(error_code="remote_uncertain")
+                elif wrote:
+                    status, outcome = "failed", RemoteResult(error_code="remote_rejected")
+                else:
+                    # Every call before the write is read-only, so this is an unreachable
+                    # or unusable remote, not a rejection of the operation.
+                    status, outcome = "failed", RemoteResult(error_code="remote_unavailable")
             except LeaseLost:
                 outcome = RemoteResult(error_code="lease_lost")
             except (TimeoutError, WriteUncertain):
@@ -165,10 +170,18 @@ class StepExecution:
             except asyncio.CancelledError:
                 # A canceled HTTP await does not establish that the external write was not applied.
                 outcome = RemoteResult(error_code="remote_uncertain" if wrote else "lease_lost")
-            except Exception:
+            except Exception as error:
                 status = "unknown" if wrote else "failed"
                 outcome = RemoteResult(
                     error_code="remote_uncertain" if wrote else "remote_unavailable"
+                )
+                # Frames only: an unexpected message may quote remote or input content.
+                logger.warning(
+                    "Remote step stopped by an unexpected error job=%s step=%s error=%s\n%s",
+                    view.job_id,
+                    step.step_key,
+                    type(error).__name__,
+                    safe_traceback(error),
                 )
         event = ResultEvent(
             **execution.claim.identity().model_dump(),
