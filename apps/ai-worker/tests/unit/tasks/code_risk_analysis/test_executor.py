@@ -10,6 +10,7 @@ from testing_agent_ai_worker.config.models import (
     NanobotConfig,
     PiConfig,
 )
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
     ExistingTestCases,
@@ -96,7 +97,7 @@ class _FakeCredentialsFetcher:
     def __call__(self, task: Task) -> list[GitlabCredentials]:
         self.calls += 1
         if self.fail:
-            raise RuntimeError("凭证接口不可用")
+            raise UserFacingError("凭证接口不可用")
         return [
             GitlabCredentials(
                 connection_id="conn-1",
@@ -297,9 +298,21 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         result = executor.execute(self.task, datetime.now().astimezone(), progresses.append)
 
         self.assertEqual(TaskStatus.FAILED, result.status)
+        # A failure the platform worded itself is reported as written.
         self.assertIn("凭证接口不可用", result.error_message or "")
         self.assertEqual([], progresses)
         self.assertEqual([], runner.calls)
+
+    def test_execute_does_not_echo_third_party_credential_errors(self) -> None:
+        def fail(task: Task) -> list[GitlabCredentials]:
+            raise ConnectionError("SECRET https://gitlab.example.com/api/v4?private_token=x")
+
+        executor = self._executor(prompt_runner=_RecordingPromptRunner(), fetcher=fail)
+
+        result = executor.execute(self.task, datetime.now().astimezone(), lambda _progress: None)
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertEqual(result.error_message, "GitLab 凭据不可用，请检查个人授权后重试")
 
     def test_execute_reports_workspace_errors(self) -> None:
         def fail_prepare(*_args, **_kwargs):

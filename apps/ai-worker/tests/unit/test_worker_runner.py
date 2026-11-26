@@ -11,6 +11,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.result_sink import ResultSink
@@ -323,6 +324,31 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(sink.result_calls[0].status, TaskStatus.ERROR)
         self.assertEqual(
             sink.result_calls[0].intermediate_json_text, '{"enhancedText":"snapshot text"}'
+        )
+
+    def test_process_task_reports_a_user_facing_failure_as_written(self) -> None:
+        class KnownFailureExecutor(TaskExecutor):
+            def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
+                raise UserFacingError(
+                    "需求材料提取仅支持 Word/DOCX 或富文本，请替换原始需求文档后重试"
+                )
+
+        sink = _RecordingSink()
+        runner = WorkerRunner(
+            executor=KnownFailureExecutor(),
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=60,
+                run_once=False,
+            ),
+        )
+
+        result = runner.process_task(self._make_task())
+
+        self.assertEqual(result.status, TaskStatus.ERROR)
+        self.assertEqual(
+            result.error_message, "需求材料提取仅支持 Word/DOCX 或富文本，请替换原始需求文档后重试"
         )
 
     def test_executor_error_log_and_result_omit_provider_message(self) -> None:

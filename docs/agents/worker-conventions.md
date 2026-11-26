@@ -63,6 +63,15 @@ HTTP 服务的启动/停止必须幂等，停止时关闭监听并回收线程�
 
 状态词汇按协议固定：ai-worker 使用 `success`、`failed`、`error`，`canceled` 仅为协议兼容保留且 Worker 不发布；api-ui-worker 的执行错误只使用 `error`、`canceled`；integration-worker 的步骤事件只使用 `succeeded`、`failed`、`unknown`；perf-worker 使用 `completed`、`failed`、`stopped`、`canceled`。
 
+## 失败文案
+
+回传给用户的失败原因只有两类。代码里写好的固定文案（可以带阶段、字段、平台编号和数量）原样回传；其余异常一律回传固定提示，日志只记录异常类型和安全栈帧。模型输出、第三方异常文本、请求地址和响应体不得拼进回传文案；说明校验失败时只给出位置和规则，不引用被拒绝的内容本身。
+
+| 项目 | 已知失败的承载方式 |
+| --- | --- |
+| ai-worker | `SafeMessageError` 家族（`UserFacingError`、`AgentOutputError`），由 runner 原样回传；两个模型适配器对非正常结束一律抛 `AgentOutputError`，成功返回的结果视为完整 |
+| api-ui-worker / integration-worker / perf-worker | 各自的错误类型携带固定文案，由回传层选择安全错误；未知异常只记类型和栈帧 |
+
 ## 快照与身份字段
 
 Worker 必须把控制面快照视为只读冻结输入，不得自行补造任务归属、修改租约或把缺失字段解释成另一种状态。领取、心跳、开始、完成和恢复事件必须沿用同一任务身份。

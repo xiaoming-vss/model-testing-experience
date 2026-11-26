@@ -16,6 +16,7 @@ from testing_agent_ai_worker.agent import resolve_task_workspace, task_config_pa
 from testing_agent_ai_worker.agent.base import AgentResult
 from testing_agent_ai_worker.agent.prompt_step import run_agent_prompt
 from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.core.errors import AgentOutputError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.skill_names import CASE_VISUALIZATION_SKILL
@@ -98,12 +99,7 @@ class CaseVisualizationExecutor:
                 )
                 if inspect.isawaitable(raw):
                     raw = asyncio.run(raw)
-            if not isinstance(raw, AgentResult) or raw.finish_reason in {
-                "length",
-                "error",
-                "cancelled",
-                "canceled",
-            }:
+            if not isinstance(raw, AgentResult):
                 raise ValueError("模型未完整返回图解")
             try:
                 artifact = validate_artifact(frozen, raw.content)
@@ -136,6 +132,12 @@ class CaseVisualizationExecutor:
                 extra={"attempt_id": task.attempt_id},
             )
             result.error_message = "图解输入、技能或输出校验失败，请重试或使用文字模式"
+        except AgentOutputError as exc:
+            # The adapter maps every incomplete outcome to fixed wording.
+            logger.warning(
+                "Visualization model run did not complete: attempt_id=%s", task.attempt_id
+            )
+            result.error_message = f"图解未生成：{exc}"
         except Exception as exc:
             # Provider exception messages can contain credentials or source text.
             logger.error(

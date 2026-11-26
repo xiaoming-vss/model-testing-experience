@@ -1,0 +1,28 @@
+{
+  "description": "Built-in template functions resolve identically in the api-ui-worker API runtime, the UI runtime and the control-plane pre-render. Randomness, the clock and uuid are frozen to the values below.",
+  "frozen": {
+    "epoch": 1795407723.246,
+    "localNow": "2026-11-26 09:08:07",
+    "uuid": "3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30",
+    "randomInt": 4242,
+    "randomText": "aB3dE5fG7hJ1kL2m"
+  },
+  "cases": [
+    { "name": "second timestamp", "template": "{{$timestamp}}", "expected": "1795407723" },
+    { "name": "millisecond timestamp", "template": "{{$timestamp_ms}}", "expected": "1795407723246" },
+    { "name": "RFC3339 now in UTC", "template": "{{$now}}", "expected": "2026-11-23T04:22:03Z" },
+    { "name": "date with a layout", "template": "{{$date \"2006-01-02 15:04:05\"}}", "expected": "2026-11-26 09:08:07" },
+    { "name": "date layout keeps literal text", "template": "{{$date 'Y2006/m01/d02'}}", "expected": "Y2026/m11/d26" },
+    { "name": "date without a layout", "template": "{{$date}}", "expected": "2026-11-26" },
+    { "name": "uuid", "template": "{{$uuid}}", "expected": "3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30" },
+    { "name": "random int in range", "template": "{{$randomInt 1000 9999}}", "expected": "4242" },
+    { "name": "random int accepts a reversed range", "template": "{{$randomInt 9999 1000}}", "expected": "4242" },
+    { "name": "random string with a length", "template": "{{$randomString 8}}", "expected": "aB3dE5fG" },
+    { "name": "random string default length", "template": "{{$randomString}}", "expected": "aB3dE5fG" },
+    { "name": "unknown function stays as written", "template": "{{$unknown 1}}", "expected": "{{$unknown 1}}" },
+    { "name": "unknown variable stays as written", "template": "{{missing}}", "expected": "{{missing}}", "ui": false },
+    { "name": "functions and variables in one template", "template": "/orders/{{$uuid}}?ts={{$timestamp}}&id={{orderId}}", "vars": { "orderId": "42" }, "expected": "/orders/3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30?ts=1795407723&id=42" },
+    { "name": "one function keeps one value in a render", "template": "{{$uuid}}/{{$uuid}}", "expected": "3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30/3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30" },
+    { "name": "spaces inside the braces are ignored", "template": "{{ $uuid }}", "expected": "3f2a9c1e-7b4d-4e8a-9c06-5d1b2a7e4f30" }
+  ]
+}

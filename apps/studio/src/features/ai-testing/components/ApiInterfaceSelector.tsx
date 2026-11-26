@@ -6,7 +6,8 @@ import type {
   ApiInterfaceListItem,
   RequirementSoftwareRepository,
 } from '@/features/interface-library/types'
-import { listItems } from '@/services/api'
+import type { ListResponse } from '@/shared/api/request'
+import { listItems, listTotal } from '@/services/api'
 import { getErrorMessage } from '@/utils/format'
 
 type Props = {
@@ -29,6 +30,18 @@ export type ApiSuggestedRepository = {
 type SelectorScope = 'suggested' | 'requirement' | 'project'
 
 const PAGE_SIZE = 100
+
+/** 接口可能超过单页上限：读完第 1 页的 total 再取剩余页，「全选」才覆盖全部结果。 */
+async function fetchAllInterfaces(
+  fetchPage: (page: number) => Promise<ListResponse<ApiInterfaceListItem>>,
+): Promise<ApiInterfaceListItem[]> {
+  const first = await fetchPage(1)
+  const remaining = Math.ceil(listTotal(first) / PAGE_SIZE) - 1
+  const rest = await Promise.all(
+    Array.from({ length: remaining }, (_, index) => fetchPage(index + 2)),
+  )
+  return [first, ...rest].flatMap(page => listItems(page))
+}
 
 /** API 用例生成的接口选择器：默认使用画像建议或需求关联的软件仓库，可切换到项目全部接口。 */
 export function ApiInterfaceSelector({
@@ -109,22 +122,13 @@ export function ApiInterfaceSelector({
             softwareRepositoryId,
             keyword,
           ],
-          queryFn: () =>
-            interfaceLibraryApi.getSoftwareRepositoryApiInterfaces(
-              softwareRepositoryId,
-              { keyword, page: 1, pageSize: PAGE_SIZE },
-            ),
+          queryFn: () => fetchAllInterfaces(page => interfaceLibraryApi.getSoftwareRepositoryApiInterfaces(softwareRepositoryId, { keyword, page, pageSize: PAGE_SIZE })),
           enabled: !disabled,
         })),
   })
   const projectQuery = useQuery({
     queryKey: ['apiInterfaces', 'selector', 'project', projectId, keyword],
-    queryFn: () =>
-      interfaceLibraryApi.getProjectApiInterfaces(projectId, {
-        keyword,
-        page: 1,
-        pageSize: PAGE_SIZE,
-      }),
+    queryFn: () => fetchAllInterfaces(page => interfaceLibraryApi.getProjectApiInterfaces(projectId, { keyword, page, pageSize: PAGE_SIZE })),
     enabled: !disabled && useAllRepositories && Boolean(projectId),
   })
 

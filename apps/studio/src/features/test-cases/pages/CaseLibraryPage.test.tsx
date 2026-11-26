@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
+import { message } from '@/shared/utils/feedback'
 import { functionTestingApi } from '../api/functionTesting.api'
 import { CaseLibraryPage } from './CaseLibraryPage'
 
@@ -483,6 +484,27 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   expect(screen.getByText(/请先在禅道核对/)).toBeInTheDocument()
   expect(button('用原请求查询／重试')).toBeDisabled()
   expect(oldConnections).not.toHaveBeenCalled()
+  client.clear()
+})
+
+it('用例导入成功后提示后端返回的导入数量', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
+  const importCases = vi.spyOn(api, 'importFunctionTestCases').mockResolvedValue({ imported: 3 })
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await selectSuite(container)
+  await userEvent.click(button('导入'))
+  await userEvent.click(await screen.findByText('用例导入'))
+  const input = await waitFor(() => {
+    const node = document.querySelector<HTMLInputElement>('.ant-upload-drag input[type="file"]')
+    if (!node) throw new Error('上传控件没有打开')
+    return node
+  })
+  await userEvent.upload(input, new File(['[]'], 'cases.json', { type: 'application/json' }))
+  await userEvent.click(button('开始导入'))
+  await waitFor(() => expect(importCases).toHaveBeenCalledWith('suite-1', expect.any(Blob), 'cases.json'))
+  expect(message.success).toHaveBeenCalledWith('导入成功：3 条用例')
   client.clear()
 })
 

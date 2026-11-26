@@ -75,4 +75,4 @@
 - 页面：`pages/PerformancePage.tsx`、`PerformanceSuiteDetailPage.tsx`、`PerformanceRunsPage.tsx`、`PerformanceRunDetailPage.tsx`、`PerformanceCaseRunDetailPage.tsx`。
 - 组件：`components/PerfSuiteDrawer.tsx`、`StartPerfRunModal.tsx`、`PerfLoadModelForm.tsx`、`PerfStagedLoadFields.tsx`、`PerfLoadCurve.tsx`、`PerfNumericField.tsx`、`PerfStepsEditor.tsx`、`PerfCaseWorkbench.tsx`、`PerfMonitoringPanel.tsx`、`PerfMonitoringDrawer.tsx`。
 - API 与工具：`api/performance.api.ts`、`utils/perf.ts`、`utils/perfLoadModel.ts`、`utils/perfCaseForm.ts`、`utils/perfDraftStore.ts`、`utils/monitoringConnection.ts`。
-- 控制面：`services/perf_suite.py`、`services/perf_suite_run.py`、`services/perf_run.py`、`schemas/perf_suite.py`、`schemas/perf_suite_run.py`。
+- 控制面：`services/perf_suite.py`、`services/perf_suite_run.py`、`services/perf_run.py`、`services/perf_run_halt.py`（单用例与测试集共用的停止原语）、`schemas/perf_suite.py`、`schemas/perf_suite_run.py`。

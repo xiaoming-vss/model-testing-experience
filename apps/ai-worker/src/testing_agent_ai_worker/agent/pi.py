@@ -16,7 +16,8 @@ from tempfile import TemporaryDirectory
 from typing import Any, Literal
 from uuid import uuid4
 
-from testing_agent_ai_worker.agent.base import AgentResult
+from testing_agent_ai_worker.agent.base import AgentResult, incomplete_output_error
+from testing_agent_ai_worker.core.errors import UserFacingError
 
 PINNED_VERSION = "1.3.0"
 # Only variables needed to start Node/Pi and locate tools cross the process
@@ -299,7 +300,7 @@ class Pi:
                 settled = True
             elif kind == "tool_execution_end" and event.get("toolName") == "subagent":
                 if event.get("isError"):
-                    raise RuntimeError("功能测试子任务执行失败，未生成完整产物")
+                    raise UserFacingError("功能测试子任务执行失败，未生成完整产物")
                 details = event.get("result", {}).get("details", {})
                 count = details.get("count", 0)
                 if isinstance(count, int):
@@ -322,21 +323,19 @@ class Pi:
                             usage=usage,
                         )
         if last is None:
-            raise RuntimeError("Pi completed without an assistant result")
+            raise incomplete_output_error("empty_final_response")
         reason = last.get("stopReason", "")
-        if reason in {"error", "aborted", "length"}:
-            # Provider error text can contain authentication headers or private input.
-            raise RuntimeError(f"Pi generation ended with {reason}")
         if reason != "stop":
-            raise RuntimeError("Pi completed with an unexpected stop reason")
+            # Provider error text can contain authentication headers or private input.
+            raise incomplete_output_error(reason)
         content = "".join(
             block.get("text", "")
             for block in last.get("content", [])
             if block.get("type") == "text"
         )
         if not content.strip():
-            raise RuntimeError("Pi completed without artifact text")
-        return AgentResult(content=content, finish_reason=reason, usage=usage)
+            raise incomplete_output_error("empty_final_response")
+        return AgentResult(content=content, finish_reason="stop", usage=usage)
 
     async def _close(self, process: asyncio.subprocess.Process) -> None:
         try:

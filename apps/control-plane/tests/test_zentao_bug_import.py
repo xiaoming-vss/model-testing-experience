@@ -456,6 +456,9 @@ def test_import_with_images_applies_text_and_defers_description_group(api, setup
 
     detail = api.get(f"/v1/bugs/{result['bugId']}", headers=owner).json()["data"]
     assert detail["descriptionHtml"] == "<p>截图</p>"
+    # 外部图片被剔除时必须说明，不能显示成全部成功（R45）。
+    reasons = [item["reason"] for item in result["pending"]]
+    assert any("不是禅道文件，未导入：http://zentao/file/1.png" in reason for reason in reasons)
 
     async def load():
         async with api.app.state.test_sessions() as session:
@@ -618,6 +621,98 @@ def test_import_file_transfer_failure_keeps_bug_and_marks_pending(api, pull_file
     baselines, mappings = asyncio.run(load())
     assert baselines == []
     assert [(m.direction, m.status) for m in mappings] == [("pull", "failed")]
+
+
+def _description_baselines(api, bug_id):
+    async def load():
+        async with api.app.state.test_sessions() as session:
+            return (
+                await session.scalars(
+                    select(BugZentaoSyncBaseline).where(
+                        BugZentaoSyncBaseline.bug_id == bug_id,
+                        BugZentaoSyncBaseline.field_group == "description",
+                    )
+                )
+            ).all()
+
+    return asyncio.run(load())
+
+
+def test_import_pulls_get_style_images_and_writes_baseline(api, pull_files):
+    field = pull_files
+    owner = field["owner"]
+    # HTML 里 `&` 写作 `&amp;`；安装子路径下正文图片是 GET 风格的读取地址（R44/A17）。
+    field["remote"].details[58] = remote_bug(
+        58,
+        steps=(
+            '<p>复现</p><img src="/zentao/index.php?m=file&amp;f=read&amp;fileID=58&amp;t=png" />'
+        ),
+    )
+    response = api.post(
+        field["import"],
+        headers=owner,
+        json={
+            "requestId": "req-20261009-0008",
+            "items": [import_item(field["sprint"], 58, field["owner_id"])],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]["items"][0]
+    assert result["status"] == "success"
+    assert all(item["field"] != "description" for item in result["pending"])
+
+    detail = api.get(f"/v1/bugs/{result['bugId']}", headers=owner).json()["data"]
+    assert detail["descriptionHtml"] == '<p>复现</p><img data-file-id="pull-1">'
+    assert len(_description_baselines(api, result["bugId"])) == 1
+
+
+def test_import_reports_images_that_are_not_zentao_files(api, pull_files):
+    field = pull_files
+    owner = field["owner"]
+    field["remote"].details[59] = remote_bug(
+        59,
+        steps=(
+            "<p>说明</p>"
+            '<img src="https://cdn.example.com/a.png?token=secret" />'
+            '<img src="/zentao/index.php?m=file&amp;f=read&amp;fileID=59&amp;t=png" />'
+        ),
+    )
+    response = api.post(
+        field["import"],
+        headers=owner,
+        json={
+            "requestId": "req-20261009-0009",
+            "items": [import_item(field["sprint"], 59, field["owner_id"])],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]["items"][0]
+    assert result["status"] == "success"
+
+    # 禅道图片照常补齐，描述组完成；外部图片被剔除，说明留在结果里且不带查询串（R45）。
+    detail = api.get(f"/v1/bugs/{result['bugId']}", headers=owner).json()["data"]
+    assert detail["descriptionHtml"] == '<p>说明</p><img data-file-id="pull-1">'
+    assert result["pending"] == [
+        {
+            "field": "description",
+            "reason": "正文有 1 处图片不是禅道文件，未导入：https://cdn.example.com/a.png",
+        }
+    ]
+    assert len(_description_baselines(api, result["bugId"])) == 1
+
+    async def load_activity():
+        async with api.app.state.test_sessions() as session:
+            return (
+                await session.scalars(
+                    select(BugActivity).where(
+                        BugActivity.bug_id == result["bugId"],
+                        BugActivity.action == "zentao_files",
+                    )
+                )
+            ).all()
+
+    (activity,) = asyncio.run(load_activity())
+    assert activity.content == "从禅道拉取文件：成功 1 个，待处理 1 个"
 
 
 def test_import_is_idempotent_and_deduplicates(api, setup):

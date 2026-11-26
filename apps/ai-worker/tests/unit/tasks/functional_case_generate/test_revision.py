@@ -12,6 +12,9 @@ from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches imp
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     FunctionalCaseExecutor,
 )
+from testing_agent_ai_worker.tasks.functional_case_generate.validation import (
+    OutputValidationError,
+)
 from tests.unit.tasks.functional_case_generate.fixtures import (
     analysis,
     case,
@@ -217,3 +220,101 @@ class FunctionalRevisionTests(unittest.TestCase):
             self.assertEqual(len(present), 1, call)
         self.assertTrue(all("add errors" in call for call in calls))
         self.assertEqual(len(json.loads(result)["cases"]), 3)
+
+    def run_revision(self, answers):
+        """Drive the real batch runner over two current cases; the model answers in order."""
+        calls = []
+        previous = [
+            {"case_id": "case-a", **case("验证登录成功", "login")},
+            {"case_id": "case-b", **case("验证登录失败", "login")},
+        ]
+
+        class Bot:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def run(self, message, **kwargs):
+                calls.append(message)
+                answer = answers[min(len(calls), len(answers)) - 1]
+                return SimpleNamespace(content=json.dumps(answer, ensure_ascii=False))
+
+        result = asyncio.run(
+            run_functional_detailed_case_batches(
+                requirement_analysis_json='{"purpose":"original"}',
+                case_names_json=json.dumps(traceable_modules("login")),
+                session_key="session",
+                skill_name="mtx-generate-solution-test-cases",
+                current_cases_json=json.dumps({"cases": previous}, ensure_ascii=False),
+                revision_instruction="add errors",
+                from_config=lambda **kwargs: Bot(),
+            )
+        )
+        return json.loads(result)["cases"], calls, previous
+
+    def test_revision_repairs_a_case_dropped_without_being_declared(self):
+        cases, calls, previous = self.run_revision(
+            [
+                {"cases": [case("验证登录失败", "login")]},
+                {"cases": [case("验证登录成功", "login"), case("验证登录失败", "login")]},
+            ]
+        )
+
+        self.assertEqual(len(calls), 2)
+        self.assertIn("未保留也未声明删除的当前用例：验证登录成功（case-a）", calls[1])
+        self.assertIn("removedCases", calls[0])
+        # Both cases survive and keep the identity the platform issued before.
+        self.assertEqual(
+            sorted((item["case_id"], item["case_title"]) for item in cases),
+            sorted((item["case_id"], item["case_title"]) for item in previous),
+        )
+
+    def test_revision_that_keeps_dropping_a_case_fails_instead_of_losing_it(self):
+        with self.assertRaises(OutputValidationError) as caught:
+            self.run_revision([{"cases": [case("验证登录失败", "login")]}])
+
+        message = str(caught.exception)
+        self.assertIn("detailed_cases/login 修订未通过校验", message)
+        self.assertIn("验证登录成功（case-a）", message)
+
+    def test_revision_may_remove_a_case_it_declares_with_a_reason(self):
+        cases, calls, _previous = self.run_revision(
+            [
+                {
+                    "cases": [case("验证登录失败", "login")],
+                    "removedCases": [{"caseId": "case-a", "reason": "对应需求已取消"}],
+                }
+            ]
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual([item["case_id"] for item in cases], ["case-b"])
+
+    def test_revision_summary_reports_how_many_cases_were_removed(self):
+        def batches(**kwargs):
+            return json.dumps({"cases": [{"case_id": "case-b", **case("验证登录失败", "login")}]})
+
+        task = self.task("detailed_cases")
+        config = json.loads(task.config_json)
+        config["resultYaml"] = json.dumps(
+            {
+                "cases": [
+                    {"case_id": "case-a", **case("验证登录成功")},
+                    {"case_id": "case-b", **case("验证登录失败")},
+                ]
+            },
+            ensure_ascii=False,
+        )
+        task.config_json = json.dumps(config, ensure_ascii=False)
+        result = FunctionalCaseExecutor(
+            agent_config=PiConfig(),
+            detailed_batch_runner=batches,
+            chain_runner=lambda **kwargs: self.fail("must not run full chain"),
+            skill_runner=lambda **kwargs: self.fail("must not rerun upstream"),
+        ).execute(task, datetime.now().astimezone(), lambda _: None)
+
+        summary = json.loads(result.result_summary_json)
+        self.assertEqual(summary["caseCount"], 1)
+        self.assertEqual(summary["removedCaseCount"], 1)

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.historical_requirement_artifacts import (
     validate_historical_input,
     validate_historical_output,
@@ -22,13 +23,13 @@ FENCED_JSON = re.compile(r"```(?:json)?\s*\n(.*?)\n```", re.DOTALL)
 
 def read_history_model_output(response: Any, label: str) -> object:
     if getattr(response, "error", None):
-        raise RuntimeError(f"{label}模型调用失败")
+        raise UserFacingError(f"{label}模型调用失败，请检查模型服务或授权后重试")
     reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
     metadata = getattr(response, "metadata", None)
     if reason is None and isinstance(metadata, dict):
         reason = metadata.get("finish_reason")
     if reason in {"length", "max_tokens", "max_output_tokens"}:
-        raise ValueError(f"{label}模型产物已截断")
+        raise UserFacingError(f"{label}模型产物已截断，请调整输出限制或缩小范围后重试")
     raw = response if isinstance(response, (str, dict)) else getattr(response, "content", None)
     if not isinstance(raw, str):
         return raw
@@ -47,15 +48,15 @@ def execute_history_stage(
     attachment_downloader: Any = None,
 ) -> TaskResult:
     if not task.checkpoint_enabled or not task.session_key:
-        raise ValueError("历史需求关联需要独立阶段尝试和人工审核")
+        raise UserFacingError("历史需求关联需要独立阶段尝试和人工审核")
     source = validate_historical_input(task.payload.source_content)
     current = source["currentRequirement"]
     if current["requirementId"] != task.requirement_id:
-        raise ValueError("历史需求关联快照不属于当前需求")
+        raise UserFacingError("历史需求关联快照不属于当前需求")
     if source["historicalRequirements"]:
         config = json.loads(task.config_json or "{}")
         if not isinstance(config, dict):
-            raise ValueError("configJson 必须是对象")
+            raise UserFacingError("configJson 必须是对象")
         instructions = [task.payload.extra_instruction, "正式响应只返回本阶段完整 JSON 对象。"]
         revision = config.get("revisionInstruction")
         if revision:
@@ -70,7 +71,7 @@ def execute_history_stage(
         media = []
         if attachments:
             if attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
+                raise UserFacingError("未配置继续优化图片下载器")
             images = attachment_downloader.download(
                 task_id=task.task_id, workspace=workspace, attachments=attachments
             )
@@ -98,8 +99,10 @@ def execute_history_stage(
         }
     try:
         artifact = validate_historical_output(value, source)
+    except UserFacingError:
+        raise
     except ValueError as exc:
-        raise ValueError("历史需求关联结果未通过结构或引用校验") from exc
+        raise UserFacingError("历史需求关联结果未通过结构或引用校验") from exc
     return TaskResult(
         task_id=task.task_id,
         attempt_id=task.attempt_id,

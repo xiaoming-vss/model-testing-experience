@@ -9,11 +9,13 @@ from pathlib import Path
 from typing import Any, Callable
 
 import yaml
+from pydantic import ValidationError
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import AgentBackendConfig, UiGenerationConfig
+from testing_agent_ai_worker.core.errors import UserFacingError, validation_error_message
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -144,10 +146,16 @@ class UiCaseExecutor(TaskExecutor):
                     )
                 self._cleanup_repository_source(repository_source, success=True)
                 return result
-            raise ValueError("不支持的 UI 工作流版本")
+            raise UserFacingError("不支持的 UI 工作流版本")
         except (OSError, ValueError, yaml.YAMLError, RepositorySourceError) as error:
             self._cleanup_failed_source(repository_source, repository_run_root)
-            return self._failure(task, started_at, str(error))
+            # Our validators write for the user; pydantic's default text repeats the draft.
+            message = (
+                validation_error_message(error)
+                if isinstance(error, ValidationError)
+                else str(error)
+            )
+            return self._failure(task, started_at, message)
         except Exception:
             # 未知异常仍按 worker 既有协议向上抛出,但仓库工作区必须保留供排查。
             self._cleanup_failed_source(repository_source, repository_run_root)

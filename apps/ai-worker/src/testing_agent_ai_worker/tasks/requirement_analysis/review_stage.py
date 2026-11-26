@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress
 from testing_agent_ai_worker.platform.revision_attachments import (
     parse_revision_attachments,
@@ -35,15 +36,15 @@ def execute_review_stage(
 ):
     """Return None: the review stage stops at waiting_review, never as a final result."""
     if task.payload.metadata.get("workflowVersion", 2) != 2:
-        raise ValueError("不支持的需求分析工作流版本")
+        raise UserFacingError("不支持的需求分析工作流版本")
     if not task.checkpoint_enabled:
-        raise ValueError("需求分析必须启用人工审核")
+        raise UserFacingError("需求分析必须启用人工审核")
     stage = task.current_stage or "requirement_review"
     if stage != "requirement_review":
-        raise ValueError(f"需求评审不支持阶段: {stage}")
+        raise UserFacingError(f"需求评审不支持阶段: {stage}")
     config = json.loads(task.config_json or "{}")
     if not isinstance(config, dict):
-        raise ValueError("configJson 必须是对象")
+        raise UserFacingError("configJson 必须是对象")
     revision = str(config.get("revisionInstruction") or "").strip()
     if source_downloader is None:
         raise ValueError("requirement_analysis source_downloader is required")
@@ -81,7 +82,7 @@ def execute_review_stage(
         attachments = parse_revision_attachments(config)
         if attachments:
             if attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
+                raise UserFacingError("未配置继续优化图片下载器")
             revision_images = attachment_downloader.download(
                 task_id=task.task_id, workspace=workspace, attachments=attachments
             )

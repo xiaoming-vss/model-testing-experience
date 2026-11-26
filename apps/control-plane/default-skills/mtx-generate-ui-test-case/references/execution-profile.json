@@ -20,7 +20,8 @@
       "text_eq",
       "text_contains",
       "url_eq",
-      "url_contains"
+      "url_contains",
+      "absent"
     ]
   },
   "features": {

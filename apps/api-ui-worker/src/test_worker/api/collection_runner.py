@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Any
 
+from ..core.reporting import deliver
 from .case_runner import ApiCaseRunner, now_iso
 from .template_runtime import dump_runtime_vars, load_runtime_vars
 
@@ -36,7 +36,8 @@ class ApiCollectionRunner:
             if not item.get("enabled", True):
                 result = _skipped_item_result(case_run, "用例未启用", runtime_vars)
                 status_counts["skipped"] += 1
-                await asyncio.to_thread(
+                await deliver(
+                    snapshot["taskId"],
                     self._control_plane_client.report_api_collection_item_completed,
                     snapshot["taskId"],
                     item_id,
@@ -49,7 +50,8 @@ class ApiCollectionRunner:
                     case_run, "前置用例失败且未开启 continueOnFailure", runtime_vars
                 )
                 status_counts["skipped"] += 1
-                await asyncio.to_thread(
+                await deliver(
+                    snapshot["taskId"],
                     self._control_plane_client.report_api_collection_item_completed,
                     snapshot["taskId"],
                     item_id,
@@ -58,7 +60,8 @@ class ApiCollectionRunner:
                 continue
 
             item_started_at = now_iso()
-            await asyncio.to_thread(
+            await deliver(
+                snapshot["taskId"],
                 self._control_plane_client.report_api_collection_item_started,
                 snapshot["taskId"],
                 item_id,
@@ -71,7 +74,8 @@ class ApiCollectionRunner:
             result = await self._case_runner.run(case_run, runtime_vars)
             result["startedAt"] = item_started_at
             runtime_vars.update(load_runtime_vars(result.get("runtimeVarsJson")))
-            await asyncio.to_thread(
+            await deliver(
+                snapshot["taskId"],
                 self._control_plane_client.report_api_collection_item_completed,
                 snapshot["taskId"],
                 item_id,

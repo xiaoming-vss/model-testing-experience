@@ -179,8 +179,20 @@ class GeneratedCase(Contract):
         return self
 
 
+class RemovedCase(Contract):
+    """A current case a revision intentionally drops, with the reason."""
+
+    caseId: Text
+    reason: Text
+
+
 class DetailedCasesOutput(Contract):
     cases: list[GeneratedCase]
+    # A revision declares what it removes; every other current case must stay in `cases`.
+    # Left out when the model does not mention it, so ordinary output is unchanged.
+    removedCases: list[RemovedCase] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def duplicates(self):

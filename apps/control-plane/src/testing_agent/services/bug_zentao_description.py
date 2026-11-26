@@ -23,7 +23,11 @@ def image_id(src, instance):
     internal = re.fullmatch(r"\{([1-9][0-9]*)\.(?:png|jpg|jpeg|gif|webp|bmp)\}", src)
     if internal:
         return internal[1]
-    url = urlsplit(src)
+    try:
+        url = urlsplit(src)
+    except ValueError:
+        # Remote HTML can carry a malformed URL such as an unmatched bracket.
+        return None
     if url.scheme not in {"", "http", "https"}:
         return None
     if url.netloc and url.netloc != urlsplit(instance).netloc:

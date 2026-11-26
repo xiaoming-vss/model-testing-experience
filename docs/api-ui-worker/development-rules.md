@@ -38,7 +38,8 @@
 | --- | --- |
 | 调度、心跳及停止 | `tests/test_poller_regressions.py`、`test_shutdown.py` |
 | 控制面通信与载荷 | `tests/test_control_plane_client.py`，加控制面 `test_worker_contract.py` |
-| API 执行 | `tests/test_api_runner.py`，加受影响模板、变量和断言行为回归 |
+| API 执行 | `tests/test_api_runner.py`、`tests/test_template_functions.py`，加受影响模板、变量和断言行为回归 |
+| 内置函数表 | 修改 `template_functions.py` 后同步控制面的逐字节副本，并更新根目录契约夹具 `tests/fixtures/api-template-contract.json`；运行根测试 `tests.test_template_functions_contract` |
 | UI 步骤及浏览器选项 | `tests/test_ui_steps_contract.py`、`test_ui_step_executor.py`、`test_ui_browser_options.py` |
 | 文件上传与清理 | `tests/test_artifact_upload.py`，加控制面文件授权与实际上传路径验收 |
 | 配置加载 | `tests/test_config.py`；保留无环境变量覆盖的现有契约 |

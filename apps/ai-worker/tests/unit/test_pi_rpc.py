@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from testing_agent_ai_worker.agent.pi import _CHILDREN, Pi, check_runtime
 from testing_agent_ai_worker.config.models import PiConfig
+from testing_agent_ai_worker.core.errors import AgentOutputError
 
 PEER = r"""#!/usr/bin/env python3
 import json,sys,time,os
@@ -134,7 +135,7 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("PATH", child_env)
 
     async def test_truncation_cannot_be_published_as_a_complete_artifact(self):
-        with self.assertRaisesRegex(RuntimeError, "length"):
+        with self.assertRaisesRegex(AgentOutputError, "截断"):
             await self.client().run("length", session_key="run")
 
     async def test_errors_never_expose_provider_details(self):

@@ -8,11 +8,14 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
+from testing_agent_ai_worker.agent.base import AgentResult
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import PiConfig
+from testing_agent_ai_worker.core.errors import AgentOutputError
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.test_order_graph.executor import (
+    ROUND_ATTEMPTS,
     TEST_ORDER_GRAPH_SKILL_NAME,
     TestOrderGraphExecutor,
     parse_graph_input,
@@ -284,6 +287,67 @@ class TestOrderGraphExecutorTest(unittest.TestCase):
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("cases", str(result.error_message))
         self.assertEqual([], progresses)
+
+    def test_accepts_the_agent_result_of_the_shared_skill_step(self) -> None:
+        graph_text = json.dumps(GRAPH_WITH_EDGE, ensure_ascii=False)
+
+        class AgentStep:
+            def __call__(self, **kwargs):
+                return AgentResult(content=graph_text, finish_reason="stop")
+
+        result, _ = self._execute(
+            self._task(make_graph_input(["C01", "C02"])), self._executor(AgentStep())
+        )
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual(json.loads(graph_text), json.loads(result.output_yaml))
+
+    def test_incomplete_model_run_is_retried_and_never_published(self) -> None:
+        message = "模型在限定轮次内没有完成生成，请缩小任务范围或简化指令后重试"
+
+        class IncompleteRun:
+            calls = 0
+
+            def __call__(self, **kwargs):
+                self.calls += 1
+                raise AgentOutputError(message)
+
+        runner = IncompleteRun()
+        result, _ = self._execute(self._task(make_graph_input(["C01"])), self._executor(runner))
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertEqual(ROUND_ATTEMPTS, runner.calls)
+        self.assertIn(message, str(result.error_message))
+
+    def test_third_party_exception_text_is_not_echoed(self) -> None:
+        class Broken:
+            def __call__(self, **kwargs):
+                raise ConnectionError("SECRET provider detail")
+
+        result, _ = self._execute(self._task(make_graph_input(["C01"])), self._executor(Broken()))
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertIn(
+            "调用失败：ConnectionError: 任务执行失败，请查看 Worker 日志", result.error_message
+        )
+        self.assertNotIn("SECRET", str(result.error_message))
+
+    def test_schema_feedback_names_the_field_without_quoting_the_draft(self) -> None:
+        # A main path needs at least two cases; the draft is rejected three times.
+        short_path = json.dumps(
+            {
+                "schema_version": "2.0",
+                "main_paths": [{"path_id": "P01", "case_ids": ["C01"]}],
+                "edges": [],
+            }
+        )
+        runner = _RecordingSkillRunner([short_path])
+
+        result, _ = self._execute(self._task(make_graph_input(["C01"])), self._executor(runner))
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertIn("ValidationError: main_paths.0.case_ids", str(result.error_message))
+        self.assertNotIn("input_value", str(result.error_message))
 
 
 if __name__ == "__main__":

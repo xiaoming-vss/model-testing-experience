@@ -29,6 +29,7 @@ from ..control_plane.client import (
     is_execution_rejected,
 )
 from ..core import logger
+from ..core.reporting import ReportDeliveryError, deliver
 from ..ui.case_runner import UiCaseRunner
 from ..ui.suite_runner import UiSuiteRunner
 from .task_notifications import listen_for_tasks, publish_worker_presence, wait_for_task
@@ -78,21 +79,6 @@ class TaskLease:
 
 class UserStopped(Exception):
     """A user requested cancellation of the current task."""
-
-
-class ReportDeliveryError(Exception):
-    """Execution finished but its result or artifacts could not be delivered."""
-
-    def __init__(self, task_id: str, error: BaseException) -> None:
-        self.task_id = task_id
-        self.error_type = type(error).__name__
-        self.status_code = getattr(error, "status_code", None)
-        message = (
-            f"result delivery failed: task_id={task_id} error_type={self.error_type}"
-        )
-        if isinstance(self.status_code, int):
-            message += f" status_code={self.status_code}"
-        super().__init__(message)
 
 
 class TaskPoller:
@@ -339,16 +325,14 @@ class TaskPoller:
     async def _report_completion(self, domain: str, task_id: str, result) -> None:
         self._finishing_tasks.add(task_id)
         try:
+            # The execution already finished. A failed report is not an execution
+            # failure and must not synthesize a second error result.
             callback = (
                 self._control_plane_client.report_task_completed
                 if domain == "ui"
                 else self._control_plane_client.report_api_task_completed
             )
-            await asyncio.to_thread(callback, task_id, result)
-        except Exception as error:
-            # The execution already finished. Reporting failure is not an
-            # execution failure and must not synthesize a second error result.
-            raise ReportDeliveryError(task_id, error) from error
+            await deliver(task_id, callback, task_id, result)
         finally:
             self._finishing_tasks.discard(task_id)
 
@@ -455,6 +439,10 @@ class TaskPoller:
                 },
             )
 
+        except ReportDeliveryError as error:
+            # An item result or the final result could not be delivered.
+            self._log_report_delivery_failure("ui", task.task_id, task.task_type, error)
+            return
         except UserStopped:
             await self._report_task_error(task, "用户已停止运行", status="canceled")
         except ExecutionLeaseLost:
@@ -674,6 +662,10 @@ class TaskPoller:
                     "success": result.get("success"),
                 },
             )
+        except ReportDeliveryError as error:
+            # An item result or the final result could not be delivered.
+            self._log_report_delivery_failure("api", task_id, task_type, error)
+            return
         except UserStopped:
             await self._report_api_task_error(
                 task, "用户已停止运行", started_at, status="canceled"

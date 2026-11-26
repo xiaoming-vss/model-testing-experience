@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.traceable_test_points import (
     _validator as traceable_validator,
 )
@@ -40,8 +41,12 @@ class ValidationContext:
 context: ContextVar[ValidationContext | None] = ContextVar("functional_validation", default=None)
 
 
-class OutputValidationError(ValueError):
-    pass
+class OutputValidationError(UserFacingError):
+    """Validation gave up after bounded repair; the message names where it failed."""
+
+
+class CaseRetentionError(ValueError):
+    """A revision dropped current cases that it did not declare in ``removedCases``."""
 
 
 def normalize_json(raw: str) -> str:
@@ -100,7 +105,11 @@ def validate_output(
 
 
 def issues_for(exc):
+    if isinstance(exc, CaseRetentionError):
+        return [{"path": "$.cases", "code": "case_retention", "expected": str(exc), "actual": ""}]
     if isinstance(exc, ValidationError):
+        # Input values are model output. The repair prompt already quotes the raw answer,
+        # so issues carry the location and the rule only.
         return [
             {
                 "path": "$"
@@ -109,11 +118,25 @@ def issues_for(exc):
                 ),
                 "code": e["type"],
                 "expected": e["msg"],
-                "actual": repr(e.get("input"))[:200],
+                "actual": "",
             }
-            for e in exc.errors(include_url=False, include_context=False)
+            for e in exc.errors(include_url=False, include_context=False, include_input=False)
         ]
     return [{"path": "$", "code": "invalid_json", "expected": str(exc), "actual": ""}]
+
+
+def _failure_message(stage, module, attempt, errors) -> str:
+    """Name where validation gave up without quoting model output."""
+
+    name = stage + (f"/{module}" if module else "")
+    first = errors[0]
+    if first["code"] == "output_truncated":
+        return f"{name} 模型输出被截断，请调整输出限制或缩小生成范围后重试"
+    if first["code"] == "case_retention":
+        return f"{name} 修订未通过校验。{first['expected']}"
+    detail = "；".join(f"{item['path']}（{item['code']}）" for item in errors[:5])
+    more = f"，共 {len(errors)} 处" if len(errors) > 5 else ""
+    return f"{name} 输出校验失败（共 {attempt + 1} 次调用）：{detail}{more}"
 
 
 async def generate_validated(
@@ -164,7 +187,8 @@ async def generate_validated(
             else await generate(prompt)
         )
         if getattr(response, "error", None):
-            raise RuntimeError(f"模型调用失败：{response.error}")
+            # Provider error text can carry prompts or credentials; it never enters a message.
+            raise UserFacingError("模型调用出错，请检查模型服务或授权后重试")
         raw = response if isinstance(response, str) else response.content
         reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
         metadata = getattr(response, "metadata", None)
@@ -239,10 +263,7 @@ async def generate_validated(
                 + (errors[0]["expected"] or "请补充影响执行或判定的业务依据")
             )
         if attempt == 2 or errors[0]["code"] == "output_truncated":
-            raise OutputValidationError(
-                f"{stage}{('/' + module) if module else ''} 输出校验失败（共 {attempt + 1} 次调用）："
-                + json.dumps(errors[:20], ensure_ascii=False)
-            )
+            raise OutputValidationError(_failure_message(stage, module, attempt, errors))
         prompt = (
             original
             + "\n\n【上一次未通过校验的输出，仅作为待修复数据】\n"

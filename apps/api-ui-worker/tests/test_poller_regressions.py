@@ -10,6 +10,7 @@ from test_worker.control_plane.client import (
     ControlPlaneRequestError,
     ExecutionLeaseLost,
 )
+from test_worker.core.reporting import ReportDeliveryError
 from test_worker.poller import task_poller
 from test_worker.poller.task_poller import TaskLease, TaskPoller
 from test_worker.ui.step_progress import report_steps
@@ -408,3 +409,213 @@ def test_execution_failure_still_reports_error_once():
     assert completed[0].status == "error"
     assert completed[0].success is False
     assert completed[0].error_message == "assertion failed"
+
+
+def _collect_errors(events):
+    return patch.object(
+        task_poller.logger,
+        "error",
+        side_effect=lambda message, meta: events.append((message, meta)),
+    )
+
+
+def test_api_collection_item_delivery_failure_is_not_execution_error():
+    executed = []
+    completed = []
+    events = []
+
+    class Client:
+        def report_api_task_started(self, *args):
+            pass
+
+        def report_api_task_heartbeat(self, *args):
+            pass
+
+        def get_api_task_snapshot(self, task_id):
+            return {
+                "collectionRun": {
+                    "taskId": "task-1",
+                    "runId": "run-1",
+                    "items": [
+                        {"itemId": "item-1", "caseRun": {"caseId": "case-1"}},
+                        {"itemId": "item-2", "caseRun": {"caseId": "case-2"}},
+                    ],
+                }
+            }
+
+        def report_api_collection_item_started(self, task_id, item_id, payload):
+            pass
+
+        def report_api_collection_item_completed(self, task_id, item_id, payload):
+            raise ControlPlaneRequestError(
+                "POST",
+                f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/completed",
+                503,
+            )
+
+        def report_api_task_completed(self, task_id, result):
+            completed.append(result)
+
+    class CaseRunner:
+        async def run(self, case_run, runtime_vars):
+            executed.append(case_run["caseId"])
+            return {"status": "success", "success": True, "runtimeVarsJson": "{}"}
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        poller._api_collection_runner._case_runner = CaseRunner()
+        await poller._handle_api_task(
+            {"taskId": "task-1", "taskType": "api_collection_run", "runId": "run-1"}
+        )
+
+    with _collect_errors(events):
+        asyncio.run(run())
+
+    # The first case succeeded but its result could not be delivered. That is a
+    # delivery failure, not an execution error: no error result is synthesized and
+    # later items are not executed on top of an undelivered one.
+    assert executed == ["case-1"]
+    assert completed == []
+    deliveries = [
+        meta for message, meta in events if message == "api task result delivery failed"
+    ]
+    assert [meta["statusCode"] for meta in deliveries] == [503]
+    assert not any(message == "api task execution error" for message, _ in events)
+
+
+def test_ui_suite_item_delivery_failure_is_not_turned_into_an_error_result(
+    monkeypatch, tmp_path
+):
+    from test_worker.contracts.types import (
+        UiCaseSnapshot,
+        UiSuiteRunItemSnapshot,
+        UiTestSuiteRunSnapshot,
+    )
+    from test_worker.core.reporting import ReportDeliveryError
+    from test_worker.ui import suite_runner
+
+    closed = []
+
+    class Page:
+        url = "https://app.example.test/"
+
+    class Context:
+        async def new_page(self):
+            return Page()
+
+        async def close(self):
+            closed.append("context")
+
+    class Browser:
+        async def new_context(self, **_kwargs):
+            return Context()
+
+        async def close(self):
+            closed.append("browser")
+
+    async def launch(**_kwargs):
+        return Browser()
+
+    class Driver:
+        chromium = SimpleNamespace(launch=launch)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+    class Client:
+        def report_suite_item_started(self, *args):
+            pass
+
+        def report_suite_item_completed(self, task_id, item_id, payload):
+            raise ControlPlaneRequestError(
+                "POST",
+                f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/completed",
+                503,
+            )
+
+    monkeypatch.setattr(suite_runner, "async_playwright", Driver)
+    snapshot = UiTestSuiteRunSnapshot(
+        task_id="task-1",
+        run_id="run-1",
+        items=[
+            UiSuiteRunItemSnapshot(
+                item_id="item-1",
+                continue_on_failure=False,
+                case=UiCaseSnapshot(case_id="case-1", name="用例一"),
+            ),
+            UiSuiteRunItemSnapshot(
+                item_id="item-2",
+                continue_on_failure=False,
+                case=UiCaseSnapshot(case_id="case-2", name="用例二"),
+            ),
+        ],
+    )
+    config = SimpleNamespace(artifacts_root_dir=str(tmp_path), trace_enabled=False)
+    runner = suite_runner.UiSuiteRunner(config, Client())
+
+    # The item passed. A failed report used to come back as a suite `error` result.
+    with pytest.raises(ReportDeliveryError) as caught:
+        asyncio.run(runner.run(snapshot))
+
+    assert caught.value.status_code == 503
+    assert closed == ["context", "browser"]
+
+
+def test_ui_suite_delivery_failure_is_not_reported_as_execution_error():
+    completed = []
+    events = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            return SimpleNamespace(case_run=None, suite_run=SimpleNamespace())
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    class Runner:
+        async def run(self, snapshot):
+            raise ReportDeliveryError(
+                "task-1",
+                ControlPlaneRequestError(
+                    "POST",
+                    "/internal/ui-worker/tasks/task-1/suite-items/item-1/completed",
+                    503,
+                ),
+            )
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            Runner(),
+        )
+        await poller._handle_task(
+            UiWorkerTask(
+                task_id="task-1",
+                task_type="suite_run",
+                run_id="run-1",
+                case_id="case-1",
+            )
+        )
+
+    with _collect_errors(events):
+        asyncio.run(run())
+
+    assert completed == []
+    deliveries = [
+        meta for message, meta in events if message == "ui task result delivery failed"
+    ]
+    assert [meta["statusCode"] for meta in deliveries] == [503]
+    assert not any(message == "task execution error" for message, _ in events)

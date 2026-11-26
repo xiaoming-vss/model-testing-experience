@@ -8,6 +8,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.tasks.api_case_generate.design_contract import DESIGN_SCHEMA_VERSION
 from testing_agent_ai_worker.tasks.api_case_generate.generation_contract import (
     dump_case_dicts,
@@ -157,7 +158,7 @@ async def generate_cases_batches(
                 ),
             )
         except ValueError as exc:
-            raise ValueError(
+            raise UserFacingError(
                 f"API 用例生成第 {index}/{len(batches)} 批"
                 f"（用例 {start_order_no}-{start_order_no + len(rows) - 1}）失败：{exc}"
             ) from exc

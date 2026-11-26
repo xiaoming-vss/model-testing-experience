@@ -46,10 +46,7 @@ export type FunctionTestCase = {
 }
 
 export type FunctionTestCaseImportResult = {
-  importedCaseCount?: number
-  imported_case_count?: number
-  importedCount?: number
-  imported_count?: number
+  imported: number
 }
 
 export type ImportFunctionTestCasesToZentaoPayload = {

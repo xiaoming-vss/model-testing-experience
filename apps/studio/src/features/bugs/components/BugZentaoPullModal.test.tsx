@@ -45,7 +45,21 @@ function mount() {
       <BugZentaoPullModal open bugId="b1" projectId="p1" onClose={vi.fn()} />
     </QueryClientProvider>,
   )
+  return client
 }
+
+it('refreshes the bug, its list and its activities after applying remote values', async () => {
+  vi.spyOn(bugsApi, 'pullBugZentao').mockResolvedValue({ applied: ['status'], kept: ['profile', 'description', 'assignee'], notes: [] })
+  const client = mount()
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  await screen.findByText(/远端标题/)
+  await userEvent.click(screen.getByRole('button', { name: '确认同步' }))
+  // 详情查询的键是 ['bug', id]；失效别的键会让页面停在同步前的内容。
+  await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bug', 'b1'] }))
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugs'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugActivities', 'b1'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugZentaoPush', 'b1'] })
+})
 
 it('shows per-group two-side comparison with states and no-op defaults', async () => {
   mount()

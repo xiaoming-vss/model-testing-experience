@@ -96,15 +96,16 @@ def validate_design_output(value: Any, cases: list[dict[str, Any]]) -> dict[str,
     try:
         Design.model_validate(value)
     except ValidationError as exc:
+        # Input values are model output; the repair prompt already quotes the raw draft.
         issues = [
             {
                 "path": "$"
                 + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e["loc"]),
                 "code": e["type"],
                 "expected": e["msg"],
-                "actual": e.get("input"),
+                "actual": "",
             }
-            for e in exc.errors(include_url=False, include_context=False)[:20]
+            for e in exc.errors(include_url=False, include_context=False, include_input=False)[:20]
         ]
         raise ValueError(json.dumps(issues, ensure_ascii=False, default=str)) from exc
     originals = {case["caseId"]: case for case in cases}

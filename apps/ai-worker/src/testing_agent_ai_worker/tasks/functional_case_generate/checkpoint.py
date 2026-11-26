@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import datetime
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.revision_attachments import (
@@ -63,7 +64,7 @@ def execute_checkpoint_task(
         attachments = parse_revision_attachments(config)
         if attachments:
             if attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
+                raise UserFacingError("未配置继续优化图片下载器")
             images = attachment_downloader.download(
                 task_id=task.task_id, workspace=workspace, attachments=attachments
             )
@@ -145,6 +146,9 @@ def execute_checkpoint_task(
 
     if stage == "detailed_cases":
         case_names_json = _require_config_json_text(config, "caseNames", stage)
+        previous_cases_json = (
+            _require_config_json_text(config, "resultYaml", stage) if revision else ""
+        )
         detailed_cases_json = _resolve_text_result(
             detailed_batch_runner(
                 source_text=task.payload.source_content,
@@ -157,9 +161,7 @@ def execute_checkpoint_task(
                 extra_instruction=task.payload.extra_instruction,
                 **(
                     {
-                        "current_cases_json": _require_config_json_text(
-                            config, "resultYaml", stage
-                        ),
+                        "current_cases_json": previous_cases_json,
                         "revision_instruction": revision + attachment_note,
                     }
                     if revision
@@ -196,6 +198,7 @@ def execute_checkpoint_task(
                 status=TaskStatus.SUCCESS,
                 config_json=config_json,
                 detailed_cases_json=detailed_cases_json,
+                previous_cases_json=previous_cases_json,
                 error_message=None,
             ),
             started_at=started_at,
@@ -274,15 +277,15 @@ def _relation_case_ids(cases_json: str) -> list[str]:
     try:
         payload = json.loads(cases_json)
     except ValueError as exc:
-        raise ValueError("图谱分析阶段的用例 JSON 无法解析") from exc
+        raise UserFacingError("图谱分析阶段的用例 JSON 无法解析") from exc
     cases = payload.get("cases") if isinstance(payload, dict) else None
     if not isinstance(cases, list):
-        raise ValueError("图谱分析阶段的用例 JSON 必须包含 cases 数组")
+        raise UserFacingError("图谱分析阶段的用例 JSON 必须包含 cases 数组")
     case_ids: list[str] = []
     for case in cases:
         case_id = str(case.get("case_id") or "").strip() if isinstance(case, dict) else ""
         if not case_id:
-            raise ValueError(
+            raise UserFacingError(
                 "完整测试用例必须全部携带平台签发的 case_id，请重新生成用例后再生成图谱"
             )
         case_ids.append(case_id)
@@ -294,7 +297,7 @@ def _read_checkpoint_config(task: Task) -> dict[str, object]:
         return {}
     parsed = json.loads(task.config_json)
     if not isinstance(parsed, dict):
-        raise ValueError("configJson 顶层必须是对象")
+        raise UserFacingError("configJson 顶层必须是对象")
     return parsed
 
 
@@ -314,5 +317,5 @@ def _require_config_json_text(
 ) -> str:
     value = _optional_config_json_text(config, field_name).strip()
     if not value:
-        raise ValueError(f"{stage} 阶段缺少 configJson.{field_name}")
+        raise UserFacingError(f"{stage} 阶段缺少 configJson.{field_name}")
     return value

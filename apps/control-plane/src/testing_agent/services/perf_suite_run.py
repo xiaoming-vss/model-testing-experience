@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from sqlalchemy import select
-
 from testing_agent.core.enums import PERF_RUN_TERMINAL_STATUSES, PerfRunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
@@ -24,6 +22,7 @@ from testing_agent.schemas.perf_suite_run import (
     PerfSuiteRunResponse,
     PerfSuiteRunSummaryResponse,
 )
+from testing_agent.services.perf_run_halt import STOP_MESSAGE, halt_perf_run
 from testing_agent.services.project_access import ProjectAction, require_project_id
 
 SUITE_TERMINAL_STATUSES = {
@@ -215,6 +214,23 @@ class PerfSuiteRunService:
             run.duration_ms = max(0, int((now - started_at).total_seconds() * 1000))
         self._refresh_counts(run, items)
 
+    async def _skip_unstarted(self, items: list[PerfSuiteRunItem]) -> None:
+        """Skip items that can no longer be dispatched and cancel their prepared child runs."""
+        now = datetime.now(UTC)
+        unstarted = [item for item in items if item.status == "pending"]
+        for item in unstarted:
+            item.status = "skipped"
+            item.finished_at = now
+        children = await self.runs.list_by_ids(
+            [item.child_run_id for item in unstarted], for_update=True
+        )
+        for child in children.values():
+            if child.status == PerfRunStatus.QUEUED.value:
+                child.status = PerfRunStatus.CANCELED.value
+                child.outcome = "stopped"
+                child.error_message = STOP_MESSAGE
+                child.finished_at = now
+
     async def run(self, user_id: str, suite_id: str, body: PerfSuiteRunCreate) -> dict[str, Any]:
         if self.perf_runs is None:
             raise RuntimeError("PerfSuiteRunService.run requires PerfRunService")
@@ -354,10 +370,7 @@ class PerfSuiteRunService:
             item.finished_at = now
 
         if run.status == PerfRunStatus.STOPPING.value or item.status == "canceled":
-            for pending in items:
-                if pending.status == "pending":
-                    pending.status = "skipped"
-                    pending.finished_at = now
+            await self._skip_unstarted(items)
             self._finish(
                 run,
                 items,
@@ -408,10 +421,7 @@ class PerfSuiteRunService:
                 continue
             pending = [item for item in items if item.status == "pending"]
             if run.status == PerfRunStatus.STOPPING.value:
-                now = datetime.now(UTC)
-                for item in pending:
-                    item.status = "skipped"
-                    item.finished_at = now
+                await self._skip_unstarted(items)
                 self._finish(
                     run,
                     items,
@@ -468,77 +478,37 @@ class PerfSuiteRunService:
             raise ErrForbidden()
         if run.status in SUITE_TERMINAL_STATUSES:
             return {"status": run.status}
-        now = datetime.now(UTC)
         run.status = PerfRunStatus.STOPPING.value
         items = await self.repository.list_items(suite_run_id)
-        current: PerfSuiteRunItem | None = None
-        for item in items:
-            if item.status == "pending":
-                item.status = "skipped"
-                item.finished_at = now
-            elif item.status in {"queued", "running"} and current is None:
-                current = item
-        if current is None:
+        current = next((item for item in items if item.status in {"queued", "running"}), None)
+        if current is not None:
+            child = await self.runs.get_run(current.child_run_id, for_update=True)
+            if child is not None and await halt_perf_run(self.repository.session, child):
+                current.status = "canceled"
+                current.outcome = "stopped"
+                current.finished_at = child.finished_at
+        await self._skip_unstarted(items)
+        if current is None or current.status == "canceled":
             self._finish(
                 run,
                 items,
                 status=PerfRunStatus.CANCELED.value,
                 outcome="stopped",
             )
-            await self.repository.commit()
-            return {"status": run.status}
-
-        child = await self.runs.get_run(current.child_run_id, for_update=True)
-        if child is not None:
-            task = await self.repository.session.scalar(
-                select(WorkerTask)
-                .where(WorkerTask.domain == "perf", WorkerTask.run_id == child.run_id)
-                .with_for_update()
-            )
-            if child.status == PerfRunStatus.QUEUED.value and (
-                task is None or task.status == "pending"
-            ):
-                child.status = PerfRunStatus.CANCELED.value
-                child.outcome = "stopped"
-                child.error_message = "用户已停止运行"
-                child.finished_at = now
-                current.status = "canceled"
-                current.outcome = "stopped"
-                current.finished_at = now
-                if task is not None:
-                    task.status = "canceled"
-                    task.finished_at = now
-                    task.error_message = "用户已停止运行"
-                self._finish(
-                    run,
-                    items,
-                    status=PerfRunStatus.CANCELED.value,
-                    outcome="stopped",
-                )
-            else:
-                child.status = PerfRunStatus.STOPPING.value
-                if task is not None:
-                    task.status = "stopping"
         await self.repository.commit()
         return {"status": run.status}
 
+    async def stop_child(self, user_id: str, child_run_id: str) -> dict[str, Any] | None:
+        """Stop the whole serial suite from one of its child runs.
 
-async def stop_suite_for_child(session, child_run_id: str) -> None:
-    """Cascade a direct child-run stop to its parent suite without committing."""
-    repository = PerfSuiteRunRepository(session)
-    item = await repository.get_item_by_child_run(child_run_id)
-    if item is None:
-        return
-    run = await repository.get_run(item.suite_run_id, for_update=True)
-    if run is None or run.status in SUITE_TERMINAL_STATUSES:
-        return
-    now = datetime.now(UTC)
-    run.status = PerfRunStatus.STOPPING.value
-    items = await repository.list_items(run.suite_run_id)
-    for pending in items:
-        if pending.status == "pending":
-            pending.status = "skipped"
-            pending.finished_at = now
+        Returns None when no suite item owns the run.
+        """
+        item = await self.repository.get_item_by_child_run(child_run_id)
+        if item is None:
+            return None
+        await self.stop(user_id, item.suite_run_id)
+        child = await self.runs.get_run(child_run_id)
+        return {"status": child.status if child is not None else PerfRunStatus.CANCELED.value}
 
 
 def suite_run_service(session) -> PerfSuiteRunService:

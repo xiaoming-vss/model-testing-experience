@@ -5,7 +5,9 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
+from testing_agent_ai_worker.agent.base import AgentResult
 from testing_agent_ai_worker.config.models import PiConfig
+from testing_agent_ai_worker.core.errors import AgentOutputError, UserFacingError
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.test_report_generate.executor import (
@@ -21,7 +23,7 @@ class _RecordingSkillRunner:
 
     def __call__(self, **kwargs):
         self.calls.append(kwargs)
-        return self.output
+        return AgentResult(content=self.output, finish_reason="stop")
 
 
 class TestReportExecutorTest(unittest.TestCase):
@@ -77,6 +79,39 @@ class TestReportExecutorTest(unittest.TestCase):
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertEqual("test_report_generate 缺少 dailyMetrics", result.error_message)
         self.assertEqual([], skill_runner.calls)
+
+    def test_blank_report_is_not_published_as_success(self) -> None:
+        executor = TestReportExecutor(
+            agent_config=PiConfig(runtime_root=str(Path("runtime/test-report"))),
+            skill_runner=_RecordingSkillRunner("  \n"),
+        )
+
+        # An empty answer used to come back as SUCCESS with an empty report.
+        with self.assertRaisesRegex(UserFacingError, "测试报告内容为空"):
+            executor.execute(
+                self._task(daily_metrics={"function": {"total": 1}}),
+                datetime.now().astimezone(),
+                lambda _progress: None,
+            )
+
+    def test_incomplete_model_run_is_not_published(self) -> None:
+        class IncompleteRun:
+            def __call__(self, **kwargs):
+                raise AgentOutputError(
+                    "模型在限定轮次内没有完成生成，请缩小任务范围或简化指令后重试"
+                )
+
+        executor = TestReportExecutor(
+            agent_config=PiConfig(runtime_root=str(Path("runtime/test-report"))),
+            skill_runner=IncompleteRun(),
+        )
+
+        with self.assertRaises(AgentOutputError):
+            executor.execute(
+                self._task(daily_metrics={"function": {"total": 1}}),
+                datetime.now().astimezone(),
+                lambda _progress: None,
+            )
 
 
 if __name__ == "__main__":

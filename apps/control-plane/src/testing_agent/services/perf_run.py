@@ -3,11 +3,8 @@ from __future__ import annotations
 import copy
 import json
 import re
-from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
-
-from sqlalchemy import select
 
 from testing_agent.core.enums import (
     PERF_RUN_CLOSED_STATUSES,
@@ -47,6 +44,7 @@ from testing_agent.services.execution_secrets import redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.monitoring_connection import MonitoringConnectionService
 from testing_agent.services.perf_case_spec import parse_case_yaml
+from testing_agent.services.perf_run_halt import halt_perf_run
 from testing_agent.services.project_access import require_project_id
 from testing_agent.services.stored_file import StoredFileService
 
@@ -410,10 +408,7 @@ class PerfRunService:
         return read_private_spec(run, self.credential_cipher)
 
     async def stop(self, user_id: str, run_id: str) -> dict[str, Any]:
-        from testing_agent.services.perf_suite_run import (
-            on_child_completed_after_commit,
-            stop_suite_for_child,
-        )
+        from testing_agent.services.perf_suite_run import suite_run_service
 
         probe = await self.repository.get_run(run_id)
         if probe is None:
@@ -425,35 +420,18 @@ class PerfRunService:
             raise ErrForbidden()
         if probe.status in PERF_RUN_CLOSED_STATUSES:
             return {"status": probe.status}
-        # Lock the suite before its child run so suite-level and child-level stops
-        # always acquire parent/child rows in the same order.
-        await stop_suite_for_child(self.repository.session, run_id)
+        if probe.trigger_type == "suite":
+            # The suite is always locked before its child, so both stop entry points
+            # acquire the parent and child rows in the same order.
+            stopped = await suite_run_service(self.repository.session).stop_child(user_id, run_id)
+            if stopped is not None and stopped["status"] in PERF_RUN_CLOSED_STATUSES:
+                return stopped
+        # A suite child left open after its suite already ended has no parent to cascade to.
         run = await self.repository.get_run(run_id, for_update=True)
         if run is None:
             raise ErrPerfRunNotFound()
-        task = await self.repository.session.scalar(
-            select(WorkerTask)
-            .where(WorkerTask.domain == "perf", WorkerTask.run_id == run_id)
-            .with_for_update()
-        )
-        now = datetime.now(UTC)
-        if run.status == PerfRunStatus.QUEUED.value and (
-            task is None or task.status in {"pending"}
-        ):
-            run.status = PerfRunStatus.CANCELED.value
-            run.finished_at = now
-            run.error_message = "用户已停止运行"
-            if task is not None:
-                task.status = "canceled"
-                task.finished_at = now
-                task.error_message = "用户已停止运行"
-        else:
-            run.status = PerfRunStatus.STOPPING.value
-            if task is not None:
-                task.status = "stopping"
+        await halt_perf_run(self.repository.session, run)
         await self.repository.commit()
-        if run.status == PerfRunStatus.CANCELED.value:
-            await on_child_completed_after_commit(self.repository.session, run_id)
         return {"status": run.status}
 
 

@@ -1,9 +1,10 @@
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { tableFooterClass } from '@/shared/utils/surfaceClasses'
-import { Alert, Button, Empty, Modal, Spin } from 'antd'
+import { Alert, Button, Empty, Modal, Spin, Tooltip } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { ProjectActionButton } from '@/domain/projects/components/ProjectActionButton'
 import { CodeRiskReportView } from './CodeRiskReportView'
 import { RunArtifacts } from './RunPipelineStatus'
 import { RunHistoryTable, RunRowActions } from './RunHistoryTable'
@@ -16,7 +17,7 @@ import { getErrorMessage } from '@/utils/format'
 
 const STAGES: RunPipelineStageKey[] = ['generate']
 
-/** 需求详情「代码风险」页签的运行历史，与设计类页签共用列表外观与分页。 */
+/** 需求详情「代码风险」弹窗：发起入口加上按需求汇总的运行历史，历史列表与设计类页签共用外观与分页。 */
 export function RequirementCodeRiskPanel({ workspace, canWrite }: {
   workspace: RequirementCodeRiskWorkspace
   canWrite: boolean
@@ -34,9 +35,25 @@ export function RequirementCodeRiskPanel({ workspace, canWrite }: {
     loading: workspace.runsFetching,
     onChange: (next: number, size: number) => { workspace.setPage(size === workspace.pageSize ? next : 1); workspace.setPageSize(size) },
   }
+  const hasRuns = workspace.total > 0
   return <>
     {workspace.personalLlm.dialog}
     {workspace.personalGitlab.dialog}
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-surface-divider)] px-4 py-3">
+      <span className="text-[12px] leading-[18px] text-[var(--app-surface-text-muted)]">
+        运行记录按当前需求汇总；发起时使用当前采用的材料整理。
+      </span>
+      {/* 禁用原因只在悬停或聚焦时提示，不在弹窗里常驻。 */}
+      <Tooltip title={workspace.runDisabledReason}>
+        <span>
+          <ProjectActionButton action="execute" operation={hasRuns ? 'run' : 'create'} type="primary"
+            loading={workspace.start.isPending} disabled={Boolean(workspace.runDisabledReason)}
+            onClick={() => workspace.start.mutate()}>
+            {hasRuns ? '重新分析' : '发起分析'}
+          </ProjectActionButton>
+        </span>
+      </Tooltip>
+    </div>
     {workspace.runsError ? <Alert showIcon type="error" title={getErrorMessage(workspace.runsError)} action={<Button onClick={workspace.refresh}>重试读取</Button>} /> : null}
     <section className="ai-requirement-design-history flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 rounded-none bg-transparent [&>.ant-empty]:flex [&>.ant-empty]:flex-1 [&>.ant-empty]:flex-col [&>.ant-empty]:items-center [&>.ant-empty]:justify-center [&_.ant-table-wrapper]:m-0 [&_.ant-table-wrapper]:min-h-0 [&_.ant-table-wrapper]:flex-1 [&_.ant-table-wrapper]:overflow-auto [&_.ant-table-wrapper]:p-4">
       {workspace.runsLoading ? <Spin /> : workspace.pagedRows.length ? <RunHistoryTable appearance="list" className="tp-list-table" rows={workspace.pagedRows} getRunId={row => row.runId} selectedRunId={workspace.selectedRunId}

@@ -68,6 +68,7 @@ class PerfSuiteService:
             yaml=case.yaml,
             created_at=case.created_at,
             updated_at=case.updated_at,
+            invalidated_at=case.invalidated_at,
         ).model_dump(by_alias=True, mode="json")
 
     def _summary(

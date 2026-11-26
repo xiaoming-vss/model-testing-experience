@@ -185,17 +185,13 @@
       "classification": "write",
       "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
     },
-    "services/perf_run.py": {
+    "services/perf_run_halt.py": {
       "classification": "read-write",
-      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+      "reason": "停止原语在同一事务内锁定并改写运行与队列任务，供单用例和测试集服务共用。"
     },
     "services/perf_suite.py": {
       "classification": "write",
       "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
-    "services/perf_suite_run.py": {
-      "classification": "read-write",
-      "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/perf_worker.py": {
       "classification": "write",

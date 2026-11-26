@@ -16,7 +16,7 @@ from testing_agent_ai_worker.config.models import (
     PiConfig,
     RepositoryProfileConfig,
 )
-from testing_agent_ai_worker.core.errors import safe_traceback
+from testing_agent_ai_worker.core.errors import SafeMessageError, safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -231,7 +231,7 @@ class RepositoryProfileExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         except Exception as exc:
-            if isinstance(exc, (ProfileWorkspaceError, ProfileContractError)):
+            if isinstance(exc, (ProfileWorkspaceError, ProfileContractError, SafeMessageError)):
                 LOGGER.warning(
                     "repository profile failed: task_id=%s attempt_id=%s error_type=%s",
                     task.task_id,
@@ -276,7 +276,7 @@ class RepositoryProfileExecutor(TaskExecutor):
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
-        if isinstance(exc, (ProfileWorkspaceError, ProfileContractError)):
+        if isinstance(exc, (ProfileWorkspaceError, ProfileContractError, SafeMessageError)):
             return str(exc)
         return "仓库画像准备或模型调用失败"
 

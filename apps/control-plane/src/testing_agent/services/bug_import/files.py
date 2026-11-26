@@ -1,11 +1,13 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
 from hashlib import sha256
+from html import unescape
 from re import I as _RE_I
 from re import finditer as _re_finditer
 from re import search as _re_search
 from re import sub as _re_sub
 from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy import select
 
@@ -17,6 +19,7 @@ from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.repositories.bug import BugRepository
 from testing_agent.services.bug_import.contracts import BugImportResult
+from testing_agent.services.bug_zentao_description import image_id
 from testing_agent.services.mcp_client import McpCallError, McpClient
 from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.zentao_mcp import ZentaoMcpConnection
@@ -46,27 +49,31 @@ class BugImportFiles:
         """拉取远端附件与正文图片（R44-R47），重写正文并按完成度写描述基线。
 
         只认远端附件清单内、属于本 Bug 的文件；正文里无法解析或拉取失败的
-        图片按 R41 记待处理，不冒充完整同步。
+        图片按 R41 记待处理，不冒充完整同步。图片引用与推送侧共用同一套识别。
         """
         steps = str(detail.get("steps") or "")
+        instance = access.base_url
         catalog = _attachment_index(detail.get("attachments"))
         targets: dict[int, dict] = dict(catalog)
-        image_refs = _image_refs(steps)
+        image_refs = _image_refs(steps, instance)
         for rid in image_refs:
             targets.setdefault(rid, catalog.get(rid, {}))
         file_map: dict[int, str] = {}
-        notes: list[str] = []
+        failures: list[str] = []
         pulled_count = 0
         for rid, meta in sorted(targets.items()):
             local_file_id, error = await self._pull_one(
                 client, access, user_id, project_id, bug_id, remote_bug_id, rid, operation_id, meta
             )
             if local_file_id is None:
-                notes.append(_file_label(rid, meta, error or "拉取失败"))
+                failures.append(_file_label(rid, meta, error or "拉取失败"))
                 continue
             file_map[rid] = local_file_id
             pulled_count += 1
-        rewritten, resolved = _rewrite_images(steps, file_map)
+        rewritten, resolved, foreign_images = _rewrite_images(steps, file_map, instance)
+        # 非禅道文件的图片按平台富文本规则剔除（R45）；说明始终保留，不随描述组完成而消失。
+        foreign_note = _foreign_image_note(foreign_images) if foreign_images else ""
+        notes = [*failures, *([foreign_note] if foreign_note else [])]
         clean = sanitize_rich_text(rewritten) if rewritten else ""
         bug = await self.repository.get_bug(bug_id)
         if bug is None:
@@ -118,12 +125,14 @@ class BugImportFiles:
             )
         )
         await self.repository.commit()
-        for note in notes:
+        for note in failures:
             result["pending"].append({"field": "description", "reason": note})
         if complete and "description" in {item["field"] for item in result["pending"]}:
             result["pending"] = [
-                item for item in result["pending"] if not item["field"] == "description"
+                item for item in result["pending"] if item["field"] != "description"
             ]
+        if foreign_note:
+            result["pending"].append({"field": "description", "reason": foreign_note})
 
     async def _pull_one(
         self,
@@ -246,17 +255,30 @@ class BugImportFiles:
 
 
 _IMG_TAG = r"<img\b[^>]*/?>"
-_FILE_REF = r"file-read-(\d+)"
 _SRC_ATTR = r"\ssrc=(\"[^\"]*\"|'[^']*')"
 
 
-def _image_refs(raw_html: str) -> list[int]:
+def _file_number(source: str, instance: str) -> int | None:
+    """禅道文件编号；不是禅道文件引用的图片来源返回 None（R44）。"""
+    identifier = image_id(source, instance) if source else None
+    if identifier and identifier.isdigit() and int(identifier) > 0:
+        return int(identifier)
+    return None
+
+
+def _tag_source(tag: str) -> str:
+    """img 标签的 src 原值，实体已解码；HTML 里 `&` 通常写作 `&amp;`。"""
+    found = _re_search(_SRC_ATTR, tag, _RE_I)
+    return unescape(found[1][1:-1]) if found else ""
+
+
+def _image_refs(raw_html: str, instance: str) -> list[int]:
     """正文图片引用的禅道文件编号，按出现顺序去重（R44）。"""
     refs: list[int] = []
     seen: set[int] = set()
-    for match in _re_finditer(_FILE_REF, raw_html or "", _RE_I):
-        rid = int(match.group(1))
-        if rid not in seen:
+    for match in _re_finditer(_IMG_TAG, raw_html or "", _RE_I):
+        rid = _file_number(_tag_source(match.group(0)), instance)
+        if rid is not None and rid not in seen:
             refs.append(rid)
             seen.add(rid)
     return refs
@@ -284,22 +306,48 @@ def _attachment_index(raw: object) -> dict[int, dict]:
     return index
 
 
-def _rewrite_images(raw_html: str, mapping: dict[int, str]) -> tuple[str, list[int]]:
-    """把已解析图片的禅道地址改写为平台 data-file-id；未解析图片剔除并返回清单。"""
+def _rewrite_images(
+    raw_html: str, file_map: dict[int, str], instance: str
+) -> tuple[str, list[int], list[str]]:
+    """把已拉取的禅道图片改写为平台 data-file-id，其余图片按平台富文本规则剔除。
+
+    拉取失败的图片已由文件管线记待处理；无法识别的图片来源原样返回，
+    由调用方说明（R41/R45），不静默丢弃。
+    """
     resolved: list[int] = []
+    foreign: list[str] = []
 
     def repl(match):
         tag = match.group(0)
-        found = _re_search(_FILE_REF, tag, _RE_I)
-        if found is None:
-            return ""
-        local = mapping.get(int(found.group(1)))
-        if local is None:
-            return ""
-        resolved.append(int(found.group(1)))
-        return _re_sub(_SRC_ATTR, f' data-file-id="{local}"', tag, count=1)
+        source = _tag_source(tag)
+        rid = _file_number(source, instance)
+        if rid is None:
+            foreign.append(source)
+        elif rid in file_map:
+            resolved.append(rid)
+            return _re_sub(_SRC_ATTR, f' data-file-id="{file_map[rid]}"', tag, count=1)
+        return ""
 
-    return _re_sub(_IMG_TAG, repl, raw_html or "", flags=_RE_I), resolved
+    return _re_sub(_IMG_TAG, repl, raw_html or "", flags=_RE_I), resolved, foreign
+
+
+def _foreign_image_note(sources: list[str]) -> str:
+    """说明被剔除的非禅道文件图片；只带主机与路径，不带查询串（R45）。"""
+    labels = list(dict.fromkeys(_image_label(source) for source in sources))
+    shown = "、".join(labels[:3])
+    return f"正文有 {len(sources)} 处图片不是禅道文件，未导入：{shown}" + (
+        " 等" if len(labels) > 3 else ""
+    )
+
+
+def _image_label(source: str) -> str:
+    try:
+        url = urlsplit(source)
+    except ValueError:
+        return "地址格式无效"
+    if url.scheme or url.hostname:
+        return f"{url.scheme}://{url.hostname}{url.path}"[:120]
+    return source[:120]
 
 
 def _file_label(remote_file_id: int, meta: dict, message: str) -> str:

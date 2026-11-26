@@ -228,6 +228,36 @@ def test_perf_suite_crud_and_case_order(api):
     assert listed.json()["data"]["items"][0]["caseCount"] == 2
 
 
+def test_suite_detail_reports_invalidated_cases(api):
+    _settings(api)
+    _, headers = account(api, "suite-invalidated")
+    project_id = project(api, headers, "suite-invalidated-project")
+    suite = _suite(api, headers, project_id)
+    first = _case(api, headers, project_id, suite["suiteId"], "first")
+    _case(api, headers, project_id, suite["suiteId"], "second")
+
+    invalidated = api.post(
+        f"/v1/projects/{project_id}/perf-cases/batch-invalidation",
+        headers=headers,
+        json={"caseIds": [first["caseId"]], "invalidated": True},
+    )
+    assert invalidated.status_code == 200, invalidated.text
+
+    cases = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).json()["data"]["cases"]
+    assert cases[0]["invalidatedAt"] is not None
+    assert cases[1]["invalidatedAt"] is None
+
+    restored = api.post(
+        f"/v1/projects/{project_id}/perf-cases/batch-invalidation",
+        headers=headers,
+        json={"caseIds": [first["caseId"]], "invalidated": False},
+    )
+    assert restored.status_code == 200, restored.text
+
+    cases = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).json()["data"]["cases"]
+    assert [case["invalidatedAt"] for case in cases] == [None, None]
+
+
 def test_suite_run_requires_sprint_from_same_project(api):
     headers, suite, _, _, environment_id, connection_id = _setup(api, "suite-sprint")
     path = f"/v1/perf-suites/{suite['suiteId']}/runs"
@@ -363,6 +393,18 @@ def test_perf_suite_stop_skips_remaining_cases(api):
     assert _pending_tasks(api, child_ids) == 0
 
 
+def _run_status(api, headers, run_id):
+    response = api.get(f"/v1/perf-runs/{run_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]["status"]
+
+
+def _suite_detail(api, headers, suite_run_id):
+    response = api.get(f"/v1/perf-suite-runs/{suite_run_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
 def test_stopping_child_run_cascades_to_suite(api):
     headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-child-stop")
     run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
@@ -372,11 +414,81 @@ def test_stopping_child_run_cascades_to_suite(api):
     assert stopped.status_code == 200, stopped.text
     assert stopped.json()["data"]["status"] == "canceled"
 
-    detail = api.get(f"/v1/perf-suite-runs/{run['suiteRunId']}", headers=headers).json()["data"]
+    detail = _suite_detail(api, headers, run["suiteRunId"])
     assert detail["status"] == "canceled"
     assert detail["outcome"] == "stopped"
     assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
     assert _pending_tasks(api, child_ids) == 0
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
+
+
+def test_stopping_an_unstarted_child_run_stops_the_running_one(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(
+        api, "suite-child-stop-running"
+    )
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    first_task = _claim(api)
+    _start(api, first_task["taskId"])
+    stopped = api.post(f"/v1/perf-runs/{child_ids[1]}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["data"]["status"] == "canceled"
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "stopping"
+    assert [item["status"] for item in detail["items"]] == ["running", "skipped"]
+    assert _run_status(api, headers, child_ids[0]) == "stopping"
+    assert _run_status(api, headers, child_ids[1]) == "canceled"
+
+    heartbeat = api.post(
+        f"/internal/perf-worker/tasks/{first_task['taskId']}/heartbeat",
+        headers=_WORKER_HEADERS,
+        json={"workerId": "worker-suite"},
+    )
+    assert heartbeat.status_code == 200, heartbeat.text
+    assert heartbeat.json()["stopRequested"] is True
+
+    _complete(api, first_task["taskId"], child_ids[0])
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert detail["outcome"] == "stopped"
+    assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
+    assert _pending_tasks(api, child_ids) == 0
+
+
+def test_stopping_an_unstarted_child_run_cancels_the_queued_one(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(
+        api, "suite-child-stop-queued"
+    )
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    stopped = api.post(f"/v1/perf-runs/{child_ids[1]}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["data"]["status"] == "canceled"
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert detail["outcome"] == "stopped"
+    assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
+    assert _pending_tasks(api, child_ids) == 0
+    assert _claim(api) is None
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
+
+
+def test_suite_stop_leaves_no_open_child_run(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-stop-open")
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    stopped = api.post(f"/v1/perf-suite-runs/{run['suiteRunId']}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
 
 
 def test_deleting_suite_cascades_cases_and_run_history(api):
