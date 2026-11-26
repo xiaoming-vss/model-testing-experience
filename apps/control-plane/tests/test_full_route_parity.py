@@ -129,10 +129,6 @@ def test_missing_go_routes_are_exposed():
         ("POST", "/v1/projects/{project_id}/skills"),
         ("DELETE", "/v1/projects/{project_id}/skills/{skill_space_id}"),
         ("GET", "/v1/projects/{project_id}/skills/{skill_space_id}/download"),
-        ("GET", "/v1/api-case-generate-tasks/{task_id}"),
-        ("GET", "/v1/function-case-generate-tasks/{task_id}"),
-        ("GET", "/v1/function-case-generate-task-runs/{run_id}"),
-        ("POST", "/v1/function-case-generate-task-runs/{run_id}/relation-analysis"),
         ("GET", "/v1/requirement-analysis-tasks/{task_id}"),
         ("POST", "/v1/projects/{project_id}/test-report-generate-runs"),
         ("GET", "/v1/projects/{project_id}/test-report-generate-runs"),
@@ -156,6 +152,11 @@ def test_missing_go_routes_are_exposed():
     }
     assert not {("GET", go_path(path)) for path in retired_discovery} & routes
     retired_legacy_task_routes = {
+        ("GET", "/v1/api-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/function-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/ui-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/function-case-generate-task-runs/{run_id}"),
+        ("POST", "/v1/function-case-generate-task-runs/{run_id}/relation-analysis"),
         ("GET", "/v1/projects/{project_id}/api-case-generate-tasks"),
         ("POST", "/v1/projects/{project_id}/api-case-generate-tasks"),
         ("PATCH", "/v1/api-case-generate-tasks/{task_id}"),

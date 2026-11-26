@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：control-plane maintainer
-- 最近复核：2026-11-19
+- 最近复核：2026-11-26
 - 复核周期：每季度
 - 适用范围：`apps/control-plane/src/testing_agent/services/`
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响分层规则时更新开发规则并通知审查者。
@@ -57,7 +57,6 @@ uv run --locked --extra dev pytest tests/test_architecture_layers.py -q
 | 文件 | 长期保留理由 | 重新评估条件 |
 | --- | --- | --- |
 | `services/stage_storage/chain_view.py` | 生成链全景由 stage/attempt/version/import 多表组装，属于读模型投影 | 生成链读模型整体收口时 |
-| `services/standalone_worker_authorization.py` | 队列身份、执行、尝试和阶段的多表授权判断属于独立执行授权策略 | 执行授权协议调整时 |
 | `services/stored_file_access.py` | 下载授权按文件用途跨需求、Bug、运行、技能等资源验证归属，属于访问策略 | 文件访问策略抽为独立领域服务时 |
 | `services/worker_domains/ui.py` | 读取与 UI 任务状态迁移、结果应用和计数更新交织 | worker 域拆分时 |
 | `services/zentao_bindings.py` | 绑定解析同时执行共享服务选择、子绑定校验和推送状态汇总 | 绑定选择规则进入 domain 时 |

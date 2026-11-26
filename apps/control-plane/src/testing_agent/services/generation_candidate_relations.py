@@ -16,8 +16,8 @@ from testing_agent.domain.request_identity import request_signature
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
 from testing_agent.repositories.generation_candidate_storage import candidate_stage_scope
-from testing_agent.repositories.standalone_execution import lock_or_create_stage
 from testing_agent.services.functional_requirement_source import (
     FUNCTIONAL_SOURCE_FORMAT,
     FUNCTIONAL_SOURCE_FORMAT_VERSION,

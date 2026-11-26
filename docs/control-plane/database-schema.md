@@ -86,7 +86,7 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 统一 AI 执行模型使用以下表：
 
 - `ai_generate_tasks`：任务定义、归属、创建者和来源配置。
-- `ai_executions`：一次用户或系统发起的执行身份、发起者和创建时间；独立多阶段执行另存聚合状态、当前阶段、检查点、初始快照和起止时间。
+- `ai_executions`：一次用户或系统发起的执行身份、发起者和创建时间。
 - `ai_generation_stages`：任务的稳定阶段，保存当前尝试和活动尝试；输入来源由候选内容的快照保存，不保存业务版本计数。
 - `ai_generation_attempts`：阶段内的生成、修订或人工编辑尝试，保存冻结输入、输出、错误和可选执行关联；人工编辑可以没有 Worker 队列。
 - `ai_generate_imports` 和 `ai_generate_import_requests`：正式资产导入的自包含来源回执及幂等请求，不依赖生成任务或尝试继续存在。

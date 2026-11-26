@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import builtins
 import json
-from hashlib import sha256
 from types import SimpleNamespace
 from typing import Any
 
@@ -11,17 +10,10 @@ import yaml
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
-    dynamic_error,
 )
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.api_generation_snapshot import project_api_generation_snapshot
-from testing_agent.repositories.api_interface import ApiInterfaceRepository
-from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
-from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.import_payload import import_items, parse_import_payload
-from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_test_case import ui_import_cases
 
 
@@ -50,161 +42,6 @@ def dump_task_summary(task: AiGenerateTask, latest_run_status: str = "") -> dict
     payload["interfaceCount"] = len(getattr(task, "interface_ids_json", None) or [])
     payload["latestRunStatus"] = latest_run_status
     return payload
-
-
-def dump_run(run: StandaloneRun) -> dict[str, Any]:
-    summary = run.result_summary_json or {}
-    if isinstance(summary, dict) and isinstance(summary.get("uiSemanticReview"), dict):
-        review = summary["uiSemanticReview"]
-        digest = sha256((run.result_yaml or "").encode("utf-8")).hexdigest()
-        if review.get("artifactSha256") != digest:
-            # Derive staleness without rewriting the historical report or attempt ledger.
-            summary = {**summary, "uiSemanticReview": {**review, "status": "stale"}}
-    return {
-        "createdAt": run.created_at,
-        "startedAt": run.started_at,
-        "finishedAt": run.finished_at,
-        "updatedAt": run.history_updated_at,
-        "hasResult": bool(run.result_yaml),
-        "availableArtifacts": [
-            key
-            for key in (
-                "requirementAnalysis",
-                "caseNames",
-                "caseRelations",
-                "firstStepOutput",
-                "apiExtraction",
-                "apiDesign",
-                "uiSurface",
-                "uiDesign",
-            )
-            if isinstance(run.config_json, dict) and run.config_json.get(key)
-        ],
-        "runId": run.run_id,
-        "taskId": run.task_id,
-        "requirementId": run.requirement_id,
-        "sprintId": run.sprint_id,
-        "projectId": run.project_id,
-        "triggerUserId": run.trigger_user_id,
-        "triggerType": run.trigger_type,
-        "status": run.status,
-        "workflowVersion": (run.snapshot_json or {}).get("workflowVersion", 2),
-        "checkpointEnabled": run.checkpoint_enabled,
-        "generationChainManaged": bool((run.snapshot_json or {}).get("generationChainManaged")),
-        "currentStage": run.current_stage,
-        "stageStatus": run.stage_status,
-        "snapshotJson": run.snapshot_json or {},
-        "errorMessage": run.error_message,
-        "configJson": run.config_json or {},
-        "resultYaml": run.result_yaml,
-        "resultSummaryJson": summary,
-        "reviewStatus": run.review_status,
-        "importStatus": run.import_status,
-        "importedTargets": run.imported_targets or [],
-        "importedAt": run.imported_at,
-        "reviewerUserId": run.reviewer_user_id,
-        "reviewedAt": run.reviewed_at,
-        "reviewComment": run.review_comment,
-        "durationMs": run.duration_ms,
-    }
-
-
-def requirement_document_download_url(requirement: Any, requirement_id: str) -> str:
-    document_download_url = str(getattr(requirement, "document_download_url", "") or "")
-    if document_download_url:
-        return document_download_url
-
-    resolved_requirement_id = str(
-        getattr(requirement, "requirement_id", "") or requirement_id or ""
-    )
-    if not resolved_requirement_id:
-        return ""
-    return f"/v1/requirements/{resolved_requirement_id}/download"
-
-
-def worker_requirement_document_download_url(worker_task_id: str) -> str:
-    return f"/internal/ai-worker/tasks/{worker_task_id}/requirement-document"
-
-
-async def _api_interface_snapshot(
-    repository: AiGenerateTaskRepository, task: AiGenerateTask
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    interface_ids = list(task.interface_ids_json or [])
-    if not interface_ids:
-        raise dynamic_error(ErrBadRequest, "API 用例生成任务尚未选择接口")
-    interfaces = await ApiInterfaceRepository(repository.session).list_by_ids(interface_ids)
-    software_repository_ids = sorted({interface.software_repository_id for interface in interfaces})
-    repositories = await SoftwareRepositoryRepository(repository.session).get_many(
-        software_repository_ids
-    )
-    return project_api_generation_snapshot(interface_ids, interfaces, repositories)
-
-
-async def build_generate_run_snapshot(
-    repository: AiGenerateTaskRepository,
-    kind: str,
-    task: AiGenerateTask,
-    run_id: str,
-    instruction: str | None = None,
-    worker_task_id: str | None = None,
-) -> dict[str, Any]:
-    source_content = task.source_content
-    document_type = ""
-    document_download_url = ""
-    uses_requirement_document = False
-    if kind == "function" and task.requirement_id:
-        raise dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段")
-    if kind == "requirement_analysis":
-        requirement = await repository.get_requirement(task.requirement_id)
-        if requirement is not None:
-            uses_requirement_document = True
-            document_type = normalize_document_type(str(requirement.document_type or "richtext"))
-            document_download_url = (
-                worker_requirement_document_download_url(worker_task_id)
-                if worker_task_id
-                else requirement_document_download_url(requirement, str(task.requirement_id or ""))
-            )
-            source_content = str(getattr(requirement, "document_content", "") or "")
-            if not source_content and (
-                document_type == "docx" or bool(getattr(requirement, "document_file_id", ""))
-            ):
-                source_content = document_download_url
-    snapshot: dict[str, Any] = {
-        "taskId": task.task_id,
-        "runId": run_id,
-        "taskType": task.task_type,
-        "name": task.name,
-        "projectId": task.project_id,
-        "sprintId": task.sprint_id,
-        "requirementId": task.requirement_id,
-        "sourceContent": source_content,
-        "instruction": task.instruction if instruction is None else instruction,
-    }
-    if uses_requirement_document:
-        snapshot["documentType"] = document_type
-        snapshot["documentDownloadUrl"] = document_download_url
-        snapshot["documentFilename"] = str(getattr(requirement, "document_filename", "") or "")
-        snapshot["documentFileId"] = str(getattr(requirement, "document_file_id", "") or "")
-        snapshot["documentHash"] = str(getattr(requirement, "document_hash", "") or "")
-    else:
-        snapshot["sourceType"] = task.source_type
-    if kind == "api":
-        software_repositories, interfaces = await _api_interface_snapshot(repository, task)
-        # API runs read the selected interfaces; no OpenAPI/Swagger body is frozen.
-        snapshot.pop("sourceContent", None)
-        snapshot["sourceType"] = "interface_library"
-        snapshot["interfaces"] = interfaces
-        snapshot["softwareRepositories"] = software_repositories
-        requirement = (
-            await repository.get_requirement(task.requirement_id) if task.requirement_id else None
-        )
-        if requirement is not None:
-            snapshot["requirement"] = {
-                "requirementId": requirement.requirement_id,
-                "name": requirement.name,
-                "instruction": snapshot["instruction"],
-            }
-    return snapshot
 
 
 def generated_payload(run: Any, content: str | None = None) -> dict[str, Any]:

@@ -2071,48 +2071,6 @@ def upgrade() -> None:
             comment="发起本次执行的用户业务标识",
         ),
         sa.Column(
-            "workflow_status",
-            sa.String(length=20),
-            nullable=True,
-            comment="独立多阶段执行的聚合状态；单阶段执行为空并由尝试确定",
-        ),
-        sa.Column(
-            "current_stage",
-            sa.String(length=40),
-            nullable=True,
-            comment="独立多阶段执行当前阶段；单阶段执行为空",
-        ),
-        sa.Column(
-            "checkpoint_enabled",
-            sa.Boolean(),
-            nullable=True,
-            comment="独立多阶段执行是否启用人工检查点；单阶段执行为空",
-        ),
-        sa.Column(
-            "trigger_type",
-            sa.String(length=30),
-            nullable=True,
-            comment="独立执行的触发方式；空值按历史默认方式处理",
-        ),
-        sa.Column(
-            "source_snapshot_json",
-            sa.JSON(none_as_null=True),
-            nullable=True,
-            comment="独立执行创建时冻结的业务输入快照 JSON",
-        ),
-        sa.Column(
-            "started_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="独立多阶段执行开始时间（UTC）；未知为空",
-        ),
-        sa.Column(
-            "finished_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="独立多阶段执行结束时间（UTC）；未结束为空",
-        ),
-        sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="执行创建时间（UTC）"
         ),
         sa.ForeignKeyConstraint(
@@ -2122,7 +2080,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("execution_id", name=op.f("pk_ai_executions")),
-        comment="AI 任务的一次执行身份及发起者；独立多阶段执行保存聚合状态和初始输入",
+        comment="AI 任务的一次执行身份及发起者",
     )
     op.create_index(
         "idx_ai_execution_task_created",

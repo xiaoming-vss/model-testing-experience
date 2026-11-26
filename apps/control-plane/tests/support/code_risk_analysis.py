@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from hashlib import sha256
 from types import SimpleNamespace
 
 import pytest
@@ -16,7 +17,6 @@ from testing_agent.repositories.requirement_software_repository import (
     RequirementRepositoryBinding,
 )
 from testing_agent.services import worker_task as worker_task_service_module
-from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.code_risk_analysis import (
     CodeRiskAnalysisService,
     parse_risk_report,
@@ -48,6 +48,49 @@ coverageGaps:
   - gap: "登录失败路径无用例覆盖"
     suggestion: "新增失败路径用例"
 """
+
+
+def dump_run(run) -> dict:
+    summary = run.result_summary_json or {}
+    if isinstance(summary, dict) and isinstance(summary.get("uiSemanticReview"), dict):
+        review = summary["uiSemanticReview"]
+        digest = sha256((run.result_yaml or "").encode("utf-8")).hexdigest()
+        if review.get("artifactSha256") != digest:
+            summary = {**summary, "uiSemanticReview": {**review, "status": "stale"}}
+    return {
+        "createdAt": run.created_at,
+        "startedAt": run.started_at,
+        "finishedAt": run.finished_at,
+        "updatedAt": run.history_updated_at,
+        "hasResult": bool(run.result_yaml),
+        "availableArtifacts": [],
+        "runId": run.run_id,
+        "taskId": run.task_id,
+        "requirementId": run.requirement_id,
+        "sprintId": run.sprint_id,
+        "projectId": run.project_id,
+        "triggerUserId": run.trigger_user_id,
+        "triggerType": run.trigger_type,
+        "status": run.status,
+        "workflowVersion": (run.snapshot_json or {}).get("workflowVersion", 2),
+        "checkpointEnabled": run.checkpoint_enabled,
+        "generationChainManaged": bool((run.snapshot_json or {}).get("generationChainManaged")),
+        "currentStage": run.current_stage,
+        "stageStatus": run.stage_status,
+        "snapshotJson": run.snapshot_json or {},
+        "errorMessage": run.error_message,
+        "configJson": run.config_json or {},
+        "resultYaml": run.result_yaml,
+        "resultSummaryJson": summary,
+        "reviewStatus": run.review_status,
+        "importStatus": run.import_status,
+        "importedTargets": run.imported_targets or [],
+        "importedAt": run.imported_at,
+        "reviewerUserId": run.reviewer_user_id,
+        "reviewedAt": run.reviewed_at,
+        "reviewComment": run.review_comment,
+        "durationMs": run.duration_ms,
+    }
 
 
 def dump_code_risk_analysis_run(run):

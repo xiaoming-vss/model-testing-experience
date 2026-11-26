@@ -129,7 +129,7 @@ class DirectStageStorage:
                 )
                 .with_for_update()
             )
-            if execution is None or execution.workflow_status is not None:
+            if execution is None:
                 raise ErrBadRequest()
         else:
             execution = AiExecution(

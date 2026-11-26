@@ -338,7 +338,7 @@ class TestOrderGraphService:
             task = build_graph_task(order, user_id)
             self.repository.add(task)
             await self.repository.session.flush()
-        stage = await lock_or_create_stage(self.repository.session, task.task_id)
+        stage, _ = await lock_or_create_stage(self.repository.session, task.task_id)
         if body.get("request_id") is not None:
             replay = await find_replay(
                 self.repository.session,

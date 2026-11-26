@@ -17,7 +17,6 @@ from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRe
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.ai_report import TestReportWorkflow
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
-from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
 from testing_agent.services.ai_task_access import GenerationImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
@@ -98,7 +97,6 @@ def get_generation_reports(
         repository=access.repository,
         sprint_daily_metrics_service=metrics,
         ensure_project_access=access.ensure_project_access,
-        owned_run=access.owned_run,
     )
 
 
@@ -146,15 +144,6 @@ def get_ui_worker_artifact_service(
     from testing_agent.services.ui_worker_artifacts import UiWorkerArtifactService
 
     return UiWorkerArtifactService(tasks, files)
-
-
-def get_generation_stages(
-    access: GenerationAccess = Depends(get_generation_access),
-) -> GenerationStageWorkflow:
-    return GenerationStageWorkflow(
-        repository=access.repository,
-        owned_run=access.owned_run,
-    )
 
 
 def get_ui_generation_sources(

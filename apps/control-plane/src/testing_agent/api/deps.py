@@ -28,7 +28,6 @@ from testing_agent.api.deps_generation import (
     get_generation_metrics,
     get_generation_queries,
     get_generation_reports,
-    get_generation_stages,
     get_generation_task_commands,
     get_requirement_design_service,
     get_ui_generation_sources,
@@ -164,7 +163,6 @@ __all__ = [
     "get_requirement_design_service",
     "get_worker_task_service",
     "get_ui_worker_artifact_service",
-    "get_generation_stages",
     "get_ui_generation_sources",
     "get_generation_chain",
 ]

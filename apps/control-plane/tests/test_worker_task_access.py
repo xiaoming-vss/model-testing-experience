@@ -36,19 +36,14 @@ async def test_ai_task_access_always_checks_current_authority(monkeypatch, outco
         authorize.assert_awaited_once_with(task)
 
 
-@pytest.mark.parametrize("standalone", [True, False])
 @pytest.mark.parametrize("error", [ErrBadRequest, ErrForbidden])
-async def test_ai_claim_suppresses_only_forbidden_errors(monkeypatch, standalone, error):
+async def test_ai_claim_suppresses_only_forbidden_errors(monkeypatch, error):
     task = SimpleNamespace(task_id="task")
     repository = SimpleNamespace(session=object(), claim_pending=AsyncMock(return_value=task))
     service = WorkerTaskService(repository)
-    first = SimpleNamespace(
-        is_standalone=AsyncMock(return_value=standalone), claim=AsyncMock(side_effect=error())
-    )
     direct = SimpleNamespace(
         is_direct=AsyncMock(return_value=True), claim=AsyncMock(side_effect=error())
     )
-    monkeypatch.setattr(module, "StandaloneWorkerService", lambda _: first)
     monkeypatch.setattr(module, "DirectStageWorkerService", lambda _: direct)
     if error is ErrForbidden:
         assert await service.claim("ai", WorkerClaimRequest(worker_id="worker")) is None

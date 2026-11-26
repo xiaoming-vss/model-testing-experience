@@ -13,11 +13,11 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.generation_candidates import RequirementGenerationChain
+from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
 from testing_agent.repositories.generation_current_chain import (
     bind_current_chain,
     ensure_empty_slot,
 )
-from testing_agent.repositories.standalone_execution import lock_or_create_stage
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.generation_application_scope import GenerationApplicationScope
 from testing_agent.services.generation_chain import GenerationChainService

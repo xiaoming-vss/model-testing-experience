@@ -224,15 +224,7 @@ async def revoke_executions(
                     continue
                 if connection_id and connection_id not in identity.connection_ids:
                     continue
-                from testing_agent.services.standalone_worker_service import StandaloneWorkerService
-
-                standalone = StandaloneWorkerService(session)
-                if await standalone.is_standalone(task):
-                    await standalone.retire(
-                        task, "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
-                    )
-                else:
-                    await direct.retire_authorization(task)
+                await direct.retire_authorization(task)
             # Unknown legacy AI entries are handled by the coordinated cutover,
             # and must never fall back to the retired ledger during revocation.
             continue

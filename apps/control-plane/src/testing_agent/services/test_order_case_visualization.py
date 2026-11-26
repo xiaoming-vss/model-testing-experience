@@ -220,7 +220,7 @@ class TestOrderCaseVisualizationService:
             )
             if replay:
                 return {"entryId": entry_id, "disposition": "queued", "runId": replay.execution_id}
-            stage = await lock_or_create_stage(self.session, task.task_id)
+            stage, _ = await lock_or_create_stage(self.session, task.task_id)
             if stage.active_attempt_id:
                 active = await self.repository.attempt(stage.active_attempt_id)
                 return {

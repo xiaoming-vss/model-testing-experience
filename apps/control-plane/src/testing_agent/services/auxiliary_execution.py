@@ -56,7 +56,7 @@ async def dispatch_auxiliary_execution(
             raise ErrBadRequest()
     frozen_source["taskId"] = task.task_id
     frozen_source["runId"] = execution_id
-    stage = await lock_or_create_stage(session, task.task_id)
+    stage, _ = await lock_or_create_stage(session, task.task_id)
     input_snapshot = {
         "source": frozen_source,
         "config": deepcopy(config),

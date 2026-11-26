@@ -6,13 +6,6 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.project_access import ProjectAction
-from testing_agent.services.standalone_run import StandaloneRun
-
-
-class OwnedRun(Protocol):
-    async def __call__(
-        self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> StandaloneRun: ...
 
 
 class RequireProjectAccess(Protocol):
@@ -29,10 +22,6 @@ class RequireCollectionAccess(Protocol):
 
 class CandidateImportContext(Protocol):
     repository: AiGenerateTaskRepository
-
-    async def owned_run(
-        self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> StandaloneRun: ...
 
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
@@ -70,5 +59,4 @@ class GenerationImportContext:
         access: GenerationAccess,
     ) -> None:
         self.repository = repository
-        self.owned_run = access.owned_run
         self.ensure_requirement_access = access.ensure_requirement_access

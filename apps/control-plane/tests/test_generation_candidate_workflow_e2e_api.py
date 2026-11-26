@@ -426,12 +426,6 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
     )
     assert imported_run["reviewStatus"] == "approved" and imported_run["importStatus"] == "imported"
     assert imported_run["importedTargets"]
-    detail = api.get(
-        f"/v1/function-case-generate-task-runs/{cases['currentAttemptId']}", headers=headers
-    )
-    assert detail.status_code == 200, detail.text
-    assert detail.json()["data"]["reviewStatus"] == "approved"
-    assert detail.json()["data"]["importStatus"] == "imported"
     replay = api.post(url + "/import", headers=headers, json=body)
     assert replay.status_code == 200 and replay.json()["data"]["replayed"]
     chain = api.get(bases["function"], headers=headers)

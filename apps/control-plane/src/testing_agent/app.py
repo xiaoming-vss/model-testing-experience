@@ -19,7 +19,6 @@ from testing_agent.core.http_diagnostics import RequestDiagnosticsMiddleware
 from testing_agent.core.import_http import ImportEnvelopeMiddleware
 from testing_agent.routers.admin_users import router as admin_users_router
 from testing_agent.routers.ai_worker import router as ai_worker_router
-from testing_agent.routers.api_ai_tasks import router as api_ai_tasks_router
 from testing_agent.routers.api_assets import router as api_assets_router
 from testing_agent.routers.api_case import router as api_case_router
 from testing_agent.routers.api_runs import router as api_runs_router
@@ -30,7 +29,6 @@ from testing_agent.routers.bugs import router as bugs_router
 from testing_agent.routers.case_visualization import router as case_visualization_router
 from testing_agent.routers.code_risk_analysis_tasks import router as code_risk_analysis_tasks_router
 from testing_agent.routers.files import router as files_router
-from testing_agent.routers.function_ai_tasks import router as function_ai_tasks_router
 from testing_agent.routers.function_tests import router as function_tests_router
 from testing_agent.routers.gitlab_integrations import router as gitlab_integrations_router
 from testing_agent.routers.integration_worker import router as integration_worker_router
@@ -61,7 +59,6 @@ from testing_agent.routers.test_orders import router as test_orders_router
 from testing_agent.routers.test_report_ai_tasks import router as test_report_ai_tasks_router
 from testing_agent.routers.test_run_availability import router as test_run_availability_router
 from testing_agent.routers.test_run_events import router as test_run_events_router
-from testing_agent.routers.ui_ai_tasks import router as ui_ai_tasks_router
 from testing_agent.routers.ui_run_variables import router as ui_run_variables_router
 from testing_agent.routers.ui_runs import router as ui_runs_router
 from testing_agent.routers.ui_tests import router as ui_tests_router
@@ -170,7 +167,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(api_assets_router, tags=["API Assets"])
     v1.include_router(api_case_router, tags=["API Tests"])
     v1.include_router(ui_tests_router, tags=["UI Tests"])
-    v1.include_router(ui_ai_tasks_router, tags=["UI AI Tasks"])
     v1.include_router(zentao_integrations_router, tags=["Zentao Integrations"])
     v1.include_router(gitlab_integrations_router, tags=["GitLab Integrations"])
     v1.include_router(llm_integrations_router, tags=["LLM Integrations"])
@@ -182,8 +178,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(project_skills_router, tags=["Project Skills"])
     v1.include_router(sprint_metrics_router, tags=["Sprint Metrics"])
     v1.include_router(sprint_code_overview_router, tags=["Sprint Metrics"])
-    v1.include_router(api_ai_tasks_router, tags=["API AI Tasks"])
-    v1.include_router(function_ai_tasks_router, tags=["Function AI Tasks"])
     v1.include_router(requirement_analysis_runs_router, tags=["Requirement Analysis Tasks"])
     v1.include_router(code_risk_analysis_tasks_router, tags=["Code Risk Analysis Tasks"])
     v1.include_router(repository_profile_tasks_router, tags=["Repository Profile Tasks"])

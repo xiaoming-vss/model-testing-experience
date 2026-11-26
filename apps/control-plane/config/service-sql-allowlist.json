@@ -7,10 +7,6 @@
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/ai_task_scope.py": {
-      "classification": "locking-read",
-      "reason": "读取使用行锁并与调用方事务绑定，保留在 service。"
-    },
     "services/api_collection.py": {
       "classification": "write",
       "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
@@ -285,47 +281,6 @@
     "services/stage_storage/worker_service.py": {
       "classification": "read-write",
       "reason": "Worker service for direct stage attempts；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_candidate.py": {
-      "classification": "read-write",
-      "reason": "Execution-scoped edits and review for independent generation candidates；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_dispatch.py": {
-      "classification": "read-write",
-      "reason": "Append a checkpoint continuation, retry or revision to one execution；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_execution.py": {
-      "classification": "read-write",
-      "reason": "Start independent generation workflows without sharing stage state across runs；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_execution_delete.py": {
-      "classification": "read-write",
-      "reason": "Delete a terminal independent execution while retaining formal assets and files；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_execution_view.py": {
-      "classification": "types-only",
-      "reason": "Project a single independent execution without mixing other runs' artifacts；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
-    },
-    "services/standalone_history.py": {
-      "classification": "types-only",
-      "reason": "Project independent execution history into existing paginated responses；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
-    },
-    "services/standalone_worker_authorization.py": {
-      "classification": "read-only",
-      "migration": "long-term-exception",
-      "reason": "包含队列身份、执行、尝试和阶段的多表授权判断，属于独立执行授权策略；保留在 service 以便与后续加锁复核保持同一协议。"
-    },
-    "services/standalone_worker_events.py": {
-      "classification": "read-write",
-      "reason": "Validate and apply independent workflow Worker results in one transaction；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_worker_service.py": {
-      "classification": "read-write",
-      "reason": "Worker lease operations for an independent multi-stage dispatch；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/standalone_worker_transitions.py": {
-      "classification": "read-write",
-      "reason": "Execution-scoped state transitions for independent AI Worker dispatches；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/storage_backup.py": {
       "classification": "write",

@@ -23,6 +23,7 @@ from support.code_risk_analysis import (  # noqa: F401
     FakeSession,
     approved_understanding,
     dump_code_risk_analysis_run,
+    dump_run,
     make_run,
     real_risk_service,
     worker_contract_authority,
@@ -42,7 +43,6 @@ from testing_agent.core.errors import AppError
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker_task as worker_task_service_module
-from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.code_risk_analysis import (
     parse_risk_report,
 )

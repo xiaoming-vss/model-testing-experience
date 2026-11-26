@@ -4,7 +4,6 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, cast
 
-from testing_agent.core.enums import RUN_ACTIVE_STATUSES
 from testing_agent.core.errors import (
     ErrAiGenerateTaskRunRunning,
     ErrBadRequest,
@@ -19,11 +18,11 @@ from testing_agent.domain.generation_chain import stage_names
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_interface import ApiInterfaceRepository
+from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
 from testing_agent.repositories.generation_current_chain import (
     bind_current_chain,
     ensure_empty_slot,
 )
-from testing_agent.repositories.standalone_execution import lock_or_create_stage
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.ai_task_output import (
     dump_task,
@@ -75,17 +74,6 @@ class GenerationTaskCommands:
             if sprint is None or sprint.project_id != project_id:
                 raise ErrNotFound()
             sprint_id = requirement.sprint_id
-        if kind == "test_report":
-            if not sprint_id:
-                raise ErrBadRequest()
-            sprint = await self.repository.get_sprint(sprint_id)
-            if sprint is None or sprint.project_id != project_id:
-                raise ErrNotFound()
-            existing = await self.repository.get_active_task_by_project_sprint_type(
-                project_id, sprint_id, task_type_for(kind)
-            )
-            if existing is not None:
-                raise ErrBadRequest()
         if sprint_id:
             await self.access.ensure_sprint_access(user_id, sprint_id, action="write")
         if requirement_id:
@@ -110,11 +98,7 @@ class GenerationTaskCommands:
                         else (
                             f"{requirement.name} 仓库画像"
                             if kind == "repository_profile" and requirement is not None
-                            else (
-                                "test-report-generate-task"
-                                if kind == "test_report"
-                                else f"{kind}-case-generate-task"
-                            )
+                            else f"{kind}-case-generate-task"
                         )
                     )
                 )
@@ -131,11 +115,7 @@ class GenerationTaskCommands:
                 else requirement.document_type
                 if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
                 and requirement is not None
-                else (
-                    "daily_metrics"
-                    if kind == "test_report"
-                    else body.get("sourceType") or body.get("source_type") or "manual"
-                )
+                else body.get("sourceType") or body.get("source_type") or "manual"
             ),
             source_content=str(
                 ""
@@ -277,44 +257,6 @@ class GenerationTaskCommands:
             )
             if active:
                 raise ErrAiGenerateTaskRunRunning()
-        if kind in {"function", "api", "ui"} and not task.requirement_id:
-            from sqlalchemy import select
-
-            from testing_agent.models.ai_execution import AiExecution
-
-            session = self.repository.session
-            expected_scope = (
-                task.project_id,
-                task.sprint_id,
-                task.requirement_id,
-                task.order_id,
-                task.task_type,
-            )
-            current = await self.repository.get_task_for_update(task_id)
-            if (
-                current is None
-                or (
-                    current.project_id,
-                    current.sprint_id,
-                    current.requirement_id,
-                    current.order_id,
-                    current.task_type,
-                )
-                != expected_scope
-            ):
-                raise ErrNotFound()
-            await self.access.validate_task_scope(current)
-            active = await session.scalar(
-                select(AiExecution.execution_id)
-                .where(
-                    AiExecution.task_id == task_id,
-                    AiExecution.workflow_status.in_(RUN_ACTIVE_STATUSES),
-                )
-                .limit(1)
-                .with_for_update()
-            )
-            if active:
-                raise ErrAiGenerateTaskRunRunning()
         await self.deletion.delete(self.repository.session, task)
         await self.repository.commit()
         return {}
@@ -358,40 +300,4 @@ class GenerationTaskCommands:
                 await self.repository.commit()
                 return {}
             raise ErrNotFound()
-        if kind in {"function", "api", "ui"}:
-            from testing_agent.repositories.standalone_execution import workflow_task_id
-            from testing_agent.services.standalone_execution_delete import (
-                delete_standalone_execution,
-            )
-
-            session = self.repository.session
-            task_id = await workflow_task_id(session, run_id)
-            if task_id is None:
-                raise ErrNotFound()
-            await self.repository.commit()
-            authorized = await self.access.owned_task(user_id, task_id, kind, action="write")
-            standalone_scope = (
-                authorized.project_id,
-                authorized.sprint_id,
-                authorized.requirement_id,
-                authorized.order_id,
-                authorized.task_type,
-            )
-            current = await self.repository.get_task_for_update(task_id)
-            if (
-                current is None
-                or (
-                    current.project_id,
-                    current.sprint_id,
-                    current.requirement_id,
-                    current.order_id,
-                    current.task_type,
-                )
-                != standalone_scope
-            ):
-                raise ErrNotFound()
-            await self.access.validate_task_scope(current)
-            await delete_standalone_execution(session, task_id=task_id, execution_id=run_id)
-            await self.repository.commit()
-            return {}
         raise ErrNotFound()

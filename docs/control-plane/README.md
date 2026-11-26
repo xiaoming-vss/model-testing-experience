@@ -61,13 +61,12 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `ai_task_commands.py` / GenerationTaskCommands | 任务创建、修改、删除与运行删除；业务命令保留各自提交点 |
 | `repository_profile.py` / RepositoryProfileService | 冻结当前采用的需求材料与全部仓库工作分支 HEAD，组装画像快照；不解析基线、不生成 diff |
 | `ai_run_launcher.py` / GenerationRunLauncher | 准备快照、重查权限、发起运行；阶段派发使用 `stage_storage/dispatch.py` 的显式写入 |
-| `ai_stage_workflow.py` / GenerationStageWorkflow | 阶段保存、审核、修订、重试和图谱派发 |
 | `generation_candidate_commands.py` / GenerationCandidateCommands | 候选编辑、派生、优化与处置；不创建正式资产 |
 | `generation_chain.py` / GenerationChainService | 需求生成链全景与阶段视图；读取候选和当前采用内容，不导入正式资产 |
 | `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
 | `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |
 | `function_generate_import.py`、`ui_generate_import.py` | 功能/UI 候选正式导入；各入口负责原有提交与回滚语义 |
-| `ai_task_access.py` / GenerationImportContext | 仅向正式导入提供仓储、运行访问与需求权限能力；不承担任务管理 |
+| `ai_task_access.py` / GenerationImportContext | 仅向正式导入提供仓储与需求权限能力；不承担任务管理 |
 | `domain/ai_tasks.py`、`ai_task_output.py` | 纯任务规则与常量、产物解析及快照/响应序列化；调用方直接引用实际归属 |
 | `stage_storage/dispatch.py` | 协调 stage、attempt、queue 的显式写入；flush，不提交调用者事务 |
 
@@ -100,7 +99,7 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 | 职责与公共入口 | 隐藏的实现及调用约束 |
 | --- | --- |
 | `services/auth_session.py` 的 SessionService、本地/LDAP 登录模块 | 验证当前账号和会话；项目授权仍使用 `project_access` 与 `domain/project_policy.py`，资源归属不能由角色替代 |
-| `services/stage_storage/dispatch.py` 的 `dispatch_stage_attempt` | 显式接收阶段派发参数；查询投影在 `repositories/standalone_execution.py`，普通 repository.commit 不推进执行状态 |
+| `services/stage_storage/dispatch.py` 的 `dispatch_stage_attempt` | 显式接收阶段派发参数；查询投影在 `repositories/auxiliary_execution.py`，普通 repository.commit 不推进执行状态 |
 | `repositories/worker_task.py` 的 execution_context | 返回 `domain/worker_context.py` 的明确上下文；不向 WorkerTask ORM 临时附加业务字段 |
 | `services/worker_task.py` 的 ai_worker_task | 查找任务并检查当前执行授权；文档及技能入口复用它，调用方仍检查所需租约/资源条件 |
 | `services/worker_domains/` | AI、API、UI 各自维护快照和结果规则；公共协调层管理领取、租约与事件身份，集成写入使用独立协议 |
@@ -154,7 +153,7 @@ AI 任务与资源绑定的普通读取不使用 `FOR UPDATE`；修改时通过�
 
 UI 套件运行历史 `GET /v1/ui-test-suites/{suite_id}/runs` 与 API 集合运行历史 `GET /v1/api-collections/{collection_id}/runs` 支持 `page` / `pageSize`（默认 1 / 20，最大 100），返回 `items` 和筛选后的 `total`，按 `created_at`、数据库 ID 倒序。唯一基线已包含 `api_collection_runs` 的 `(collection_id, created_at, id)` 复合索引；`ui_test_suite_runs` 复用已有的 `(suite_id, created_at, id)` 索引。
 
-`repositories/standalone_history.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
+`repositories/auxiliary_execution.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
 
 代码风险建 run 时按需求关联软件仓库上的基线与工作分支，通过当前执行人的个人连接解析仓库克隆地址和两侧 commit；解析结果固化进快照，任一仓库失败整次 run 创建失败。需求没有关联软件仓库，或关联缺少分支/基线、基线与工作分支相同时直接拒绝，不在运行期回退历史推断。
 

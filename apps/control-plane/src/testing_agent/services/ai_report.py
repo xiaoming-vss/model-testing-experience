@@ -15,7 +15,7 @@ from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.auxiliary_execution import detail_row, lock_or_create_stage
-from testing_agent.services.ai_task_access import OwnedRun, RequireProjectAccess
+from testing_agent.services.ai_task_access import RequireProjectAccess
 from testing_agent.services.ai_task_output import normalize_config_json
 from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
 from testing_agent.services.auxiliary_execution_view import auxiliary_detail
@@ -54,7 +54,6 @@ class TestReportWorkflow:
         repository: AiGenerateTaskRepository,
         sprint_daily_metrics_service: SprintDailyMetricsService | None,
         ensure_project_access: RequireProjectAccess,
-        owned_run: OwnedRun,
         id_factory: Callable[[], str] = new_id,
     ):
         self.repository = repository
@@ -135,7 +134,7 @@ class TestReportWorkflow:
                 "triggerType": str(body.get("triggerType") or "manual"),
             },
         )
-        stage = await lock_or_create_stage(self.repository.session, task.task_id)
+        stage, _ = await lock_or_create_stage(self.repository.session, task.task_id)
         if body.get("requestId") is not None:
             replay = await find_replay(
                 self.repository.session,
