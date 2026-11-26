@@ -67,6 +67,7 @@ scripts/build_images.sh control-plane studio
 | 仅静态检查 | `uv run --locked --extra dev python scripts/check.py --static-only` | — |
 | 全量测试（串行） | `uv run --locked --extra dev pytest -q` | 全量约 28 分钟；本仓库约定不与其它 pytest 并发执行 |
 | 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
+| 元素库回归 | `uv run --locked --extra dev pytest tests/test_ui_element_library.py -q` | 校验项目权限、分组、定位模板与版本冲突 |
 | Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
 | Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
 | mypy | `uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>` | — |

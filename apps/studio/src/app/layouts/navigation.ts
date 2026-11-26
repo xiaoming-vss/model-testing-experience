@@ -10,20 +10,24 @@ export function testingTabForLocation(pathname: string, search: string) {
             ? resolveTestingTab(new URLSearchParams(search).get('tab')) : null
 }
 
-export type AssetLibraryTab = 'cases' | 'interfaces' | 'repositories'
+export type AssetLibraryTab = 'cases' | 'interfaces' | 'elements' | 'repositories'
 
 export const ASSET_LIBRARY_TABS = [
   { key: 'cases', label: '用例库' },
   { key: 'interfaces', label: '接口库' },
+  { key: 'elements', label: '元素库' },
   { key: 'repositories', label: '软件仓库' },
 ] as const satisfies readonly { key: AssetLibraryTab; label: string }[]
+
+export function resolveAssetLibraryTab(value: string | null): AssetLibraryTab {
+  if (value === 'apps') return 'repositories'
+  return ASSET_LIBRARY_TABS.find(tab => tab.key === value)?.key ?? 'cases'
+}
 
 export function assetTabForLocation(pathname: string, search: string): AssetLibraryTab | null {
   if (!pathname.startsWith('/asset-library')) return null
   if (pathname.startsWith('/asset-library/interfaces')) return 'interfaces'
-  const tab = new URLSearchParams(search).get('tab')
-  if (tab === 'apps') return 'repositories'
-  return tab === 'interfaces' || tab === 'repositories' ? tab : 'cases'
+  return resolveAssetLibraryTab(new URLSearchParams(search).get('tab'))
 }
 
 // Order follows the visible top-level navigation; null denotes an unrelated page.

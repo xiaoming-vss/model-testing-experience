@@ -23,6 +23,8 @@
 
 [项目级接口库 ADR](adr/0012-project-interface-library.md)
 
+[元素库接口](ui-element-library.md)
+
 [本地开发库性能运行字段升级记录](records/2026-11-20-perf-run-local-db-upgrade.md)
 
 ## 运行时与依赖

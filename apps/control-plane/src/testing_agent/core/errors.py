@@ -176,6 +176,13 @@ ErrMonitoringConnectionNameAlreadyUse = AppError(3907, "该监控接入名称已
 ErrPerfDataFileMissing = AppError(3908, "性能用例引用的数据文件不存在", HTTPStatus.BAD_REQUEST)
 ErrPerfCaseYamlInvalid = AppError(3909, "性能用例 YAML 内容不合法", HTTPStatus.BAD_REQUEST)
 ErrMonitoringConnectionDisabled = AppError(3910, "监控接入已停用", HTTPStatus.CONFLICT)
+ErrUiElementGroupDuplicate = AppError(3951, "该路由已有页面分组", HTTPStatus.CONFLICT)
+ErrUiElementGroupNotEmpty = AppError(3952, "请先移除该分组中的元素", HTTPStatus.CONFLICT)
+ErrUiElementDuplicate = AppError(3953, "该分组已有相同作用范围和定位的元素", HTTPStatus.CONFLICT)
+ErrUiElementVersionConflict = AppError(3954, "元素已被修改，请刷新后重试", HTTPStatus.CONFLICT)
+ErrSoftwareRepositoryHasUiElementGroups = AppError(
+    3955, "请先移除该软件仓库的元素库分组", HTTPStatus.CONFLICT
+)
 
 
 def app_error_payload(error: AppError, data: Any | None = None) -> dict[str, Any]:

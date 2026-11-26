@@ -69,6 +69,7 @@ from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
+from testing_agent.models.ui_element import UiElement, UiElementGroup
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
@@ -77,6 +78,8 @@ from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
+    "UiElement",
+    "UiElementGroup",
     "AiGenerationCandidate",
     "AiGenerationReviewReceipt",
     "AiGenerationStageContent",

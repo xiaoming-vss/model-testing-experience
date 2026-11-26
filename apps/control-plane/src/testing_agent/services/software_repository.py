@@ -10,6 +10,7 @@ from testing_agent.core.errors import (
     ErrBadRequest,
     ErrSoftwareRepositoryHasInterfaces,
     ErrSoftwareRepositoryHasRequirements,
+    ErrSoftwareRepositoryHasUiElementGroups,
     ErrSoftwareRepositoryNameAlreadyUse,
     ErrSoftwareRepositoryNotFound,
     ErrSoftwareRepositoryRepositoryInvalid,
@@ -164,6 +165,14 @@ class SoftwareRepositoryService:
             repository = await self._repository_values(
                 user_id, software_repository.project_id, body.repository
             )
+            identity_changed = any(
+                getattr(software_repository, key) != repository[key]
+                for key in ("repository_project_id", "repository_instance_key")
+            )
+            if identity_changed and await self.repository.has_ui_element_groups(
+                software_repository_id
+            ):
+                raise ErrSoftwareRepositoryHasUiElementGroups()
             repository_changed = any(
                 getattr(software_repository, key) != value for key, value in repository.items()
             )
@@ -196,6 +205,8 @@ class SoftwareRepositoryService:
             raise ErrSoftwareRepositoryHasInterfaces()
         if await self.requirements.count_for_repository(software_repository_id) > 0:
             raise ErrSoftwareRepositoryHasRequirements()
+        if await self.repository.has_ui_element_groups(software_repository_id):
+            raise ErrSoftwareRepositoryHasUiElementGroups()
         await self.deletion.delete(self.repository.session, software_repository)
         await self.repository.commit()
         return {}

@@ -4,10 +4,20 @@ from sqlalchemy import func, select
 
 from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.software_repository import SoftwareRepository
+from testing_agent.models.ui_element import UiElementGroup
 from testing_agent.repositories.base import BaseRepository
 
 
 class SoftwareRepositoryRepository(BaseRepository):
+    async def has_ui_element_groups(self, software_repository_id: str) -> bool:
+        group_id = await self.session.scalar(
+            select(UiElementGroup.id)
+            .where(UiElementGroup.software_repository_id == software_repository_id)
+            .limit(1)
+            .with_for_update()
+        )
+        return group_id is not None
+
     async def get(self, software_repository_id: str) -> SoftwareRepository | None:
         return await self.session.scalar(
             select(SoftwareRepository).where(

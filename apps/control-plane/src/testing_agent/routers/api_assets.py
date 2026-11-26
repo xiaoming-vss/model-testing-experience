@@ -23,6 +23,16 @@ from testing_agent.handlers.software_repository import (
     list_software_repositories,
     update_software_repository,
 )
+from testing_agent.handlers.ui_element import (
+    create_ui_element,
+    create_ui_element_group,
+    delete_ui_element,
+    delete_ui_element_group,
+    get_ui_element,
+    list_ui_element_groups,
+    list_ui_elements,
+    update_ui_element,
+)
 from testing_agent.schemas.api_interface import (
     ApiInterfaceGroupMutationResponse,
     ApiInterfaceListItem,
@@ -34,6 +44,7 @@ from testing_agent.schemas.api_interface_import import (
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.software_repository import SoftwareRepositoryResponse
+from testing_agent.schemas.ui_element import UiElementDetail, UiElementGroupView, UiElementSummary
 
 router = APIRouter()
 
@@ -107,3 +118,28 @@ router.post(
     "/software-repositories/{software_repository_id}/interfaces/import",
     response_model=ApiResponse[ApiInterfaceImportCommitResponse],
 )(commit_api_interface_import)
+
+router.get(
+    "/software-repositories/{software_repository_id}/ui-element-groups",
+    response_model=ApiResponse[ListResponse[UiElementGroupView]],
+)(list_ui_element_groups)
+router.post(
+    "/software-repositories/{software_repository_id}/ui-element-groups",
+    response_model=ApiResponse[UiElementGroupView],
+)(create_ui_element_group)
+router.delete("/ui-element-groups/{group_id}", response_model=ApiResponse[EmptyData])(
+    delete_ui_element_group
+)
+router.get(
+    "/software-repositories/{software_repository_id}/ui-elements",
+    response_model=ApiResponse[ListResponse[UiElementSummary]],
+)(list_ui_elements)
+router.post(
+    "/software-repositories/{software_repository_id}/ui-elements",
+    response_model=ApiResponse[UiElementDetail],
+)(create_ui_element)
+router.get("/ui-elements/{element_id}", response_model=ApiResponse[UiElementDetail])(get_ui_element)
+router.patch("/ui-elements/{element_id}", response_model=ApiResponse[UiElementDetail])(
+    update_ui_element
+)
+router.delete("/ui-elements/{element_id}", response_model=ApiResponse[EmptyData])(delete_ui_element)

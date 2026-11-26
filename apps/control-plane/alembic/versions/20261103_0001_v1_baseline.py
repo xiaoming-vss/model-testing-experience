@@ -2019,6 +2019,119 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "ui_element_groups",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column("group_id", sa.String(length=64), nullable=False, comment="元素分组业务标识"),
+        sa.Column(
+            "software_repository_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="所属前端应用的软件仓库业务标识",
+        ),
+        sa.Column("kind", sa.String(length=10), nullable=False, comment="分组类型：page/common"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="元素分组显示名称"),
+        sa.Column(
+            "route_template",
+            sa.String(length=512),
+            nullable=False,
+            comment="页面路由模板；公共组使用空字符串",
+        ),
+        sa.Column(
+            "route_key",
+            sa.String(length=64),
+            nullable=False,
+            comment="路由模板的 SHA-256 摘要，参与同仓库分组查重",
+        ),
+        sa.Column(
+            "created_by_user_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="创建分组的用户业务标识",
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="分组创建时间（UTC）"
+        ),
+        sa.ForeignKeyConstraint(
+            ["software_repository_id"],
+            ["software_repositories.software_repository_id"],
+            name="fk_ui_element_groups_repository",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_ui_element_groups")),
+        sa.UniqueConstraint("group_id", name=op.f("uq_ui_element_groups_group_id")),
+        sa.UniqueConstraint(
+            "software_repository_id", "kind", "route_key", name="uk_ui_element_group_route"
+        ),
+        comment="前端应用的页面和公共元素分组",
+    )
+    op.create_table(
+        "ui_elements",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column("element_id", sa.String(length=64), nullable=False, comment="元素库条目业务标识"),
+        sa.Column(
+            "group_id", sa.String(length=64), nullable=False, comment="所属页面或公共分组业务标识"
+        ),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="元素显示名称"),
+        sa.Column(
+            "scope", sa.String(length=255), nullable=False, comment="元素所在容器或可用的页面状态"
+        ),
+        sa.Column(
+            "locator_type", sa.String(length=20), nullable=False, comment="UI 执行器定位方式"
+        ),
+        sa.Column(
+            "locator_value", sa.Text(), nullable=False, comment="固定的定位值或含命名参数的定位模板"
+        ),
+        sa.Column(
+            "parameters_json",
+            mysql.JSON(),
+            nullable=False,
+            comment="定位参数定义数组；每项含 name 和 description，固定定位为空数组",
+        ),
+        sa.Column(
+            "locator_key",
+            sa.String(length=64),
+            nullable=False,
+            comment="作用范围、定位方式和模板的 SHA-256 摘要，参与分组内查重",
+        ),
+        sa.Column(
+            "verification_status",
+            sa.String(length=16),
+            nullable=False,
+            comment="定位验证状态：pending/verified；手工修改定位后待验证",
+        ),
+        sa.Column(
+            "version", sa.Integer(), nullable=False, comment="元素乐观并发版本，每次内容更新加一"
+        ),
+        sa.Column(
+            "created_by_user_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="创建元素的用户业务标识",
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="元素创建时间（UTC）"
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, comment="元素更新时间（UTC）"
+        ),
+        sa.ForeignKeyConstraint(
+            ["group_id"],
+            ["ui_element_groups.group_id"],
+            name="fk_ui_elements_group",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_ui_elements")),
+        sa.UniqueConstraint("element_id", name=op.f("uq_ui_elements_element_id")),
+        sa.UniqueConstraint("group_id", "locator_key", name="uk_ui_element_locator"),
+        comment="可复用 UI 元素及其固定定位或参数模板",
+    )
+    op.create_index(
+        "idx_ui_element_group_updated",
+        "ui_elements",
+        ["group_id", "updated_at", "id"],
+        unique=False,
+    )
+    op.create_table(
         "sprints",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
@@ -5494,6 +5607,8 @@ def downgrade() -> None:
     op.drop_table("ai_generation_stages")
     op.drop_table("ai_executions")
     op.drop_table("sprints")
+    op.drop_table("ui_elements")
+    op.drop_table("ui_element_groups")
     op.drop_table("software_repositories")
     op.drop_table("shared_services")
     op.drop_table("revoked_access_tokens")

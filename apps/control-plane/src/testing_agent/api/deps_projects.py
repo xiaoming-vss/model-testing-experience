@@ -18,6 +18,7 @@ from testing_agent.repositories.resource_binding import ResourceBindingRepositor
 from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
+from testing_agent.repositories.ui_element import UiElementRepository
 from testing_agent.services.baseline_resolution import BaselineResolutionService
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
@@ -32,6 +33,7 @@ from testing_agent.services.software_repository import SoftwareRepositoryService
 from testing_agent.services.sprint import SprintService
 from testing_agent.services.sprint_code_overview import SprintCodeOverviewService
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
+from testing_agent.services.ui_element import UiElementService
 from testing_agent.services.zentao_mcp import ZentaoMcpResources
 
 
@@ -75,6 +77,10 @@ def get_software_repository_service(
         SoftwareRepositoryRepository(session),
         connections,
     )
+
+
+def get_ui_element_service(session: AsyncSession = Depends(get_session)) -> UiElementService:
+    return UiElementService(UiElementRepository(session), SoftwareRepositoryRepository(session))
 
 
 def get_requirement_software_repository_service(

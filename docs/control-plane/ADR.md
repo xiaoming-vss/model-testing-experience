@@ -42,3 +42,4 @@
 - [0029 历史用例核验阶段](adr/0029-historical-test-case-verification-stage.md)
 - [0030 历史用例核验以测试点表达补测建议](adr/0030-historical-supplemental-test-points.md)
 - [0031 删除候选是物理删除](adr/0031-candidate-removal-is-physical-delete.md)
+- [0033 软件仓库拥有元素库](adr/0033-software-repository-ui-element-library.md)

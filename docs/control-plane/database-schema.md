@@ -74,12 +74,18 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 ## 接口库与软件仓库
 
-- `software_repositories`：项目级软件仓库，保存名称、说明、仓库级 `base_path`、手工接口分组列表 `interface_groups_json` 和 `version`。Git 仓库以 `repository_project_id`、`repository_group_id`（所选群组来源快照）、`repository_instance_key`（匹配操作者同实例个人授权）、`repository_path`、`repository_name`、`repository_instance_url` 快照保存，创建与换绑均必选；`(project_id, name)` 唯一，删除前必须没有接口和需求关联。
+- `software_repositories`：项目级软件仓库，保存名称、说明、仓库级 `base_path`、手工接口分组列表 `interface_groups_json` 和 `version`。Git 仓库以 `repository_project_id`、`repository_group_id`（所选群组来源快照）、`repository_instance_key`（匹配操作者同实例个人授权）、`repository_path`、`repository_name`、`repository_instance_url` 快照保存，创建与换绑均必选；`(project_id, name)` 唯一，删除前必须没有接口、需求关联和元素库分组。
 - `api_interfaces`：接口定义，保存方法、规范化相对路径、`path_key`（路径 SHA-256）、请求头与 Path/Query 参数 JSON、请求体、单个默认成功响应、接口级 `security_json` 与文档级 `security_schemes_json`、标签、说明、版本和来源快照。接口身份由 `(software_repository_id, method, path_key)` 唯一约束确定，避免 utf8mb4 长路径索引限制；软件仓库外键为 `RESTRICT`。
 - `api_interface_requirements`：接口与需求的关联表，接口外键和需求外键均 `CASCADE`，`(interface_id, requirement_id)` 唯一；迭代通过需求归属推导，不在关联表冗余保存。
 - `requirement_software_repositories`：需求与软件仓库的多对多关联，保存需求级工作分支 `branch`、基线分支 `baseline_branch` 和关联人；`(requirement_id, software_repository_id)` 唯一，需求外键 `CASCADE`、软件仓库外键 `RESTRICT`。
 
 接口删除为业务硬删除，使用统一的 `ResourceDeletion`；导入提交在单一事务内锁定软件仓库与接口行、校验来源摘要和逐项版本，并保留仅库中存在的接口。接口分组没有独立表：展示集合由 `software_repositories.interface_groups_json` 中手工创建的分组名与 `api_interfaces.tags_json` 的首个非空标签合并而成；手工分组允许为空，重命名、移除和移动同时维护分组列表与批量标签。软件仓库直接绑定 GitLab 仓库，群组仅作为个人连接下的选择范围与来源快照。结构决策见 [ADR 0013](adr/0013-software-repository-and-interface-library-api-generation.md)、[ADR 0015](adr/0015-software-repository-direct-gitlab-binding.md) 与 [ADR 0016](adr/0016-interface-library-tag-groups.md)。
+
+## 元素库
+
+- `ui_element_groups`：仓库级页面组与公共组。`(software_repository_id, kind, route_key)` 唯一，`route_key` 是路由模板的 SHA-256 摘要，公共组使用空路由。软件仓库外键为 `RESTRICT`。
+- `ui_elements`：分组内的 UI 元素，保存作用范围、定位类型和值、参数 JSON、验证状态和乐观并发版本。`(group_id, locator_key)` 唯一，`locator_key` 是作用范围、定位方式和定位值组合的 SHA-256 摘要。分组外键为 `RESTRICT`。
+- 删除软件仓库或更换其 GitLab 仓库身份前，须移除元素库分组。分组为空时可删除，公共组随第一个公共元素写入事务创建。接口及定位语法见[元素库](ui-element-library.md)。
 
 ## AI 执行、阶段尝试与历史
 
