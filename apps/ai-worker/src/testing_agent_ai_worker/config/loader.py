@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -46,8 +47,10 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
         "nanobot": os.getenv("TESTING_AGENT_NANOBOT_RUNTIME_ROOT"),
         "pi": os.getenv("TESTING_AGENT_PI_RUNTIME_ROOT"),
     }
+    worker_id = settings.worker.worker_id.strip() or f"ai-worker-{socket.gethostname()}"
     return settings.model_copy(
         update={
+            "worker": settings.worker.model_copy(update={"worker_id": worker_id}),
             "platform": settings.platform.model_copy(update=platform_updates),
             "agent": settings.agent.model_copy(
                 update={

@@ -1,5 +1,7 @@
 [worker]
-worker_id = "ai-worker-01"
+# 留空时使用 "ai-worker-<主机名>"，K8s 下即 Pod 名；控制面按该 ID 校验任务归属，
+# 多个副本不要配置成相同的值。
+worker_id = ""
 poll_interval_seconds = 5
 heartbeat_interval_seconds = 15
 max_concurrent_tasks = 2
@@ -11,13 +13,6 @@ run_once = false
 [platform]
 base_url = "http://127.0.0.1:9000"
 worker_token = ""
-task_claim_path = "/internal/ai-worker/tasks/claim"
-task_snapshot_path = "/internal/ai-worker/tasks/{task_id}/snapshot"
-task_started_path = "/internal/ai-worker/tasks/{task_id}/started"
-task_heartbeat_path = "/internal/ai-worker/tasks/{task_id}/heartbeat"
-task_progress_path = "/internal/ai-worker/tasks/{task_id}/progress"
-task_completed_path = "/internal/ai-worker/tasks/{task_id}/completed"
-task_llm_credentials_path = "/internal/ai-worker/tasks/{task_id}/llm-credentials"
 request_timeout_seconds = 60
 
 [agent]

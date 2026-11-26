@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote
 
+from testing_agent_ai_worker.config.models import AI_WORKER_TASKS_PATH
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
@@ -32,7 +33,7 @@ def download_images(
     images = []
     for file_id in parser.file_ids:
         endpoint = (
-            f"/internal/ai-worker/tasks/{quote(task.task_id, safe='')}/requirement-images/"
+            f"{AI_WORKER_TASKS_PATH}/{quote(task.task_id, safe='')}/requirement-images/"
             f"{file_id}?workerId={quote(worker_id, safe='')}"
         )
         data = client.get_signed_file_bytes(endpoint)

@@ -34,6 +34,7 @@
 | 本地启动单个服务 | `python3 scripts/manage.py run <control-plane\|ai-worker\|api-ui-worker\|integration-worker\|perf-worker\|studio>` | 已安装对应项目依赖 |
 | 数据库迁移 | `python3 scripts/manage.py migrate` | 数据库可达；迁移基线只支持空库初始化 |
 | K8s chart 静态检查 | `for chart in deploy/helm/charts/*; do helm lint "$chart"; done` | 已安装 Helm；K8s 不是本地默认部署方式 |
+| Helm chart 模板检查 | `python3 -m unittest tests.test_helm_charts -v` | 已安装 Helm；复制自检不依赖 Helm，渲染用例在未安装时跳过 |
 | K8s values 模板一致性检查 | `python3 scripts/check_k8s_config.py` | Python 3.11+；对比 `config/platform.example.toml` 与 chart 默认 values，不访问集群 |
 | K8s values 部署一致性检查 | `python3 scripts/check_k8s_config.py --platform-config config/platform.toml --values-dir .runtime/k8s` | 已执行 `init` 并填写实际 values；strict，关键字段缺失或漂移时非零 |
 | 文档一致性检查 | `python3 scripts/check_docs.py` | 默认不访问外部网络；`--check-urls` 可选检查外部链接 |
@@ -164,6 +165,7 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | 变更范围 | 最小入口 |
 | --- | --- |
 | 根编排、Compose、部署脚本 | 根编排测试 + Compose 配置校验 |
+| Helm chart | 根编排测试 + `helm lint` + `tests.test_helm_charts` |
 | control-plane | `apps/control-plane/scripts/check.py`，再按[控制面开发规则](control-plane/development-rules.md#验证与交付)追加专项 |
 | ai-worker | unittest 全量，再按[AI Worker 开发规则](ai-worker/development-rules.md#验证入口)追加专项 |
 | api-ui-worker | pytest 全量，再按[API/UI Worker 开发规则](api-ui-worker/development-rules.md#验证入口)追加专项 |

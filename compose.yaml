@@ -52,6 +52,7 @@ services:
     image: mtx/control-plane:local
     build: ./apps/control-plane
     restart: unless-stopped
+    stop_grace_period: 60s
     ports:
       - "${BIND_HOST}:${CONTROL_PLANE_PORT}:9000"
     volumes:
@@ -66,6 +67,14 @@ services:
     image: mtx/ai-worker:local
     build: ./apps/ai-worker
     restart: unless-stopped
+    environment:
+      TESTING_AGENT_HEALTH_PORT: "8080"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     volumes:
       - ./.runtime/docker/ai-worker.toml:/app/config/worker.toml:ro
       - ${AI_RUNTIME_VOLUME:-ai-runtime}:/data/runtime
@@ -78,6 +87,15 @@ services:
     image: mtx/api-ui-worker:local
     build: ./apps/api-ui-worker
     restart: unless-stopped
+    stop_grace_period: 120s
+    environment:
+      TEST_WORKER_HEALTH_PORT: "8080"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     volumes:
       - ./.runtime/docker/api-ui-worker.toml:/app/config.toml:ro
       - worker-artifacts:/app/artifacts

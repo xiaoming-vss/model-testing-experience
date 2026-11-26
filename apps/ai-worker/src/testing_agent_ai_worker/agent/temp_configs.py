@@ -9,6 +9,8 @@ from pathlib import Path
 
 _ACTIVE: set[Path] = set()
 _LOCK = threading.Lock()
+# Both backends name their per-task credential file "<backend>-task-*.json".
+TASK_CONFIG_PATTERNS = ("pi-task-*.json", "nanobot-task-*.json")
 
 
 @contextmanager
@@ -32,3 +34,17 @@ def cleanup_task_configs() -> None:
         for path in tuple(_ACTIVE):
             Path(path).unlink(missing_ok=True)
         _ACTIVE.clear()
+
+
+def sweep_task_configs(temp_configs_dir: Path) -> None:
+    """Remove credential files left behind by a process killed before cleanup.
+
+    SIGKILL and OOM never reach the task or signal cleanup, so the next start
+    clears the previous run's plaintext configuration before claiming work.
+    """
+
+    with _LOCK:
+        for pattern in TASK_CONFIG_PATTERNS:
+            for path in Path(temp_configs_dir).glob(pattern):
+                if path not in _ACTIVE:
+                    path.unlink(missing_ok=True)

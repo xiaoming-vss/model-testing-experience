@@ -17,7 +17,7 @@
 - Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
 - Python 依赖：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`、`jsonschema`
 - Node 运行时：`@earendil-works/pi-coding-agent==1.3.0`，由 `package.json` / `package-lock.json` 固定
-- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；默认不监听端口，设置 `TESTING_AGENT_HEALTH_PORT` 后提供 `/healthz` 探针，Compose 本地运行不注入该变量
+- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；默认不监听端口，设置 `TESTING_AGENT_HEALTH_PORT` 后提供 `/healthz` 探针。Compose 与 K8s 都会注入该变量并用它做健康检查；本地直接启动时不注入
 
 ## 执行底座
 
@@ -55,7 +55,7 @@
 | `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `agent.nanobot.runtime_root` |
 | `TESTING_AGENT_PI_RUNTIME_ROOT` | `agent.pi.runtime_root` |
 
-其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[ui_generation]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
+其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[ui_generation]`、`[logging]`。`[worker].worker_id` 留空（或只有空白）时，启动时生成 `ai-worker-<主机名>`：Compose 下是容器主机名，K8s 下即 Pod 名。控制面按该 ID 校验任务归属，多个副本必须得到不同的值，不要显式配置成相同的 ID。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
 
 ```toml
 [agent]

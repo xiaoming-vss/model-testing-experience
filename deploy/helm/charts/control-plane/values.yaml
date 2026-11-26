@@ -47,8 +47,8 @@ config:
       user_expire_hours: 72
       super_admin_expire_hours: 24
 
-    # 首次启动时 seed 的超级管理员。username/email 必须填写。
-    # initial_password 留空时使用服务内置初始密码，并强制首次登录改密。
+    # 首次启动时 seed 的超级管理员。username、email、initial_password 都必须填写。
+    # initial_password 至少 8 个字符且不能是示例里的占位值；留空或占位会让控制面启动失败。
     super_admin:
       username: ""
       email: ""
@@ -70,6 +70,10 @@ config:
 
     # 独立集成 Worker 的专属令牌，不能与 worker.key 相同。
     integration_worker:
+      key: ""
+
+    # 独立性能 Worker 的专属令牌，不能与其他令牌相同。
+    perf_worker:
       key: ""
 
   # 独立集成 Worker 的执行开关。
@@ -95,7 +99,6 @@ config:
   data:
     db:
       user:
-        driver: mysql
         pool_size: 20
         max_overflow: 10
         dsn: ""

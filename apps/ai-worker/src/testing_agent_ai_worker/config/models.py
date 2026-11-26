@@ -6,9 +6,14 @@ from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
+# Prefix of every control-plane endpoint that addresses the AI queue or one AI task.
+AI_WORKER_TASKS_PATH = "/internal/ai-worker/tasks"
+
 
 class WorkerConfig(BaseModel):
-    worker_id: str = "testing-agent-ai-worker"
+    # Empty selects "ai-worker-<hostname>", the Pod name on Kubernetes. The control
+    # plane checks task ownership by this id, so replicas must not share one.
+    worker_id: str = ""
     poll_interval_seconds: int = 10
     heartbeat_interval_seconds: int = 15
     max_concurrent_tasks: int = 2
@@ -20,13 +25,13 @@ class WorkerConfig(BaseModel):
 class PlatformConfig(BaseModel):
     base_url: str = ""
     worker_token: str = ""
-    task_claim_path: str = "/internal/ai-worker/tasks/claim"
-    task_snapshot_path: str = "/internal/ai-worker/tasks/{task_id}/snapshot"
-    task_started_path: str = "/internal/ai-worker/tasks/{task_id}/started"
-    task_heartbeat_path: str = "/internal/ai-worker/tasks/{task_id}/heartbeat"
-    task_progress_path: str = "/internal/ai-worker/tasks/{task_id}/progress"
-    task_completed_path: str = "/internal/ai-worker/tasks/{task_id}/completed"
-    task_llm_credentials_path: str = "/internal/ai-worker/tasks/{task_id}/llm-credentials"
+    task_claim_path: str = f"{AI_WORKER_TASKS_PATH}/claim"
+    task_snapshot_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/snapshot"
+    task_started_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/started"
+    task_heartbeat_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/heartbeat"
+    task_progress_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/progress"
+    task_completed_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/completed"
+    task_llm_credentials_path: str = f"{AI_WORKER_TASKS_PATH}/{{task_id}}/llm-credentials"
     request_timeout_seconds: float = 60.0
 
 

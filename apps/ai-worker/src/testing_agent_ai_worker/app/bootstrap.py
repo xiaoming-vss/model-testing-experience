@@ -9,7 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
 
-from testing_agent_ai_worker.agent import apply_environment, migrate_legacy_sessions
+from testing_agent_ai_worker.agent import (
+    apply_environment,
+    migrate_legacy_sessions,
+    resolve_runtime_paths,
+)
+from testing_agent_ai_worker.agent.temp_configs import sweep_task_configs
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import Settings
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -205,6 +210,7 @@ def run_worker(
     apply_environment(resolved_settings.agent.active)
     migrate_legacy_sessions(resolved_settings.agent.active)
     sweep_expired_workspaces(resolved_settings.agent.active)
+    sweep_task_configs(resolve_runtime_paths(resolved_settings.agent.active).temp_configs_dir)
     resolved_poller = poller or build_task_poller(resolved_settings)
     resolved_task_runner = task_runner or build_task_runner(resolved_settings)
     resolved_logger = logger or logging.getLogger("testing_agent_ai_worker")

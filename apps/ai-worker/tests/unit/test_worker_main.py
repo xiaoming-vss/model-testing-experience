@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import socket
 import sys
 import tempfile
 import threading
@@ -218,6 +219,22 @@ class WorkerMainTests(unittest.TestCase):
                 ),
             ),
         )
+
+    def test_load_settings_derives_a_per_host_worker_id_from_an_empty_value(self) -> None:
+        for configured in ("", "   "):
+            with (
+                self.subTest(configured=configured),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                config_path = Path(temp_dir) / "worker.toml"
+                config_path.write_text(
+                    "\n".join(["[worker]", f'worker_id = "{configured}"']),
+                    encoding="utf-8",
+                )
+
+                settings = load_settings(config_path)
+
+                self.assertEqual(f"ai-worker-{socket.gethostname()}", settings.worker.worker_id)
 
     def test_load_settings_applies_secret_and_runtime_environment_overrides(self) -> None:
         with patch.dict(

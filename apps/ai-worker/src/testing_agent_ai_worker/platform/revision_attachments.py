@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
+from testing_agent_ai_worker.config.models import AI_WORKER_TASKS_PATH
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 MAX_REVISION_ATTACHMENTS = 6
@@ -50,7 +51,7 @@ class PlatformRevisionAttachmentDownloader:
         for attachment in attachments:
             file_id = attachment["fileId"]
             endpoint = (
-                f"/internal/ai-worker/tasks/{quote(task_id, safe='')}/revision-attachments/"
+                f"{AI_WORKER_TASKS_PATH}/{quote(task_id, safe='')}/revision-attachments/"
                 f"{quote(file_id, safe='')}?workerId={quote(self.worker_id, safe='')}"
             )
             data = self.client.get_signed_file_bytes(endpoint)

@@ -9,6 +9,7 @@ from urllib.parse import quote
 import httpx
 
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.config.models import AI_WORKER_TASKS_PATH
 from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.skill_names import (
     API_DESIGN_SKILL,
@@ -126,7 +127,7 @@ class SkillPreparer:
                 shutil.rmtree(staging)
 
     def _fetch(self, task, name, target):
-        base = f"/internal/ai-worker/tasks/{quote(task.task_id, safe='')}/skills/{name}"
+        base = f"{AI_WORKER_TASKS_PATH}/{quote(task.task_id, safe='')}/skills/{name}"
         query = "?workerId=" + quote(self.worker_id, safe="")
         manifest = self.client.get(base + query)
         entries = manifest.get("files", []) if manifest else []

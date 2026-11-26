@@ -278,11 +278,40 @@ class ManagementTests(unittest.TestCase):
         manage.upgrade_config(self.root)
         upgraded = manage.read(path)
         password = upgraded["control_plane"]["security"]["super_admin"]["initial_password"]
-        self.assertGreaterEqual(len(password), 8)
-        self.assertNotIn(
-            password.lower(),
-            {"mtx123456", "password", "secret", "change-me", "generate"},
-        )
+        # One rule, read from the control plane: whatever it refuses is replaced here.
+        self.assertFalse(manage.password_is_insecure(password))
+        manage.validate(manage.read(path))
+
+    def test_upgrade_config_replaces_every_password_the_control_plane_refuses(self):
+        path = self.root / "config/platform.toml"
+        # "changeme" and "test-jwt" used to pass validate() and fail only at service start.
+        for password in (
+            "short",
+            "changeme",
+            "change_me",
+            "test-jwt",
+            "worker-token",
+            "test-integration",
+            "replace-with-local-integration-key",
+        ):
+            with self.subTest(password=password):
+                data = manage.read(path)
+                data["control_plane"]["security"]["super_admin"]["initial_password"] = password
+                manage.write(path, manage.toml_text(data), permissions=0o600)
+                manage.upgrade_config(self.root)
+                upgraded = manage.read(path)
+                self.assertFalse(
+                    manage.password_is_insecure(
+                        upgraded["control_plane"]["security"]["super_admin"]["initial_password"]
+                    )
+                )
+
+    def test_validate_rejects_a_password_the_control_plane_refuses(self):
+        data = json.loads(json.dumps(self.data))
+        data["control_plane"]["security"]["super_admin"]["initial_password"] = "changeme"
+
+        with self.assertRaisesRegex(ValueError, "initial_password"):
+            manage.validate(data)
 
     def test_integration_config_upgrade_preserves_custom_values_permissions_and_secrets(self):
         path = self.root / "config/platform.toml"

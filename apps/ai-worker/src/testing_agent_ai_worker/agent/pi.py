@@ -54,7 +54,12 @@ def pi_subprocess_env(overrides: dict[str, str]) -> dict[str, str]:
 def check_runtime(executable: str) -> None:
     try:
         result = subprocess.run(
-            [executable, "--version"], capture_output=True, text=True, timeout=15, check=True
+            [executable, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=True,
+            env=pi_subprocess_env({}),
         )
     except (OSError, subprocess.SubprocessError):
         raise RuntimeError("Pi CLI unavailable; install the pinned npm dependency") from None

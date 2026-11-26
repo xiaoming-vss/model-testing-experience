@@ -40,6 +40,9 @@ key = {{ .Values.config.security.worker.key | default "" | toJson }}
 [security.integration_worker]
 key = {{ .Values.config.security.integration_worker.key | default "" | toJson }}
 
+[security.perf_worker]
+key = {{ .Values.config.security.perf_worker.key | default "" | toJson }}
+
 [integration_execution]
 enabled = {{ .Values.config.integration_execution.enabled | default false }}
 project_ids = [{{ range $i, $id := .Values.config.integration_execution.project_ids }}{{ if $i }}, {{ end }}{{ $id | default "" | toJson }}{{ end }}]
@@ -56,7 +59,6 @@ restore_review_max_age_seconds = {{ int64 .Values.config.integration_execution.r
 worker_presence_ttl_seconds = {{ int64 .Values.config.integration_execution.worker_presence_ttl_seconds }}
 
 [data.db.user]
-driver = {{ .Values.config.data.db.user.driver | default "mysql" | toJson }}
 pool_size = {{ int64 .Values.config.data.db.user.pool_size }}
 max_overflow = {{ int64 .Values.config.data.db.user.max_overflow }}
 dsn = {{ .Values.config.data.db.user.dsn | default "" | toJson }}
