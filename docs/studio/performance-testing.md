@@ -13,8 +13,9 @@
 
 - 顶部「测试」悬停浮层：测试单 → API 测试 → UI 测试 → 性能测试；选中性能测试落在 `/testing?tab=perf`。
 - 性能测试集详情（工作台）：`/performance/suites/:suiteId`，支持 `?case=<caseId>` 定位当前用例、`?step=<stepIndex>` 定位该用例内的接口。
-- 运行记录：`/performance/runs`，支持 `?suiteId=` 过滤。
-- 运行详情：`/performance/runs/:runId`。
+- 运行记录：`/performance/runs`，支持 `?suiteId=` 过滤测试集运行；`?kind=case` 切换单用例运行视图，`?caseId=` 按用例过滤。
+- 测试集运行详情：`/performance/runs/:runId`。
+- 单用例运行详情：`/performance/case-runs/:runId`。
 - 顶部「基础服务」悬停浮层新增「性能监控」，落在 `/base-services?tab=monitoring`。
 
 性能监控属于项目级共享基础服务，不放在测试集页面内。发起测试集运行时在对话框中同时选择性能环境和监控接入，所有用例共用本次选择并冻结快照。
@@ -29,7 +30,7 @@
 ## 测试集工作台（默认视图）
 
 - 工具栏单行展示名称、用例数、描述与最近更新时间，右侧依次是环境选择、「环境」管理入口、运行记录和运行测试集；描述过长时省略，不换行撑高工具栏。测试集名称与描述统一在列表卡片上编辑，工作台只负责用例配置。切换运行环境会作为发起运行对话框的默认环境。
-- 工作台由三块独立面板组成：顶部工具栏卡片、左侧用例树面板、右侧编辑面板，三块在页面背景上按 12px 间距排列。右侧编辑面板是一个容器：用例名称行固定在顶部，性能参数与数据文件在容器内以分隔线分段并整体滚动。两栏布局铺满工作区剩余高度：左栏用例树、右栏编辑区各自在列内滚动。运行入口和运行记录统一放在工作区工具栏。
+- 工作台由三块独立面板组成：顶部工具栏卡片、左侧用例树面板、右侧编辑面板，三块在页面背景上按 12px 间距排列。右侧编辑面板是一个容器：用例名称行固定在顶部，性能参数与数据文件在容器内以分隔线分段并整体滚动。两栏布局铺满工作区剩余高度：左栏用例树、右栏编辑区各自在列内滚动。测试集级运行入口和运行记录放在工作区工具栏；单用例的运行入口和运行记录放在选中用例行。
   - 左栏「用例与接口」：按 `orderNo` 列出用例分组，组内按顺序列出接口（方法、名称、路径），支持折叠；点击用例进入用例级配置，点击接口进入接口级编辑。用例行显示失效标签，左栏状态胶囊可切换「全部 / 有效 / 已失效」，筛选态禁用用例排序提交；「用例状态」入口打开共享管理弹窗。
   - 右栏按选中层级切换：选中用例时展示用例名称、负载模型和数据文件；选中接口时按 API 测试页的接口编辑器组织：顶部展示步骤名称、请求方法、运行环境 baseUrl + 相对路径的请求条，下面分为请求头、请求体、后置操作、设置四个页签。失效用例仍可查看和编辑，但单用例运行入口禁用。
 - 切换用例或接口时，未保存修改暂存为前端草稿；切回后草稿仍在。「取消」才丢弃草稿并恢复服务端保存状态。保存后清空草稿并刷新测试集摘要。
@@ -57,6 +58,9 @@
 - 运行详情轮询排队/运行/停止中的状态；展示用例进度、总请求数、总迭代数、总耗时、平均请求速率、最高 P95、加权失败率、逐用例执行顺序与指标表、运行信息和按用例筛选的 k6 日志。
 - 平台不在页面内查询 Prometheus、绘制时序图或提供外部看板入口；本期只展示执行事实和 k6 摘要。父运行结果统一为「未判定」，不做达标判定。
 - 监控快照由控制面在创建子运行时写入 `perf_runs.monitoring_snapshot_json`，冻结接入名称和 Remote Write 地址，不包含凭据；之后修改或删除接入不影响历史运行。
+- 单用例运行从选中用例行发起：对话框必须选择 `kind="perf"` 的环境和已启用的监控接入，迭代可选（默认不关联）。用例有未保存修改时先提示保存；失效用例的运行入口禁用。运行创建后进入 `/performance/case-runs/:runId`，页面轮询排队 / 运行 / 停止中的状态并提供停止；控制面只允许触发人停止。
+- 单用例运行详情展示该次运行的请求数、迭代数、耗时、速率、P95/P99 和失败率，以及运行信息、监控快照、数据文件、执行器信息和 k6 日志；结果同样统一为「未判定」。
+- 运行记录页提供「测试集运行 / 单用例运行」切换。单用例视图只列手动发起的运行（`triggerType=manual`），不含测试集派生的子运行；从用例行「运行记录」进入时按该用例过滤，可关闭过滤查看全部手动运行。
 
 ## 监控接入管理
 
@@ -68,7 +72,7 @@
 
 ## 相关代码
 
-- 页面：`pages/PerformancePage.tsx`、`PerformanceSuiteDetailPage.tsx`、`PerformanceRunsPage.tsx`、`PerformanceRunDetailPage.tsx`。
-- 组件：`components/PerfSuiteDrawer.tsx`、`StartPerfSuiteRunModal.tsx`、`PerfLoadModelForm.tsx`、`PerfStagedLoadFields.tsx`、`PerfLoadCurve.tsx`、`PerfNumericField.tsx`、`PerfStepsEditor.tsx`、`PerfCaseWorkbench.tsx`、`PerfMonitoringPanel.tsx`、`PerfMonitoringDrawer.tsx`。
+- 页面：`pages/PerformancePage.tsx`、`PerformanceSuiteDetailPage.tsx`、`PerformanceRunsPage.tsx`、`PerformanceRunDetailPage.tsx`、`PerformanceCaseRunDetailPage.tsx`。
+- 组件：`components/PerfSuiteDrawer.tsx`、`StartPerfRunModal.tsx`、`PerfLoadModelForm.tsx`、`PerfStagedLoadFields.tsx`、`PerfLoadCurve.tsx`、`PerfNumericField.tsx`、`PerfStepsEditor.tsx`、`PerfCaseWorkbench.tsx`、`PerfMonitoringPanel.tsx`、`PerfMonitoringDrawer.tsx`。
 - API 与工具：`api/performance.api.ts`、`utils/perf.ts`、`utils/perfLoadModel.ts`、`utils/perfCaseForm.ts`、`utils/perfDraftStore.ts`、`utils/monitoringConnection.ts`。
 - 控制面：`services/perf_suite.py`、`services/perf_suite_run.py`、`services/perf_run.py`、`schemas/perf_suite.py`、`schemas/perf_suite_run.py`。

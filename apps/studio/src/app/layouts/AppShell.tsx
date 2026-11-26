@@ -38,6 +38,7 @@ const BugDetailPage = lazy(() => import('@/features/bugs/pages/BugDetailPage').t
 const BugSubmitPage = lazy(() => import('@/features/bugs/pages/BugSubmitPage').then(({ BugSubmitPage }) => ({ default: BugSubmitPage })))
 const UiTestSuiteCasePage = lazy(() => import('@/features/ui-automation/pages/UiTestSuiteCasePage').then(({ UiTestSuiteCasePage }) => ({ default: UiTestSuiteCasePage })))
 const PerformanceRunDetailPage = lazy(() => import('@/features/performance/pages/PerformanceRunDetailPage').then(({ PerformanceRunDetailPage }) => ({ default: PerformanceRunDetailPage })))
+const PerformanceCaseRunDetailPage = lazy(() => import('@/features/performance/pages/PerformanceCaseRunDetailPage').then(({ PerformanceCaseRunDetailPage }) => ({ default: PerformanceCaseRunDetailPage })))
 const PerformanceRunsPage = lazy(() => import('@/features/performance/pages/PerformanceRunsPage').then(({ PerformanceRunsPage }) => ({ default: PerformanceRunsPage })))
 const PerformanceSuiteDetailPage = lazy(() => import('@/features/performance/pages/PerformanceSuiteDetailPage').then(({ PerformanceSuiteDetailPage }) => ({ default: PerformanceSuiteDetailPage })))
 
@@ -207,6 +208,7 @@ export function AppShell() {
             <Route path="/performance/suites/:suiteId" element={<PerformanceSuiteDetailPage />} />
             <Route path="/performance/runs" element={<PerformanceRunsPage />} />
             <Route path="/performance/runs/:runId" element={<PerformanceRunDetailPage />} />
+            <Route path="/performance/case-runs/:runId" element={<PerformanceCaseRunDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/admin/ldap" element={<LdapSettingsPage />} />

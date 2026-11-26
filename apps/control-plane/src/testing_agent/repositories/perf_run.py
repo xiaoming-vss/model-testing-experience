@@ -22,6 +22,7 @@ class PerfRunRepository(ResourceRepository):
         *,
         case_id: str = "",
         status: str = "",
+        trigger_type: str = "",
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[PerfRun], int]:
@@ -30,6 +31,8 @@ class PerfRunRepository(ResourceRepository):
             conditions.append(PerfRun.case_id == case_id)
         if status:
             conditions.append(PerfRun.status == status)
+        if trigger_type:
+            conditions.append(PerfRun.trigger_type == trigger_type)
         total = await self.session.scalar(
             select(func.count()).select_from(PerfRun).where(*conditions)
         )

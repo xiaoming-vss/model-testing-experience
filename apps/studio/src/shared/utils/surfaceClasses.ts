@@ -120,6 +120,20 @@ export const runHistoryItemIdClass = 'text-[12px] leading-[18px] text-[var(--app
 
 export const runHistoryItemLinkClass = 'text-[12px] leading-[18px] text-[var(--app-accent)]'
 
+/** 运行详情/记录页顶栏容器：标题、状态与操作分布两端。 */
+export const runDetailToolbarClass =
+  'tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3'
+
+/** 运行 ID、脚本摘要等需要断行的等宽标识。 */
+export const runIdMonoClass = 'break-all font-mono text-[11px]'
+
+/** 列表中的单行运行 ID/标识，超出省略。 */
+export const runIdLineClass = 'truncate font-mono text-[11px] text-app-surface-text-muted'
+
+/** 指标卡标签与脚注。 */
+export const statCardLabelClass = 'text-xs text-app-surface-text-muted'
+export const statCardNoteClass = 'mt-0.5 text-[11px] text-app-surface-text-muted'
+
 export const runResultBlockClass =
   'mt-2.5 flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-1'
 

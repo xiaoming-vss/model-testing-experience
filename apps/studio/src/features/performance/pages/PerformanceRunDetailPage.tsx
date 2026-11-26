@@ -11,12 +11,21 @@ import type { TableProps } from 'antd'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import {
+  runDetailToolbarClass,
+  runIdLineClass,
+  runIdMonoClass,
+  statCardLabelClass,
+  statCardNoteClass,
+} from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import type { PerfSuiteRunItem, PerfSuiteRunItemStatus } from '../types'
 import {
   PERF_OUTCOME_LABELS,
   PERF_STATUS_LABELS,
   formatPerfDuration,
+  formatPerfMetric,
+  formatPerfPercent,
   isPerfRunActive,
   perfMetricsFromSummary,
   perfOutcomeColor,
@@ -43,16 +52,6 @@ function itemStatusColor(status: PerfSuiteRunItemStatus) {
   if (status === 'running' || status === 'queued') return 'processing'
   if (status === 'stopped' || status === 'canceled') return 'warning'
   return 'default'
-}
-
-function formatMetric(value: number | null, digits = 1, suffix = '') {
-  if (value === null) return '-'
-  return `${value.toFixed(digits)}${suffix}`
-}
-
-function formatPercent(value: number | null) {
-  if (value === null) return '-'
-  return `${(value * 100).toFixed(2)}%`
 }
 
 function numberValue(value: unknown) {
@@ -132,9 +131,9 @@ export function PerformanceRunDetailPage() {
     { label: '总请求数', value: summary.requests.toLocaleString('zh-CN'), note: 'http_reqs' },
     { label: '总迭代数', value: summary.iterations.toLocaleString('zh-CN'), note: 'iterations' },
     { label: '总耗时', value: formatPerfDuration(run?.durationMs ?? 0), note: '运行时间' },
-    { label: '平均请求速率', value: formatMetric(summary.rps, 1, ' req/s'), note: '各用例速率之和' },
-    { label: 'P95 延迟', value: formatMetric(summary.p95, 1, ' ms'), note: '取最高用例' },
-    { label: '失败率', value: formatPercent(summary.failureRate), note: 'http_req_failed' },
+    { label: '平均请求速率', value: formatPerfMetric(summary.rps, 1, ' req/s'), note: '各用例速率之和' },
+    { label: 'P95 延迟', value: formatPerfMetric(summary.p95, 1, ' ms'), note: '取最高用例' },
+    { label: '失败率', value: formatPerfPercent(summary.failureRate), note: 'http_req_failed' },
   ]
 
   const columns: TableProps<PerfSuiteRunItem>['columns'] = [
@@ -143,17 +142,17 @@ export function PerformanceRunDetailPage() {
       width: 240,
       render: (_, item) => <div className="min-w-0">
         <div className="truncate text-xs font-medium text-app-surface-text" title={item.caseName}>{item.orderNo}. {item.caseName}</div>
-        <div className="truncate font-mono text-[11px] text-app-surface-text-muted" title={item.childRunId}>{item.childRunId}</div>
+        <div className={runIdLineClass} title={item.childRunId}>{item.childRunId}</div>
       </div>,
     },
     { title: '负载模型', width: 170, render: (_, item) => <Tag color="blue">{runLoadLabel(item.load)}</Tag> },
     { title: '状态', width: 95, render: (_, item) => <Tag color={itemStatusColor(item.status)}>{ITEM_STATUS_LABELS[item.status]}</Tag> },
     { title: '请求数', width: 90, align: 'right', render: (_, item) => settledText(item) || (perfMetricsFromSummary(item.summary).requests ?? 0).toLocaleString('zh-CN') },
     { title: '迭代数', width: 90, align: 'right', render: (_, item) => settledText(item) || (perfMetricsFromSummary(item.summary).iterations ?? 0).toLocaleString('zh-CN') },
-    { title: 'RPS', width: 85, align: 'right', render: (_, item) => settledText(item) || formatMetric(perfMetricsFromSummary(item.summary).rps, 1) },
-    { title: 'P95', width: 95, align: 'right', render: (_, item) => settledText(item) || formatMetric(perfMetricsFromSummary(item.summary).p95, 1, ' ms') },
-    { title: 'P99', width: 95, align: 'right', render: (_, item) => settledText(item) || formatMetric(perfMetricsFromSummary(item.summary).p99, 1, ' ms') },
-    { title: '失败率', width: 100, align: 'right', render: (_, item) => settledText(item) || formatPercent(perfMetricsFromSummary(item.summary).failureRate) },
+    { title: 'RPS', width: 85, align: 'right', render: (_, item) => settledText(item) || formatPerfMetric(perfMetricsFromSummary(item.summary).rps, 1) },
+    { title: 'P95', width: 95, align: 'right', render: (_, item) => settledText(item) || formatPerfMetric(perfMetricsFromSummary(item.summary).p95, 1, ' ms') },
+    { title: 'P99', width: 95, align: 'right', render: (_, item) => settledText(item) || formatPerfMetric(perfMetricsFromSummary(item.summary).p99, 1, ' ms') },
+    { title: '失败率', width: 100, align: 'right', render: (_, item) => settledText(item) || formatPerfPercent(perfMetricsFromSummary(item.summary).failureRate) },
   ]
 
   const selectedLogItem = items.find((item) => item.caseId === logCaseId)
@@ -167,7 +166,7 @@ export function PerformanceRunDetailPage() {
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-panel-flat workbench-board-panel tp-board">
-          <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className={runDetailToolbarClass}>
             <div className="flex min-w-0 flex-wrap items-center gap-3">
               <Button
                 type="text"
@@ -199,9 +198,9 @@ export function PerformanceRunDetailPage() {
           {runQuery.isPending ? <div className="p-10"><Empty description="运行详情加载中..." /></div> : run ? <>
             <div className="grid grid-cols-2 gap-3 px-4 pt-4 md:grid-cols-4 xl:grid-cols-7">
               {statCards.map((card) => <Card key={card.label} size="small">
-                <div className="text-xs text-app-surface-text-muted">{card.label}</div>
+                <div className={statCardLabelClass}>{card.label}</div>
                 <div className="mt-1 font-mono text-xl font-semibold text-app-surface-text">{card.value}</div>
-                <div className="mt-0.5 text-[11px] text-app-surface-text-muted">{card.note}</div>
+                <div className={statCardNoteClass}>{card.note}</div>
               </Card>)}
             </div>
 
@@ -246,7 +245,7 @@ export function PerformanceRunDetailPage() {
                   <Descriptions size="small" column={1} items={[
                     { key: 'suite', label: '测试集', children: run.suiteName },
                     { key: 'sprint', label: '迭代', children: run.sprintName || run.sprintId || '未关联' },
-                    { key: 'run', label: '运行 ID', children: <span className="break-all font-mono text-[11px]">{run.suiteRunId}</span> },
+                    { key: 'run', label: '运行 ID', children: <span className={runIdMonoClass}>{run.suiteRunId}</span> },
                     { key: 'environment', label: '环境', children: run.environmentName || '-' },
                     { key: 'monitoring', label: '监控接入', children: run.monitoringConnectionName || '-' },
                     { key: 'started', label: '开始时间', children: formatTime(run.startedAt ?? run.createdAt) },

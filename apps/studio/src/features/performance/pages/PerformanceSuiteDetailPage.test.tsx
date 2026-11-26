@@ -7,7 +7,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
-import type { PerfSuite } from '../types'
+import { message } from '@/shared/utils/feedback'
+import type { PerfRun, PerfSuite } from '../types'
 import { buildDefaultPerfYaml } from '../utils/perf'
 import { PerformanceSuiteDetailPage } from './PerformanceSuiteDetailPage'
 
@@ -52,12 +53,27 @@ const environment = {
   isDefault: true,
 }
 
+function mockRunOptions() {
+  vi.spyOn(api, 'listMonitoringConnections').mockResolvedValue(listResponse([{
+    connectionId: 'monitoring-1',
+    projectId: 'project-1',
+    name: 'Prometheus',
+    remoteWriteUrl: 'http://prom.local/api/v1/write',
+    remoteWriteAuthType: 'none',
+    hasRemoteWriteCredentials: false,
+    enabled: true,
+  }]))
+  vi.spyOn(api, 'getSprints').mockResolvedValue(listResponse([]))
+}
+
 function renderPage(client: QueryClient) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/performance/suites/suite-1']}>
         <Routes>
           <Route path="/performance/suites/:suiteId" element={<PerformanceSuiteDetailPage />} />
+          <Route path="/performance/runs" element={<div>运行记录占位</div>} />
+          <Route path="/performance/case-runs/:runId" element={<div>单用例运行详情占位</div>} />
           <Route path="/testing" element={<div>性能测试占位</div>} />
         </Routes>
       </MemoryRouter>
@@ -211,5 +227,81 @@ it('从「用例状态」弹窗批量标记失效', async () => {
   await waitFor(() =>
     expect(batch).toHaveBeenCalledWith('project-1', ['case-1'], true),
   )
+  client.clear()
+})
+
+it('选中用例提供运行与运行记录入口，失效时禁用运行', async () => {
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue({
+    ...suite,
+    cases: [{ ...suite.cases[0], invalidatedAt: '2026-11-22T02:30:00Z' }],
+  })
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  expect(await screen.findByRole('button', { name: '运行用例 登录下单' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '查看用例 登录下单 的运行记录' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '删除用例 登录下单' })).toBeInTheDocument()
+  client.clear()
+})
+
+it('运行记录入口按当前用例跳转', async () => {
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue(suite)
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  await screen.findByLabelText('用例名称')
+  await userEvent.click(screen.getByRole('button', { name: '查看用例 登录下单 的运行记录' }))
+
+  expect(await screen.findByText('运行记录占位')).toBeInTheDocument()
+  client.clear()
+})
+
+it('单用例运行提交环境与监控接入并进入运行详情', async () => {
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue(suite)
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  mockRunOptions()
+  const startRun = vi.spyOn(api, 'startPerfRun').mockResolvedValue({ runId: 'case-run-1' } as unknown as PerfRun)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  await screen.findByLabelText('用例名称')
+  await userEvent.click(screen.getByRole('button', { name: '运行用例 登录下单' }))
+
+  const dialog = await screen.findByRole('dialog')
+  expect(within(dialog).getByText('运行用例')).toBeInTheDocument()
+  const submit = within(dialog).getByRole('button', { name: '开始运行' })
+  await waitFor(() => expect(submit).toBeEnabled())
+  await userEvent.click(submit)
+
+  await waitFor(() => expect(startRun).toHaveBeenCalledWith('case-1', {
+    environmentId: 'env-1',
+    monitoringConnectionId: 'monitoring-1',
+  }))
+  expect(await screen.findByText('单用例运行详情占位')).toBeInTheDocument()
+  client.clear()
+})
+
+it('有未保存修改时不发起单用例运行', async () => {
+  vi.spyOn(api, 'getPerfSuite').mockResolvedValue(suite)
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(listResponse([environment]))
+  mockRunOptions()
+  const startRun = vi.spyOn(api, 'startPerfRun')
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+
+  const nameInput = await screen.findByLabelText('用例名称')
+  await userEvent.clear(nameInput)
+  await userEvent.type(nameInput, '登录下单改')
+  await userEvent.click(screen.getByRole('button', { name: '运行用例 登录下单' }))
+
+  expect(message.warning).toHaveBeenCalledWith('当前用例有未保存修改，请先保存后再运行')
+  expect(startRun).not.toHaveBeenCalled()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   client.clear()
 })

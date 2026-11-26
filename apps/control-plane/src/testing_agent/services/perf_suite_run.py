@@ -32,11 +32,6 @@ SUITE_TERMINAL_STATUSES = {
     PerfRunStatus.STOPPED.value,
     PerfRunStatus.CANCELED.value,
 }
-SUITE_ACTIVE_STATUSES = {
-    PerfRunStatus.QUEUED.value,
-    PerfRunStatus.RUNNING.value,
-    PerfRunStatus.STOPPING.value,
-}
 
 
 def _child_item_status(status: str) -> str:

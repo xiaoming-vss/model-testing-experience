@@ -64,7 +64,7 @@ import { PerfCaseDataSection } from '../components/PerfCaseWorkbench'
 import { PerfContractToggle, type PerfContractView } from '../components/PerfContractToggle'
 import { PerfLoadModelForm } from '../components/PerfLoadModelForm'
 import { PerfStepEditor } from '../components/PerfStepsEditor'
-import { StartPerfSuiteRunModal } from '../components/StartPerfSuiteRunModal'
+import { StartPerfRunModal } from '../components/StartPerfRunModal'
 
 const { Text } = Typography
 
@@ -112,6 +112,7 @@ export function PerformanceSuiteDetailPage() {
   const [collapsedCaseIds, setCollapsedCaseIds] = useState<Set<string>>(() => new Set())
   const [contractView, setContractView] = useState<PerfContractView>('visual')
   const [runOpen, setRunOpen] = useState(false)
+  const [caseRunOpen, setCaseRunOpen] = useState(false)
   const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | undefined>(undefined)
   const [uploading, setUploading] = useState(false)
@@ -589,32 +590,65 @@ export function PerformanceSuiteDetailPage() {
                           <CaseInvalidatedTag invalidatedAt={item.invalidatedAt} className="flex-none" />
                           <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-app-surface-hover px-1.5 text-[10px] text-app-surface-text-muted">{steps.length}</span>
                         </button>
-                        {selected ? <Popconfirm
-                          title="确认删除该用例？"
-                          description="用例及其性能运行记录会一并删除，且无法恢复。"
-                          okText="删除"
-                          cancelText="取消"
-                          okButtonProps={{ danger: true }}
-                          disabled={!canWrite}
-                          onConfirm={() => deleteCaseMutation.mutate(item.caseId)}
-                        >
-                          <Tooltip title="删除用例">
+                        {selected ? <>
+                          <Tooltip title={isCaseInvalidated(item) ? '失效用例不能运行' : '运行用例'}>
                             <ProjectActionButton
-                              action="write"
+                              action="execute"
                               projectId={projectId}
-                              title="删除用例"
+                              title="运行用例"
                               type="text"
                               shape="circle"
                               size="small"
-                              className="action-btn-delete shrink-0"
-                              operation="delete"
+                              operation="run"
                               iconOnly
-                              danger
-                              aria-label={`删除用例 ${item.name}`}
-                              loading={deleteCaseMutation.isPending && deleteCaseMutation.variables === item.caseId}
+                              aria-label={`运行用例 ${item.name}`}
+                              disabled={isCaseInvalidated(item)}
+                              onClick={() => {
+                                if (dirty) {
+                                  message.warning('当前用例有未保存修改，请先保存后再运行')
+                                  return
+                                }
+                                setCaseRunOpen(true)
+                              }}
                             />
                           </Tooltip>
-                        </Popconfirm> : null}
+                          <Tooltip title="查看运行记录">
+                            <Button
+                              type="text"
+                              shape="circle"
+                              size="small"
+                              icon={<HistoryOutlined />}
+                              aria-label={`查看用例 ${item.name} 的运行记录`}
+                              onClick={() => navigate(`/performance/runs?kind=case&caseId=${item.caseId}`)}
+                            />
+                          </Tooltip>
+                          <Popconfirm
+                            title="确认删除该用例？"
+                            description="用例及其性能运行记录会一并删除，且无法恢复。"
+                            okText="删除"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true }}
+                            disabled={!canWrite}
+                            onConfirm={() => deleteCaseMutation.mutate(item.caseId)}
+                          >
+                            <Tooltip title="删除用例">
+                              <ProjectActionButton
+                                action="write"
+                                projectId={projectId}
+                                title="删除用例"
+                                type="text"
+                                shape="circle"
+                                size="small"
+                                className="action-btn-delete shrink-0"
+                                operation="delete"
+                                iconOnly
+                                danger
+                                aria-label={`删除用例 ${item.name}`}
+                                loading={deleteCaseMutation.isPending && deleteCaseMutation.variables === item.caseId}
+                              />
+                            </Tooltip>
+                          </Popconfirm>
+                        </> : null}
                       </div>
                       {collapsed ? null : <div className="ml-4 mt-1 grid min-w-0 gap-0.5 border-l border-app-surface-border pl-2">
                         {steps.length === 0 ? <div className="px-2 py-1.5 text-[11px] text-app-surface-text-muted">还没有步骤</div> : steps.map((step, stepIndex) => {
@@ -832,18 +866,31 @@ export function PerformanceSuiteDetailPage() {
           batchInvalidateCasesMutation.mutate({ caseIds, invalidated })
         }
       />
-      <StartPerfSuiteRunModal
+      <StartPerfRunModal
         open={runOpen}
         projectId={projectId}
-        suite={suite ?? null}
+        target={suite ? { kind: 'suite', suite } : null}
         defaultEnvironmentId={resolvedEnvironmentId}
         onClose={() => setRunOpen(false)}
         onStarted={(run) => {
           setRunOpen(false)
-          navigate(`/performance/runs/${run.suiteRunId}`)
+          if ('suiteRunId' in run) navigate(`/performance/runs/${run.suiteRunId}`)
         }}
         onManageEnvironments={() => { setRunOpen(false); setEnvironmentDrawerOpen(true) }}
         onManageMonitoring={() => { setRunOpen(false); navigate('/base-services?tab=monitoring') }}
+      />
+      <StartPerfRunModal
+        open={caseRunOpen}
+        projectId={projectId}
+        target={activeCase ? { kind: 'case', caseItem: activeCase } : null}
+        defaultEnvironmentId={resolvedEnvironmentId}
+        onClose={() => setCaseRunOpen(false)}
+        onStarted={(run) => {
+          setCaseRunOpen(false)
+          if ('runId' in run) navigate(`/performance/case-runs/${run.runId}`)
+        }}
+        onManageEnvironments={() => { setCaseRunOpen(false); setEnvironmentDrawerOpen(true) }}
+        onManageMonitoring={() => { setCaseRunOpen(false); navigate('/base-services?tab=monitoring') }}
       />
       <EnvironmentDrawer
         open={environmentDrawerOpen}

@@ -396,6 +396,54 @@ def test_deleting_suite_cascades_cases_and_run_history(api):
     assert _pending_tasks(api, child_ids) == 0
 
 
+def test_perf_run_list_filters_trigger_type(api):
+    headers, suite, first, _second, environment_id, connection_id = _setup(api, "run-list")
+    suite_run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in suite_run["items"]]
+    project_id = suite["projectId"]
+
+    manual_empty = api.get(
+        f"/v1/projects/{project_id}/perf-runs",
+        headers=headers,
+        params={"triggerType": "manual"},
+    )
+    assert manual_empty.status_code == 200, manual_empty.text
+    assert manual_empty.json()["data"] == {"total": 0, "items": []}
+
+    created = api.post(
+        f"/v1/perf-cases/{first['caseId']}/runs",
+        headers=headers,
+        json={"environmentId": environment_id, "monitoringConnectionId": connection_id},
+    )
+    assert created.status_code == 200, created.text
+    manual_run_id = created.json()["data"]["runId"]
+
+    manual = api.get(
+        f"/v1/projects/{project_id}/perf-runs",
+        headers=headers,
+        params={"triggerType": "manual"},
+    )
+    assert manual.status_code == 200, manual.text
+    assert manual.json()["data"]["total"] == 1
+    assert [item["runId"] for item in manual.json()["data"]["items"]] == [manual_run_id]
+
+    suite_only = api.get(
+        f"/v1/projects/{project_id}/perf-runs",
+        headers=headers,
+        params={"triggerType": "suite"},
+    )
+    assert suite_only.status_code == 200, suite_only.text
+    assert {item["runId"] for item in suite_only.json()["data"]["items"]} == set(child_ids)
+    assert all(item["triggerType"] == "suite" for item in suite_only.json()["data"]["items"])
+
+    invalid = api.get(
+        f"/v1/projects/{project_id}/perf-runs",
+        headers=headers,
+        params={"triggerType": "unknown"},
+    )
+    assert invalid.status_code == 400, invalid.text
+
+
 def test_project_deletion_requires_removing_perf_suites(api):
     _settings(api)
     _, headers = account(api, "suite-project-delete")

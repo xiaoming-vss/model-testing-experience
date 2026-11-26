@@ -7,6 +7,7 @@ import {
 import { Button, Input, Popconfirm, Select, Tag, Tooltip, Upload } from 'antd'
 import type { UploadProps } from 'antd'
 import type { PerfDataFile } from '../types'
+import { formatPerfFileSize } from '../utils/perf'
 import {
   createPerfDataEntry,
   type PerfCaseFormValues,
@@ -183,7 +184,7 @@ export function PerfCaseDataSection({
               <Tag color={file.filename.endsWith('.json') ? 'gold' : 'green'}>{file.filename.endsWith('.json') ? 'JSON' : 'CSV'}</Tag>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs text-app-surface-text" title={file.filename}>{file.filename}</div>
-                <div className="text-[11px] text-app-surface-text-muted">{formatFileSize(file.size)}</div>
+                <div className="text-[11px] text-app-surface-text-muted">{formatPerfFileSize(file.size)}</div>
               </div>
               {referenced ? <Tag color="green">已引用</Tag> : <Button size="small" disabled={disabled} onClick={() => addReference(file)}>添加引用</Button>}
               <Tooltip title="下载">
@@ -215,10 +216,4 @@ export function PerfCaseDataSection({
       </div>
     </div>
   </section>
-}
-
-function formatFileSize(size: number) {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / 1024 / 1024).toFixed(1)} MB`
 }

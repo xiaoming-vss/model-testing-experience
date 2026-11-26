@@ -13,3 +13,4 @@
 
 - [0001 性能 Worker 独立成项目](adr/0001-independent-perf-worker.md)
 - [0002 性能任务接入控制面与 poll 模式](adr/0002-control-plane-poll-mode.md)
+- [0003 性能运行指标上下文](adr/0003-performance-run-metrics-context.md)

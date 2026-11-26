@@ -21,7 +21,7 @@ import type { PerfSuiteSummary } from '../types'
 import { PERF_OUTCOME_LABELS, PERF_STATUS_LABELS, perfOutcomeColor, perfStatusColor } from '../utils/perf'
 import { PERF_LOAD_MODEL_LABELS, type PerfLoadModel } from '../utils/perfLoadModel'
 import { PerfSuiteDrawer, type PerfSuiteFormValues } from '../components/PerfSuiteDrawer'
-import { StartPerfSuiteRunModal } from '../components/StartPerfSuiteRunModal'
+import { StartPerfRunModal } from '../components/StartPerfRunModal'
 
 const { Text } = Typography
 
@@ -301,13 +301,15 @@ export function PerformancePage() {
         onClose={() => { setDrawerOpen(false); setEditingSuite(null) }}
         onSubmit={submitSuite}
       />
-      <StartPerfSuiteRunModal
+      <StartPerfRunModal
         open={Boolean(runSuite)}
         projectId={activeProjectId}
-        suite={runSuiteQuery.data ?? null}
+        target={runSuiteQuery.data ? { kind: 'suite', suite: runSuiteQuery.data } : null}
         defaultEnvironmentId={resolvedEnvironmentId}
         onClose={() => setRunSuite(null)}
-        onStarted={(run) => navigate(`/performance/runs/${run.suiteRunId}`)}
+        onStarted={(run) => {
+          if ('suiteRunId' in run) navigate(`/performance/runs/${run.suiteRunId}`)
+        }}
         onManageEnvironments={() => { setRunSuite(null); setEnvironmentDrawerOpen(true) }}
         onManageMonitoring={() => { setRunSuite(null); navigate('/base-services?tab=monitoring') }}
       />

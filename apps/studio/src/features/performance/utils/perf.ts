@@ -92,6 +92,22 @@ export function perfMetricsFromSummary(
   }
 }
 
+export function formatPerfMetric(value: number | null, digits = 1, suffix = '') {
+  if (value === null) return '-'
+  return `${value.toFixed(digits)}${suffix}`
+}
+
+export function formatPerfPercent(value: number | null) {
+  if (value === null) return '-'
+  return `${(value * 100).toFixed(2)}%`
+}
+
+export function formatPerfFileSize(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
 export function formatPerfDuration(durationMs: number) {
   if (!Number.isFinite(durationMs) || durationMs <= 0) return '-'
   const seconds = Math.round(durationMs / 1000)

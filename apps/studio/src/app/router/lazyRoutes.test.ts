@@ -20,6 +20,7 @@ describe('route-level lazy loading', () => {
     'BugDetailPage',
     'PerformanceSuiteDetailPage',
     'PerformanceRunDetailPage',
+    'PerformanceCaseRunDetailPage',
   ])('lazy-loads the %s route', (page) => {
     expect(appShellSource).toContain(`const ${page} = lazy(() => import(`)
   })

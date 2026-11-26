@@ -21,6 +21,7 @@ async def list_perf_runs(
     project_id: str,
     case_id: str = Query(default="", alias="caseId"),
     status: str = "",
+    trigger_type: str = Query(default="", alias="triggerType"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     user_id: str = Depends(get_current_user_id),
@@ -32,6 +33,7 @@ async def list_perf_runs(
             project_id,
             case_id=case_id,
             status=status,
+            trigger_type=trigger_type,
             page=page,
             page_size=page_size,
         )

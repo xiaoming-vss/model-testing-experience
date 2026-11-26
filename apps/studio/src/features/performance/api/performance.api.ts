@@ -5,7 +5,6 @@ import type {
   CreatePerfSuitePayload,
   MonitoringConnection,
   PerfCase,
-  PerfCaseSummary,
   PerfRun,
   PerfRunSummary,
   PerfSuite,
@@ -20,16 +19,11 @@ import type {
 } from '../types'
 
 export const performanceApi = {
-  listPerfCases: (projectId: string, filters: { invalidated?: boolean } = {}) =>
-    request<ListResponse<PerfCaseSummary>>(
-      `/v1/projects/${projectId}/perf-cases${buildQuery({ ...filters })}`,
-    ),
   batchInvalidatePerfCases: (projectId: string, caseIds: string[], invalidated: boolean) =>
     request<{ caseIds: string[]; updatedCount: number }>(
       `/v1/projects/${projectId}/perf-cases/batch-invalidation`,
       { method: 'POST', body: JSON.stringify({ caseIds, invalidated }) },
     ),
-  getPerfCase: (caseId: string) => request<PerfCase>(`/v1/perf-cases/${caseId}`),
   createPerfCase: (projectId: string, body: CreatePerfCasePayload) =>
     request<PerfCase>(`/v1/projects/${projectId}/perf-cases`, {
       method: 'POST',
@@ -49,7 +43,13 @@ export const performanceApi = {
     }),
   listPerfRuns: (
     projectId: string,
-    params: { caseId?: string; status?: string; page?: number; pageSize?: number } = {},
+    params: {
+      caseId?: string
+      status?: string
+      triggerType?: 'manual' | 'suite'
+      page?: number
+      pageSize?: number
+    } = {},
   ) => request<ListResponse<PerfRunSummary>>(`/v1/projects/${projectId}/perf-runs${buildQuery(params)}`),
   getPerfRun: (runId: string) => request<PerfRun>(`/v1/perf-runs/${runId}`),
   stopPerfRun: (runId: string) =>
@@ -66,11 +66,6 @@ export const performanceApi = {
     request<PerfSuite>(`/v1/perf-suites/${suiteId}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
-    }),
-  reorderPerfSuiteCases: (suiteId: string, caseIds: string[]) =>
-    request<PerfSuite>(`/v1/perf-suites/${suiteId}/case-order`, {
-      method: 'PUT',
-      body: JSON.stringify({ caseIds }),
     }),
   deletePerfSuite: (suiteId: string) =>
     request<Record<string, never>>(`/v1/perf-suites/${suiteId}`, { method: 'DELETE' }),

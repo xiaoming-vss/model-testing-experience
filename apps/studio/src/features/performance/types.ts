@@ -99,6 +99,7 @@ export type PerfRun = PerfRunSummary & {
 export type StartPerfRunPayload = {
   environmentId: string
   monitoringConnectionId: string
+  sprintId?: string
 }
 
 export type PerfSuiteSummary = {

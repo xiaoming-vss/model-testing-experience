@@ -384,16 +384,20 @@ class PerfRunService:
         *,
         case_id: str = "",
         status: str = "",
+        trigger_type: str = "",
         page: int = 1,
         page_size: int = 20,
     ) -> dict[str, Any]:
         await require_project_id(self.repository.session, user_id, project_id, action="read")
         if status and status not in {item.value for item in PerfRunStatus}:
             raise ErrBadRequest()
+        if trigger_type and trigger_type not in {"manual", "suite"}:
+            raise ErrBadRequest()
         rows, total = await self.repository.list_by_project(
             project_id,
             case_id=case_id,
             status=status,
+            trigger_type=trigger_type,
             page=max(page, 1),
             page_size=min(max(page_size, 1), 100),
         )
