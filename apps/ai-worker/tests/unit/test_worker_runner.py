@@ -6,6 +6,8 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
+import httpx
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
@@ -27,24 +29,46 @@ class _RecordingSink(ResultSink):
         self.heartbeat_calls: list[tuple[str, str, str]] = []
         self.progress_calls: list[TaskProgress] = []
         self.result_calls: list[TaskResult] = []
+        self.timeouts: list[tuple[str, float | None]] = []
         self.first_heartbeat = threading.Event()
 
-    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None:
+    def mark_started(
+        self,
+        task_id: str,
+        attempt_id: str,
+        started_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         self.started_calls.append((task_id, attempt_id, started_at_iso))
+        self.timeouts.append(("started", timeout_seconds))
 
-    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         self.heartbeat_calls.append((task_id, attempt_id, heartbeat_at_iso))
+        self.timeouts.append(("heartbeat", timeout_seconds))
         self.first_heartbeat.set()
 
-    def submit_progress(self, progress: TaskProgress) -> None:
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
         self.progress_calls.append(progress)
+        self.timeouts.append(("progress", timeout_seconds))
 
     def submit_result(self, result: TaskResult) -> None:
         self.result_calls.append(result)
 
 
 class _FailingProgressSink(_RecordingSink):
-    def submit_progress(self, progress: TaskProgress) -> None:
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
         raise RuntimeError("progress endpoint unavailable")
 
 
@@ -65,12 +89,21 @@ class _FlakyResultSink(_RecordingSink):
 
 
 class _FailingHeartbeatSink(_RecordingSink):
-    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         raise RuntimeError("SECRET-MARKER heartbeat endpoint unavailable")
 
 
 class _FailingProgressAndHeartbeatSink(_FailingHeartbeatSink):
-    def submit_progress(self, progress: TaskProgress) -> None:
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
         raise RuntimeError("progress endpoint unavailable")
 
 
@@ -80,11 +113,96 @@ class _FlakyHeartbeatSink(_RecordingSink):
         self.failures_before_success = failures_before_success
         self.attempts = 0
 
-    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         self.attempts += 1
         if self.attempts <= self.failures_before_success:
             raise RuntimeError("heartbeat endpoint unavailable")
-        super().send_heartbeat(task_id, attempt_id, heartbeat_at_iso)
+        super().send_heartbeat(
+            task_id, attempt_id, heartbeat_at_iso, timeout_seconds=timeout_seconds
+        )
+
+
+def _rejected(status: int, method: str = "PATCH") -> httpx.HTTPStatusError:
+    request = httpx.Request(method, "https://platform.example.test/internal/ai-worker/tasks/task-1")
+    return httpx.HTTPStatusError(
+        "SECRET-MARKER rejected", request=request, response=httpx.Response(status, request=request)
+    )
+
+
+class _RejectingSink(_RecordingSink):
+    """Answer one lifecycle call with an HTTP error status."""
+
+    def __init__(self, call: str, status: int) -> None:
+        super().__init__()
+        self.call = call
+        self.status = status
+
+    def _reject(self, call: str) -> None:
+        if call == self.call:
+            raise _rejected(self.status)
+
+    def mark_started(self, task_id, attempt_id, started_at_iso, *, timeout_seconds=None) -> None:
+        super().mark_started(task_id, attempt_id, started_at_iso, timeout_seconds=timeout_seconds)
+        self._reject("started")
+
+    def send_heartbeat(
+        self, task_id, attempt_id, heartbeat_at_iso, *, timeout_seconds=None
+    ) -> None:
+        super().send_heartbeat(
+            task_id, attempt_id, heartbeat_at_iso, timeout_seconds=timeout_seconds
+        )
+        self._reject("heartbeat")
+
+    def submit_progress(self, progress, *, timeout_seconds=None) -> None:
+        super().submit_progress(progress, timeout_seconds=timeout_seconds)
+        self._reject("progress")
+
+
+class _HangingHeartbeatSink(_RecordingSink):
+    """A heartbeat that never gets an answer until the test releases it."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
+        super().send_heartbeat(
+            task_id, attempt_id, heartbeat_at_iso, timeout_seconds=timeout_seconds
+        )
+        self.release.wait(timeout=10)
+
+
+class _SlowAnswerHeartbeatSink(_RecordingSink):
+    def __init__(self, delay: float) -> None:
+        super().__init__()
+        self.delay = delay
+
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
+        time.sleep(self.delay)
+        super().send_heartbeat(
+            task_id, attempt_id, heartbeat_at_iso, timeout_seconds=timeout_seconds
+        )
 
 
 class _SuccessfulExecutor(TaskExecutor):
@@ -525,6 +643,120 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(1, len(sink.result_calls))
         self.assertNotIn("task lease lost", "\n".join(logs.output))
 
+    def _lease_runner(self, sink, executor, *, interval=0.01, max_failures=3) -> WorkerRunner:
+        return WorkerRunner(
+            executor=executor,
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=interval,
+                run_once=False,
+            ),
+            heartbeat_max_failures=max_failures,
+        )
+
+    def test_lease_expires_while_a_heartbeat_is_still_waiting_for_its_answer(self) -> None:
+        # No failure ever comes back, so only the clock can end the lease.
+        sink = _HangingHeartbeatSink()
+        runner = self._lease_runner(sink, _LeaseCheckExecutor(timeout_seconds=3), max_failures=100)
+
+        try:
+            with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+                result = runner.process_task(self._make_task())
+        finally:
+            sink.release.set()
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("task lease lost, result discarded", "\n".join(logs.output))
+        # A hanging beat is cut off while half of the one-second lease is still left.
+        self.assertTrue(sink.timeouts)
+        self.assertTrue(
+            all(0 < limit <= 0.5 for call, limit in sink.timeouts if call == "heartbeat")
+        )
+
+    def test_renewing_calls_are_bounded_by_the_remaining_lease(self) -> None:
+        sink = _RecordingSink()
+        runner = self._lease_runner(sink, _SuccessfulExecutor(), interval=60)
+
+        self.assertIsNotNone(runner.process_task(self._make_task()))
+
+        self.assertEqual(["started", "progress"], [call for call, _ in sink.timeouts])
+        self.assertTrue(all(0 < limit <= 0.5 for _, limit in sink.timeouts))
+
+    def test_rejected_progress_ends_the_lease_at_that_checkpoint(self) -> None:
+        for status in (401, 403, 404, 409, 410):
+            with self.subTest(status=status):
+                sink = _RejectingSink("progress", status)
+                runner = self._lease_runner(
+                    sink, _LeaseCheckExecutor(timeout_seconds=3), max_failures=100
+                )
+
+                with self.assertLogs(
+                    "testing_agent_ai_worker.worker.runner", level="WARNING"
+                ) as logs:
+                    result = runner.process_task(self._make_task())
+
+                self.assertIsNone(result)
+                self.assertEqual([], sink.result_calls)
+                output = "\n".join(logs.output)
+                self.assertIn(f"progress_rejected status={status}", output)
+                self.assertNotIn("SECRET-MARKER", output)
+
+    def test_progress_request_problem_is_not_a_lost_lease(self) -> None:
+        for status in (400, 422, 500):
+            with self.subTest(status=status):
+                sink = _RejectingSink("progress", status)
+                runner = self._lease_runner(sink, _SuccessfulExecutor())
+
+                with self.assertLogs(
+                    "testing_agent_ai_worker.worker.runner", level="WARNING"
+                ) as logs:
+                    result = runner.process_task(self._make_task())
+
+                # The request was wrong, not the lease: the result is still delivered.
+                self.assertEqual([result], sink.result_calls)
+                self.assertNotIn("task lease lost", "\n".join(logs.output))
+
+    def test_rejected_heartbeat_ends_the_lease_before_the_failure_threshold(self) -> None:
+        sink = _RejectingSink("heartbeat", 409)
+        runner = self._lease_runner(sink, _LeaseCheckExecutor(timeout_seconds=3), max_failures=100)
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("heartbeat_rejected status=409", "\n".join(logs.output))
+
+    def test_rejected_start_runs_nothing_and_reports_nothing(self) -> None:
+        sink = _RejectingSink("started", 409)
+        runner = self._lease_runner(sink, _SuccessfulExecutor())
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.heartbeat_calls)
+        self.assertEqual([], sink.progress_calls)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("start_rejected status=409", "\n".join(logs.output))
+
+    def test_a_heartbeat_answer_that_outlives_its_window_does_not_revive_the_lease(self) -> None:
+        # Sent at 0.2s into a one-second lease and answered at 1.7s: the window it
+        # was meant to extend has already passed.
+        sink = _SlowAnswerHeartbeatSink(delay=1.5)
+        runner = self._lease_runner(
+            sink, _LeaseCheckExecutor(timeout_seconds=4), interval=0.2, max_failures=100
+        )
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("late_heartbeat", "\n".join(logs.output))
+
     def test_result_submission_failure_is_preserved_and_recovered(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             sink = _FlakyResultSink()
@@ -558,6 +790,25 @@ class WorkerRunnerTests(unittest.TestCase):
             self.assertEqual(1, outcome.delivered)
             self.assertEqual([result], sink.result_calls)
             self.assertEqual([], list(Path(temp_dir).glob("*.json")))
+
+
+class WorkerLifecycleTests(unittest.TestCase):
+    def test_heartbeat_interval_is_at_most_half_the_lease(self) -> None:
+        lifecycle = WorkerLifecycle(
+            poll_interval_seconds=10, heartbeat_interval_seconds=15, run_once=False
+        )
+
+        self.assertEqual(15, lifecycle.heartbeat_interval_for(30))
+        self.assertEqual(5, lifecycle.heartbeat_interval_for(10))
+        self.assertEqual(1, lifecycle.heartbeat_interval_for(1))
+
+    def test_heartbeat_interval_without_a_configured_value_is_half_the_lease(self) -> None:
+        lifecycle = WorkerLifecycle(
+            poll_interval_seconds=10, heartbeat_interval_seconds=0, run_once=False
+        )
+
+        self.assertEqual(15, lifecycle.heartbeat_interval_for(30))
+        self.assertEqual(1, lifecycle.heartbeat_interval_for(2))
 
 
 if __name__ == "__main__":

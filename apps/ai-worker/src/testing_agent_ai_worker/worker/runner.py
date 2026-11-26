@@ -19,6 +19,7 @@ from datetime import UTC, datetime, timedelta
 from testing_agent_ai_worker.core.errors import safe_execution_error, safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.platform.http_client import lease_rejected
 from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.outbox import OutboxDrain, ResultOutbox
@@ -31,46 +32,93 @@ class LeaseLostError(RuntimeError):
 
 
 class _LeaseState:
-    """Track heartbeat success and the local lease deadline for one task."""
+    """Track heartbeat success and the local lease deadline for one task.
 
-    def __init__(self, *, lease_seconds: int, max_failures: int) -> None:
+    The window runs from the moment a renewal request was sent. The control plane
+    renews sometime before its answer arrives, so this window is never later than the
+    control plane's own, and an answer that arrives after the window cannot revive it.
+    """
+
+    def __init__(
+        self,
+        *,
+        lease_seconds: int,
+        max_failures: int,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self.lease_seconds = max(1, lease_seconds)
         self.max_failures = max(1, max_failures)
+        self._clock = clock
         self._lock = threading.Lock()
-        self._last_success_monotonic = time.monotonic()
-        self._last_success_at = datetime.now(UTC)
+        self._renewed_monotonic = clock()
+        self._renewed_at = datetime.now(UTC)
         self._failures = 0
         self._lost = False
 
-    def record_success(self) -> None:
+    def record_success(self, renewed_at: float) -> None:
+        """Start a new window at ``renewed_at``, the moment the request was sent."""
         with self._lock:
             if self._lost:
                 return
-            self._last_success_at = datetime.now(UTC)
-            self._last_success_monotonic = time.monotonic()
+            elapsed = self._clock() - renewed_at
+            if elapsed >= self.lease_seconds:
+                # The answer outlived the window it was meant to extend.
+                self._lost = True
+                return
+            self._renewed_monotonic = renewed_at
+            self._renewed_at = datetime.now(UTC) - timedelta(seconds=max(0.0, elapsed))
             self._failures = 0
 
-    def record_failure(self) -> tuple[int, bool]:
+    def record_failure(self, *, rejected: bool = False) -> tuple[int, bool]:
+        """Count a failed renewal; ``rejected`` means the control plane ended the attempt."""
         with self._lock:
             self._failures += 1
-            elapsed = time.monotonic() - self._last_success_monotonic
-            if self._failures >= self.max_failures or elapsed >= self.lease_seconds:
-                self._lost = True
+            lost = (
+                rejected
+                or self._failures >= self.max_failures
+                or self._elapsed() >= self.lease_seconds
+            )
+            self._lost = self._lost or lost
             return self._failures, self._lost
+
+    def lose(self) -> None:
+        with self._lock:
+            self._lost = True
 
     @property
     def lost(self) -> bool:
+        # Read on every checkpoint, so a heartbeat that hangs past the deadline is caught
+        # here without waiting for its failure to come back.
         with self._lock:
-            return self._lost
+            return self._lost or self._elapsed() >= self.lease_seconds
 
     def lease_expires_at(self) -> datetime:
         with self._lock:
-            return self._last_success_at + timedelta(seconds=self.lease_seconds)
+            return self._renewed_at + timedelta(seconds=self.lease_seconds)
 
     def remaining_seconds(self) -> float:
         with self._lock:
-            elapsed = time.monotonic() - self._last_success_monotonic
-            return max(0.0, self.lease_seconds - elapsed)
+            return max(0.0, self.lease_seconds - self._elapsed())
+
+    def _elapsed(self) -> float:
+        return self._clock() - self._renewed_monotonic
+
+
+def _lose_lease(
+    task: Task, lease_lost_event: threading.Event, lease_state: _LeaseState, reason: str
+) -> None:
+    lease_state.lose()
+    lease_lost_event.set()
+    LOGGER.error(
+        "task lease lost: task_id=%s attempt_id=%s %s",
+        task.task_id,
+        task.attempt_id,
+        reason,
+    )
+
+
+def _status_of(error: BaseException) -> object:
+    return getattr(getattr(error, "response", None), "status_code", None)
 
 
 class TaskExecutor:
@@ -129,19 +177,32 @@ class WorkerRunner:
             if lease_lost_event.is_set() or lease_state.lost:
                 raise LeaseLostError("任务租约已失效")
             latest_progress = progress
+            requested_at = time.monotonic()
             try:
-                self.result_service.submit_progress(progress)
+                self.result_service.submit_progress(
+                    progress, timeout_seconds=lease_state.remaining_seconds() / 2
+                )
             except Exception as exc:
+                if lease_rejected(exc):
+                    # The control plane ended this attempt: stop at this checkpoint.
+                    _lose_lease(
+                        task,
+                        lease_lost_event,
+                        lease_state,
+                        f"progress_rejected status={_status_of(exc)}",
+                    )
+                    raise LeaseLostError("任务租约已失效") from None
                 LOGGER.warning(
-                    "progress submission failed: task_id=%s stage=%s error_type=%s\n%s",
+                    "progress submission failed: task_id=%s stage=%s error_type=%s status=%s\n%s",
                     progress.task_id,
                     progress.current_stage,
                     type(exc).__name__,
+                    _status_of(exc),
                     safe_traceback(exc),
                 )
             else:
                 # Progress extends the platform lease for every AI queue path.
-                lease_state.record_success()
+                lease_state.record_success(requested_at)
 
         # 凭证缺失属于执行前失败，直接回传 failed，不进入 started/heartbeat。
         if task.credential_error:
@@ -159,8 +220,14 @@ class WorkerRunner:
             return result
 
         try:
-            self.result_service.mark_started(task.task_id, task.attempt_id, started_at.isoformat())
-            lease_state.record_success()
+            requested_at = time.monotonic()
+            self.result_service.mark_started(
+                task.task_id,
+                task.attempt_id,
+                started_at.isoformat(),
+                timeout_seconds=lease_state.remaining_seconds() / 2,
+            )
+            lease_state.record_success(requested_at)
             heartbeat_thread = threading.Thread(
                 target=self._heartbeat_loop,
                 args=(task, stop_event, lease_lost_event, lease_state),
@@ -177,32 +244,17 @@ class WorkerRunner:
             except LeaseLostError:
                 result = None
         except Exception as exc:
-            LOGGER.error(
-                "task execution failed: task_id=%s error_type=%s\n%s",
-                task.task_id,
-                type(exc).__name__,
-                safe_traceback(exc),
-            )
-            intermediate_json_text = (
-                latest_progress.intermediate_json_text
-                if latest_progress is not None
-                else task.config_json
-            )
-            result = TaskResult(
-                task_id=task.task_id,
-                attempt_id=task.attempt_id,
-                generate_task_id=task.generate_task_id,
-                status=TaskStatus.ERROR,
-                intermediate_json_text=intermediate_json_text,
-                output_yaml=latest_progress.output_yaml if latest_progress is not None else "",
-                result_summary_json=(
-                    latest_progress.result_summary_json if latest_progress is not None else ""
-                ),
-                # Provider messages may contain prompts, source text or credentials.
-                error_message=safe_execution_error(exc),
-                started_at=started_at,
-                finished_at=datetime.now().astimezone(),
-            )
+            if lease_rejected(exc):
+                # The attempt was stopped or reclaimed before anything ran.
+                _lose_lease(
+                    task,
+                    lease_lost_event,
+                    lease_state,
+                    f"start_rejected status={_status_of(exc)}",
+                )
+                result = None
+            else:
+                result = self._execution_error(task, exc, latest_progress, started_at)
         finally:
             stop_event.set()
             if heartbeat_thread is not None:
@@ -222,6 +274,39 @@ class WorkerRunner:
         if result is not None:
             self._submit_result(task, result, lease_state)
         return result
+
+    def _execution_error(
+        self,
+        task: Task,
+        exc: Exception,
+        latest_progress: TaskProgress | None,
+        started_at: datetime,
+    ) -> TaskResult:
+        LOGGER.error(
+            "task execution failed: task_id=%s error_type=%s\n%s",
+            task.task_id,
+            type(exc).__name__,
+            safe_traceback(exc),
+        )
+        return TaskResult(
+            task_id=task.task_id,
+            attempt_id=task.attempt_id,
+            generate_task_id=task.generate_task_id,
+            status=TaskStatus.ERROR,
+            intermediate_json_text=(
+                latest_progress.intermediate_json_text
+                if latest_progress is not None
+                else task.config_json
+            ),
+            output_yaml=latest_progress.output_yaml if latest_progress is not None else "",
+            result_summary_json=(
+                latest_progress.result_summary_json if latest_progress is not None else ""
+            ),
+            # Provider messages may contain prompts, source text or credentials.
+            error_message=safe_execution_error(exc),
+            started_at=started_at,
+            finished_at=datetime.now().astimezone(),
+        )
 
     def _submit_result(
         self,
@@ -303,30 +388,35 @@ class WorkerRunner:
         interval_seconds = self.lifecycle.heartbeat_interval_for(task.lease_seconds)
         wait_seconds = interval_seconds
         while not stop_event.wait(wait_seconds):
+            requested_at = time.monotonic()
             try:
+                # Give up while half the lease is left, so another beat can still renew it.
                 self.result_service.send_heartbeat(
                     task.task_id,
                     task.attempt_id,
                     datetime.now().astimezone().isoformat(),
+                    timeout_seconds=lease_state.remaining_seconds() / 2,
                 )
             except Exception as exc:
-                failures, lost = lease_state.record_failure()
+                rejected = lease_rejected(exc)
+                failures, lost = lease_state.record_failure(rejected=rejected)
                 LOGGER.warning(
-                    "task heartbeat failed: task_id=%s attempt_id=%s failures=%s error_type=%s\n%s",
+                    "task heartbeat failed: task_id=%s attempt_id=%s failures=%s "
+                    "error_type=%s status=%s\n%s",
                     task.task_id,
                     task.attempt_id,
                     failures,
                     type(exc).__name__,
+                    _status_of(exc),
                     safe_traceback(exc),
                 )
                 if lost:
-                    lease_lost_event.set()
-                    LOGGER.error(
-                        "task lease lost: task_id=%s attempt_id=%s failures=%s",
-                        task.task_id,
-                        task.attempt_id,
-                        failures,
+                    reason = (
+                        f"heartbeat_rejected status={_status_of(exc)}"
+                        if rejected
+                        else f"failures={failures}"
                     )
+                    _lose_lease(task, lease_lost_event, lease_state, reason)
                     return
                 # A failed renewal must not consume the whole remaining lease;
                 # retry sooner, but never turn failures into an unbounded loop.
@@ -335,5 +425,8 @@ class WorkerRunner:
                     max(0.1, lease_state.remaining_seconds() / 2),
                 )
             else:
-                lease_state.record_success()
+                lease_state.record_success(requested_at)
+                if lease_state.lost:
+                    _lose_lease(task, lease_lost_event, lease_state, "late_heartbeat")
+                    return
                 wait_seconds = interval_seconds

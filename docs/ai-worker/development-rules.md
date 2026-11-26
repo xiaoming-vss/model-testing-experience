@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：ai-worker maintainer
-- 最近复核：2026-11-19
+- 最近复核：2026-11-26
 - 复核周期：每季度
 - 适用范围：`apps/ai-worker/`
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
@@ -15,7 +15,7 @@
 - `app/` 装配执行依赖，`worker/` 管理轮询、领取、心跳和运行，`tasks/` 管理各类任务，`platform/` 封装控制面协议，`agent/` 负责执行底座门面与适配器。
 - 业务模块不得直接导入 Nanobot SDK 或 Pi RPC；新增底座只扩展 `agent/` 适配器，并实现 `agent/base.py` 的契约。底座专属逻辑（凭据文件、会话、进程回收、超时）留在适配器内。
 - 新任务类型必须同时更新分派、任务载荷、执行器、结果解析与控制面消费方；不能只在提示词中添加名称就视为支持新任务。
-- 调整并发、停止或中断策略时，必须保留独立任务 workspace 和任务关联身份，并验证心跳及结果回传，不套用其他 Worker 的排空期限。
+- 调整并发、停止或中断策略时，必须保留独立任务 workspace 和任务关联身份，并验证心跳及结果回传，不套用其他 Worker 的排空期限。关闭语义固定为：SIGINT 停止领取新任务并等待在途任务完成后退出；SIGTERM 立即终止模型子进程并退出进程，不回传结果，在途尝试由控制面按租约回收。
 
 Pi 和 git 子进程不得继承完整 `os.environ`。Pi 使用 `agent/pi.py` 的 `PI_ENV_ALLOWLIST`（PATH、HOME、临时目录、locale、Windows 启动变量）加父进程 `PI_*`，并由代码显式注入 `MTX_PI_API_KEY`、`PI_CODING_AGENT_DIR`、`PI_OFFLINE` 和 `PI_TELEMETRY`；git 使用 `tasks/git_workspace.py` 的 `GIT_ENV_ALLOWLIST` 加显式 askpass 配置和 `GIT_PASSWORD`。Worker Token、GitLab token、云凭据及其他服务秘密不得进入子进程。新增子进程依赖（如代理或自定义 CA）时必须按最小范围显式加入白名单并补秘密标记回归，不能整体回退到父环境。
 
@@ -29,7 +29,9 @@ Pi 和 git 子进程不得继承完整 `os.environ`。Pi 使用 `agent/pi.py` �
 
 异常日志与最终失败回传统一使用 `core/errors.py` 的安全摘要：只保留异常类型、文件/行号/函数名和任务标识。可能携带提示词、输入材料、模型输出或凭据的异常，不得使用 `LOGGER.exception`、`exc_info=True` 或直接拼接 `str(exc)`。Pydantic 校验摘要必须关闭输入值（`include_input=False`），只输出字段路径和校验消息；配置加载失败只输出配置路径、字段路径和修复提示，不输出配置值。回归测试使用秘密标记断言日志和回传均不含该标记。
 
-心跳失败必须记录安全 warning 和连续失败次数；连续失败达到阈值或租约到期后，执行器只能在进度检查点停止，且不得再回传结果。AI 队列没有停止信号，Worker 不产生 `canceled`；`TaskStatus.CANCELED` 仅为协议兼容保留。完成回传失败时，最终结果写入本地 outbox 并在租约内重试，不重新调用模型；租约过期条目只保留诊断，不再投递。该路径由 `test_worker_runner.py`、`test_worker_outbox.py` 和 `test_worker_main.py` 覆盖。
+心跳间隔取配置值与租约一半的较小者，漏掉一次仍来得及续租。本地租约窗口用 `time.monotonic` 从续租请求发出的时刻起算，因此不会晚于控制面自己的窗口。以下任一情况都判定租约失效：窗口到期、心跳连续失败达到阈值、控制面以 `401/403/404/409/410` 拒绝开始、心跳或进度（见 [ADR 0032](../control-plane/adr/0032-replays-are-idempotent-for-the-original-identity.md)）。租约失效后执行器只能在下一个进度检查点停止，且不得再回传结果；迟到的成功响应不能复活已过期的窗口。`started`、心跳和进度请求的超时不超过剩余租约的一半，挂起的请求不能越过本地截止；完成回传使用配置超时，不能因提前放弃而丢掉已完成的结果。心跳失败必须记录安全 warning、状态码和连续失败次数；`400`/`422` 只说明 Worker 发出的请求有问题，不判定租约失效。
+
+AI 队列没有停止信号，Worker 不产生 `canceled`；`TaskStatus.CANCELED` 仅为协议兼容保留。完成回传失败时，最终结果写入本地 outbox 并在租约内重试，不重新调用模型；租约过期条目只保留诊断，不再投递。该路径由 `test_worker_runner.py`、`test_worker_outbox.py`、`test_result_sink.py`、`test_http_client.py` 和 `test_worker_main.py` 覆盖。
 
 ## 验证入口
 

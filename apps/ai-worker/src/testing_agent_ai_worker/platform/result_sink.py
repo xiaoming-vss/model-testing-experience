@@ -16,9 +16,32 @@ from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 
 class ResultSink(Protocol):
-    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None: ...
-    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None: ...
-    def submit_progress(self, progress: TaskProgress) -> None: ...
+    """Lifecycle events for one attempt.
+
+    ``timeout_seconds`` bounds a call that renews the lease, so a hanging request cannot
+    outlast the lease it was meant to extend. ``submit_result`` has no such bound: the
+    control plane decides on receipt, and giving up early would only lose the result.
+    """
+
+    def mark_started(
+        self,
+        task_id: str,
+        attempt_id: str,
+        started_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None: ...
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None: ...
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None: ...
     def submit_result(self, result: TaskResult) -> None: ...
 
 
@@ -42,7 +65,14 @@ class HttpResultSink:
         self.progress_path_template = progress_path_template
         self.completed_path_template = completed_path_template
 
-    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None:
+    def mark_started(
+        self,
+        task_id: str,
+        attempt_id: str,
+        started_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         """回传 started。"""
 
         self.client.post(
@@ -52,9 +82,17 @@ class HttpResultSink:
                 "attemptId": attempt_id,
                 "startedAt": started_at_iso,
             },
+            timeout_seconds=timeout_seconds,
         )
 
-    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+    def send_heartbeat(
+        self,
+        task_id: str,
+        attempt_id: str,
+        heartbeat_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
         """回传 heartbeat。"""
 
         self.client.post(
@@ -64,9 +102,12 @@ class HttpResultSink:
                 "attemptId": attempt_id,
                 "heartbeatAt": heartbeat_at_iso,
             },
+            timeout_seconds=timeout_seconds,
         )
 
-    def submit_progress(self, progress: TaskProgress) -> None:
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
         """回传 progress。
 
         平台沿用 `configJson/resultYaml/resultSummaryJson` 三个通用字段承载中间结果。
@@ -83,6 +124,7 @@ class HttpResultSink:
                 "configJson": progress.intermediate_json_text,
                 "resultSummaryJson": progress.result_summary_json,
             },
+            timeout_seconds=timeout_seconds,
         )
 
     def submit_result(self, result: TaskResult) -> None:
