@@ -35,6 +35,7 @@ type CanvasProps = {
   onOpenTab: (kind: 'content' | GenerationChainKind) => void
 }
 const ports = <><Handle type="target" position={Position.Left} className="gc-flow-handle" /><Handle type="target" position={Position.Top} id="top" className="gc-flow-handle" /><Handle type="source" position={Position.Right} className="gc-flow-handle" /><Handle type="source" position={Position.Bottom} id="bottom" className="gc-flow-handle" /></>
+const historyInputHandle = 'history-input'
 const NODE_CLASS = 'gc-node relative flex flex-col gap-[5px] rounded-[10px] border border-[var(--gc-line)] p-[10px_11px] text-left [font:inherit] text-[var(--gc-text)] cursor-pointer transition-[border-color,box-shadow,transform] duration-[160ms]'
 const NODE_TOP_CLASS = 'gc-node-top flex items-center justify-between gap-1.5'
 const NODE_INDEX_CLASS = 'gc-node-index font-mono text-[10px] tracking-[0.06em] text-[var(--gc-muted)]'
@@ -75,7 +76,9 @@ function StageCard({ data }: NodeProps<StageNode>) {
         : `已完成 ${stage.moduleGeneration.modules.filter(module => module.status === 'completed').length}/${stage.moduleGeneration.modules.length} ${stage.moduleGeneration.stage === 'case_names' ? '个分组' : '个模块'}`
     : running ? '等待本次结果' : stage.blockedReason
       || (stage.state === 'approved' ? '已有当前采用内容' : stage.state === 'draft' ? '已有候选内容' : stage.state === 'invalid' ? '当前内容需重新确认' : stage.state === 'failed' ? stage.errorMessage || '本次生成失败' : '暂无产物')
-  return <div className="gc-flow-stage relative w-full">{ports}<button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
+  return <div className="gc-flow-stage relative w-full">{ports}
+    {stage.stage === 'detailed_cases' ? <Handle type="target" position={Position.Bottom} id={historyInputHandle} className="gc-flow-handle" /> : null}
+    <button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
     <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{String(stage.order + 1).padStart(2, '0')}</span><span className={NODE_STATE_CLASS}>{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
     <span className={NODE_MAIN_CLASS}><Icon aria-hidden /><strong className={NODE_TITLE_CLASS}>{stage.label}</strong></span><span className={NODE_META_CLASS}><span className={NODE_META_TEXT_CLASS}>{summary}</span></span>
   </button></div>
@@ -114,7 +117,7 @@ function ProfileCard({ data }: NodeProps<ProfileNode>) {
   </div>
 }
 const nodeTypes = { chainGroup: ChainGroup, stage: StageCard, special: SpecialCard, profile: ProfileCard, relations: RelationsCard }
-type EdgeRoute = { route?: 'profile' | 'document-material' }
+type EdgeRoute = { route?: 'profile' | 'document-material'; optional?: boolean }
 type GenerationFlowEdge = Edge<EdgeRoute & { running: boolean }, 'generationFlow'>
 // 320 单位/秒，每秒一束；12 段透明度渐变组成 87 单位的拖尾，沿实际曲线行进。
 const beamSegments = Array.from({ length: 12 }, (_, index) => ({
@@ -137,8 +140,9 @@ function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
   const route = props.data?.route
   const path = route ? flowRoutes[route](props) : getBezierPath(props)[0]
   return <>
+    {props.data?.optional ? <title>可选输入 · 历史用例核验结果</title> : null}
     <BaseEdge id={props.id} path={path} markerEnd={props.markerEnd} style={props.style} className="gc-flow-edge-track" />
-    {props.data?.running ? <g className="gc-flow-edge-output" aria-hidden="true">
+    {props.data?.optional ? null : props.data?.running ? <g className="gc-flow-edge-output" aria-hidden="true">
       <path d={path} className="gc-flow-beam gc-flow-beam-halo" />
       {beamSegments.map((style, index) => <path key={index} d={path} className="gc-flow-beam" style={style} />)}
     </g> : <path d={path} className="gc-flow-edge-stream" fill="none" aria-hidden="true" />}
@@ -255,6 +259,13 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
       },
     })
     if (nodes.some(node => node.id === upstream)) edges.push({ id: 'history-to-verification', source: upstream, target: id })
+    if (functional?.stages.some(stage => stage.stage === 'detailed_cases')) {
+      edges.push({
+        id: 'verification-to-detailed-cases', source: id, target: 'function:detailed_cases',
+        targetHandle: historyInputHandle, ariaLabel: '历史用例核验到完整用例的可选输入',
+        data: { optional: true }, style: { strokeDasharray: '6 4', opacity: 0.8 },
+      })
+    }
   }
   if (relations && functional) {
     const count = functional.stages.length
@@ -287,7 +298,7 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
   }
   const runningStages = new Set(chains.filter(item => item.configured).flatMap(item => item.stages
     .filter(entry => entry.state === 'running').map(entry => `${item.kind}:${entry.stage}`)))
-  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { ...edge.data, running: runningStages.has(edge.source) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
+  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { ...edge.data, running: runningStages.has(edge.source) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5, ...edge.style } })) }
 }
 function CanvasInner(props: CanvasProps) {
   const { chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab } = props
