@@ -1,18 +1,26 @@
-"""A retried report for a finished task is acknowledged, never re-applied or refused."""
+"""How a finished task answers worker events.
 
+Reports are acknowledged so a retry stays idempotent; a start is refused because nothing
+has run yet.
+"""
+
+from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
-from testing_agent.core.errors import AppError, ErrForbidden
+from testing_agent.core.errors import AppError, ErrForbidden, ErrWorkerLeaseLost
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker_task as module
 from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
 from testing_agent.services.worker_domains.events import apply_event_to_task
+from testing_agent.services.worker_domains.guard import ensure_worker_match
 from testing_agent.services.worker_task import WorkerTaskService
 
-EVENTS = ["started", "heartbeat", "complete"]
+REPORTS = ["heartbeat", "complete"]
+EVENTS = ["started", *REPORTS]
 
 
 def _finished_task(**overrides):
@@ -32,7 +40,7 @@ def _event(**overrides):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("event", EVENTS)
+@pytest.mark.parametrize("event", REPORTS)
 async def test_late_event_from_the_owning_worker_is_acknowledged(monkeypatch, event):
     task = _finished_task()
     monkeypatch.setattr(module, "find_task", AsyncMock(return_value=task))
@@ -62,6 +70,31 @@ async def test_late_event_from_another_worker_is_refused(monkeypatch, event):
         await getattr(service, event)("api", "task-1", _event(worker_id="worker-2"))
 
     assert raised.value.code == ErrForbidden.code
+    authorize.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_late_start_is_refused_before_the_worker_runs_anything(monkeypatch):
+    # Nothing has run yet, so there is nothing to acknowledge: the worker must stop.
+    task = _finished_task()
+    monkeypatch.setattr(module, "find_task", AsyncMock(return_value=task))
+    authorize = AsyncMock(side_effect=AssertionError("a finished task is not re-authorized"))
+    monkeypatch.setattr(module, "authorize_execution", authorize)
+    service = WorkerTaskService(SimpleNamespace(session=object()))
+
+    with pytest.raises(AppError) as raised:
+        await service.started("api", "task-1", _event())
+
+    assert raised.value.code == ErrWorkerLeaseLost.code
+    authorize.assert_not_awaited()
+
+    direct = DirectStageWorkerService(object())
+    monkeypatch.setattr(direct, "authorize", authorize)
+
+    with pytest.raises(AppError) as raised:
+        await direct.started(task, _event())
+
+    assert raised.value.code == ErrWorkerLeaseLost.code
     authorize.assert_not_awaited()
 
 
@@ -96,7 +129,7 @@ async def test_active_task_still_goes_through_authorization(monkeypatch, event):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("event", EVENTS)
+@pytest.mark.parametrize("event", REPORTS)
 async def test_direct_stage_late_event_is_acknowledged_for_every_task_type(monkeypatch, event):
     task = _finished_task(task_type="test_report_generate", status="failed")
     service = DirectStageWorkerService(object())
@@ -162,3 +195,35 @@ async def test_canceled_task_gets_a_finished_time_without_a_reported_one():
     await apply_event_to_task(task, WorkerTaskEventRequest(worker_id="worker-1"), "canceled")
 
     assert task.finished_at is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("call", ["heartbeat", "control_state"])
+@pytest.mark.parametrize("state", ["requeued", "expired"])
+async def test_event_outside_a_live_lease_is_a_conflict(monkeypatch, call, state):
+    # Workers end the execution on 409; a 400 is a request they sent wrong.
+    stale = {"status": "pending"} if state == "requeued" else {"status": "running"}
+    task = _finished_task(
+        **stale,
+        lease_expires_at=datetime.now(UTC) - timedelta(seconds=1 if state == "expired" else -60),
+    )
+    monkeypatch.setattr(module, "find_task", AsyncMock(return_value=task))
+    authorize = AsyncMock()
+    monkeypatch.setattr(module, "authorize_execution", authorize)
+    service = WorkerTaskService(SimpleNamespace(session=object()))
+
+    with pytest.raises(AppError) as raised:
+        if call == "heartbeat":
+            await service.heartbeat("api", "task-1", _event())
+        else:
+            await service.control_state("api", "task-1", "worker-1")
+
+    assert raised.value.http_code == HTTPStatus.CONFLICT
+    assert raised.value.code == ErrWorkerLeaseLost.code
+
+
+def test_missing_worker_identity_is_still_a_bad_request():
+    with pytest.raises(AppError) as raised:
+        ensure_worker_match(_finished_task(status="running"), " ")
+
+    assert raised.value.http_code == HTTPStatus.BAD_REQUEST

@@ -16,7 +16,7 @@ from support.worker_contract import (
 from testing_agent.api.deps import get_worker_task_service
 from testing_agent.app import create_app
 from testing_agent.core.config import get_settings
-from testing_agent.core.errors import AppError
+from testing_agent.core.errors import AppError, ErrWorkerLeaseLost
 from testing_agent.handlers.ai_worker import claim_task
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
@@ -876,6 +876,27 @@ def test_internal_ui_worker_started_returns_204_like_go_contract():
 
     assert response.status_code == 204
     assert not response.content
+
+
+def test_internal_ui_worker_heartbeat_without_a_live_lease_is_a_409():
+    # Workers end the execution on this status; a 400 would read as a request they sent wrong.
+    class FakeWorkerService:
+        async def heartbeat(self, domain, task_id, body):
+            raise ErrWorkerLeaseLost()
+
+    app = create_app(worker_settings())
+    app.dependency_overrides[get_worker_task_service] = lambda: FakeWorkerService()
+    app.dependency_overrides[get_settings] = worker_settings
+    client = TestClient(app)
+
+    response = client.post(
+        "/internal/ui-worker/tasks/task-1/heartbeat",
+        headers={"X-Worker-Token": "worker-token"},
+        json={"workerId": "worker-1", "heartbeatAt": "2026-06-28T14:08:00Z"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == 409
 
 
 @pytest.mark.asyncio

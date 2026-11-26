@@ -6,7 +6,13 @@ from typing import Any, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.core.errors import AppError, ErrBadRequest, ErrForbidden, ErrNotFound
+from testing_agent.core.errors import (
+    AppError,
+    ErrBadRequest,
+    ErrForbidden,
+    ErrNotFound,
+    ErrWorkerLeaseLost,
+)
 from testing_agent.domain.ai_tasks import AUXILIARY_EXECUTION_TYPES
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -138,13 +144,13 @@ class DirectStageWorkerService:
 
     async def started(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
         from testing_agent.services.worker_domains.guard import (
-            ensure_terminal_event,
             ensure_worker_match,
+            is_late_event,
         )
 
-        if ensure_terminal_event(task, body):
-            # A late start must not reopen a run that already finished.
-            return {"taskId": task.task_id, "workerId": body.worker_id}
+        if is_late_event(task, body):
+            # Nothing has run yet: acknowledging would let the worker start a finished task.
+            raise ErrWorkerLeaseLost()
         ensure_worker_match(task, body.worker_id)
         if body.run_id and body.run_id != task.run_id:
             raise ErrBadRequest()
@@ -156,11 +162,11 @@ class DirectStageWorkerService:
 
     async def heartbeat(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
         from testing_agent.services.worker_domains.guard import (
-            ensure_terminal_event,
             ensure_worker_match,
+            is_late_event,
         )
 
-        if ensure_terminal_event(task, body, require_owner=False):
+        if is_late_event(task, body, from_owner_only=False):
             # A late heartbeat must not rewrite finished_at or extend the lease.
             return {"taskId": task.task_id, "workerId": body.worker_id}
         ensure_worker_match(task, body.worker_id)
@@ -208,11 +214,11 @@ class DirectStageWorkerService:
 
     async def complete(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
         from testing_agent.services.worker_domains.guard import (
-            ensure_terminal_event,
             ensure_worker_match,
+            is_late_event,
         )
 
-        if ensure_terminal_event(task, body):
+        if is_late_event(task, body):
             # A retried completion after the run closed is acknowledged, not applied.
             if body.run_id and body.run_id != task.run_id:
                 raise ErrBadRequest()

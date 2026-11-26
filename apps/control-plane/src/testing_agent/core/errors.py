@@ -26,6 +26,7 @@ ErrBadRequest = AppError(400, "请求参数错误", HTTPStatus.BAD_REQUEST)
 ErrUnauthorized = AppError(401, "未授权或登录失效", HTTPStatus.UNAUTHORIZED)
 ErrForbidden = AppError(403, "无权操作该资源", HTTPStatus.FORBIDDEN)
 ErrNotFound = AppError(404, "资源不存在", HTTPStatus.NOT_FOUND)
+ErrWorkerLeaseLost = AppError(409, "任务租约已失效或任务已结束", HTTPStatus.CONFLICT)
 ErrInternalServerError = AppError(500, "服务器内部错误", HTTPStatus.INTERNAL_SERVER_ERROR)
 
 ErrNameAlreadyUse = AppError(1001, "该用户名已被注册", HTTPStatus.CONFLICT)

@@ -11,6 +11,7 @@ from testing_agent.core.errors import (
     ErrBadRequest,
     ErrForbidden,
     ErrNotFound,
+    ErrWorkerLeaseLost,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
@@ -57,8 +58,8 @@ from testing_agent.services.worker_domains import ui as ui_domain
 from testing_agent.services.worker_domains.events import ensure_final_status
 from testing_agent.services.worker_domains.guard import (
     ensure_task_id,
-    ensure_terminal_event,
     ensure_worker_match,
+    is_late_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -271,9 +272,9 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.started(task, body)
             raise ErrNotFound()
-        if ensure_terminal_event(task, body):
-            # A late start must not reopen a run that already finished.
-            return {"taskId": task_id, "workerId": body.worker_id}
+        if is_late_event(task, body):
+            # Nothing has run yet: acknowledging would let the worker start a finished task.
+            raise ErrWorkerLeaseLost()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         if body.run_id and body.run_id != task.run_id:
@@ -325,7 +326,7 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.heartbeat(task, body)
             raise ErrNotFound()
-        if ensure_terminal_event(task, body, require_owner=False):
+        if is_late_event(task, body, from_owner_only=False):
             # A late heartbeat must not rewrite finished_at or extend the lease.
             return {"taskId": task_id, "workerId": body.worker_id}
         if body.run_id and body.run_id != task.run_id:
@@ -352,7 +353,7 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.complete(task, body)
             raise ErrNotFound()
-        if domain in {"api", "ui"} and ensure_terminal_event(task, body):
+        if domain in {"api", "ui"} and is_late_event(task, body):
             # Duplicate completion after the run closed is a no-op.
             return {"taskId": task_id, "workerId": body.worker_id, "status": task.status}
         authority = await authorize_execution(self.repository.session, task)
