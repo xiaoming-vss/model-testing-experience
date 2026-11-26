@@ -5,6 +5,7 @@ from datetime import UTC
 from typing import Any
 
 from testing_agent.domain.ai_execution_format import FIELDS
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 
 
 def project_direct_history(rows, counts, pending, latest, imports) -> dict[str, Any]:
@@ -40,7 +41,7 @@ def project_direct_history(rows, counts, pending, latest, imports) -> dict[str, 
             "reviewStatus": "approved"
             if row.candidate_id
             else "rejected"
-            if row.invalidated_reason == "审核未通过，候选产物已丢弃"
+            if row.invalidated_reason == CANDIDATE_DELETED_REASON
             else "pending",
             "reviewerUserId": row.reviewer_user_id or "",
             "reviewedAt": row.reviewed_at,

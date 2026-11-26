@@ -5,6 +5,7 @@ import { ProjectActionButton } from '@/domain/projects/components/ProjectActionB
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { notify } from '@/shared/utils/toast'
 import { cx } from '@/shared/utils/cx'
+import { isRailOverlayViewport } from '@/shared/utils/viewport'
 import { isJsonText } from '../utils/functionalOutput'
 import {
   buildGeneratedCasesModel,
@@ -34,12 +35,6 @@ const FLEX_TRUNCATE = 'min-w-0 flex-1 truncate'
 const CHEVRON = 'text-[9px] text-app-surface-text-muted'
 const HEADER_GROUP = 'flex items-center gap-2'
 const FOCUS_LABEL = 'min-w-0 truncate'
-
-function isRailOverlay() {
-  return typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(max-width: 1180px)').matches
-}
 
 function sceneIdsOf(model: GeneratedCasesModel) {
   return model.modules.flatMap(module => module.scenes.map(scene => scene.id))
@@ -75,7 +70,7 @@ export function GeneratedCasesReviewView({
   const canDelete = Boolean(onChange && allowDelete)
 
   const closeRail = useCallback(() => {
-    if (isRailOverlay()) setRailOpen(false)
+    if (isRailOverlayViewport()) setRailOpen(false)
   }, [])
 
   const selectEntry = useCallback((entry: GeneratedCaseEntry, modelForScene: GeneratedCasesModel | null = model, options: { focus?: boolean } = {}) => {

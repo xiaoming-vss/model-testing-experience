@@ -141,6 +141,128 @@ def test_concurrent_rejection_replays_one_receipt(mysql):  # noqa: F811
         )
 
 
+def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
+    tables = Base.metadata.tables
+    with mysql.begin() as connection:
+        project = seed_row(connection, tables["projects"])
+        sprint = seed_row(connection, tables["sprints"], {"project_id": project["project_id"]})
+        requirement = seed_row(
+            connection, tables["requirements"], {"sprint_id": sprint["sprint_id"]}
+        )
+        task = seed_row(
+            connection,
+            tables["ai_generate_tasks"],
+            {
+                "project_id": project["project_id"],
+                "sprint_id": sprint["sprint_id"],
+                "requirement_id": requirement["requirement_id"],
+                "task_type": "functional_case_generate",
+            },
+        )
+        stage = seed_row(
+            connection,
+            tables["ai_generation_stages"],
+            {"task_id": task["task_id"], "stage": "case_names"},
+        )
+        chain = seed_row(
+            connection,
+            tables["requirement_generation_chains"],
+            {
+                "requirement_id": requirement["requirement_id"],
+                "task_id": task["task_id"],
+                "kind": "function",
+            },
+        )
+        candidate = tables["ai_generation_candidates"]
+        for value in ("current", "delete"):
+            seed_row(
+                connection,
+                candidate,
+                {
+                    "candidate_id": f"command-{value}",
+                    "chain_id": chain["chain_id"],
+                    "stage_id": stage["id"],
+                    "candidate_token": f"token-{value}",
+                    "disposition": "available",
+                    "generation_mode": "current",
+                    "created_by": project["user_id"],
+                },
+            )
+        seed_row(
+            connection,
+            tables["ai_generation_stage_contents"],
+            {
+                "stage_id": stage["id"],
+                "chain_id": chain["chain_id"],
+                "stage": "case_names",
+                "source_candidate_id": "command-current",
+                "content_token": "slot-token",
+            },
+        )
+
+    async def exercise():
+        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        start = asyncio.Event()
+        body = CandidateDispositionRequest(
+            action="delete",
+            expectedCandidateToken="token-delete",
+            requestId=uuid4(),
+            comment="清理",
+        )
+
+        async def delete():
+            async with factory() as session:
+                await start.wait()
+                service = generation_services(AiGenerateTaskRepository(session)).chain
+                return await CandidateCommands(service).dispose(
+                    requirement["requirement_id"],
+                    "function",
+                    "case_names",
+                    "command-delete",
+                    body,
+                    project["user_id"],
+                )
+
+        try:
+            tasks = [asyncio.create_task(delete()) for _ in range(3)]
+            start.set()
+            return await asyncio.gather(*tasks)
+        finally:
+            await engine.dispose()
+
+    results = asyncio.run(exercise())
+    assert {(result.disposition, result.candidate_token) for result in results} == {
+        ("deleted", None)
+    }
+    with mysql.connect() as connection:
+        receipt = tables["ai_generation_review_receipts"]
+        assert (
+            connection.scalar(
+                sa.select(sa.func.count())
+                .select_from(receipt)
+                .where(receipt.c.candidate_id == "command-delete")
+            )
+            == 1
+        )
+        assert (
+            connection.scalar(
+                sa.select(sa.func.count())
+                .select_from(candidate)
+                .where(candidate.c.candidate_id == "command-delete")
+            )
+            == 0
+        )
+        assert (
+            connection.scalar(
+                sa.select(tables["ai_generation_stage_contents"].c.source_candidate_id).where(
+                    tables["ai_generation_stage_contents"].c.stage_id == stage["id"]
+                )
+            )
+            == "command-current"
+        )
+
+
 def test_edit_and_reference_freeze_cannot_both_win(mysql):  # noqa: F811
     tables = Base.metadata.tables
     with mysql.begin() as connection:

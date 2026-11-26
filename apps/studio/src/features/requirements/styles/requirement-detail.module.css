@@ -45,11 +45,6 @@
   border-radius: 0;
 }
 
-.root :global(.requirement-detail-workspace-actions):empty,
-.root :global(.requirement-detail-workspace-actions):has(> [hidden]) {
-  display: none;
-}
-
 .root :global(.requirement-detail-main) :global(.requirement-document-inline) :global(.requirement-document-workspace) {
   flex: 1 1 0%;
   min-height: 0;

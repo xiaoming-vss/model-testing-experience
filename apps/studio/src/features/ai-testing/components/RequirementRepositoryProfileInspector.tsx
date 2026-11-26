@@ -52,8 +52,7 @@ export function RequirementRepositoryProfileInspector({
               >
                 {version.label}
                 {version.candidateId === workspace.currentProfile?.candidateId ? '（当前）'
-                    : workspace.candidateSummaries.find(item => item.candidateId === version.candidateId)?.disposition === 'rejected' ? '（已拒绝）'
-                      : workspace.candidateSummaries.find(item => item.candidateId === version.candidateId)?.disposition === 'discarded' ? '（已丢弃）' : ''}
+                    : workspace.candidateSummaries.find(item => item.candidateId === version.candidateId)?.disposition === 'rejected' ? '（已拒绝）' : ''}
               </button>
             ))}
           </div>
@@ -64,7 +63,7 @@ export function RequirementRepositoryProfileInspector({
         {workspace.selectedCandidate ? <div className="flex flex-wrap gap-2">
           {workspace.selectedCandidate.disposition === 'available' && !workspace.selectedCandidate.isCurrent ? <>
             <ProjectActionButton action="review" size="small" type="primary" loading={workspace.adopt.isPending} disabled={workspace.busy || !workspace.currentProfile || workspace.currentProfileLoading} onClick={() => workspace.adopt.mutate()}>采用此画像</ProjectActionButton>
-            <Popconfirm title="拒绝这个画像候选？" onConfirm={() => workspace.dispose.mutate('reject')}><ProjectActionButton action="write" size="small" disabled={workspace.busy}>拒绝</ProjectActionButton></Popconfirm>
+            <Popconfirm title="拒绝这个画像候选？" onConfirm={() => workspace.dispose.mutate()}><ProjectActionButton action="write" size="small" disabled={workspace.busy}>拒绝</ProjectActionButton></Popconfirm>
           </> : null}
           {workspace.currentProfile?.candidateId ? <Popconfirm title="清空当前画像？" description="候选和已冻结的 UI 输入会保留。" onConfirm={() => workspace.clearCurrent.mutate()}><ProjectActionButton action="review" size="small" disabled={workspace.busy}>清空当前</ProjectActionButton></Popconfirm> : null}
         </div> : null}

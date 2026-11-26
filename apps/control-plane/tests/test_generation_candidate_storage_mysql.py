@@ -16,9 +16,10 @@ from testing_agent.repositories.generation_candidate_creation import (
 )
 from testing_agent.repositories.generation_candidate_storage import (
     CandidateEditSnapshot,
-    dispose_candidate_if_unchanged,
+    delete_candidate_if_unchanged,
     edit_unfrozen_candidate_if_unchanged,
     freeze_candidate_for_reference,
+    reject_candidate_if_unchanged,
     replace_current_if_unchanged,
 )
 from testing_agent.repositories.generation_current_chain import (
@@ -307,7 +308,7 @@ def test_reference_and_edit_race_has_one_winner(mysql):  # noqa: F811
             assert row["snapshot_id"] != "original-snapshot" and row["content"] == "edited"
 
 
-def test_disposal_and_adoption_race_cannot_reject_current(mysql):  # noqa: F811
+def test_rejection_and_adoption_race_cannot_reject_current(mysql):  # noqa: F811
     tables = Base.metadata.tables
     with mysql.begin() as connection:
         requirement = seed_row(connection, tables["requirements"])
@@ -369,13 +370,12 @@ def test_disposal_and_adoption_race_cannot_reject_current(mysql):  # noqa: F811
         async def reject():
             async with factory() as session:
                 await start.wait()
-                result = await dispose_candidate_if_unchanged(
+                result = await reject_candidate_if_unchanged(
                     session,
                     chain_id=chain["chain_id"],
                     stage_id=stage["id"],
                     candidate_id="disposition-race",
                     expected_candidate_token="original-token",
-                    disposition="rejected",
                 )
                 await session.commit()
                 return result is not None
@@ -400,6 +400,104 @@ def test_disposal_and_adoption_race_cannot_reject_current(mysql):  # noqa: F811
             )
         ).one()
         assert row == (("available", "disposition-race") if adopted else ("rejected", None))
+
+
+def test_deletion_and_adoption_race_cannot_leave_current_dangling(mysql):  # noqa: F811
+    tables = Base.metadata.tables
+    with mysql.begin() as connection:
+        requirement = seed_row(connection, tables["requirements"])
+        task = seed_row(connection, tables["ai_generate_tasks"])
+        stage = seed_row(connection, tables["ai_generation_stages"], {"task_id": task["task_id"]})
+        chain = seed_row(
+            connection,
+            tables["requirement_generation_chains"],
+            {
+                "requirement_id": requirement["requirement_id"],
+                "task_id": task["task_id"],
+                "kind": "api",
+            },
+        )
+        seed_row(
+            connection,
+            tables["ai_generation_candidates"],
+            {
+                "candidate_id": "deletion-race",
+                "chain_id": chain["chain_id"],
+                "stage_id": stage["id"],
+                "candidate_token": "original-token",
+                "disposition": "available",
+                "content": "original",
+            },
+        )
+        seed_row(
+            connection,
+            tables["ai_generation_stage_contents"],
+            {
+                "stage_id": stage["id"],
+                "chain_id": chain["chain_id"],
+                "stage": "api_design",
+                "content_token": "slot-token",
+            },
+        )
+
+    async def exercise():
+        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
+        async_engine = create_async_engine(url)
+        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        start = asyncio.Event()
+
+        async def adopt():
+            async with factory() as session:
+                await start.wait()
+                result = await replace_current_if_unchanged(
+                    session,
+                    stage_id=stage["id"],
+                    candidate_id="deletion-race",
+                    expected_content_token="slot-token",
+                    expected_candidate_token="original-token",
+                    actor_id="user",
+                    comment="",
+                )
+                await session.commit()
+                return result is not None
+
+        async def delete():
+            async with factory() as session:
+                await start.wait()
+                result = await delete_candidate_if_unchanged(
+                    session,
+                    chain_id=chain["chain_id"],
+                    stage_id=stage["id"],
+                    candidate_id="deletion-race",
+                    expected_candidate_token="original-token",
+                )
+                await session.commit()
+                return result
+
+        try:
+            tasks = [asyncio.create_task(adopt()), asyncio.create_task(delete())]
+            start.set()
+            return await asyncio.gather(*tasks)
+        finally:
+            await async_engine.dispose()
+
+    adopted, deleted = asyncio.run(exercise())
+    assert adopted != deleted
+    with mysql.connect() as connection:
+        candidate = tables["ai_generation_candidates"]
+        current = tables["ai_generation_stage_contents"]
+        candidate_id = connection.scalar(
+            sa.select(candidate.c.candidate_id).where(candidate.c.candidate_id == "deletion-race")
+        )
+        source_candidate_id = connection.scalar(
+            sa.select(current.c.source_candidate_id).where(current.c.stage_id == stage["id"])
+        )
+        if adopted:
+            assert candidate_id == "deletion-race"
+            assert source_candidate_id == "deletion-race"
+        else:
+            assert candidate_id is None
+            assert source_candidate_id is None
 
 
 def test_adoption_refreshes_candidate_cached_before_edit(mysql):  # noqa: F811

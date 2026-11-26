@@ -66,7 +66,7 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `generation_chain.py` / GenerationChainService | 需求生成链全景与阶段视图；读取候选和当前采用内容，不导入正式资产 |
 | `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
 | `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |
-| `function_generate_import.py`、`ui_generate_import.py`、`requirement_generate_import.py` | 功能/UI 候选正式导入、需求增强文本采纳；各入口负责原有提交与回滚语义 |
+| `function_generate_import.py`、`ui_generate_import.py` | 功能/UI 候选正式导入；各入口负责原有提交与回滚语义 |
 | `ai_task_access.py` / GenerationImportContext | 仅向正式导入提供仓储、运行访问与需求权限能力；不承担任务管理 |
 | `domain/ai_tasks.py`、`ai_task_output.py` | 纯任务规则与常量、产物解析及快照/响应序列化；调用方直接引用实际归属 |
 | `stage_storage/dispatch.py` | 协调 stage、attempt、queue 的显式写入；flush，不提交调用者事务 |
@@ -253,6 +253,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 - [生成链多候选与唯一当前结果](adr/0024-generation-candidates-current.md)：每阶段多候选、最多一份当前内容，试生成冻结来源。
 - [阶段采用是独立指针](adr/0025-independent-stage-adoption.md)：采用和导入只校验内容自身的冻结来源，上游换采用不影响下游。
 - [API/UI 测试集归项目所有](adr/0027-project-owned-api-ui-test-suites.md)：需求改为可选关联，运行冻结项目、需求与迭代快照，CI 只凭测试集运行。
+- [删除候选是物理删除](adr/0031-candidate-removal-is-physical-delete.md)：丢弃改为直接删除候选，派生候选保留但清除派生指针。
 
 ## 文件存储验收与恢复
 

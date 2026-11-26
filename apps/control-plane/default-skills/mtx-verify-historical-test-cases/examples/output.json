@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "0.2",
+  "artifactType": "historical_test_case_verification",
+  "requirementId": "req-new",
+  "materialSnapshotId": "material-new-3",
+  "impactResultId": "confirmed-impact-result-1",
+  "impactId": "impact-1",
+  "batchId": "batch-1",
+  "caseFindings": [
+    {
+      "caseId": "case-31",
+      "caseSnapshotId": "case-31-snapshot-1",
+      "decision": "modify",
+      "evidence": [
+        {
+          "kind": "step",
+          "position": 1
+        }
+      ],
+      "reason": "步骤验证第 3 次失败后仍可重试，已与本次管理员锁定规则冲突。",
+      "modificationHint": "将该步骤的预期改为账号被锁定。",
+      "needsFullCase": false
+    }
+  ],
+  "supplementalPoints": [
+    {
+      "pointId": "point-1",
+      "title": "验证管理员连续输错密码第 2 次时账号仍未锁定。"
+    }
+  ]
+}

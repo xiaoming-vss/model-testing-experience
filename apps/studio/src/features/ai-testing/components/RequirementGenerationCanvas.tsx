@@ -114,18 +114,28 @@ function ProfileCard({ data }: NodeProps<ProfileNode>) {
   </div>
 }
 const nodeTypes = { chainGroup: ChainGroup, stage: StageCard, special: SpecialCard, profile: ProfileCard, relations: RelationsCard }
-type GenerationFlowEdge = Edge<{ running: boolean; profileRoute?: boolean }, 'generationFlow'>
+type EdgeRoute = { route?: 'profile' | 'document-material' }
+type GenerationFlowEdge = Edge<EdgeRoute & { running: boolean }, 'generationFlow'>
 // 320 单位/秒，每秒一束；12 段透明度渐变组成 87 单位的拖尾，沿实际曲线行进。
 const beamSegments = Array.from({ length: 12 }, (_, index) => ({
   '--gc-beam-offset': `${(11 - index) * 7.25}px`,
   opacity: (index / 11) ** 2.2,
 } as CSSProperties))
-// 画像入线从材料整理右侧绕至画像上方，再接入画像左侧，避免穿过卡片。
+// 画像入线从材料整理右侧出弯，沿材料整理与画像之间的空隙下行，再接入画像左侧。
 function getProfilePath({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
-  return `M ${sourceX} ${sourceY} C ${sourceX + 54} ${sourceY + 11} ${sourceX + 34} ${targetY - 85} ${targetX + 138} ${targetY - 80} C ${targetX + 65} ${targetY - 74} ${targetX - 65} ${targetY - 88} ${targetX - 65} ${targetY - 35} C ${targetX - 65} ${targetY - 15} ${targetX - 39} ${targetY} ${targetX} ${targetY}`
+  const corridorX = Math.min(sourceX + 36, targetX - 20)
+  const top = sourceY + 46
+  const bottom = Math.max(top + 20, targetY - 42)
+  return `M ${sourceX} ${sourceY} C ${sourceX + 26} ${sourceY} ${corridorX} ${sourceY + 24} ${corridorX} ${top} L ${corridorX} ${bottom} C ${corridorX} ${targetY - 16} ${corridorX + 8} ${targetY} ${targetX} ${targetY}`
 }
+// 正文到材料整理的连线从出口上抬，不再下绕与评审连线交叉。
+function getDocumentMaterialPath({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
+  return `M ${sourceX} ${sourceY} H ${sourceX + 30} C ${sourceX + 80} ${sourceY} ${sourceX + 80} ${targetY} ${targetX} ${targetY}`
+}
+const flowRoutes = { profile: getProfilePath, 'document-material': getDocumentMaterialPath }
 function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
-  const path = props.data?.profileRoute ? getProfilePath(props) : getBezierPath(props)[0]
+  const route = props.data?.route
+  const path = route ? flowRoutes[route](props) : getBezierPath(props)[0]
   return <>
     <BaseEdge id={props.id} path={path} markerEnd={props.markerEnd} style={props.style} className="gc-flow-edge-track" />
     {props.data?.running ? <g className="gc-flow-edge-output" aria-hidden="true">
@@ -136,58 +146,89 @@ function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
 }
 const edgeTypes = { generationFlow: FlowEdge }
 const positions: Record<GenerationChainKind, { x: number; y: number; width: number }> = {
-  requirement_analysis: { x: 375, y: 211, width: 292 }, function: { x: 905, y: -228, width: 455 },
-  api: { x: 1026, y: 286, width: 455 }, ui: { x: 1019, y: 652, width: 455 },
+  requirement_analysis: { x: 375, y: 211, width: 560 }, function: { x: 1050, y: -228, width: 600 },
+  api: { x: 1100, y: 286, width: 504 }, ui: { x: 1095, y: 652, width: 504 },
 }
 const stageInset = 20
 const stageGap = 40
+const functionStageInset = 40
+const functionStageGap = 60
 const stageTop = 44
 const stageBottom = 176
 const itemWidth = 126
-// 画像位于第二行，留出空间供材料整理的右侧出线绕行。
-const profileTop = 220
-// 三阶段链路（功能测试、API 测试、UI 测试）外框向右加宽、向下加高，阶段卡片交错排布。
-const staggeredKinds = new Set<GenerationChainKind>(['function', 'api', 'ui'])
+// 需求分析使用两行：材料整理、历史需求关联在上，需求评审、仓库画像在下。
+const analysisGroupSize = { width: 560, height: 320 }
+const analysisStagePositions: Record<string, { x: number; y: number }> = {
+  extracting_text: { x: 40, y: 48 },
+  historical_requirement_relations: { x: 370, y: 48 },
+  requirement_review: { x: 40, y: 176 },
+}
+const profilePosition = { x: 250, y: 196 }
+// API / UI 三阶段链路外框向右加宽、向下加高，阶段卡片交错排布。
+const staggeredKinds = new Set<GenerationChainKind>(['api', 'ui'])
 const staggeredExtraWidth = 96
 const staggeredGroupHeight = 280
 const compactGroupHeight = 144
+const functionGroupHeight = 280
 const isStaggered = (kind: GenerationChainKind) => staggeredKinds.has(kind)
 const isStaggeredGroup = (node: CanvasNode) => node.type === 'chainGroup' && isStaggered(node.data.kind)
 function buildCanvas({ chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab }: CanvasProps) {
   const nodes: CanvasNode[] = [
-    { id: 'document', type: 'special', position: { x: 35, y: 275 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onOpen: (origin) => onOpenSpecial('content', origin) } },
-    { id: 'risk', type: 'special', position: { x: 198, y: 674 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
+    { id: 'document', type: 'special', position: { x: 35, y: 327 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onOpen: (origin) => onOpenSpecial('content', origin) } },
+    { id: 'risk', type: 'special', position: { x: 300, y: 600 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
   ]
-  const edges: Edge[] = []
+  const edges: Edge<EdgeRoute>[] = []
+  const materialNodeId = 'requirement_analysis:extracting_text'
+  const analysis = chains.find(item => item.kind === 'requirement_analysis' && item.configured)
+  const verification = analysis?.stages.find(stage => stage.stage === 'historical_test_case_verification')
   for (const chain of chains) {
     const layout = positions[chain.kind]
     const groupId = `group:${chain.kind}`
     const status = !chain.configured ? '未开始' : chain.pendingCandidateCount ? `${chain.pendingCandidateCount} 个候选待处理` : chain.stages.length > 0 && chain.stages.every(stage => ['approved', 'imported'].includes(stage.state)) ? '已全部采用' : '已配置'
     const profileCard = chain.kind === 'requirement_analysis' && chain.configured ? profile : undefined
-    const hasProfileRow = Boolean(profileCard && chain.stages.length)
-    const count = chain.stages.length
+    const stages = chain.stages.filter(stage => stage !== verification)
+    const count = stages.length
     const staggered = isStaggered(chain.kind)
-    const groupScale = chain.kind === 'requirement_analysis' ? 1.2 : 1
-    const groupWidth = (Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
-      + (staggered ? staggeredExtraWidth : 0)) * groupScale
-    const groupHeight = (staggered || hasProfileRow ? staggeredGroupHeight : compactGroupHeight) * groupScale
+    const groupWidth = chain.kind === 'requirement_analysis'
+      ? analysisGroupSize.width
+      : Math.max(layout.width, (chain.kind === 'function' ? functionStageInset : stageInset) * 2 + count * itemWidth + Math.max(0, count - 1) * (chain.kind === 'function' ? functionStageGap : stageGap))
+        + (staggered ? staggeredExtraWidth : 0)
+    const groupHeight = chain.kind === 'requirement_analysis'
+      ? analysisGroupSize.height
+      : chain.kind === 'function' ? functionGroupHeight : staggered ? staggeredGroupHeight : compactGroupHeight
     nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: groupHeight }, data: { kind: chain.kind, label: chain.label, status, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, readOnlyUnconfigured: !canWrite && (chain.kind === 'requirement_analysis' || chain.kind === 'function'), onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
     if (!chain.configured) continue
-    chain.stages.forEach((entry, index) => {
+    stages.forEach((entry, index) => {
       const id = `${chain.kind}:${entry.stage}`
-      const position = staggered || chain.kind === 'requirement_analysis' ? {
-        x: stageInset + index * (groupWidth - stageInset * 2 - itemWidth) / Math.max(1, count - 1),
-        y: staggered && index % 2 === 1 ? stageBottom : stageTop,
-      } : { x: stageInset + index * (itemWidth + stageGap), y: stageTop }
+      const position = chain.kind === 'requirement_analysis'
+        ? analysisStagePositions[entry.stage] ?? { x: stageInset + index * (itemWidth + stageGap), y: stageTop }
+        : staggered ? {
+          x: stageInset + index * (groupWidth - stageInset * 2 - itemWidth) / Math.max(1, count - 1),
+          y: index % 2 === 1 ? stageBottom : stageTop,
+        } : { x: functionStageInset + index * (itemWidth + functionStageGap), y: stageTop }
       nodes.push({ id, type: 'stage', parentId: groupId, extent: 'parent', position, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, onOpen: (origin) => onOpenStage(chain.kind, entry, origin) } })
-      if (index > 0) edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${chain.stages[index - 1].stage}`, target: id })
+      if (chain.kind === 'requirement_analysis') {
+        if (entry.upstreamStages.length === 0) {
+          edges.push({
+            id: `document-to-${entry.stage}`, source: 'document', target: id,
+            data: id === materialNodeId ? { route: 'document-material' } : undefined,
+          })
+        }
+        for (const upstream of entry.upstreamStages) {
+          if (stages.some(stage => stage.stage === upstream)) {
+            edges.push({ id: `${chain.kind}:${upstream}:${entry.stage}`, source: `${chain.kind}:${upstream}`, target: id })
+          }
+        }
+      } else if (index > 0) {
+        edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${stages[index - 1].stage}`, target: id })
+      }
     })
-    if (profileCard && chain.stages.length) {
-      const profileIndex = chain.stages.length
+    if (profileCard && stages.length) {
+      const profileIndex = stages.length
       nodes.push({
         id: 'profile', type: 'profile', parentId: groupId, extent: 'parent',
-        // 第二行略偏左，避免看起来像材料整理之后的第三个链上阶段。
-        position: { x: (groupWidth - itemWidth) / 2 - 16, y: profileTop },
+        // 第二行居中偏右，与需求评审并列。
+        position: profilePosition,
         style: { width: itemWidth },
         data: {
           ...profileCard, index: String(profileIndex + 1).padStart(2, '0'),
@@ -195,14 +236,29 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
           onOpen: (origin) => onOpenSpecial('repositoryProfile', origin),
         },
       })
-      edges.push({ id: 'analysis-to-profile', source: `requirement_analysis:${chain.stages[profileIndex - 1].stage}`, target: 'profile', data: { profileRoute: true } })
+      if (stages.some(stage => stage.stage === 'extracting_text')) {
+        edges.push({ id: 'analysis-to-profile', source: materialNodeId, target: 'profile', data: { route: 'profile' } })
+      }
     }
   }
-  const analysis = chains.find(item => item.kind === 'requirement_analysis' && item.configured)
   const functional = chains.find(item => item.kind === 'function' && item.configured)
+  if (verification && nodes.some(node => node.id === 'group:function')) {
+    const id = `requirement_analysis:${verification.stage}`
+    const upstream = 'requirement_analysis:historical_requirement_relations'
+    nodes.push({
+      id, type: 'stage', parentId: 'group:function', extent: 'parent',
+      position: { x: functionStageInset, y: stageBottom }, style: { width: itemWidth },
+      data: {
+        stage: verification,
+        active: !special && selected?.kind === 'requirement_analysis' && selected.stage === verification.stage,
+        onOpen: (origin) => onOpenStage('requirement_analysis', verification, origin),
+      },
+    })
+    if (nodes.some(node => node.id === upstream)) edges.push({ id: 'history-to-verification', source: upstream, target: id })
+  }
   if (relations && functional) {
     const count = functional.stages.length
-    const groupWidth = Math.max(positions.function.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap) + staggeredExtraWidth
+    const groupWidth = Math.max(positions.function.width, functionStageInset * 2 + count * itemWidth + Math.max(0, count - 1) * functionStageGap)
     // 作为泳道子节点固定在分组右侧，随分组一起缩放和平移。
     nodes.push({
       id: 'case-relations', type: 'relations', parentId: `group:function`, position: { x: groupWidth + stageGap, y: stageTop }, style: { width: itemWidth },
@@ -211,10 +267,12 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
     const lastStage = functional.stages.at(-1)
     if (lastStage) edges.push({ id: 'function-to-relations', source: `function:${lastStage.stage}`, target: 'case-relations' })
   }
-  if (analysis?.stages[0]) edges.push({ id: 'document-to-analysis', source: 'document', target: `requirement_analysis:${analysis.stages[0].stage}` })
-  if (analysis?.stages.length && functional?.stages[0]) edges.push({ id: 'analysis-to-function', source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target: `function:${functional.stages[0].stage}` })
+  const hasMaterialNode = nodes.some(node => node.id === materialNodeId)
+  if (hasMaterialNode && functional?.stages.some(stage => stage.stage === 'requirement_analysis')) {
+    edges.push({ id: 'analysis-to-function', source: materialNodeId, target: 'function:requirement_analysis' })
+  }
   const profileNode = nodes.some(node => node.id === 'profile')
-  if (analysis?.stages.length) {
+  if (profileNode || hasMaterialNode) {
     for (const kind of ['api', 'ui'] as const) {
       const targetChain = chains.find(item => item.kind === kind)
       if (!targetChain) continue
@@ -224,12 +282,12 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
         edges.push({ id: `profile-to-${kind}`, source: 'profile', sourceHandle: 'right', target })
         continue
       }
-      edges.push({ id: `analysis-to-${kind}`, source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target })
+      edges.push({ id: `analysis-to-${kind}`, source: materialNodeId, target })
     }
   }
   const runningStages = new Set(chains.filter(item => item.configured).flatMap(item => item.stages
     .filter(entry => entry.state === 'running').map(entry => `${item.kind}:${entry.stage}`)))
-  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { running: runningStages.has(edge.source), profileRoute: Boolean((edge.data as { profileRoute?: boolean } | undefined)?.profileRoute) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
+  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { ...edge.data, running: runningStages.has(edge.source) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
 }
 function CanvasInner(props: CanvasProps) {
   const { chains, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onOpenStage, onOpenSpecial, onOpenTab } = props
@@ -260,7 +318,10 @@ function CanvasInner(props: CanvasProps) {
       const previous = new Map(current.map(node => [node.id, node]))
       // 刷新产物数据时保留节点尺寸；丢失 measured 会让 React Flow 隐藏节点，
       // 而阅读期间延迟的 ResizeObserver 通知不一定会在返回后重新触发。
-      return graph.nodes.map(node => ({ ...node, measured: previous.get(node.id)?.measured, position: previous.get(node.id)?.position ?? node.position }))
+      return graph.nodes.map(node => {
+        const prior = previous.get(node.id)
+        return { ...node, measured: prior?.measured, position: prior?.parentId === node.parentId ? prior?.position ?? node.position : node.position }
+      })
     })
     setEdges(graph.edges)
   }, [graph, setNodes, setEdges])

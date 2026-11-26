@@ -15,6 +15,7 @@ import { ProjectActionButton } from '@/domain/projects/components/ProjectActionB
 import { ArtifactEvidence, ArtifactEvidenceItem, ArtifactEvidenceMissing, ArtifactRefChips } from '@/shared/components/ArtifactView'
 import { notify } from '@/shared/utils/toast'
 import { cx } from '@/shared/utils/cx'
+import { isRailOverlayViewport } from '@/shared/utils/viewport'
 import { toRecordArray } from '@/shared/utils/value'
 import { toDisplayText } from '../utils/functionalOutput'
 import { buildTraceablePointsModel, TRACEABLE_REF_FIELDS, type TraceableGap, type TraceableIssue, type TraceablePoint } from '../utils/traceablePointsModel'
@@ -35,12 +36,6 @@ type Props = {
 type Page = 'points' | 'issues' | 'gaps'
 
 const PAGE_LABEL: Record<Page, string> = { points: '测试点', issues: '审查', gaps: '缺口' }
-
-function isRailOverlay() {
-  return typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(max-width: 1180px)').matches
-}
 
 function reviewTone(label: string) {
   if (label === '独立审查通过') return 'border-[var(--app-status-approved-border)] bg-[var(--app-status-approved-bg)] text-app-status-approved-text'
@@ -100,7 +95,7 @@ export function TraceablePointsView({ content, onChange, materialContent, rootTi
   const graphGap = page === 'gaps' ? activeGap : issueGap
 
   const closeRail = useCallback(() => {
-    if (isRailOverlay()) setRailOpen(false)
+    if (isRailOverlayViewport()) setRailOpen(false)
   }, [])
 
   const selectPage = (next: Page) => {

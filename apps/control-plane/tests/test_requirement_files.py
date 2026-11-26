@@ -139,7 +139,7 @@ async def test_requirement_creation_initializes_generation_before_commit():
     repository = FakeRequirementRepository()
     calls = []
 
-    def initialize(requirement, project_id, user_id):
+    async def initialize(requirement, project_id, user_id):
         assert repository.requirement is requirement
         calls.append((requirement.requirement_id, project_id, user_id))
 
@@ -154,7 +154,8 @@ async def test_requirement_creation_initializes_generation_before_commit():
     assert calls == [(created["requirementId"], "project-1", "user-1")]
 
 
-def test_default_generation_tasks_belong_to_new_requirement():
+@pytest.mark.asyncio
+async def test_default_generation_tasks_belong_to_new_requirement():
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.generation_candidates import (
         AiGenerationStageContent,
@@ -170,6 +171,9 @@ def test_default_generation_tasks_belong_to_new_requirement():
         def add(self, task):
             self.tasks.append(task)
 
+        async def flush(self):
+            pass
+
     session = Session()
     requirement = Requirement(
         requirement_id="req",
@@ -178,7 +182,7 @@ def test_default_generation_tasks_belong_to_new_requirement():
         document_type="word",
         document_content="",
     )
-    add_default_generation_tasks(session, requirement, "project", "user")
+    await add_default_generation_tasks(session, requirement, "project", "user")
     tasks = [item for item in session.tasks if isinstance(item, AiGenerateTask)]
     assert {task.task_type for task in tasks} == {
         "requirement_analysis",
@@ -187,4 +191,4 @@ def test_default_generation_tasks_belong_to_new_requirement():
     assert all(task.requirement_id == "req" and task.project_id == "project" for task in tasks)
     chains = [item for item in session.tasks if isinstance(item, RequirementGenerationChain)]
     slots = [item for item in session.tasks if isinstance(item, AiGenerationStageContent)]
-    assert len(chains) == 2 and len(slots) == 5
+    assert len(chains) == 2 and len(slots) == 7

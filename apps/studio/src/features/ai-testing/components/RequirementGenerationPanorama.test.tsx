@@ -51,7 +51,6 @@ vi.mock('../hooks/usePersonalLlmChoice', () => ({
 vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 
 const clients: QueryClient[] = []
-const readingActionHosts: HTMLElement[] = []
 const stopFlowDragInJsdom = (event: MouseEvent) => {
   if ((event.target as Element).closest('.react-flow__node button, .gc-flow-group')) event.stopPropagation()
 }
@@ -70,7 +69,7 @@ beforeAll(() => {
   })
 })
 afterAll(() => { document.removeEventListener('mousedown', stopFlowDragInJsdom, true); vi.restoreAllMocks(); vi.unstubAllGlobals() })
-afterEach(() => { cleanup(); readingActionHosts.splice(0).forEach(host => host.remove()); clients.forEach(client => client.clear()); clients.length = 0; vi.clearAllMocks() })
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.clearAllMocks() })
 
 function chain(): GenerationChain {
   return {
@@ -109,14 +108,9 @@ function sourceOptions(): UiGenerationSourceOptions {
 function mount(documentPreview?: import('react').ReactNode, onReadingNodeChange?: Parameters<typeof RequirementDesignWorkspace>[0]['onReadingNodeChange'], inspectorHost?: HTMLElement | null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
-  // 阅读态的视图切换与复制走页面标题栏插槽，测试中提供与真实页面等价的宿主节点。
-  const readingActionsHost = document.createElement('div')
-  readingActionsHost.dataset.testid = 'reading-actions'
-  document.body.appendChild(readingActionsHost)
-  readingActionHosts.push(readingActionsHost)
   const readingNodeChange = onReadingNodeChange ?? vi.fn()
   render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter>
-    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} onReadingNodeChange={readingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
+    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} onReadingNodeChange={readingNodeChange} inspectorHost={inspectorHost} />
   </MemoryRouter></QueryClientProvider></TestThemeProvider>)
   return () => {
     const reported = (readingNodeChange as ReturnType<typeof vi.fn>).mock.lastCall?.[0] as { leave?: () => void } | undefined
@@ -287,7 +281,7 @@ async function openUiCandidateWorkspace() {
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'UI 用例设计 · 有候选' }))
   await user.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  await user.click(await screen.findByRole('button', { name: '编辑或派生' }))
+  await user.click(await screen.findByRole('button', { name: '编辑' }))
   const editor = await screen.findByRole('textbox', { name: '候选内容' })
   await user.click(editor)
   await user.keyboard('x')
@@ -628,8 +622,9 @@ it('候选需求评审展示问题登记，提示不阻断采用', async () => {
   expect(within(dialog).getAllByText('RR-01').length).toBeGreaterThan(0)
   expect(within(dialog).getAllByText(/库存不足时仍可提交订单/).length).toBeGreaterThan(0)
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
-  expect(within(inspector).getByRole('button', { name: '检查并采用' })).toBeEnabled()
-  expect(within(inspector).getByRole('button', { name: '采用并生成下一阶段' })).toBeEnabled()
+  expect(within(inspector).getByRole('button', { name: '采用' })).toBeEnabled()
+  await user.click(await within(inspector).findByRole('button', { name: '更多操作' }))
+  expect(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' })).toBeEnabled()
   profiles.mockRestore(); current.mockRestore(); list.mockRestore(); detail.mockRestore()
 })
 
@@ -648,6 +643,23 @@ function chainWith(kind: GenerationChain['kind'], label: string, stages: Generat
 
 
 
+it('需求文档分别连入需求评审和材料整理', async () => {
+  const data = chainWith('requirement_analysis', '需求分析', [
+    draftStage('requirement_review', '需求评审', 0),
+    draftStage('extracting_text', '材料整理', 1),
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileTasks).mockResolvedValue([] as never)
+
+  mount()
+  await waitFor(() => {
+    expect(document.querySelector('[aria-label="Edge from document to requirement_analysis:requirement_review"]')).toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from document to requirement_analysis:extracting_text"]')).toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from requirement_analysis:requirement_review to requirement_analysis:extracting_text"]')).not.toBeInTheDocument()
+  })
+})
+
 it('需求分析分组内提供仓库画像候选，进入阅读区后在侧栏运行', async () => {
   const data = chainWith('requirement_analysis', '需求分析', [
     {
@@ -656,10 +668,17 @@ it('需求分析分组内提供仓库画像候选，进入阅读区后在侧栏�
 
       upstreamStages: [],
     },
+    {
+      ...draftStage('historical_requirement_relations', '历史需求关联', 1),
+      upstreamStages: ['extracting_text'],
+    },
+    draftStage('historical_test_case_verification', '历史用例核验', 2, ['historical_requirement_relations']),
   ])
   data.candidateMode = true
   vi.mocked(generationChainApi.overview).mockResolvedValue({
-    chains: [data, emptyChain('api', 'API 测试'), chain()],
+    chains: [data, chainWith('function', '功能测试', [
+      { ...draftStage('requirement_analysis', '测试范围与风险分析', 0), upstreamStages: ['extracting_text'] },
+    ]), emptyChain('api', 'API 测试'), chain()],
   })
   vi.mocked(generationChainApi.chain).mockResolvedValue(data)
   vi.mocked(repositoryProfileApi.getRepositoryProfileTasks).mockResolvedValue([
@@ -690,7 +709,19 @@ it('需求分析分组内提供仓库画像候选，进入阅读区后在侧栏�
   expect(card).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /生成 UI 用例/ })).not.toBeInTheDocument()
   await waitFor(() => {
-    expect(document.querySelector('[data-testid="rf__edge-analysis-to-profile"]')).not.toBeNull()
+    expect(document.querySelector('[aria-label="Edge from requirement_analysis:extracting_text to profile"]')).toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from requirement_analysis:extracting_text to function:requirement_analysis"]')).toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from requirement_analysis:extracting_text to requirement_analysis:historical_requirement_relations"]')).toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from requirement_analysis:historical_requirement_relations to requirement_analysis:historical_test_case_verification"]')).toBeInTheDocument()
+    const flowNode = (id: string) => document.querySelector<HTMLElement>(`[data-id="${id}"]`)!
+    const position = (node: HTMLElement) => node.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px/)!.slice(1).map(Number)
+    const group = flowNode('group:function')
+    const [groupX, groupY] = position(group)
+    const [cardX, cardY] = position(flowNode('requirement_analysis:historical_test_case_verification'))
+    expect(cardX).toBeGreaterThanOrEqual(groupX)
+    expect(cardY).toBeGreaterThanOrEqual(groupY)
+    expect(cardX + 126).toBeLessThan(groupX + Number.parseFloat(group.style.width))
+    expect(cardY + 84).toBeLessThan(groupY + Number.parseFloat(group.style.height))
     expect(document.querySelector('[data-testid="rf__edge-profile-to-ui"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="rf__edge-profile-to-api"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="rf__edge-analysis-to-ui"]')).toBeNull()
@@ -840,7 +871,7 @@ it('API 三阶段与功能、UI 测试共用交错布局', async () => {
   mount()
   await screen.findByRole('button', { name: '接口用例设计 · 有候选' })
   const group = document.querySelector<HTMLElement>('[data-id="group:api"]')!
-  expect(Number.parseFloat(group.style.width)).toBeCloseTo(594)
+  expect(Number.parseFloat(group.style.width)).toBeCloseTo(600)
   expect(Number.parseFloat(group.style.height)).toBeCloseTo(280)
   expect(document.querySelector('[aria-label="Edge from api:interface_extract to api:api_design"]')).toBeInTheDocument()
   expect(document.querySelector('[aria-label="Edge from api:api_design to api:generate"]')).toBeInTheDocument()
@@ -861,8 +892,8 @@ it('API 与 UI 都从仓库画像出线，初始分组不重叠', async () => {
   const api = document.querySelector<HTMLElement>('[data-id="group:api"]')!
   const ui = document.querySelector<HTMLElement>('[data-id="group:ui"]')!
   const analysisGroup = document.querySelector<HTMLElement>('[data-id="group:requirement_analysis"]')!
-  expect(Number.parseFloat(analysisGroup.style.width)).toBeCloseTo(292 * 1.2)
-  expect(Number.parseFloat(analysisGroup.style.height)).toBeCloseTo(280 * 1.2)
+  expect(Number.parseFloat(analysisGroup.style.width)).toBeCloseTo(560)
+  expect(Number.parseFloat(analysisGroup.style.height)).toBeCloseTo(320)
   const y = (node: HTMLElement) => Number(node.style.transform.match(/,\s*([\d.]+)px\)/)?.[1])
   expect(y(ui)).toBeGreaterThan(y(api) + Number.parseFloat(api.style.height))
 })
@@ -937,8 +968,10 @@ it('后续阶段运行时仍可采用前序候选', async () => {
   await screen.findByRole('dialog', { name: 'UI 用例设计 · 候选与当前内容' })
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
   await user.click(await within(inspector).findByRole('button', { name: /候选 candidat/ }))
-  expect(await within(inspector).findByRole('button', { name: '采用并生成下一阶段' })).toBeEnabled()
-  await user.click(within(inspector).getByRole('button', { name: '检查并采用' }))
+  await user.click(await within(inspector).findByRole('button', { name: '更多操作' }))
+  expect(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' })).toBeEnabled()
+  await user.keyboard('{Escape}')
+  await user.click(within(inspector).getByRole('button', { name: '采用' }))
   await waitFor(() => expect(adopt).toHaveBeenCalledWith('req', 'ui', 'ui_design', expect.objectContaining({ candidateId: 'candidate-1', expectedAttemptId: 'attempt' })))
   profiles.mockRestore(); current.mockRestore(); list.mockRestore(); detail.mockRestore(); check.mockRestore(); adopt.mockRestore()
 })

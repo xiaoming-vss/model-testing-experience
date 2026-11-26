@@ -33,7 +33,6 @@ export function RequirementDetailPage() {
   const [editing, setEditing] = useState(false)
   const [refreshingGeneration, setRefreshingGeneration] = useState(false)
   const [inspectorHost, setInspectorHost] = useState<HTMLDivElement | null>(null)
-  const [readingActionsHost, setReadingActionsHost] = useState<HTMLDivElement | null>(null)
   const [readingNode, setReadingNode] = useState<RequirementReadingNode | null>(null)
   // 阅读态的「退回流程」动作由生成全景提供，用 ref 保存，避免函数身份变化触发重渲染。
   const leaveReadingRef = useRef<(() => void) | null>(null)
@@ -110,7 +109,7 @@ export function RequirementDetailPage() {
       <div className="requirement-detail-layout flex min-h-0 min-w-0 flex-1 gap-3 max-narrow:flex-col max-narrow:overflow-auto">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
         <section className="requirement-detail-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-[var(--app-surface-border)] bg-[var(--srf-card)] max-narrow:flex-none">
-          <RequirementDetailHeader showDownload={readingDocument} showEdit={readingDocument} requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading} readingActionsRef={setReadingActionsHost}
+          <RequirementDetailHeader showDownload={readingDocument} showEdit={readingDocument} requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading}
             canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
               setDocumentError(undefined)
               setDocumentLoading(requirement.documentType === 'richtext')
@@ -121,7 +120,7 @@ export function RequirementDetailPage() {
                 file: undefined }); setEditing(true)
             }} />
           {sprint.data ? <RequirementDesignWorkspace key={requirementId} requirementId={requirementId} projectId={sprint.data.projectId ?? ''}
-            canWrite={access.can('write')} onReadingNodeChange={handleReadingNode} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost}
+            canWrite={access.can('write')} onReadingNodeChange={handleReadingNode} inspectorHost={inspectorHost}
             documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
         </section>
         {/* 阶段侧栏独立成卡片，挂在画布大容器外侧。 */}

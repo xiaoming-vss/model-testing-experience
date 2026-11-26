@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from testing_agent.core.errors import (
@@ -49,7 +49,7 @@ class RequirementService:
         files=None,
         *,
         deletion: ResourceDeletion | None = None,
-        initialize_generation: Callable[[Requirement, str, str], None] | None = None,
+        initialize_generation: Callable[[Requirement, str, str], Awaitable[None]] | None = None,
     ) -> None:
         self.deletion = deletion or SqlResourceDeletion()
         self.requirements = requirements
@@ -95,7 +95,7 @@ class RequirementService:
             raise AppError(400, "请先上传需求原文件到 S3，再提交 documentFileId", 400)
         self.requirements.add(requirement)
         if self.initialize_generation is not None:
-            self.initialize_generation(requirement, sprint.project_id, user_id)
+            await self.initialize_generation(requirement, sprint.project_id, user_id)
         await self.requirements.commit()
         await self.requirements.refresh(requirement)
         return dump_requirement(requirement)

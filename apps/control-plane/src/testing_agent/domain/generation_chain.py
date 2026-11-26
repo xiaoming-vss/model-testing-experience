@@ -10,6 +10,10 @@ import json
 from typing import Any
 
 CHAIN_KINDS = ("requirement_analysis", "function", "api", "ui")
+HISTORICAL_REQUIREMENT_STAGE = "historical_requirement_relations"
+HISTORICAL_TEST_STAGE = "historical_test_case_verification"
+HISTORICAL_STAGES = {HISTORICAL_REQUIREMENT_STAGE, HISTORICAL_TEST_STAGE}
+CANDIDATE_DELETED_REASON = "审核未通过，候选产物已删除"
 
 CHAIN_LABELS = {
     "requirement_analysis": "需求分析",
@@ -22,6 +26,8 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
     "requirement_analysis": (
         ("requirement_review", "需求评审"),
         ("extracting_text", "材料整理"),
+        (HISTORICAL_REQUIREMENT_STAGE, "历史需求关联"),
+        (HISTORICAL_TEST_STAGE, "历史用例核验"),
     ),
     "function": (
         ("requirement_analysis", "测试范围风险分析"),
@@ -48,6 +54,8 @@ STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
     # The review report is advisory: extraction is independent of it.
     "requirement_review": (),
     "extracting_text": (),
+    HISTORICAL_REQUIREMENT_STAGE: ("extracting_text",),
+    HISTORICAL_TEST_STAGE: (HISTORICAL_REQUIREMENT_STAGE,),
     "requirement_analysis": ("extracting_text",),
     "case_names": ("requirement_analysis",),
     "detailed_cases": ("requirement_analysis", "case_names"),
@@ -63,6 +71,8 @@ STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
 STAGE_CONFIG_FIELDS = {
     "requirement_review": "reviewOutput",
     "extracting_text": "firstStepOutput",
+    HISTORICAL_REQUIREMENT_STAGE: "historicalRequirementRelations",
+    HISTORICAL_TEST_STAGE: "historicalTestCaseVerification",
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
     "ui_surface": "uiSurface",
@@ -77,6 +87,8 @@ STAGE_CONFIG_FIELDS = {
 JSON_ARTIFACT_STAGES = {
     "requirement_review",
     "extracting_text",
+    HISTORICAL_REQUIREMENT_STAGE,
+    HISTORICAL_TEST_STAGE,
     "interface_extract",
     "api_design",
     "requirement_analysis",
@@ -107,6 +119,8 @@ def kind_for_stage(stage: str) -> str:
 
 
 def is_final_stage(kind: str, stage: str) -> bool:
+    if kind == "requirement_analysis":
+        return stage == "extracting_text" or stage in HISTORICAL_STAGES
     return stage == stage_names(kind)[-1]
 
 

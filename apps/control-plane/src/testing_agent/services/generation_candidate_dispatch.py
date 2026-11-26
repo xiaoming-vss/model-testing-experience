@@ -2,6 +2,7 @@
 
 # transaction-bound: reservation, source locks and stage dispatch share one commit.
 
+import json
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.db.savepoint import ensure_outer_transaction
+from testing_agent.domain.generation_chain import HISTORICAL_REQUIREMENT_STAGE, HISTORICAL_STAGES
 from testing_agent.domain.generation_source_closure import RootKey, RootSnapshot, SourceClosureError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
@@ -23,6 +25,8 @@ from testing_agent.services.generation_candidate_snapshot import (
     candidate_request_signature,
 )
 from testing_agent.services.generation_source_selection import resolve_run_sources
+from testing_agent.services.historical_requirement_inputs import build_historical_requirement_input
+from testing_agent.services.historical_test_case_inputs import build_historical_test_case_input
 from testing_agent.services.stage_storage.dispatch import (
     dispatch_stage_attempt,
     replay_stage_attempt,
@@ -96,6 +100,8 @@ async def dispatch_candidate_stage(
     """
     if not task.requirement_id or not actor_id:
         raise ErrBadRequest()
+    if stage in HISTORICAL_STAGES and request.generation_mode != "current":
+        raise SourceClosureError("source_conflict")
     if (request.refresh_inputs or request.function_case_ids is not None) and (
         kind != "ui" or stage != "ui_surface"
     ):
@@ -141,6 +147,23 @@ async def dispatch_candidate_stage(
             current_root_hashes=current_root_hashes,
             direct_roots=direct_roots,
         )
+        if stage in HISTORICAL_STAGES:
+            builder = (
+                build_historical_requirement_input
+                if stage == HISTORICAL_REQUIREMENT_STAGE
+                else build_historical_test_case_input
+            )
+            history = await builder(
+                session,
+                project_id=task.project_id,
+                requirement_id=task.requirement_id,
+                sources=sources,
+            )
+            source = {
+                **source,
+                "sourceType": stage,
+                "sourceContent": json.dumps(history, ensure_ascii=False, separators=(",", ":")),
+            }
         snapshot = build_candidate_input_snapshot(
             requirement_id=task.requirement_id,
             kind=kind,

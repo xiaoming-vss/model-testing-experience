@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "0.1",
+  "artifactType": "historical_requirement_relation_input",
+  "currentRequirement": {
+    "requirementId": "req-new",
+    "materialSnapshotId": "material-new-3",
+    "items": [
+      {
+        "itemId": "new-1",
+        "functionId": "function-1",
+        "functionName": "管理员登录",
+        "sectionTitle": "功能使用与业务规则",
+        "text": "管理员连续登录失败达到 3 次时锁定账号。",
+        "status": "confirmed",
+        "materialBlockIds": [
+          "block-new-1"
+        ]
+      }
+    ]
+  },
+  "historicalRequirements": [
+    {
+      "requirementId": "req-old",
+      "materialSnapshotId": "material-old-2",
+      "items": [
+        {
+          "itemId": "old-1",
+          "functionId": "function-1",
+          "functionName": "管理员登录",
+          "sectionTitle": "功能使用与业务规则",
+          "text": "管理员连续登录失败达到 5 次时锁定账号。",
+          "status": "confirmed",
+          "materialBlockIds": [
+            "block-old-1"
+          ]
+        }
+      ]
+    }
+  ],
+  "knownRelations": []
+}

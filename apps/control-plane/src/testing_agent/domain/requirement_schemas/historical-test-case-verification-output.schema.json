@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "requirementId",
+    "materialSnapshotId",
+    "impactResultId",
+    "batchId",
+    "impactId",
+    "caseFindings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "enum": [
+        "0.1",
+        "0.2"
+      ]
+    },
+    "artifactType": {
+      "const": "historical_test_case_verification"
+    },
+    "requirementId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "materialSnapshotId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "impactResultId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "batchId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "impactId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "caseFindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/caseFinding"
+      }
+    },
+    "supplementalScenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenario"
+      }
+    },
+    "supplementalPoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/supplementalPoint"
+      }
+    }
+  },
+  "$defs": {
+    "caseFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "caseSnapshotId",
+        "decision",
+        "evidence",
+        "reason",
+        "modificationHint",
+        "needsFullCase"
+      ],
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "caseSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "decision": {
+          "enum": [
+            "reuse",
+            "modify",
+            "invalidate",
+            "unaffected",
+            "needs_confirmation"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "position"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "precondition",
+                  "step"
+                ]
+              },
+              "position": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "uniqueItems": true
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "modificationHint": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "needsFullCase": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "modify"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "modificationHint": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "modificationHint": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "needsFullCase": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "decision": {
+                "const": "needs_confirmation"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "enum": [
+                  "reuse",
+                  "modify",
+                  "invalidate"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenarioId",
+        "preconditions",
+        "action",
+        "expected",
+        "reason"
+      ],
+      "properties": {
+        "scenarioId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "action": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "expected": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "supplementalPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pointId",
+        "title"
+      ],
+      "properties": {
+        "pointId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S",
+          "not": {
+            "pattern": "[\\r\\n\\u2028\\u2029]"
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "schemaVersion": {
+          "const": "0.1"
+        }
+      },
+      "required": [
+        "supplementalScenarios"
+      ],
+      "not": {
+        "required": [
+          "supplementalPoints"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "schemaVersion": {
+          "const": "0.2"
+        }
+      },
+      "required": [
+        "supplementalPoints"
+      ],
+      "not": {
+        "required": [
+          "supplementalScenarios"
+        ]
+      }
+    }
+  ]
+}

@@ -16,6 +16,8 @@ from testing_agent_ai_worker.skill_names import (
     CASE_RELATIONS_SKILL,
     CASE_VISUALIZATION_SKILL,
     DETAILED_CASES_SKILL,
+    HISTORICAL_REQUIREMENT_SKILL,
+    HISTORICAL_TEST_CASE_SKILL,
     MATERIAL_SKILL,
     REPOSITORY_PROFILE_SKILL,
     REQUIREMENT_REVIEW_SKILL,
@@ -28,6 +30,8 @@ from testing_agent_ai_worker.tasks.requirement_analysis.document_type import ext
 REQUIREMENT_SKILLS = {
     "requirement_review": REQUIREMENT_REVIEW_SKILL,
     "extracting_text": MATERIAL_SKILL,
+    "historical_requirement_relations": HISTORICAL_REQUIREMENT_SKILL,
+    "historical_test_case_verification": HISTORICAL_TEST_CASE_SKILL,
 }
 FUNCTIONAL_SKILLS = {
     "requirement_analysis": SCOPE_SKILL,

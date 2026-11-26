@@ -22,7 +22,6 @@
 .scope :global(.gc-candidate-pill.is-trial) { border-color: var(--app-accent-border); background: var(--app-accent-surface); color: var(--app-accent); }
 .scope :global(.gc-candidate-pill.is-warn) { border-color: var(--app-status-warning-border); background: var(--app-status-warning-bg); color: var(--app-status-warning-text); font-weight: 600; }
 .scope :global(.gc-candidate-pill.is-danger) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); font-weight: 600; }
-.scope :global(.gc-candidate-pill.is-muted) { color: var(--app-surface-text-muted); }
 .scope :global(.gc-candidate-focus-meta) { color: var(--app-surface-text-muted); font-size: 11px; }
 .scope :global(.gc-candidate-focus-tools) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; }
 .scope :global(.gc-candidate-view-switch) { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--app-surface-border); border-radius: 7px; background: var(--app-surface-chip); }
@@ -122,9 +121,7 @@
 .scope :global(.gc-candidate-dock-hint) { flex: none; color: var(--app-surface-text-muted); font-size: 10px; }
 .scope :global(.gc-candidate-primary-row) { display: flex; gap: 7px; }
 .scope :global(.gc-candidate-primary) { flex: 1; min-height: 36px; }
-.scope :global(.gc-candidate-more) { width: 36px; height: 36px; padding: 0; }
 .scope :global(.gc-candidate-more-wide) { width: 100%; }
-.scope :global(.gc-candidate-continue) { min-height: 34px; }
 
 
 .dialogHint { margin: 0; color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.6; }

@@ -2,6 +2,8 @@
 
 REQUIREMENT_REVIEW_SKILL = "mtx-review-requirement"
 MATERIAL_SKILL = "mtx-organize-requirement-material"
+HISTORICAL_REQUIREMENT_SKILL = "mtx-analyze-historical-requirement-relations"
+HISTORICAL_TEST_CASE_SKILL = "mtx-verify-historical-test-cases"
 SCOPE_SKILL = "mtx-analyze-functional-requirements"
 TEST_POINTS_SKILL = "mtx-generate-traceable-test-points"
 DETAILED_CASES_SKILL = "mtx-generate-solution-test-cases"

@@ -12,7 +12,7 @@ from pydantic.alias_generators import to_camel
 from testing_agent.schemas.generation_chain import ChainSourceInputsView
 
 ChainKind = Literal["requirement_analysis", "function", "api", "ui"]
-CandidateDisposition = Literal["available", "rejected", "discarded"]
+CandidateDisposition = Literal["available", "rejected"]
 AdoptionBlockReason = Literal[
     "source_stale",
     "source_unknown",
@@ -270,7 +270,7 @@ class CandidateDeriveResult(CandidateContract):
 
 
 class CandidateDispositionRequest(CandidateContract):
-    action: Literal["reject", "discard"]
+    action: Literal["reject", "delete"]
     expected_candidate_token: Identifier
     request_id: UUID
     comment: str = Field(default="", max_length=4000)
@@ -279,8 +279,8 @@ class CandidateDispositionRequest(CandidateContract):
 class CandidateDispositionResult(CandidateContract):
     request_id: UUID
     candidate_id: Identifier
-    disposition: Literal["rejected", "discarded"]
-    candidate_token: Identifier
+    disposition: Literal["rejected", "deleted"]
+    candidate_token: Identifier | None = None
 
 
 class CurrentClearRequest(CandidateContract):

@@ -13,9 +13,7 @@ from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
 )
 
 FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_artifacts"
-REVIEW_FIXTURES = (
-    Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_review"
-)
+REVIEW_FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_review"
 
 
 def artifact(name):
@@ -78,6 +76,64 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
             json.loads(result.output_yaml),
             artifact("readable-material"),
         )
+
+    def test_history_uses_compact_source_and_a_fresh_session(self):
+        item = {
+            "itemId": "a",
+            "functionId": "f",
+            "functionName": "保存",
+            "sectionTitle": "功能使用与业务规则",
+            "text": "保存成功后展示结果",
+            "status": "confirmed",
+            "materialBlockIds": ["block"],
+        }
+        material = {
+            "requirementId": "requirement",
+            "materialSnapshotId": "material",
+            "items": [item],
+        }
+        source = {
+            "schemaVersion": "0.1",
+            "artifactType": "historical_requirement_relation_input",
+            "currentRequirement": material,
+            "historicalRequirements": [{**material, "requirementId": "old"}],
+            "knownRelations": [],
+        }
+        output = {
+            "schemaVersion": "0.1",
+            "artifactType": "historical_requirement_relation_analysis",
+            "requirementId": "requirement",
+            "materialSnapshotId": "material",
+            "relations": [],
+            "openQuestions": [],
+        }
+        calls, downloads = [], []
+
+        async def runner(**kwargs):
+            calls.append(kwargs)
+            return output
+
+        with tempfile.TemporaryDirectory() as root:
+            executor = self.executor(root, runner, downloads)
+            task = self.task(current_stage="historical_requirement_relations", document_type="")
+            task.payload.source_content = json.dumps(source)
+            result = executor.execute(task, datetime.now().astimezone(), lambda _: None)
+            self.assertEqual(result.status, TaskStatus.SUCCESS)
+            self.assertEqual(json.loads(result.output_yaml), output)
+            self.assertEqual(calls[0]["session_key"], task.attempt_id)
+            self.assertEqual(calls[0]["skill_name"], "mtx-analyze-historical-requirement-relations")
+            self.assertEqual(json.loads(calls[0]["input_text"]), source)
+            self.assertEqual(downloads, [])
+
+            output["materialSnapshotId"] = "unexpected"
+            with self.assertRaisesRegex(ValueError, "结构或引用校验"):
+                executor.execute(task, datetime.now().astimezone(), lambda _: None)
+
+            source["historicalRequirements"] = []
+            task.payload.source_content = json.dumps(source)
+            result = executor.execute(task, datetime.now().astimezone(), lambda _: None)
+            self.assertEqual(json.loads(result.output_yaml)["relations"], [])
+            self.assertEqual(len(calls), 2)
 
     def test_review_stage_uses_review_skill_and_stops_for_manual_review(self):
         calls, downloads, progress = [], [], []

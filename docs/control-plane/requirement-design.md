@@ -7,8 +7,8 @@
 | GET `/v1/requirements/{id}/design` | 返回配置摘要、旧运行计数及是否存在已审核的需求理解版本 |
 | GET `/v1/requirements/{id}/design/{kind}/runs` | 分页读取同类历史任务的运行摘要 |
 | POST `/v1/requirements/{id}/design/{kind}/configuration` | 复用或新增配置，自动填写项目、迭代、需求和名称 |
-| POST `/v1/requirements/{id}/design/{kind}/run` | 返回提示，引导客户端使用独立阶段运行接口 |
-| POST `/v1/requirements/{id}/generation/{kind}/stages/{stage}/run` | 校验权限和已审核上游，冻结输入并派发目标阶段 |
+| POST `/v1/requirements/{id}/design/{kind}/run` | 仅返回 400 提示，引导客户端改用独立阶段运行接口；不再发起任务 |
+| POST `/v1/requirements/{id}/generation/{kind}/stages/{stage}/candidate-run` | 校验权限和已审核上游，冻结输入并派发目标阶段 |
 
 `kind` 为 `requirement_analysis`、`function`、`api` 或 `ui`。配置提交可带稳定 UUID `requestId`；缺省时在需求父行锁内复用默认配置，显式新增传 `newConfiguration`。API 输入为接口库中选中的 `interfaceIds`（至少一个，须属于当前项目）；UI 源码在首阶段选择仓库画像版本、前端仓库和 commit 模式，并冻结正式功能用例。
 

@@ -38,3 +38,7 @@
 - [0025 阶段采用是独立指针](adr/0025-independent-stage-adoption.md)
 - [0026 用例失效是独立的生命周期标记](adr/0026-case-invalidation-marker.md)
 - [0027 API/UI 测试集归项目所有，需求仅作可选关联](adr/0027-project-owned-api-ui-test-suites.md)
+- [0028 历史需求关联阶段](adr/0028-historical-requirement-relations-stage.md)
+- [0029 历史用例核验阶段](adr/0029-historical-test-case-verification-stage.md)
+- [0030 历史用例核验以测试点表达补测建议](adr/0030-historical-supplemental-test-points.md)
+- [0031 删除候选是物理删除](adr/0031-candidate-removal-is-physical-delete.md)

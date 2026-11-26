@@ -19,6 +19,12 @@ it('候选列表分页并按需求、阶段及候选身份请求详情', async (
     method: 'POST',
     body: JSON.stringify(body),
   })
+  const deleteBody = { action: 'delete', expectedCandidateToken: 'token', requestId: 'request-delete' } as const
+  await generationCandidatesApi.dispose('req 1', 'function', 'case_names', 'candidate-a', deleteBody)
+  expect(request).toHaveBeenLastCalledWith('/v1/requirements/req%201/generation/function/stages/case_names/candidates/candidate-a/disposition', {
+    method: 'POST',
+    body: JSON.stringify(deleteBody),
+  })
   const editBody = { expectedCandidateToken: 'token', expectedAttemptId: 'attempt', content: 'new content' }
   await generationCandidatesApi.edit('req 1', 'function', 'case_names', 'candidate-a', editBody)
   expect(request).toHaveBeenLastCalledWith('/v1/requirements/req%201/generation/function/stages/case_names/candidates/candidate-a', {

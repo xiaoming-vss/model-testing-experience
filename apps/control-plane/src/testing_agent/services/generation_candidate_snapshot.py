@@ -4,7 +4,12 @@ import json
 from copy import deepcopy
 from typing import Any
 
-from testing_agent.domain.generation_chain import STAGE_CONFIG_FIELDS, artifact_value, stage_names
+from testing_agent.domain.generation_chain import (
+    HISTORICAL_STAGES,
+    STAGE_CONFIG_FIELDS,
+    artifact_value,
+    stage_names,
+)
 from testing_agent.domain.generation_root_fingerprints import (
     IncompleteRootInput,
     fingerprint_generation_basis,
@@ -133,7 +138,11 @@ def build_candidate_input_snapshot(
         source["sourceFormat"] = FUNCTIONAL_SOURCE_FORMAT
         source["sourceFormatVersion"] = FUNCTIONAL_SOURCE_FORMAT_VERSION
     for item in sources.selected_content:
-        if item.chain_kind == kind and item.stage in STAGE_CONFIG_FIELDS:
+        if (
+            stage not in HISTORICAL_STAGES
+            and item.chain_kind == kind
+            and item.stage in STAGE_CONFIG_FIELDS
+        ):
             config[STAGE_CONFIG_FIELDS[item.stage]] = artifact_value(
                 item.stage, item.content, item.format
             )

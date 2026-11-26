@@ -1,7 +1,7 @@
 /** Candidate read contracts and target contracts for subsequent write flows. */
 import type { UiGenerationSourceInputs } from './generationChain.api'
 export type CandidateChainKind = 'requirement_analysis' | 'function' | 'api' | 'ui'
-export type CandidateDisposition = 'available' | 'rejected' | 'discarded'
+export type CandidateDisposition = 'available' | 'rejected'
 export type CandidateSourceTrace = {
   chainKind: CandidateChainKind
   stage: string
@@ -115,7 +115,7 @@ export type CandidateDeriveResult = {
   snapshotId: string
 }
 export type CandidateDispositionBody = {
-  action: 'reject' | 'discard'
+  action: 'reject' | 'delete'
   expectedCandidateToken: string
   requestId: string
   comment?: string
@@ -123,8 +123,8 @@ export type CandidateDispositionBody = {
 export type CandidateDispositionResult = {
   requestId: string
   candidateId: string
-  disposition: 'rejected' | 'discarded'
-  candidateToken: string
+  disposition: 'rejected' | 'deleted'
+  candidateToken: string | null
 }
 export type CurrentClearBody = { expectedCurrentToken: string; requestId: string }
 export type CurrentImportBody = {

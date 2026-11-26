@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
 from testing_agent.domain.ai_execution_format import FIELDS
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON, HISTORICAL_TEST_STAGE
 from testing_agent.repositories.direct_attempt_view import direct_attempt_rows
 from testing_agent.services.stage_storage.views import attempt_source
 from testing_agent.services.ui_generation_sources import public_ui_source_snapshot
@@ -49,6 +50,10 @@ async def direct_attempt_view(
     state = attempt.status
     stage_status = ("completed" if review else "waiting_review") if state == "success" else state
     public_source = attempt_source(attempt)
+    if stage.stage == HISTORICAL_TEST_STAGE:
+        public_source = {
+            key: value for key, value in public_source.items() if key != "sourceContent"
+        }
     if task.task_type == "ui_case_generate":
         public_source = public_ui_source_snapshot(public_source)
     return {
@@ -73,8 +78,8 @@ async def direct_attempt_view(
         "reviewStatus": "approved"
         if review
         else "rejected"
-        if (candidate is not None and candidate.disposition in {"rejected", "discarded"})
-        or attempt.invalidated_reason == "审核未通过，候选产物已丢弃"
+        if (candidate is not None and candidate.disposition == "rejected")
+        or attempt.invalidated_reason == CANDIDATE_DELETED_REASON
         else "pending",
         "reviewerUserId": review.actor_id if review else "",
         "reviewedAt": review.created_at if review else None,

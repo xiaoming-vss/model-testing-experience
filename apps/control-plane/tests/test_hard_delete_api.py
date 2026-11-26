@@ -143,3 +143,46 @@ def test_account_self_deletion_is_disabled(api):
     response = api.delete("/v1/user", headers=headers)
     assert response.status_code == 405
     assert asyncio.run(credentials()) == 1
+
+
+def test_requirement_delete_rejects_running_generation_task(api):
+    import asyncio
+
+    from testing_agent.models.ai_generation_stage import AiGenerationStage
+
+    _, owner = account(api, "running-delete-owner")
+    pid = project(api, owner)
+    rid = requirement(api, owner, pid)
+    created = api.post(
+        f"/v1/projects/{pid}/code-risk-analysis-tasks",
+        headers=owner,
+        json={"name": "risk", "requirementId": rid},
+    )
+    assert created.status_code == 200, created.text
+    tid = created.json()["data"]["taskId"]
+
+    async def set_active_attempt(value: str | None):
+        async with api.app.state.test_sessions() as session:
+            stage = await session.get(AiGenerationStage, f"stage-{tid}")
+            if stage is None:
+                stage = AiGenerationStage(
+                    id=f"stage-{tid}",
+                    task_id=tid,
+                    stage="code_risk_analysis",
+                    active_attempt_id=value,
+                )
+                session.add(stage)
+            else:
+                stage.active_attempt_id = value
+            await session.commit()
+
+    asyncio.run(set_active_attempt("attempt-1"))
+    blocked = api.delete(f"/v1/requirements/{rid}", headers=owner)
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["code"] == 3106
+    assert api.get(f"/v1/requirements/{rid}", headers=owner).status_code == 200
+
+    asyncio.run(set_active_attempt(None))
+    deleted = api.delete(f"/v1/requirements/{rid}", headers=owner)
+    assert deleted.status_code == 200, deleted.text
+    assert api.get(f"/v1/code-risk-analysis-tasks/{tid}", headers=owner).status_code == 404

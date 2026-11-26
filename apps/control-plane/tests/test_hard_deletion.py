@@ -250,6 +250,49 @@ async def test_requirement_removes_owned_generation_tasks(db):
     assert await count(db, m.Requirement) == 0
 
 
+async def test_requirement_with_running_execution_blocks_deletion(db):
+    req = await db.scalar(select(m.Requirement))
+    await add(
+        db,
+        m.AiGenerateTask(
+            task_id="task",
+            task_type="functional_case_generate",
+            name="task",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="r",
+            creator_user_id="u",
+            source_type="requirement",
+            source_content="",
+        ),
+    )
+    await add(
+        db,
+        m.AiExecution(
+            execution_id="execution",
+            task_id="task",
+            requested_by="u",
+            workflow_status="running",
+        ),
+    )
+    await db.commit()
+
+    with pytest.raises(AppError) as blocked:
+        await delete_resource(db, req)
+    assert blocked.value.code == 3106
+
+    await db.rollback()
+    execution = await db.scalar(select(m.AiExecution))
+    execution.workflow_status = "success"
+    req = await db.scalar(select(m.Requirement))
+    await db.commit()
+
+    await delete_resource(db, req)
+    await db.commit()
+    assert await count(db, m.AiGenerateTask) == 0
+    assert await count(db, m.AiExecution) == 0
+
+
 async def test_environment_removes_owned_variables(db):
     env = await add(db, m.ApiEnvironment(environment_id="env", project_id="p", name="dev"))
     await add(db, m.ApiEnvironmentVar(env_var_id="v", environment_id="env", var_key="token"))

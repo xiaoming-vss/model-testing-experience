@@ -1,9 +1,10 @@
 """Bounded execution history based on candidates and their review receipts."""
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrBadRequest
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 from testing_agent.models.ai_generate_import import AiGenerateImport as Import
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt as Attempt
@@ -63,7 +64,10 @@ async def candidate_history_rows(
         .correlate(Attempt, Candidate, Task)
         .exists()
     )
-    rejected = Candidate.disposition.in_(("rejected", "discarded"))
+    rejected = or_(
+        Candidate.disposition == "rejected",
+        Attempt.invalidated_reason == CANDIDATE_DELETED_REASON,
+    )
     pending = and_(
         Attempt.status == "success",
         Review.receipt_id.is_(None),
@@ -89,7 +93,7 @@ async def candidate_history_rows(
             Attempt.started_at,
             Attempt.finished_at,
             Attempt.error_message,
-            case((rejected, "审核未通过，候选产物已丢弃"), else_=Attempt.invalidated_reason).label(
+            case((rejected, CANDIDATE_DELETED_REASON), else_=Attempt.invalidated_reason).label(
                 "invalidated_reason"
             ),
             func.coalesce(func.length(Attempt.output_content), 0).label("output_length"),

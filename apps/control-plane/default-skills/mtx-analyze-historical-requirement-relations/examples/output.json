@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "0.1",
+  "artifactType": "historical_requirement_relation_analysis",
+  "requirementId": "req-new",
+  "materialSnapshotId": "material-new-3",
+  "relations": [
+    {
+      "relationId": "relation-1",
+      "historicalRequirementId": "req-old",
+      "historicalMaterialSnapshotId": "material-old-2",
+      "relationType": "changes",
+      "impacts": [
+        {
+          "impactId": "impact-1",
+          "reviewStatus": "proposed",
+          "ruleEffect": "changed",
+          "scope": {
+            "roles": [
+              "管理员"
+            ],
+            "states": [
+              "账号未锁定"
+            ],
+            "conditions": [
+              "连续登录失败"
+            ]
+          },
+          "previousRule": "第 5 次连续登录失败触发锁定。",
+          "currentRule": "第 3 次连续登录失败触发锁定。",
+          "changeSummary": "管理员账号的失败锁定阈值从 5 次降至 3 次。",
+          "currentItemIds": [
+            "new-1"
+          ],
+          "historicalItemIds": [
+            "old-1"
+          ]
+        }
+      ]
+    }
+  ],
+  "openQuestions": []
+}

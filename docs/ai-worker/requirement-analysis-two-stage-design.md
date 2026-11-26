@@ -215,6 +215,8 @@ Schema 之外还需要语义校验：ID 唯一；parentId 无环且指向已有�
 
 ## 2026-10-16 需求理解精简契约 2.0
 
+> 已被取代：本节“材料提取仍使用 `document_extraction` 1.0”的表述由后文[材料可读说明契约](#材料可读说明契约本次第一阶段整改)取代，第一阶段改用 `readable_requirement_material` 0.2；需求理解 2.0 之后也随需求理解阶段一并移除。以下内容仅作历史记录。
+
 材料提取仍使用 `document_extraction` 1.0，工作流仍为两阶段。新需求理解生成与修订输出 `requirement_understanding` 2.0，完整定义见 [v2 Schema](requirement-analysis-contracts/requirement-understanding.schema.json) 与 [v2 示例](requirement-analysis-contracts/requirement-understanding.example.json)。按用户要求不适配需求理解旧版本：仅维护一份 2.0 Schema 和示例；1.0 需求理解在读取、保存、修订和导入时明确拒绝，不转换、不迁移或删除已有数据。
 
 - `sources` 仍登记材料；`evidence` 集中登记 `id/sourceId/locator` 及可选摘录。事实和问题用 `evidenceIds` 引用，重复摘录不再逐字段复制。事实缺省确认状态为 `confirmed`，此时仍强制要求有效证据，且不能仅由示例来源支撑。

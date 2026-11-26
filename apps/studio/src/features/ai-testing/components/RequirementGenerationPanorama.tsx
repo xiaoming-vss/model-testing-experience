@@ -34,15 +34,13 @@ type SpecialKind = 'content' | 'codeRisk' | 'repositoryProfile' | 'relations'
 export type RequirementReadingNodeKind = 'document' | 'stage' | 'relations'
 /** 阅读态交给页面标题栏的面包屑末项；leave 用于点上级需求名时退回生成流程。 */
 export type RequirementReadingNode = { label: string; leave?: () => void; kind?: RequirementReadingNodeKind }
-export function RequirementGenerationPanorama({ requirementId, projectId, canWrite, onOpenTab, documentPreview, onReadingNodeChange, inspectorHost, readingActionsHost }: {
+export function RequirementGenerationPanorama({ requirementId, projectId, canWrite, onOpenTab, documentPreview, onReadingNodeChange, inspectorHost }: {
   canWrite: boolean
   documentPreview?: ReactNode
   requirementId: string; projectId: string
   onOpenTab: (tab: 'content' | GenerationChainKind | 'codeRisk') => void
   onReadingNodeChange?: (node: RequirementReadingNode | null) => void
   inspectorHost?: HTMLElement | null
-  /** 阅读态把视图切换与复制放进页面标题栏，正文不再保留工具行。 */
-  readingActionsHost?: HTMLElement | null
 }) {
   const stageRef = useRef<HTMLDivElement>(null)
   const inspectorRef = useRef<HTMLElement>(null)
@@ -256,7 +254,7 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
       sourceSelected={inspectorOpen ? sourceSelected : null} onSelectSource={kind => { if (!guardChanges()) return; setInspectorOpen(true); setSourceSelected(kind); setSpecial(null); setModalOpen(false); setDocumentOpen(false); setRelationsOpen(false) }}
       onOpenStage={openStageContent} onOpenSpecial={openSpecial} onOpenTab={tab => { if (guardChanges()) onOpenTab(tab) }} /></div>      <GenerationArtifactFrame embedded hideHeader open={documentOpen} title="需求文档" onCancel={() => closeReading(() => setDocumentOpen(false))}
         className="generation-chain-document">{documentPreview}</GenerationArtifactFrame>
-      <GenerationChainModal embedded showApiRunInInspector={inspectorOpen && !sourceSelected && !special && !documentOpen && !relationsOpen} inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} readingActionsContainer={readingActionsHost} workspace={workspace} requirementId={requirementId} projectId={projectId} open={modalOpen}
+      <GenerationChainModal embedded inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} workspace={workspace} requirementId={requirementId} projectId={projectId} open={modalOpen}
         uiSourceOptions={uiSourceOptionsState} onOpenProfile={openProfileGuide}
         chooseGitlab={profileWorkspace.personalGitlab.choose} gitlabDialog={profileWorkspace.personalGitlab.dialog}
         onClose={closeStageReading} onOpenLegacy={onOpenTab} />

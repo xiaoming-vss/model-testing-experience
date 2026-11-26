@@ -111,8 +111,3 @@
   font-size: 9.5px;
   line-height: 16px;
 }
-
-.relationsPopover :global(.ant-popover-container) {
-  padding: 0;
-  overflow: hidden;
-}

@@ -14,6 +14,7 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.generation_chain import HISTORICAL_STAGES
 from testing_agent.domain.worker_context import ApiWorkerContext
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.worker_task import WorkerTask
@@ -586,10 +587,12 @@ class WorkerTaskService:
                 "code_risk_analysis",
             }:
                 raise ErrNotFound()
+            source = authority.input_snapshot.get("source") or {}
+            if source.get("sourceType") in HISTORICAL_STAGES:
+                raise ErrNotFound()
             requirement = await self.repository.get_requirement(authority.task.requirement_id)
             if requirement is None:
                 raise ErrNotFound()
-            source = authority.input_snapshot.get("source") or {}
             original_file, original_hash = source.get("documentFileId"), source.get("documentHash")
             if task.task_type == "requirement_analysis" and source.get("workflowVersion") == 2:
                 if (original_file and original_file != requirement.document_file_id) or (

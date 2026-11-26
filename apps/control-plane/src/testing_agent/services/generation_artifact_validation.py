@@ -5,6 +5,12 @@ from types import SimpleNamespace
 from typing import Any
 
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
+from testing_agent.domain.generation_chain import (
+    HISTORICAL_REQUIREMENT_STAGE,
+    HISTORICAL_TEST_STAGE,
+)
+from testing_agent.domain.historical_requirement_artifacts import validate_historical_output
+from testing_agent.domain.historical_test_case_artifacts import validate_verification_run_output
 from testing_agent.domain.test_scope_analysis import validate_test_scope
 from testing_agent.domain.traceable_test_points import validate_traceable_test_points
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -131,6 +137,20 @@ async def validate_generation_artifact(
     """Return validated content and format without consulting mutable current inputs."""
     if not content.strip():
         raise dynamic_error(ErrBadRequest, "阶段产物不能为空")
+    if (kind, stage) == ("requirement_analysis", HISTORICAL_TEST_STAGE):
+        source, _ = _frozen_inputs(source_snapshot)
+        try:
+            value = validate_verification_run_output(content, source.get("sourceContent"))
+        except ValueError as exc:
+            raise dynamic_error(ErrBadRequest, "历史用例核验结果与冻结的规则或用例不一致") from exc
+        return json.dumps(value, ensure_ascii=False), "json"
+    if (kind, stage) == ("requirement_analysis", HISTORICAL_REQUIREMENT_STAGE):
+        source, _ = _frozen_inputs(source_snapshot)
+        try:
+            value = validate_historical_output(content, source.get("sourceContent"))
+        except ValueError as exc:
+            raise dynamic_error(ErrBadRequest, "历史需求关联结果与本次冻结材料不一致") from exc
+        return json.dumps(value, ensure_ascii=False), "json"
     if kind == "requirement_analysis":
         artifact_kind = {
             "requirement_review": "requirement_review",

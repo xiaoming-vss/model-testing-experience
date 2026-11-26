@@ -5,11 +5,14 @@ from typing import Any
 from uuid import uuid4
 
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
+from testing_agent.domain.generation_chain import HISTORICAL_STAGES
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.domain.generation_source_closure import SourceClosureError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.generation_candidate_storage import candidate_stage_scope
+from testing_agent.repositories.generation_current_chain import ensure_empty_slot
 from testing_agent.repositories.generation_root_inputs import lock_api_generation_source
+from testing_agent.repositories.standalone_execution import lock_or_create_stage
 from testing_agent.schemas.generation_candidates import CandidateRunRequest
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.generation_application_scope import GenerationApplicationScope
@@ -47,10 +50,20 @@ class CandidateDispatchApplication:
         self.session = chain.tasks.session
         self.scope = GenerationApplicationScope(chain, action="execute")
 
-    async def _task(self, requirement_id: str, kind: DesignKind, stage: str) -> AiGenerateTask:
+    async def _task(
+        self, requirement_id: str, kind: DesignKind, stage: str, *, ensure_stage: bool = False
+    ) -> AiGenerateTask:
         scoped = await candidate_stage_scope(
             self.session, requirement_id=requirement_id, kind=kind, stage=stage
         )
+        if scoped is None and stage in HISTORICAL_STAGES:
+            scoped = await candidate_stage_scope(
+                self.session, requirement_id=requirement_id, kind=kind, stage="extracting_text"
+            )
+            if scoped is not None and ensure_stage:
+                chain_id, _, task = scoped
+                allocated, _ = await lock_or_create_stage(self.session, task.task_id, stage)
+                await ensure_empty_slot(self.session, chain_id=chain_id, stage_id=allocated.id)
         if scoped is None:
             raise dynamic_error(ErrBadRequest, "当前生成链尚未初始化")
         return scoped[2]
@@ -115,7 +128,7 @@ class CandidateDispatchApplication:
                 )
                 await self.session.rollback()
             await self.scope.lock_parents(requirement_id, actor_id, parent)
-            task = await self._task(requirement_id, kind, stage)
+            task = await self._task(requirement_id, kind, stage, ensure_stage=True)
             await require_personal_connection(
                 self.session, actor_id, "llm", request.connection_id, parent.project_id
             )

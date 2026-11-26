@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "0.1",
+  "artifactType": "historical_test_case_verification_input",
+  "requirementId": "req-new",
+  "materialSnapshotId": "material-new-3",
+  "impactResultId": "confirmed-impact-result-1",
+  "batchId": "batch-1",
+  "impact": {
+    "impactId": "impact-1",
+    "ruleEffect": "changed",
+    "scope": {
+      "roles": [
+        "管理员"
+      ],
+      "states": [
+        "账号未锁定"
+      ],
+      "conditions": [
+        "连续登录失败"
+      ]
+    },
+    "previousRule": "第 5 次连续登录失败触发锁定。",
+    "currentRule": "第 3 次连续登录失败触发锁定。",
+    "changeSummary": "管理员账号的失败锁定阈值从 5 次降至 3 次。"
+  },
+  "candidateCases": [
+    {
+      "caseId": "case-31",
+      "requirementId": "req-old",
+      "suiteId": "suite-6",
+      "caseSnapshotId": "case-31-snapshot-1",
+      "module": "账号安全",
+      "title": "管理员登录失败后的处理",
+      "contentScope": "matched_excerpt",
+      "preconditions": [
+        {
+          "position": 1,
+          "text": "管理员账号连续登录失败 2 次。"
+        }
+      ],
+      "steps": [
+        {
+          "position": 1,
+          "action": "再次输入错误密码。",
+          "expected": "可以继续重试，账号未锁定。"
+        }
+      ]
+    }
+  ]
+}

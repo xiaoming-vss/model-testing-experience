@@ -17,10 +17,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   onClose: () => void
   onOpenLegacy: (kind: GenerationChainKind) => void
   embedded?: boolean
-  showApiRunInInspector?: boolean
   inspectorContainer?: HTMLElement | null
   inspectorActionContainer?: HTMLElement | null
-  readingActionsContainer?: HTMLElement | null
   uiSourceOptions?: UiGenerationSourceOptionsState
   onOpenProfile?: () => void
   chooseGitlab?: (projectId: string) => Promise<string>

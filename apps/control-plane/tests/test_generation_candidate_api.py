@@ -7,6 +7,7 @@ from uuid import uuid4
 import sqlalchemy as sa
 from support.project_api import account, api, project  # noqa: F401
 
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -18,6 +19,7 @@ from testing_agent.models.generation_candidates import (
 )
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
+from testing_agent.repositories.generation_candidate_history import candidate_history_rows
 
 SOURCE_MANIFEST = {
     "generationMode": "trial",
@@ -47,7 +49,7 @@ SOURCE_MANIFEST = {
 }
 
 
-def seed_candidates(client, project_id, user_id):
+def seed_candidates(client, project_id, user_id, *, with_derived=False, with_attempt=False):
     async def insert():
         async with client.app.state.test_sessions() as session:
             now = datetime.now(UTC)
@@ -100,6 +102,21 @@ def seed_candidates(client, project_id, user_id):
                 ]
             )
             await session.flush()
+            if with_attempt:
+                session.add(
+                    AiGenerationAttempt(
+                        id="candidate-attempt-b",
+                        stage_id="candidate-stage",
+                        attempt_no=1,
+                        operation="generate",
+                        status="success",
+                        output_content="private-b",
+                        output_format="text",
+                        requested_by=user_id,
+                        created_at=now,
+                    )
+                )
+                await session.flush()
             for index, value in enumerate(("a", "b")):
                 session.add(
                     AiGenerationCandidate(
@@ -107,6 +124,12 @@ def seed_candidates(client, project_id, user_id):
                         snapshot_id=f"snapshot-{value}",
                         chain_id="candidate-chain",
                         stage_id="candidate-stage",
+                        origin_attempt_id="candidate-attempt-b"
+                        if value == "b" and with_attempt
+                        else None,
+                        current_attempt_id="candidate-attempt-b"
+                        if value == "b" and with_attempt
+                        else None,
                         content=f"private-{value}",
                         format="text",
                         context_json={"formatInfo": "test"},
@@ -117,6 +140,23 @@ def seed_candidates(client, project_id, user_id):
                         source_snapshot_json={"secret": "private-input"},
                         source_manifest_json=SOURCE_MANIFEST if value == "a" else None,
                         created_at=now + timedelta(seconds=index),
+                    )
+                )
+            if with_derived:
+                session.add(
+                    AiGenerationCandidate(
+                        candidate_id="c",
+                        snapshot_id="snapshot-c",
+                        chain_id="candidate-chain",
+                        stage_id="candidate-stage",
+                        derived_from_candidate_id="b",
+                        content="private-c",
+                        format="text",
+                        candidate_token="token-c",
+                        disposition="available",
+                        generation_mode="trial",
+                        created_by=user_id,
+                        created_at=now + timedelta(seconds=2),
                     )
                 )
             await session.flush()
@@ -235,7 +275,7 @@ def test_candidate_rejection_is_scoped_idempotent_and_preserves_current(api):  #
     assert replay.status_code == 200 and replay.json()["data"] == result
     assert (
         api.post(
-            base + "/b/disposition", headers=owner, json={**body, "action": "discard"}
+            base + "/b/disposition", headers=owner, json={**body, "action": "delete"}
         ).status_code
         == 400
     )
@@ -253,6 +293,93 @@ def test_candidate_rejection_is_scoped_idempotent_and_preserves_current(api):  #
     saved = asyncio.run(receipts())
     assert len(saved) == 1 and saved[0].comment == "不采用"
     assert saved[0].result_candidate_token == result["candidateToken"]
+
+
+def test_candidate_deletion_removes_row_and_keeps_derived_candidates(api):  # noqa: F811
+    user, owner = account(api, "candidate-deleter")
+    pid = project(api, owner)
+    _, viewer = account(api, "candidate-delete-reader")
+    assert (
+        api.post(
+            f"/v1/projects/{pid}/members",
+            headers=owner,
+            json={"name": "candidate-delete-reader", "role": "viewer"},
+        ).status_code
+        == 200
+    )
+    seed_candidates(api, pid, user["userId"], with_derived=True, with_attempt=True)
+    base = "/v1/requirements/candidate-req/generation/function/stages/case_names/candidates"
+    body = {
+        "action": "delete",
+        "expectedCandidateToken": "token-b",
+        "requestId": str(uuid4()),
+        "comment": "删除",
+    }
+    assert api.post(base + "/b/disposition", headers=viewer, json=body).status_code == 403
+    assert (
+        api.post(
+            base + "/a/disposition",
+            headers=owner,
+            json={
+                **body,
+                "expectedCandidateToken": "token-a",
+                "requestId": str(uuid4()),
+            },
+        ).status_code
+        == 400
+    )
+    first = api.post(base + "/b/disposition", headers=owner, json=body)
+    assert first.status_code == 200, first.text
+    result = first.json()["data"]
+    assert result["candidateId"] == "b" and result["disposition"] == "deleted"
+    assert result["candidateToken"] is None
+    replay = api.post(base + "/b/disposition", headers=owner, json=body)
+    assert replay.status_code == 200 and replay.json()["data"] == result
+    listing = api.get(base, headers=owner).json()["data"]
+    assert listing["total"] == 2
+    assert {item["candidateId"] for item in listing["items"]} == {"a", "c"}
+    assert api.get(base + "/b", headers=owner).status_code == 404
+    current = api.get(
+        "/v1/requirements/candidate-req/generation/function/stages/case_names/current",
+        headers=owner,
+    )
+    assert current.json()["data"]["content"] == "private-a"
+
+    async def inspect():
+        async with api.app.state.test_sessions() as session:
+            deleted = await session.scalar(
+                sa.select(AiGenerationCandidate).where(AiGenerationCandidate.candidate_id == "b")
+            )
+            derived = await session.scalar(
+                sa.select(AiGenerationCandidate).where(AiGenerationCandidate.candidate_id == "c")
+            )
+            attempt = await session.scalar(
+                sa.select(AiGenerationAttempt).where(
+                    AiGenerationAttempt.id == "candidate-attempt-b"
+                )
+            )
+            receipts = list(
+                (
+                    await session.scalars(
+                        sa.select(AiGenerationReviewReceipt).where(
+                            AiGenerationReviewReceipt.candidate_id == "b"
+                        )
+                    )
+                ).all()
+            )
+            rows, _counts, pending, _latest, _imports = await candidate_history_rows(
+                session, "candidate-task", 1, 20, "all"
+            )
+            return deleted, derived, attempt, receipts, rows, _counts, pending
+
+    deleted, derived, attempt, receipts, rows, _counts, pending = asyncio.run(inspect())
+    assert deleted is None
+    assert derived is not None and derived.derived_from_candidate_id is None
+    assert attempt is not None and attempt.invalidated_reason == CANDIDATE_DELETED_REASON
+    assert len(receipts) == 1
+    assert receipts[0].decision == "deleted" and receipts[0].result_candidate_token is None
+    assert rows[0].invalidated_reason == CANDIDATE_DELETED_REASON
+    assert pending == 0
 
 
 def test_edit_unreferenced_candidate_validates_and_never_replaces_current(api):  # noqa: F811

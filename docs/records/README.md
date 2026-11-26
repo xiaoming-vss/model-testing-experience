@@ -31,6 +31,7 @@
 
 - [2026-11-20 生成链多候选与唯一当前内容实施规格](2026-11-20-generation-candidates-spec.md)
 - [2026-11-20 整改复核及本地验收](2026-11-20-remediation-recheck.md)
+- [2026-11-21 生成候选改造验证](2026-11-21-generation-candidates-verification.md)
 - [2026-11-22 阶段采用改为独立指针](2026-11-22-independent-stage-adoption.md)
 - [2026-11-22 正式用例失效标记](2026-11-22-case-invalidation.md)
 

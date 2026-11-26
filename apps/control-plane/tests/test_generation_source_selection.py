@@ -386,7 +386,7 @@ async def test_revision_source_checks_same_stage_parent_and_its_frozen_inputs(da
     assert len((await resolve(sync, request)).selected_content) == 2
     sync.rollback()
     parent = sync.query(AiGenerationCandidate).filter_by(candidate_id="p").one()
-    parent.disposition = "discarded"
+    parent.disposition = "rejected"
     sync.flush()
     with pytest.raises(SourceClosureError, match="source_stale"):
         await resolve(sync, request)

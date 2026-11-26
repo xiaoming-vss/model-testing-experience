@@ -11,6 +11,10 @@ from testing_agent_ai_worker.skill_names import (
     MATERIAL_SKILL,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
+from testing_agent_ai_worker.tasks.requirement_analysis.history_stage import execute_history_stage
+from testing_agent_ai_worker.tasks.requirement_analysis.history_verification_stage import (
+    execute_history_verification_stage,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.material_stage import execute_material_stage
 from testing_agent_ai_worker.tasks.requirement_analysis.review_stage import (
     execute_review_stage,
@@ -57,6 +61,28 @@ class RequirementAnalysisExecutor(TaskExecutor):
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
+        stage = task.current_stage or "extracting_text"
+        if stage == "historical_test_case_verification":
+            with task_config_path(agent_config=self.agent_config, task=task) as config_path:
+                return execute_history_verification_stage(
+                    task=task,
+                    started_at=started_at,
+                    config_path=config_path,
+                    workspace=resolve_task_workspace(self.agent_config, task),
+                    progress_callback=progress_callback,
+                    skill_runner=self.skill_runner,
+                    attachment_downloader=self.attachment_downloader,
+                )
+        if stage == "historical_requirement_relations":
+            with task_config_path(agent_config=self.agent_config, task=task) as config_path:
+                return execute_history_stage(
+                    task=task,
+                    started_at=started_at,
+                    config_path=config_path,
+                    workspace=resolve_task_workspace(self.agent_config, task),
+                    skill_runner=self.skill_runner,
+                    attachment_downloader=self.attachment_downloader,
+                )
         task.payload.document_type = normalize_requirement_analysis_document_type(
             task.payload.document_type
         )
@@ -71,7 +97,6 @@ class RequirementAnalysisExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         workspace = resolve_task_workspace(self.agent_config, task)
-        stage = task.current_stage or "extracting_text"
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             if stage == "requirement_review":
                 return execute_review_stage(

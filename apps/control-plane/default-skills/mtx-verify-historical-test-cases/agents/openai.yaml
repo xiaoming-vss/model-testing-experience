@@ -1,0 +1,4 @@
+interface:
+  display_name: "历史用例核验"
+  short_description: "根据已确认的规则影响定位待维护的历史用例和补测测试点"
+  default_prompt: "使用 $mtx-verify-historical-test-cases 处理给定的输入 JSON，输出并校验符合该 Skill 契约的结果。"

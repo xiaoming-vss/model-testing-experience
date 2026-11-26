@@ -3,6 +3,11 @@
 from dataclasses import asdict
 
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
+from testing_agent.domain.generation_chain import (
+    HISTORICAL_REQUIREMENT_STAGE,
+    HISTORICAL_STAGES,
+    HISTORICAL_TEST_STAGE,
+)
 from testing_agent.repositories.generation_candidate_storage import (
     candidate_stage_scope,
     current_source_candidate_id,
@@ -33,9 +38,19 @@ def _ui_source(kind: str, snapshot: object) -> ChainSourceInputsView | None:
     return ChainSourceInputsView.model_validate(projected) if projected else None
 
 
+# Frozen inputs that Studio reads to resolve item text: functional results carry
+# the frozen material extraction, historical relations carry the frozen relation
+# input (current and historical items), and historical verification carries the
+# frozen run input (rule text and full cases). Other stage inputs stay internal.
+_MATERIAL_STAGES = {
+    "function": frozenset({"requirement_analysis", "case_names"}),
+    "requirement_analysis": frozenset({HISTORICAL_REQUIREMENT_STAGE, HISTORICAL_TEST_STAGE}),
+}
+
+
 def _material_content(kind: str, stage: str, snapshot: object) -> str | None:
-    """Expose only the frozen material used by the selected functional result."""
-    if kind != "function" or stage not in {"requirement_analysis", "case_names"}:
+    """Expose only the frozen material of the stages listed in ``_MATERIAL_STAGES``."""
+    if stage not in _MATERIAL_STAGES.get(kind, frozenset()):
         return None
     source = snapshot.get("source") if isinstance(snapshot, dict) else None
     content = source.get("sourceContent") if isinstance(source, dict) else None
@@ -191,6 +206,13 @@ class CandidateQueries:
     ) -> CurrentStageView:
         scope = await self.scope(requirement_id, kind, stage, user_id)
         if scope is None:
+            if stage in HISTORICAL_STAGES:
+                material = await self.scope(requirement_id, kind, "extracting_text", user_id)
+                if material is not None:
+                    # The first dispatch allocates the real slot and its adoption token.
+                    return CurrentStageView(
+                        stage=stage, current_token=f"uninitialized:{material[1]}"
+                    )
             raise ErrNotFound()
         row = await read_current_stage(self.session, chain_id=scope[0], stage_id=scope[1])
         if row is None:

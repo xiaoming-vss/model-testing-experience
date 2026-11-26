@@ -224,10 +224,10 @@ export function useRequirementRepositoryProfileWorkspace(
     onError: reason => { refresh(); message.error(getErrorMessage(reason)) },
   })
   const dispose = useMutation({
-    mutationFn: async (action: 'reject' | 'discard') => {
+    mutationFn: async () => {
       const candidate = candidateDetail.data
       if (!candidate || candidate.isCurrent || candidate.disposition !== 'available') throw new Error('候选已变化，请刷新后重试')
-      const body = { action, expectedCandidateToken: candidate.candidateToken }
+      const body = { action: 'reject', expectedCandidateToken: candidate.candidateToken } as const
       return profileCandidatesApi.dispose(requirementId, candidate.candidateId, { ...body, requestId: reviewId({ candidateId: candidate.candidateId, ...body }) })
     },
     onSuccess: () => { reviewRequest.current = undefined; refresh(); message.success('已处理画像候选') },

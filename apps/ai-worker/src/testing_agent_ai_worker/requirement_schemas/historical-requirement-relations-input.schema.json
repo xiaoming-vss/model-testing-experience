@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "currentRequirement",
+    "historicalRequirements",
+    "knownRelations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.1"
+    },
+    "artifactType": {
+      "const": "historical_requirement_relation_input"
+    },
+    "currentRequirement": {
+      "$ref": "#/$defs/material"
+    },
+    "historicalRequirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/material"
+      }
+    },
+    "knownRelations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/knownRelation"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirementId",
+        "materialSnapshotId",
+        "items"
+      ],
+      "properties": {
+        "requirementId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "materialSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/materialItem"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "materialItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "itemId",
+        "functionId",
+        "functionName",
+        "sectionTitle",
+        "text",
+        "status",
+        "materialBlockIds"
+      ],
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "functionId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "functionName": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "sectionTitle": {
+          "enum": [
+            "功能目标与背景",
+            "页面入口",
+            "功能使用与业务规则",
+            "完整业务流程"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "unconfirmed",
+            "conflicting",
+            "example"
+          ]
+        },
+        "materialBlockIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "knownRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fromRequirementId",
+        "fromMaterialSnapshotId",
+        "toRequirementId",
+        "toMaterialSnapshotId",
+        "relationType",
+        "scope"
+      ],
+      "properties": {
+        "fromRequirementId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "fromMaterialSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "toRequirementId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "toMaterialSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "relationType": {
+          "enum": [
+            "depends_on",
+            "supplements",
+            "changes",
+            "replaces"
+          ]
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "states",
+        "conditions"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

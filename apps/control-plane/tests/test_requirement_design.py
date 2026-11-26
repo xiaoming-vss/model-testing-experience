@@ -80,7 +80,7 @@ def seed_direct_history(sync, size):
                 requested_by="u",
                 output_content="cases: ok",
                 created_at=NOW + timedelta(seconds=i),
-                invalidated_reason="审核未通过，候选产物已丢弃" if size == 3 and i == 1 else "",
+                invalidated_reason="审核未通过，候选产物已删除" if size == 3 and i == 1 else "",
             )
         )
     sync.commit()

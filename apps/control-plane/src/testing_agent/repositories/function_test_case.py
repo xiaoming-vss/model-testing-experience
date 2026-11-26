@@ -104,6 +104,26 @@ class FunctionTestCaseRepository(ResourceRepository):
             ).all()
         )
 
+    async def list_active_for_historical_requirements(
+        self, project_id: str, requirement_ids: set[str]
+    ) -> list[tuple[FunctionTestCase, str]]:
+        """Read effective cases from the exact linked requirements inside the project."""
+        if not requirement_ids:
+            return []
+        rows = await self.session.execute(
+            select(FunctionTestCase, FunctionTestSuite.requirement_id)
+            .join(FunctionTestSuite, FunctionTestSuite.suite_id == FunctionTestCase.suite_id)
+            .join(Requirement, Requirement.requirement_id == FunctionTestSuite.requirement_id)
+            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+            .where(
+                Sprint.project_id == project_id,
+                Requirement.requirement_id.in_(requirement_ids),
+                FunctionTestCase.invalidated_at.is_(None),
+            )
+            .order_by(FunctionTestCase.suite_id, FunctionTestCase.order_no, FunctionTestCase.id)
+        )
+        return [(case, requirement_id) for case, requirement_id in rows]
+
     async def list_by_project(self, query: FunctionCaseQuery) -> tuple[list[FunctionTestCase], int]:
         """按用例库检索条件取一页用例，并把所属测试集 / 需求 / 迭代挂到用例上供响应复用。"""
         conditions = [Sprint.project_id == query.project_id]

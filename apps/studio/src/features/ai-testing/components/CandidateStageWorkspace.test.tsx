@@ -12,6 +12,12 @@ import readableMaterial from '@/domain/requirements/fixtures/readable-material.e
 import { parseQuestionRevisionDraft, updateQuestionRevisionDraft } from '../utils/functionalRevision'
 
 vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/domain/projects/hooks/useProjectRequirementOptions', () => {
+  const none = new Map<string, string>()
+  return {
+    useProjectRequirementOptions: () => ({ requirementNameMap: none, requirementSprintMap: none, sprintNameMap: none }),
+  }
+})
 vi.mock('./UiGenerationInputsModal', () => ({
   UiGenerationInputsModal: ({ onSubmit }: { onSubmit: (inputs: unknown) => Promise<unknown> }) =>
     <button onClick={() => void onSubmit({ functionCaseIds: ['case-a'], sourceProfileCandidateId: 'profile-a', sourceRepositoryId: 'repo-a', sourceCommitMode: 'profile' })}>确认 UI 输入</button>,
@@ -40,19 +46,20 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   document.querySelectorAll('[data-test-inspector]').forEach(element => element.remove())
+  document.querySelectorAll('.ant-modal-root').forEach(element => element.remove())
   vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals()
 })
 const stage: GenerationChainStage = { stage: 'extracting_text', label: '材料整理', order: 1, state: 'approved',  upstreamStages: [] }
 const current: CurrentStage = { stage: 'extracting_text', currentToken: 'current-token', candidateId: 'old', content: 'current body', format: 'text', invalidatedAt: null, invalidatedReason: null, active: false }
 const candidate: CandidateSummary = { candidateId: 'candidate-b', snapshotId: 'snapshot-b', candidateToken: 'token-b', currentAttemptId: 'attempt-b', derivedFromCandidateId: null, disposition: 'available', generationMode: 'trial', frozenAt: null, createdBy: 'u', createdAt: '2026-11-20T10:00:00Z', isCurrent: false }
 
-function setup(overrides: Partial<CurrentStage> = {}) {
+function setup(overrides: Partial<CurrentStage> = {}, workspaceStage = stage) {
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, ...overrides })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'candidate body', format: 'text' })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const onClose = vi.fn()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open embedded onClose={onClose} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={workspaceStage} open embedded onClose={onClose} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   return { client, onClose }
 }
 
@@ -131,6 +138,56 @@ it('shows the adopted material visually and can switch to its raw content', asyn
   expect(JSON.parse(rawEditor.value)).toEqual(JSON.parse(readableMaterial))
 })
 
+it('shows historical relation candidates and adopted results as a visual reading that can switch to JSON', async () => {
+  const content = JSON.stringify({ schemaVersion: '0.1', requirementId: 'req', materialSnapshotId: 'material', artifactType: 'historical_requirement_relation_analysis', relations: [], openQuestions: [] }, null, 2)
+  setup({ stage: 'historical_requirement_relations', content, format: 'json' }, { ...stage, stage: 'historical_requirement_relations', label: '历史需求关联' })
+  vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content, format: 'json' })
+
+  expect(await screen.findByRole('complementary', { name: '历史需求关联导航' })).toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: '当前内容' })).not.toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '当前查看' })).toHaveTextContent('0 条关联')
+  fireEvent.click(screen.getByRole('radio', { name: 'JSON' }))
+  expect((screen.getByRole('textbox', { name: '当前内容' }) as HTMLTextAreaElement).value).toBe(content)
+  fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
+  expect(await screen.findByRole('textbox', { name: '候选内容' })).toHaveValue(content)
+  fireEvent.click(screen.getByRole('radio', { name: '可视化' }))
+  expect(await screen.findByRole('complementary', { name: '历史需求关联导航' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '采用' })).toBeEnabled()
+})
+
+it('shows historical test case verification candidates and adopted results as a visual reading that can switch to JSON', async () => {
+  const content = JSON.stringify({ schemaVersion: '0.1', requirementId: 'req', materialSnapshotId: 'material', artifactType: 'historical_test_case_verification_result', impactResultId: 'impact-result', batches: [] }, null, 2)
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue({ items: [], total: 0 } as never)
+  setup({ stage: 'historical_test_case_verification', content, format: 'json' }, { ...stage, stage: 'historical_test_case_verification', label: '历史用例核验' })
+  vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content, format: 'json' })
+
+  expect(await screen.findByRole('complementary', { name: '历史用例核验导航' })).toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: '当前内容' })).not.toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '当前查看' })).toHaveTextContent('0 条待维护用例')
+  fireEvent.click(screen.getByRole('radio', { name: 'JSON' }))
+  expect((screen.getByRole('textbox', { name: '当前内容' }) as HTMLTextAreaElement).value).toBe(content)
+  fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
+  expect(await screen.findByRole('textbox', { name: '候选内容' })).toHaveValue(content)
+  fireEvent.click(screen.getByRole('radio', { name: '可视化' }))
+  expect(await screen.findByRole('complementary', { name: '历史用例核验导航' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '采用' })).toBeEnabled()
+})
+
+it('lets historical test case verification fill the canvas reading pane edge to edge', async () => {
+  const verificationStage: GenerationChainStage = { ...stage, stage: 'historical_test_case_verification', label: '历史用例核验' }
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue({ items: [], total: 0 } as never)
+  vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: verificationStage.stage, content: JSON.stringify({ batches: [] }), format: 'json' })
+  vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const inspector = document.createElement('div')
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={verificationStage} open embedded
+    inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+
+  const rail = await screen.findByRole('complementary', { name: '历史用例核验导航' })
+  expect(rail.closest('.p-0')).toBeInTheDocument()
+  expect(rail.closest('.p-4')).toBeNull()
+})
+
 it.each([
   ['api', 'interface_extract', '接口配置提取', JSON.stringify({ login: { method: 'POST', path: '/v1/login', headers: { 'Content-Type': 'application/json' }, json: { name: 'string' }, response: { code: 'integer' } } }), '/v1/login'],
   ['api', 'api_design', 'API 用例设计', JSON.stringify({ schemaVersion: 'api_test_design/1.0', interfaces: { get_task: { method: 'GET', path: '/tasks', cases: [{ id: 'c1', title: '查询任务', category: 'positive', priority: 'P0', intent: '查询任务', basis: { kind: 'positive', section: '', field: '', constraint: '' }, patch: {}, expected: { statusClass: '2xx', assertions: [] } }], uncovered: [] } } }), '查询任务'],
@@ -193,8 +250,9 @@ it('does not offer a next-stage action for a final candidate', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  expect(await screen.findByRole('button', { name: '检查并采用' })).toBeEnabled()
-  expect(screen.queryByRole('button', { name: '采用并生成下一阶段' })).not.toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '采用' })).toBeEnabled()
+  fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
+  expect(screen.queryByRole('menuitem', { name: '采用并生成下一阶段' })).not.toBeInTheDocument()
 })
 
 it('shows the frozen source selection for the selected current content or candidate', async () => {
@@ -249,7 +307,7 @@ it('checks adoption and explains a branch conflict without adopting', async () =
   setup()
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: false, lineageHash: 'lineage', blockingSources: [{ chainKind: 'requirement_analysis', stage: 'extracting_text', reason: 'source_conflict' }] })
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '检查并采用' }))
+  fireEvent.click(await screen.findByRole('button', { name: '采用' }))
   expect(await screen.findByText('材料整理：当前上游来自不同分支，请用试生成选择来源一致的候选')).toBeInTheDocument()
   expect(generationCandidatesApi.adopt).not.toHaveBeenCalled()
 })
@@ -262,7 +320,7 @@ it('adopts a candidate whose frozen basis uses an upstream no longer selected', 
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: true, lineageHash: 'lineage', blockingSources: [] })
   vi.mocked(generationCandidatesApi.adopt).mockResolvedValue({ requestId: 'request', candidateId: 'candidate-b', contentToken: 'token-new', replayed: false })
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '检查并采用' }))
+  fireEvent.click(await screen.findByRole('button', { name: '采用' }))
   await waitFor(() => expect(generationCandidatesApi.adopt).toHaveBeenCalled())
 })
 
@@ -276,6 +334,20 @@ it('rejects a candidate while retaining the adopted content', async () => {
   await waitFor(() => expect(generationCandidatesApi.dispose).toHaveBeenCalledWith(
     'req', 'requirement_analysis', 'extracting_text', 'candidate-b',
     expect.objectContaining({ action: 'reject', expectedCandidateToken: 'token-b' }),
+  ))
+  expect(await screen.findByDisplayValue('current body')).toBeInTheDocument()
+})
+
+it('deletes a candidate and returns to the adopted content', async () => {
+  setup()
+  vi.mocked(generationCandidatesApi.dispose).mockResolvedValue({ requestId: 'request', candidateId: 'candidate-b', candidateToken: null, disposition: 'deleted' })
+  fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
+  fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: '删除候选' }))
+  fireEvent.click(await screen.findByRole('button', { name: /确\s*定|OK/ }))
+  await waitFor(() => expect(generationCandidatesApi.dispose).toHaveBeenCalledWith(
+    'req', 'requirement_analysis', 'extracting_text', 'candidate-b',
+    expect.objectContaining({ action: 'delete', expectedCandidateToken: 'token-b' }),
   ))
   expect(await screen.findByDisplayValue('current body')).toBeInTheDocument()
 })
@@ -352,7 +424,8 @@ it('reports adoption separately when starting the next stage fails', async () =>
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '补充场景' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '采用并生成下一阶段' }))
+  fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' }))
   await waitFor(() => expect(notify.warning).toHaveBeenCalledWith({ title: '已采用该候选，下一阶段未启动', description: '上游已变化，请刷新后重试' }))
   expect(generationCandidatesApi.adopt).toHaveBeenCalledWith('req', 'function', 'case_names', expect.objectContaining({
     continueAfter: true, connectionId: 'llm', instruction: '补充场景', expectedCurrentToken: 'current-token',
@@ -372,7 +445,8 @@ it.each([
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={apiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '覆盖边界' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '采用并生成下一阶段' }))
+  fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' }))
   await waitFor(() => expect(generationCandidatesApi.adopt).toHaveBeenCalledWith(
     'req', 'api', stageName, expect.objectContaining({
       candidateId: 'candidate-b', expectedCurrentToken: 'current-token', expectedAttemptId: 'attempt-b',
@@ -385,7 +459,7 @@ it.each([
 it('keeps unsaved candidate edits when navigation is canceled', async () => {
   setup()
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '编辑或派生' }))
+  fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
   fireEvent.change(screen.getByLabelText('候选内容'), { target: { value: 'unsaved change' } })
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   expect(canNavigateAway()).toBe(false)
@@ -399,7 +473,7 @@ it('edits and saves candidate material through the visual view', async () => {
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: readableMaterial, format: 'json' })
   vi.mocked(generationCandidatesApi.edit).mockResolvedValue({} as never)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '编辑或派生' }))
+  fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
   const field = await screen.findByRole('textbox', { name: '保存 功能使用与业务规则 内容 1' })
   fireEvent.change(field, { target: { value: '更新后的规则' } })
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
@@ -433,7 +507,7 @@ it('edits a generated test case through the candidate visual form', async () => 
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={caseStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
-  fireEvent.click(await screen.findByRole('button', { name: '编辑或派生' }))
+  fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
   fireEvent.change(await screen.findByRole('textbox', { name: '用例名称' }), { target: { value: '新名称' } })
   fireEvent.click(screen.getByRole('button', { name: '保存候选' }))
   await waitFor(() => expect(generationCandidatesApi.edit).toHaveBeenCalledWith(
@@ -449,7 +523,7 @@ it('formats compact JSON without treating formatting as an unsaved edit', async 
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('radio', { name: 'JSON' }))
   expect(screen.getByLabelText('候选内容')).toHaveValue('{\n  "questions": []\n}')
-  fireEvent.click(screen.getByRole('button', { name: '编辑或派生' }))
+  fireEvent.click(screen.getByRole('button', { name: '编辑' }))
   expect(canNavigateAway()).toBe(true)
   expect(confirm).not.toHaveBeenCalled()
   fireEvent.change(screen.getByLabelText('候选内容'), { target: { value: '{"questions":[1]}' } })
@@ -590,6 +664,24 @@ it('requires a formal target before previewing an API import', async () => {
   expect(await screen.findByRole('combobox', { name: '正式导入目标' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '预览导入' })).toBeDisabled()
   expect(generationCandidatesApi.previewImport).not.toHaveBeenCalled()
+})
+
+it('does not offer import for stale adopted current content', async () => {
+  const final: GenerationChainStage = { ...stage, stage: 'detailed_cases', label: '完整用例' }
+  vi.mocked(generationCandidatesApi.current).mockResolvedValue({
+    ...current,
+    stage: 'detailed_cases',
+    invalidatedAt: '2026-11-24T10:00:00Z',
+    invalidatedReason: '上游内容已变化',
+    content: JSON.stringify({ cases: [{ case_module: '导出', case_name: '导出成功', priority: 'P0', steps: '1. 点击导出', expected: '成功' }] }),
+    format: 'json',
+  })
+  vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+
+  expect(await screen.findByText(/已采用 · 待更新/)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '预览并导入' })).not.toBeInTheDocument()
 })
 
 it('moves the final-stage import entry into the sidebar footer and previews in a modal', async () => {

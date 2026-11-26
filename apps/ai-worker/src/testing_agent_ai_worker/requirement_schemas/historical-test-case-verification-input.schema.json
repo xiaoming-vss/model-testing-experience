@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "requirementId",
+    "materialSnapshotId",
+    "impactResultId",
+    "batchId",
+    "impact",
+    "candidateCases"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.1"
+    },
+    "artifactType": {
+      "const": "historical_test_case_verification_input"
+    },
+    "requirementId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "materialSnapshotId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "impactResultId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "batchId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "impact": {
+      "$ref": "#/$defs/impact"
+    },
+    "candidateCases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/candidateCase"
+      }
+    }
+  },
+  "$defs": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "states",
+        "conditions"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impactId",
+        "ruleEffect",
+        "scope",
+        "previousRule",
+        "currentRule",
+        "changeSummary"
+      ],
+      "properties": {
+        "impactId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "ruleEffect": {
+          "enum": [
+            "still_applies",
+            "supplemented",
+            "changed",
+            "replaced",
+            "retired"
+          ]
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "previousRule": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "currentRule": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changeSummary": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ruleEffect": {
+                "const": "retired"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "currentRule": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "currentRule": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "candidateCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "requirementId",
+        "suiteId",
+        "caseSnapshotId",
+        "module",
+        "title",
+        "contentScope",
+        "preconditions",
+        "steps"
+      ],
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "requirementId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "suiteId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "caseSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "module": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "contentScope": {
+          "enum": [
+            "matched_excerpt",
+            "full_case"
+          ]
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "position",
+              "text"
+            ],
+            "properties": {
+              "position": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "position",
+              "action",
+              "expected"
+            ],
+            "properties": {
+              "position": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "action": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

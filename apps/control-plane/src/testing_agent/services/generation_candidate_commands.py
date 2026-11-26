@@ -30,8 +30,9 @@ from testing_agent.repositories.generation_candidate_creation import (
 )
 from testing_agent.repositories.generation_candidate_storage import (
     CandidateEditSnapshot,
-    dispose_candidate_if_unchanged,
+    delete_candidate_if_unchanged,
     edit_unfrozen_candidate_if_unchanged,
+    reject_candidate_if_unchanged,
 )
 from testing_agent.schemas.generation_candidates import (
     CandidateDeriveRequest,
@@ -129,7 +130,7 @@ class CandidateCommands:
             or receipt.stage_id != stage_id
             or receipt.candidate_id != candidate_id
             or receipt.decision != decision
-            or not receipt.result_candidate_token
+            or (decision != "deleted" and not receipt.result_candidate_token)
         ):
             raise dynamic_error(ErrBadRequest, "请求标识已用于其他候选操作")
         return receipt, True
@@ -337,10 +338,9 @@ class CandidateCommands:
             if (
                 parent.candidate_token != body.expected_candidate_token
                 or parent.current_attempt_id != body.expected_attempt_id
-                or parent.disposition not in {"available", "rejected"}
             ):
                 await self.session.rollback()
-                raise dynamic_error(ErrBadRequest, "候选已变化或已丢弃，请刷新后重试")
+                raise dynamic_error(ErrBadRequest, "候选已变化，请刷新后重试")
             attempt, _ = await self._edit_attempt(
                 stage_id=scope[1],
                 kind=kind,
@@ -403,7 +403,9 @@ class CandidateCommands:
         scope = await CandidateQueries(self.chain).scope(requirement_id, kind, stage, user_id)
         if scope is None:
             raise ErrNotFound()
-        decision = "rejected" if body.action == "reject" else "discarded"
+        decision: Literal["rejected", "deleted"] = (
+            "rejected" if body.action == "reject" else "deleted"
+        )
         request_id = str(body.request_id)
         fingerprint = request_signature(
             "generation-candidate-disposition",
@@ -429,24 +431,33 @@ class CandidateCommands:
         )
         if replay:
             token = receipt.result_candidate_token
-        else:
-            token = await dispose_candidate_if_unchanged(
+        elif body.action == "reject":
+            token = await reject_candidate_if_unchanged(
                 self.session,
                 chain_id=scope[0],
                 stage_id=scope[1],
                 candidate_id=candidate_id,
                 expected_candidate_token=body.expected_candidate_token,
-                disposition="rejected" if body.action == "reject" else "discarded",
             )
             if not token:
                 await self.session.rollback()
                 raise dynamic_error(ErrBadRequest, "候选已变化或正在作为当前内容，请刷新后重试")
             receipt.result_candidate_token = token
-        assert token is not None
+        else:
+            token = None
+            if not await delete_candidate_if_unchanged(
+                self.session,
+                chain_id=scope[0],
+                stage_id=scope[1],
+                candidate_id=candidate_id,
+                expected_candidate_token=body.expected_candidate_token,
+            ):
+                await self.session.rollback()
+                raise dynamic_error(ErrBadRequest, "候选已变化或正在作为当前内容，请刷新后重试")
         await self.session.commit()
         return CandidateDispositionResult(
             request_id=body.request_id,
             candidate_id=candidate_id,
-            disposition="rejected" if body.action == "reject" else "discarded",
+            disposition=decision,
             candidate_token=token,
         )

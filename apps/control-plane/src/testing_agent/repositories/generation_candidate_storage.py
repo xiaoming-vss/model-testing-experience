@@ -7,7 +7,7 @@ public workflow must provide those guarantees before it can call this module.
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal, cast
+from typing import Any, cast
 from uuid import uuid4
 
 from sqlalchemy import func, select, update
@@ -15,7 +15,9 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.ai_tasks import task_type_for
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 from testing_agent.models.ai_generate_task import AiGenerateTask
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.generation_candidates import (
     AiGenerationCandidate,
@@ -249,20 +251,19 @@ async def edit_unfrozen_candidate_if_unchanged(
     return token, snapshot_id
 
 
-async def dispose_candidate_if_unchanged(
+async def reject_candidate_if_unchanged(
     session: AsyncSession,
     *,
     chain_id: str,
     stage_id: str,
     candidate_id: str,
     expected_candidate_token: str,
-    disposition: Literal["rejected", "discarded"],
 ) -> str | None:
-    """Reject or discard one available candidate, unless it is current.
+    """Reject one available candidate, unless it is current.
 
-    Authorization, audit receipts and propagation to descendants are service
-    responsibilities. The candidate and slot use the same lock order as the
-    current-content replacement primitive.
+    Authorization and audit receipts are service responsibilities. The
+    candidate and slot use the same lock order as the current-content
+    replacement primitive.
     """
     candidate = await session.scalar(
         select(AiGenerationCandidate)
@@ -290,10 +291,70 @@ async def dispose_candidate_if_unchanged(
     if current is None or current.source_candidate_id == candidate_id:
         return None
     token = uuid4().hex
-    candidate.disposition = disposition
+    candidate.disposition = "rejected"
     candidate.candidate_token = token
     await session.flush()
     return token
+
+
+async def delete_candidate_if_unchanged(
+    session: AsyncSession,
+    *,
+    chain_id: str,
+    stage_id: str,
+    candidate_id: str,
+    expected_candidate_token: str,
+) -> bool:
+    """Physically delete one available candidate, unless it is current.
+
+    Derived candidates are kept and lose only their provenance pointer. The
+    attempt that produced the candidate is marked as invalidated so run history
+    still classifies the deleted result as rejected. Authorization and audit
+    receipts are service responsibilities.
+    """
+    candidate = await session.scalar(
+        select(AiGenerationCandidate)
+        .where(
+            AiGenerationCandidate.candidate_id == candidate_id,
+            AiGenerationCandidate.chain_id == chain_id,
+            AiGenerationCandidate.stage_id == stage_id,
+            AiGenerationCandidate.candidate_token == expected_candidate_token,
+            AiGenerationCandidate.disposition == "available",
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if candidate is None:
+        return False
+    current = await session.scalar(
+        select(AiGenerationStageContent)
+        .where(
+            AiGenerationStageContent.stage_id == stage_id,
+            AiGenerationStageContent.chain_id == chain_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if current is None or current.source_candidate_id == candidate_id:
+        return False
+    attempt_id = candidate.current_attempt_id or candidate.origin_attempt_id
+    if attempt_id:
+        await session.execute(
+            update(AiGenerationAttempt)
+            .where(AiGenerationAttempt.id == attempt_id)
+            .values(
+                invalidated_at=datetime.now(UTC),
+                invalidated_reason=CANDIDATE_DELETED_REASON,
+            )
+        )
+    await session.execute(
+        update(AiGenerationCandidate)
+        .where(AiGenerationCandidate.derived_from_candidate_id == candidate_id)
+        .values(derived_from_candidate_id=None)
+    )
+    await session.delete(candidate)
+    await session.flush()
+    return True
 
 
 async def lock_stage_content(

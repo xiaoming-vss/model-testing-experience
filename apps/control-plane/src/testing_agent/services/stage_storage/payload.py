@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.ai_tasks import AUXILIARY_EXECUTION_TYPES
+from testing_agent.domain.generation_chain import HISTORICAL_STAGES
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.generation_candidates import FrozenCandidateInput
 from testing_agent.services.stage_storage.authorization import DirectWorkerAuthority
@@ -53,7 +54,16 @@ def worker_payloads(
         }
     )
     document_type = run.get("documentType") or run.get("sourceType")
-    if task.task_type == "requirement_analysis" and document_type in {
+    if stage_name in HISTORICAL_STAGES:
+        for key in (
+            "documentFileId",
+            "documentHash",
+            "documentType",
+            "documentFilename",
+            "attachmentHashes",
+        ):
+            run.pop(key, None)
+    elif task.task_type == "requirement_analysis" and document_type in {
         "text",
         "word",
         "docx",

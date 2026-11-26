@@ -147,6 +147,8 @@ def test_new_requirement_has_default_generation_chains(api):  # noqa: F811
     assert [stage["stage"] for stage in chains["requirement_analysis"]["stages"]] == [
         "requirement_review",
         "extracting_text",
+        "historical_requirement_relations",
+        "historical_test_case_verification",
     ]
     assert chains["requirement_analysis"]["stages"][0]["label"] == "需求评审"
     assert chains["requirement_analysis"]["stages"][1]["label"] == "材料整理"

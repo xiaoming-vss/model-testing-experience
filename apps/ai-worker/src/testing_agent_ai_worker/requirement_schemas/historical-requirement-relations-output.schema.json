@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "requirementId",
+    "materialSnapshotId",
+    "relations",
+    "openQuestions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "0.1"
+    },
+    "artifactType": {
+      "const": "historical_requirement_relation_analysis"
+    },
+    "requirementId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "materialSnapshotId": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    },
+    "openQuestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "impactId",
+          "question"
+        ],
+        "properties": {
+          "impactId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        }
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationId",
+        "historicalRequirementId",
+        "historicalMaterialSnapshotId",
+        "relationType",
+        "impacts"
+      ],
+      "properties": {
+        "relationId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "historicalRequirementId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "historicalMaterialSnapshotId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "relationType": {
+          "enum": [
+            "depends_on",
+            "supplements",
+            "changes",
+            "replaces"
+          ]
+        },
+        "impacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/impact"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impactId",
+        "ruleEffect",
+        "scope",
+        "previousRule",
+        "currentRule",
+        "changeSummary",
+        "reviewStatus",
+        "currentItemIds",
+        "historicalItemIds"
+      ],
+      "properties": {
+        "impactId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "ruleEffect": {
+          "enum": [
+            "still_applies",
+            "supplemented",
+            "changed",
+            "replaced",
+            "retired"
+          ]
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "previousRule": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "currentRule": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changeSummary": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "reviewStatus": {
+          "enum": [
+            "proposed",
+            "needs_confirmation"
+          ]
+        },
+        "currentItemIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "historicalItemIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ruleEffect": {
+                "const": "retired"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "currentRule": {
+                "type": "string",
+                "pattern": "\\S"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "currentRule": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "states",
+        "conditions"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

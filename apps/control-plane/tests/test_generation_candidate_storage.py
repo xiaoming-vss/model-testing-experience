@@ -8,15 +8,17 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 from testing_agent.models import Base
 from testing_agent.repositories.generation_candidate_storage import (
     CandidateEditSnapshot,
     clear_current_if_unchanged,
-    dispose_candidate_if_unchanged,
+    delete_candidate_if_unchanged,
     edit_unfrozen_candidate_if_unchanged,
     freeze_candidate_for_reference,
     get_stage_candidate,
     list_candidate_summaries,
+    reject_candidate_if_unchanged,
     replace_current_if_unchanged,
 )
 
@@ -28,9 +30,15 @@ def storage(tmp_path):
         ("requirements", "requirement_id"),
         ("ai_generate_tasks", "task_id"),
         ("ai_generation_stages", "id"),
-        ("ai_generation_attempts", "id"),
     ):
         sa.Table(name, metadata, sa.Column(key, sa.String(64), primary_key=True))
+    sa.Table(
+        "ai_generation_attempts",
+        metadata,
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("invalidated_at", sa.DateTime(timezone=True)),
+        sa.Column("invalidated_reason", sa.String(512)),
+    )
     names = (
         "requirement_generation_chains",
         "ai_generation_candidates",
@@ -309,7 +317,7 @@ def test_reference_freeze_and_edit_are_transactional(storage):
         assert row["frozen_at"] is None
 
 
-def test_dispose_changes_only_target_and_cannot_dispose_current(storage):
+def test_rejection_changes_only_target_and_cannot_reject_current(storage):
     engine, metadata = storage
     candidate = metadata.tables["ai_generation_candidates"]
     current = metadata.tables["ai_generation_stage_contents"]
@@ -346,20 +354,19 @@ def test_dispose_changes_only_target_and_cannot_dispose_current(storage):
         factory = async_sessionmaker(async_engine, expire_on_commit=False)
         async with factory() as session:
 
-            async def dispose(value):
-                return await dispose_candidate_if_unchanged(
+            async def reject(value):
+                return await reject_candidate_if_unchanged(
                     session,
                     chain_id="chain1",
                     stage_id="stage1",
                     candidate_id=value,
                     expected_candidate_token=f"token-{value}",
-                    disposition="rejected",
                 )
 
-            assert await dispose("a") is None
-            token = await dispose("c")
+            assert await reject("a") is None
+            token = await reject("c")
             assert token and token != "token-c"
-            assert await dispose("c") is None
+            assert await reject("c") is None
             assert (
                 await freeze_candidate_for_reference(
                     session,
@@ -379,6 +386,80 @@ def test_dispose_changes_only_target_and_cannot_dispose_current(storage):
                 await session.execute(sa.select(current.c.source_candidate_id, current.c.content))
             ).one()
             assert row == ("a", "a")
+            await session.commit()
+        await async_engine.dispose()
+
+
+def test_delete_removes_row_clears_derived_pointer_and_marks_attempt(storage):
+    engine, metadata = storage
+    candidate = metadata.tables["ai_generation_candidates"]
+    current = metadata.tables["ai_generation_stage_contents"]
+    attempt = metadata.tables["ai_generation_attempts"]
+    with engine.begin() as connection:
+        for value in ("a", "b", "c"):
+            connection.execute(
+                candidate.insert().values(
+                    candidate_id=value,
+                    snapshot_id=f"snapshot-{value}",
+                    chain_id="chain1",
+                    stage_id="stage1",
+                    content=value,
+                    format="text",
+                    candidate_token=f"token-{value}",
+                    disposition="available",
+                    generation_mode="trial",
+                    current_attempt_id="attempt1" if value == "b" else None,
+                    derived_from_candidate_id="b" if value == "c" else None,
+                    created_by="user",
+                )
+            )
+        connection.execute(
+            current.insert().values(
+                stage_id="stage1",
+                chain_id="chain1",
+                stage="case_names",
+                content_token="slot-token",
+                source_candidate_id="a",
+                content="a",
+            )
+        )
+
+    async def exercise():
+        url = str(engine.url).replace("sqlite:", "sqlite+aiosqlite:", 1)
+        async_engine = create_async_engine(url)
+        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async with factory() as session:
+
+            async def delete(value, token=None):
+                return await delete_candidate_if_unchanged(
+                    session,
+                    chain_id="chain1",
+                    stage_id="stage1",
+                    candidate_id=value,
+                    expected_candidate_token=token or f"token-{value}",
+                )
+
+            assert await delete("b", token="token-a") is False
+            assert await delete("a") is False
+            assert await delete("b") is True
+            assert await delete("b") is False
+            rows = (
+                await session.execute(
+                    sa.select(candidate.c.candidate_id, candidate.c.derived_from_candidate_id)
+                )
+            ).all()
+            assert dict(rows) == {"a": None, "c": None}
+            row = (
+                await session.execute(sa.select(current.c.source_candidate_id, current.c.content))
+            ).one()
+            assert row == ("a", "a")
+            invalidated = (
+                await session.execute(
+                    sa.select(attempt.c.invalidated_at, attempt.c.invalidated_reason)
+                )
+            ).one()
+            assert invalidated.invalidated_at is not None
+            assert invalidated.invalidated_reason == CANDIDATE_DELETED_REASON
             await session.commit()
         await async_engine.dispose()
 

@@ -23,6 +23,16 @@ class SkillTests(unittest.TestCase):
             ("requirement_analysis", "requirement_review", "mtx-review-requirement"),
             ("requirement_analysis", "extracting_text", "mtx-organize-requirement-material"),
             (
+                "requirement_analysis",
+                "historical_requirement_relations",
+                "mtx-analyze-historical-requirement-relations",
+            ),
+            (
+                "requirement_analysis",
+                "historical_test_case_verification",
+                "mtx-verify-historical-test-cases",
+            ),
+            (
                 "functional_case_generate",
                 "requirement_analysis",
                 "mtx-analyze-functional-requirements",

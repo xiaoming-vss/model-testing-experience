@@ -263,6 +263,8 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         assert [stage["stage"] for stage in chain.json()["data"]["stages"]] == [
             "requirement_review",
             "extracting_text",
+            "historical_requirement_relations",
+            "historical_test_case_verification",
         ]
     finally:
         api.app.dependency_overrides.pop(verify_worker_token, None)

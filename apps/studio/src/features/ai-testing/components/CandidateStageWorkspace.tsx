@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Dropdown, Empty, Input, Modal, Pagination, Radio, Select, Spin, Tag } from 'antd'
-import { CheckOutlined, ClockCircleOutlined, ImportOutlined, InfoCircleOutlined, MoreOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Alert, Button, Empty, Input, Modal, Pagination, Radio, Select, Spin, Tag } from 'antd'
+import { CheckOutlined, ClockCircleOutlined, ImportOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { api, listItems } from '@/services/api'
@@ -19,12 +19,15 @@ import type {
 import type { GenerationChainStage, UiGenerationRunInputs, UiGenerationSourceCheck } from '../api/generationChain.api'
 import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
+import { CandidateStageActions } from './CandidateStageActions'
 import { RevisionSidePanel } from './RevisionSidePanel'
 import { UiGenerationInputsModal } from './UiGenerationInputsModal'
 import { UiGenerationSourceTrace } from './UiGenerationSourceTrace'
 import { TraceablePointsView } from './TraceablePointsView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
+import { HistoricalRelationView } from './HistoricalRelationView'
+import { HistoricalCaseVerificationView } from './HistoricalCaseVerificationView'
 import { RequirementReviewView } from './RequirementReviewView'
 import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
 import { CandidateImportModal } from './CandidateImportModal'
@@ -35,6 +38,7 @@ import type { UiGenerationStage } from '../utils/uiGenerationStage'
 import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 import { buildRevisionTemplate, createQuestionRevisionDraft, getRevisionQuestions, revisionInstructionText } from '../utils/functionalRevision'
 import { formatJsonArtifact } from '../utils/artifactFormat'
+import { stageContentStats } from '../utils/stageContentStats'
 import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
 import chainStyles from '../styles/generation-chain.module.css'
 import canvasStyles from '../styles/generation-canvas.module.css'
@@ -50,7 +54,7 @@ const STAGE_LABELS: Record<string, string> = {
   detailed_cases: '完整用例', interface_extract: '接口配置提取', api_design: 'API 用例设计',
   ui_surface: '元素控件清单', ui_design: 'UI 用例设计', ui_yaml: '用例 YAML', generate: 'API 用例生成',
 }
-const CONTINUATION_STAGES = new Set(['requirement_review', 'requirement_analysis', 'case_names', 'interface_extract', 'api_design', 'ui_surface', 'ui_design'])
+const CONTINUATION_STAGES = new Set(['requirement_review', 'requirement_analysis', 'case_names', 'interface_extract', 'api_design', 'ui_surface', 'ui_design', 'historical_requirement_relations'])
 
 function sourceKind(stage: string, ownKind: CandidateChainKind): CandidateChainKind {
   return stage === 'extracting_text' ? 'requirement_analysis' : ownKind
@@ -213,7 +217,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       window.removeEventListener('popstate', popState, true)
     }
   }, [editingDirty, revisionDirty])
-  const trialAvailable = stage.upstreamStages.length > 0
+  const trialAvailable = stage.upstreamStages.length > 0 && !['historical_requirement_relations', 'historical_test_case_verification'].includes(stage.stage)
   function sourceChoiceAt(name: string, index: number): SourceChoice | undefined {
     const chosen = choices[name]
     if (chosen) return chosen
@@ -342,6 +346,15 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       setEdit(null)
     })
   }
+  function startEdit() {
+    if (!candidate) return
+    const formatted = formatJsonArtifact(candidate.content)
+    setEditBaseline(formatted)
+    setEdit(formatted)
+  }
+  function cancelEdit() {
+    if (!editingDirty || window.confirm('放弃未保存的修改？')) setEdit(null)
+  }
   function revise(connectionId: string) {
     perform(async () => {
       const instruction = revisionInstructionText(revisionInstruction)
@@ -369,13 +382,13 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     }
     setRevisionOpen(true)
   }
-  function dispose(action: 'reject' | 'discard') {
+  function dispose(action: 'reject' | 'delete') {
     perform(async () => {
       if (!candidate) throw new Error('候选已变化，请刷新后重试')
       const body = { action, expectedCandidateToken: candidate.candidateToken } as const
       const requestId = idFor('dispose', { ...body, candidateId: candidate.candidateId })
       await generationCandidatesApi.dispose(requirementId, kind, stage.stage, candidate.candidateId, { ...body, requestId })
-      delete pendingIds.current.dispose; setSelectedId('current'); notify.success({ title: action === 'reject' ? '已拒绝此候选' : '已丢弃此候选' })
+      delete pendingIds.current.dispose; setSelectedId('current'); notify.success({ title: action === 'reject' ? '已拒绝此候选' : '已删除此候选' })
     })
   }
   function checkUiSource() {
@@ -454,40 +467,14 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       ? `当前采用内容${currentSummary ? ` · ${formatCompactTime(currentSummary.createdAt)}` : ''}`
       : '尚未采用'
     : candidate ? `${formatCompactTime(candidate.createdAt)} · 未采用` : '读取候选…'
-  const materialStats = useMemo(() => {
-    if (stage.stage !== 'extracting_text' || !content) return null
-    try {
-      const parsed: unknown = JSON.parse(content)
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
-      const record = parsed as Record<string, unknown>
-      const functions = Array.isArray(record.functions) ? record.functions : []
-      let sections = 0
-      let rules = 0
-      for (const entry of functions) {
-        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
-        const entrySections = (entry as Record<string, unknown>).sections
-        if (!Array.isArray(entrySections)) continue
-        sections += entrySections.length
-        for (const section of entrySections) {
-          if (!section || typeof section !== 'object' || Array.isArray(section)) continue
-          const items = (section as Record<string, unknown>).items
-          if (Array.isArray(items)) rules += items.length
-        }
-      }
-      const questions = Array.isArray(record.questions) ? record.questions.length : 0
-      return sections || rules || questions ? { sections, rules, questions } : null
-    } catch {
-      return null
-    }
-  }, [content, stage.stage])
-  const displayContent = edit ?? content ?? ''
-  const rawView = Boolean(content) && ((edit !== null && !visualEditable) || viewMode === 'raw' || !canRenderVisual(kind, displayContent))
+  const contentStats = useMemo(() => stageContentStats(stage.stage, content, materialContent), [content, materialContent, stage.stage])
+  const hasVisualView = kind !== 'requirement_analysis' || stage.stage === 'requirement_review' || stage.stage === 'extracting_text' || stage.stage === 'historical_requirement_relations' || stage.stage === 'historical_test_case_verification'
+  const rawView = Boolean(content) && (!hasVisualView || (edit !== null && !visualEditable) || viewMode === 'raw' || !canRenderVisual(kind, edit ?? content ?? ''))
   const readingRaw = rawView && edit === null
   const edgeToEdgeRaw = readingRaw && sidebarMode
-  // 范围分析、测试点与完整用例图谱在画布阅读态自带左右分栏和滚动，不再叠加外层 16px 内距。
-  const edgeToEdgeScope = sidebarMode && !rawView && kind === 'function' && stage.stage === 'requirement_analysis'
-  const edgeToEdgePoints = sidebarMode && !rawView && kind === 'function' && stage.stage === 'case_names'
-  const edgeToEdgeCases = sidebarMode && !rawView && kind === 'function' && stage.stage === 'detailed_cases'
+  // 范围分析、历史需求关联、历史用例核验、测试点与完整用例图谱在画布阅读态自带左右分栏和滚动，不再叠加外层 16px 内距。
+  const edgeToEdgeRail = sidebarMode && !rawView && ((kind === 'function' && stage.stage === 'requirement_analysis') || stage.stage === 'historical_requirement_relations' || stage.stage === 'historical_test_case_verification')
+  const edgeToEdgeGraph = sidebarMode && !rawView && kind === 'function' && (stage.stage === 'case_names' || stage.stage === 'detailed_cases')
   const selectedUiSourceInputs = selectedIsCurrent ? current.data?.sourceInputs : candidate?.sourceInputs
   const sourceTraceView = <div className="gc-candidate-source">
     <span className="gc-candidate-source-prefix">基于</span>
@@ -504,18 +491,13 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       {selectedIsCurrent && current.data?.invalidatedAt ? <span className="gc-candidate-pill is-warn">已采用 · 待更新</span> : null}
       {selectedIsCurrent && current.data?.active ? <span className="gc-candidate-pill is-trial">生成中</span> : null}
       {!selectedIsCurrent && candidate?.disposition === 'rejected' ? <span className="gc-candidate-pill is-danger">已拒绝</span> : null}
-      {!selectedIsCurrent && candidate?.disposition === 'discarded' ? <span className="gc-candidate-pill is-muted">已丢弃</span> : null}
     </div>
     <div className="gc-candidate-focus-meta">{selectedMeta}</div>
     <div className="gc-candidate-focus-tools">
-      {content && (edit === null || visualEditable) ? <Radio.Group className="gc-candidate-view-switch" size="small" value={viewMode} onChange={event => setViewMode(event.target.value)} options={[{ label: '可视化', value: 'visual' }, { label: rawModeLabel, value: 'raw' }]} optionType="button" /> : <span />}
+      {content && hasVisualView && (edit === null || visualEditable) ? <Radio.Group className="gc-candidate-view-switch" size="small" value={viewMode} onChange={event => setViewMode(event.target.value)} options={[{ label: '可视化', value: 'visual' }, { label: rawModeLabel, value: 'raw' }]} optionType="button" /> : <span />}
     </div>
     {sourceTraceView}
-    {materialStats ? <div className="gc-candidate-stats" aria-label="内容概况">
-      <span><b>{materialStats.sections}</b> 个章节</span>
-      <span><b>{materialStats.rules}</b> 条规则</span>
-      <span><b>{materialStats.questions}</b> 个待确认</span>
-    </div> : null}
+    {contentStats ? <div className="gc-candidate-stats" aria-label="内容概况">{contentStats.map(([value, unit]) => <span key={unit}><b>{value}</b> {unit}</span>)}</div> : null}
     {selectedIsCurrent && current.data?.invalidatedAt && current.data.invalidatedReason ? <p className="gc-candidate-reason">{current.data.invalidatedReason}</p> : null}
     {kind === 'ui' && selectedUiSourceInputs ? <div className="gc-candidate-ui-source"><UiGenerationSourceTrace source={selectedUiSourceInputs} /><Button size="small" disabled={loading} onClick={checkUiSource}>检查分支更新</Button></div> : null}
     {uiSourceCheck && uiSourceCheck.candidateId === (selectedIsCurrent ? current.data?.candidateId : candidate?.candidateId) ? <Alert showIcon type={uiSourceCheck.changed ? 'warning' : 'info'} title={uiSourceCheck.changed ? '分支已有新提交，候选仍使用冻结的 commit。' : '分支 HEAD 与冻结 commit 一致。'} description={`冻结：${uiSourceCheck.pinnedCommit}；当前：${uiSourceCheck.currentCommit}`} /> : null}
@@ -536,10 +518,10 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     {candidates.error ? <Alert type="error" showIcon title={getErrorMessage(candidates.error)} action={<Button size="small" onClick={() => void candidates.refetch()}>重试</Button>} /> : null}
     {otherCandidates.length ? <div className="gc-candidate-grid" role="group" aria-label="选择候选版本">
       {otherCandidates.map(item => <button key={item.candidateId} type="button" className="gc-candidate-tile" onClick={() => changeSelection(item.candidateId)}
-        title={`${label(item)}${item.disposition !== 'available' ? ` · ${item.disposition === 'rejected' ? '已拒绝' : '已丢弃'}` : ''}`}>
+        title={`${label(item)}${item.disposition === 'rejected' ? ' · 已拒绝' : ''}`}>
         <span className="gc-candidate-tile-name">候选 {item.candidateId.slice(0, 8)}</span>
         <span className="gc-candidate-tile-meta">{candidateModeLabel(item)} · {formatCompactTime(item.createdAt)}</span>
-        {item.disposition !== 'available' ? <span className="gc-candidate-tile-state">{item.disposition === 'rejected' ? '已拒绝' : '已丢弃'}</span> : null}
+        {item.disposition === 'rejected' ? <span className="gc-candidate-tile-state">已拒绝</span> : null}
       </button>)}
     </div> : !candidates.isPending ? <p className="gc-candidate-empty">暂无其他候选，生成后会显示在这里。</p> : null}
     {(candidates.data?.total ?? 0) > PAGE_SIZE ? <Pagination size="small" current={page} pageSize={PAGE_SIZE} total={candidates.data?.total} onChange={setPage} showSizeChanger={false} /> : null}
@@ -600,38 +582,20 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   </>
   const canAdopt = Boolean(candidate && access.can('review') && candidate.disposition === 'available' && !candidate.isCurrent)
   const canContinue = Boolean(candidate && access.can('review') && access.can('execute') && CONTINUATION_STAGES.has(stage.stage) && candidate.disposition === 'available' && !candidate.isCurrent)
-  const canEdit = Boolean(candidate && access.can('write') && candidate.currentAttemptId && candidate.disposition !== 'discarded')
+  const canEdit = Boolean(candidate && access.can('write') && candidate.currentAttemptId)
   const canRevise = Boolean(candidate && access.can('execute') && candidate.disposition === 'available' && candidate.currentAttemptId)
   const canDispose = Boolean(candidate && access.can('write') && candidate.disposition === 'available' && !candidate.isCurrent)
-  const disposeItems = canDispose ? [{ key: 'reject', label: '拒绝候选' }, { key: 'discard', label: '丢弃候选', danger: true }] : []
   const candidateActions = candidate ? <section className="gc-candidate-dock" aria-label="阶段操作">
-    <div className="gc-candidate-dock-head">
-      <span className="gc-candidate-dock-label">候选 {candidate.candidateId.slice(0, 8)}</span>
-      <span className="gc-candidate-dock-hint">{candidate.isCurrent ? '当前采用内容' : '采用后替换当前内容'}</span>
-    </div>
-    {edit !== null ? <>
-      <Button className="gc-candidate-primary" type="primary" block loading={loading} onClick={save}>保存{candidate.frozenAt || candidate.isCurrent || candidate.disposition !== 'available' ? '为新候选' : '候选'}</Button>
-      <Button block onClick={() => { if (!editingDirty || window.confirm('放弃未保存的修改？')) setEdit(null) }}>取消编辑</Button>
-    </> : <>
-      {canAdopt ? <div className="gc-candidate-primary-row">
-        <Button className="gc-candidate-primary" type="primary" loading={loading} disabled={edit !== null || revisionOpen || revisionDirty || !candidate.currentAttemptId} onClick={() => adopt()}>检查并采用</Button>
-        {disposeItems.length ? <Dropdown trigger={['click']} menu={{ items: disposeItems, onClick: ({ key }) => {
-          if (key === 'reject') Modal.confirm({ title: '拒绝这个候选？', okText: '确定', cancelText: '取消', onOk: () => dispose('reject') })
-          if (key === 'discard') Modal.confirm({ title: '丢弃这个候选？', okText: '确定', cancelText: '取消', onOk: () => dispose('discard') })
-        } }}><Button className="gc-candidate-more" icon={<MoreOutlined />} aria-label="更多操作" title="更多操作" disabled={loading || revisionOpen || revisionDirty} /></Dropdown> : null}
-      </div> : disposeItems.length ? <div className="gc-candidate-primary-row"><Dropdown trigger={['click']} menu={{ items: disposeItems, onClick: ({ key }) => {
-        if (key === 'reject') Modal.confirm({ title: '拒绝这个候选？', okText: '确定', cancelText: '取消', onOk: () => dispose('reject') })
-        if (key === 'discard') Modal.confirm({ title: '丢弃这个候选？', okText: '确定', cancelText: '取消', onOk: () => dispose('discard') })
-      } }}><Button className="gc-candidate-more-wide" icon={<MoreOutlined />} block disabled={loading || revisionOpen || revisionDirty}>更多操作</Button></Dropdown></div> : null}
-      {canEdit || canRevise ? <div className="gc-candidate-secondary-row">
-        {canEdit ? <Button block disabled={revisionOpen || revisionDirty} onClick={() => { const formatted = formatJsonArtifact(candidate.content); setEditBaseline(formatted); setEdit(formatted) }}>编辑或派生</Button> : null}
-        {canRevise ? <Button block disabled={loading || edit !== null || current.data?.active} onClick={openRevision}>继续优化</Button> : null}
-      </div> : null}
-      {canContinue ? <Button className="gc-candidate-continue" block disabled={loading || edit !== null || revisionOpen || revisionDirty || !candidate.currentAttemptId} onClick={() => adopt(true)}>采用并生成下一阶段</Button> : null}
-    </>}
+    <CandidateStageActions
+      candidate={candidate}
+      continueLabel={stage.stage === 'historical_requirement_relations' ? '采用并核验历史用例' : '采用并生成下一阶段'}
+      canAdopt={canAdopt} canContinue={canContinue} canEdit={canEdit} canRevise={canRevise} canDispose={canDispose}
+      loading={loading} editing={edit !== null} revisionOpen={revisionOpen} revisionDirty={revisionDirty} currentActive={Boolean(current.data?.active)}
+      onAdopt={adopt} onEdit={startEdit} onSave={save} onCancelEdit={cancelEdit} onRevise={openRevision} onDispose={dispose}
+    />
     {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{STAGE_LABELS[item.stage] ?? item.stage}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
   </section> : null
-  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId)
+  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt)
   const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'
   const importDock = canImportCurrent ? <section className="gc-candidate-dock" aria-label="导入正式用例">
     <div className="gc-candidate-dock-head">
@@ -651,7 +615,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   </div> : null
   const inspectorDock = candidateActions ?? (selectedIsCurrent ? importDock : null)
   return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={close} title={`${stage.label} · 候选与当前内容`} width={ARTIFACT_MODAL_WIDTH} className={`${chainStyles.scope} ${canvasStyles.scope} ${candidateStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope} generation-chain-modal`} footer={null}>
-    <div className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${edgeToEdgeRaw || edgeToEdgeScope || edgeToEdgePoints || edgeToEdgeCases ? 'p-0' : 'p-4'}`}>
+    <div className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${edgeToEdgeRaw || edgeToEdgeRail || edgeToEdgeGraph ? 'p-0' : 'p-4'}`}>
       {stage.state === 'failed' ? <Alert showIcon type="error" title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
       {!sidebarMode ? currentTools : null}
       {!sidebarMode ? generationTools : null}
@@ -665,7 +629,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
                 ? <div className="gc-artifact-scroll is-raw"><TextCodeEditor value={formatJsonArtifact(content)} readOnly ariaLabel={selectedId === 'current' ? '当前内容' : '候选内容'} language="auto" /></div>
                 : <TextCodeEditor value={edit} onChange={setEdit} readOnly={false} ariaLabel={selectedId === 'current' ? '当前内容' : '候选内容'} language="auto" />)
                 : kind === 'requirement_analysis'
-                  ? stage.stage === 'requirement_review' ? <RequirementReviewView content={content} /> : <RequirementMaterialComparison content={edit ?? content} editable={edit !== null} onChange={edit !== null ? setEdit : undefined} />
+                  ? stage.stage === 'requirement_review' ? <RequirementReviewView content={content} /> : stage.stage === 'historical_requirement_relations' ? <HistoricalRelationView content={content} materialContent={materialContent} projectId={projectId} /> : stage.stage === 'historical_test_case_verification' ? <HistoricalCaseVerificationView content={content} materialContent={materialContent} projectId={projectId} /> : <RequirementMaterialComparison content={edit ?? content} editable={edit !== null} onChange={edit !== null ? setEdit : undefined} />
                   : kind === 'function'
                     ? stage.stage === 'requirement_analysis' ? <RequirementAnalysisDiagramView content={content} materialContent={materialContent ?? undefined} />
                       : stage.stage === 'case_names' ? <TraceablePointsView content={edit ?? content} materialContent={materialContent ?? undefined} rootTitle={stage.label} onChange={edit !== null ? setEdit : undefined} />
