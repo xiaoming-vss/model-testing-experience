@@ -137,6 +137,19 @@ class DocumentationCheckTests(unittest.TestCase):
         )
         self.assertEqual(self.issues(), [])
 
+    def test_root_app_and_deploy_readmes_are_scanned(self):
+        self.write("docs/README.md", "# Docs\n")
+        self.write("README.md", "Use `scripts/missing.py`.\n")
+        self.write("apps/studio/README.md", "Use `deploy/missing.yaml`.\n")
+        self.write("deploy/chart/README.md", "Create `config/local.toml` and `config/config.yaml`.\n")
+
+        issues = self.issues()
+
+        self.assertTrue(any("scripts/missing.py" in issue for issue in issues))
+        self.assertTrue(any("deploy/missing.yaml" in issue for issue in issues))
+        self.assertFalse(any("config/local.toml" in issue for issue in issues))
+        self.assertFalse(any("config/config.yaml" in issue for issue in issues))
+
     def test_cli_exit_codes(self):
         import contextlib
         import io

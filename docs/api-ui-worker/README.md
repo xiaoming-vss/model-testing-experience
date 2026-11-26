@@ -42,7 +42,7 @@ mode = "poll"                 # poll 或 once
 [once]                        # snapshot_file，once 模式读取本地快照调试用
 ```
 
-未配置 `worker.id` 时自动生成 `api-ui-worker-<hostname>-<pid>`。`once` 模式使用本地快照文件，便于不依赖控制面调试单个任务。
+未配置 `worker.id` 时自动生成 `api-ui-worker-<hostname>-<pid>`。`worker.poll_interval_ms` 默认 3000 毫秒；Compose 从统一配置的 `[api_ui_worker.worker]` 取值，Helm chart 的默认值与之保持一致，未设置时使用应用默认值。`once` 模式使用本地快照文件，便于不依赖控制面调试单个任务。
 
 ## 命令
 

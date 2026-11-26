@@ -57,7 +57,23 @@ def test_bundled_default_skills_are_publishable():
     for folder in folders:
         entries = inspect_folder(folder, 100 * 1024 * 1024)
         assert any(path == "SKILL.md" for path, _ in entries), folder.name
-        assert not any("__pycache__" in path or path.endswith(".pyc") for path, _ in entries)
+        assert not any(
+            path.startswith("tests/") or "__pycache__" in path or path.endswith(".pyc")
+            for path, _ in entries
+        )
+
+
+def test_inspect_folder_excludes_tests_and_bytecode(tmp_path):
+    root = tmp_path / "skill"
+    (root / "tests").mkdir(parents=True)
+    (root / "__pycache__").mkdir()
+    (root / "SKILL.md").write_text("# skill", encoding="utf-8")
+    (root / "tests" / "test_skill.py").write_text("def test_x(): pass", encoding="utf-8")
+    (root / "__pycache__" / "cached.pyc").write_bytes(b"bytecode")
+
+    entries = inspect_folder(root, 100 * 1024 * 1024)
+
+    assert [path for path, _ in entries] == ["SKILL.md"]
 
 
 @pytest.mark.asyncio

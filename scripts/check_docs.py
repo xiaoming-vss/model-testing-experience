@@ -45,7 +45,9 @@ HISTORICAL_MARKERS = (
     "已从代码库移除",
 )
 # Referenced as a forbidden file that the CSS structure gate must keep absent.
-ALLOWED_MISSING_PATHS = {"src/App.css"}
+ALLOWED_MISSING_PATHS = {"src/App.css", "deploy/zentao-mcp/config/"}
+# Runtime configuration generated or copied at deployment time, not tracked files.
+GENERATED_CONFIG_NAMES = {"local.toml", "worker.toml", "config.yaml", "bug-options-openapi.json"}
 SKIP_PATH_PARTS = (".scratch/", ".codex-", "node_modules/", "/app/")
 
 
@@ -68,11 +70,14 @@ def display_path(path: Path, root: Path) -> str:
 
 def markdown_files(root: Path) -> list[Path]:
     files = sorted((root / "docs").rglob("*.md"))
-    agents = root / "AGENTS.md"
-    if agents.is_file():
-        files.append(agents)
+    for name in ("README.md", "CONTEXT-MAP.md", "CHANGELOG.md", "AGENTS.md"):
+        path = root / name
+        if path.is_file():
+            files.append(path)
+    files.extend(sorted((root / "apps").glob("*/README.md")))
     files.extend(sorted((root / "apps").glob("*/AGENTS.md")))
-    return files
+    files.extend(sorted((root / "deploy").rglob("README.md")))
+    return sorted(set(files))
 
 
 def skill_markdown_files(root: Path) -> list[Path]:
@@ -175,7 +180,9 @@ def normalized_path_token(token: str) -> str | None:
     token = re.sub(r":\d+(?:-\d+)?$", "", token)
     if token in ALLOWED_MISSING_PATHS:
         return None
-    if not token.startswith(("src/", "apps/", "docs/", "scripts/", "tests/", "alembic/")):
+    if token.startswith("config/") and Path(token).name in GENERATED_CONFIG_NAMES:
+        return None
+    if not token.startswith(("src/", "apps/", "docs/", "deploy/", "config/", "scripts/", "tests/", "alembic/")):
         return None
     return token
 
@@ -183,6 +190,8 @@ def normalized_path_token(token: str) -> str | None:
 def path_candidates(token: str, path: Path, root: Path) -> list[Path]:
     project = doc_project(path, root)
     if token.startswith("apps/") or token.startswith("docs/"):
+        return [root / token]
+    if token.startswith(("deploy/", "config/")):
         return [root / token]
     if token.startswith("src/"):
         return [project / token] if project else []

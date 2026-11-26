@@ -31,6 +31,5 @@ export function useFunctionalCaseRelationsRun(
     enabled: enabled && Boolean(candidate.currentToken),
     refetchInterval: query =>
       poll && relationGenerating(query.state.data) ? getRunPollingInterval('running') : false,
-    refetchIntervalInBackground: true,
   })
 }

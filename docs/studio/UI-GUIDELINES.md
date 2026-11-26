@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：studio maintainers
-- 最近复核：2026-11-26
+- 最近复核：2026-11-27
 - 复核周期：每季度
 - 适用范围：`apps/studio/` 界面布局与交互规则
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
@@ -194,6 +194,7 @@ Bug 列表。项目选择、页面内迭代筛选与个人设置保留。Bug 中
 - 请求地址条合并方法、环境 Base URL、路径、复制地址、发送和保存。保存按钮在表单值与持久化用例不一致时显示「保存更改」；切换用例后自动恢复「已保存」。
 - 参数与请求头统一使用 `shared/ui/keyValueTable.ts` 的表格类串：列头、启用勾选、空态卡片和整行虚线「添加」。Query 参数不再依赖末尾占位空行，空态由显式添加按钮创建首行。
 - 请求体、设置、后置操作均收进圆角卡片；后置操作按断言 / 提取分组，运行结果仍在编辑器卡片底部独立分区。
+- API 请求体的 `form` 类型使用 `FormBodyEditor` 的键值表：字段名 / 字段值两列、可增删行，最终保存为 JSON 对象，空表保存 `{}`；`none` / `json` / `raw` 行为不变，`form-data`、binary、GraphQL 仍不支持。
 
 验证：`ApiCollectionDetailPage.test.tsx`、`ApiCaseHeadersPanel.test.tsx`、`ApiCaseBodyPanel.test.tsx`、`check:css:all`、`check:tailwind` 与真实页面深色 / 浅色检查。
 

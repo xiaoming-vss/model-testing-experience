@@ -53,8 +53,8 @@ config:
     nanobot:
       runtime_root: /data/runtime
       stream_idle_timeout_seconds: 300
-      # 留空时不在 TOML 中输出该字段，使用服务默认值。
-      provider_request_timeout_seconds: null
+      # 与 config/platform.example.toml 保持一致；留空时使用服务默认值。
+      provider_request_timeout_seconds: 300
 
     pi:
       runtime_root: /data/runtime

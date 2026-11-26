@@ -115,6 +115,7 @@ deploy/helm/charts/
 | `podAnnotations` | Pod template annotations |
 | `terminationGracePeriodSeconds` | 优雅退出时间 |
 | `podSecurityContext` / `securityContext` | 安全上下文；control-plane 不设置，其他 chart 使用默认值 |
+| `nameOverride` / `fullnameOverride` | 覆盖资源名前缀；Service 名固定为 `control-plane` / `studio` / `ai-worker` 等，不受这两个 key 影响 |
 
 ### control-plane
 
@@ -342,6 +343,9 @@ control-plane chart 内部的安装顺序由 Helm hook 保证：
 1. `control-plane-migrate-config` ConfigMap（pre-install/pre-upgrade）
 2. `control-plane-migrate` Job 执行 `alembic upgrade head`
 3. 控制面 Deployment/Service
+4. `control-plane-skills-sync` Job（post-install/post-upgrade；`skillsSync.enabled=true` 且启用 S3 时发布默认技能）
+
+首次安装等 `control-plane-skills-sync` Job 成功后再依赖默认技能；它失败不会回滚控制面，但默认技能不会出现在 Skill 库。
 
 如果迁移失败，control-plane release 失败，控制面不会启动。查看：
 

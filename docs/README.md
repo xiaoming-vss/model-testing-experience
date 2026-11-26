@@ -57,5 +57,7 @@
 - [记录索引与维护规则](records/README.md)
 - [control-plane 记录](control-plane/records/README.md)
 - [studio 记录](studio/records/README.md)
+- [ai-worker 记录](ai-worker/records/2026-11-14-case-visualization-skill-trial.md)
+- [perf-worker 记录](perf-worker/records/2026-11-20-performance-metrics-spec.md)
 
 项目文档中的开发命令和源码相对路径默认以对应 `apps/<项目>/` 为工作目录；平台部署指南的命令在仓库根目录执行。明确以 `docs/`、`apps/`、`scripts/` 开头的路径均相对仓库根目录。

@@ -20,7 +20,6 @@ temp
 # Env files
 .env
 .env.*
-!.env.example
 
 # Local helper / generated folders
 _stitch_ref

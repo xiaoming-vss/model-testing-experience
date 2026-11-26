@@ -35,7 +35,6 @@ env/
 
 # Local runtime configuration (may contain worker credentials)
 config.toml
-config.docker.toml
 
 # 测试
 .pytest_cache/

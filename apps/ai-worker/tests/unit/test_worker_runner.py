@@ -20,6 +20,7 @@ from testing_agent_ai_worker.platform.result_sink import ResultSink
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.outbox import ResultOutbox
 from testing_agent_ai_worker.worker.runner import LeaseLostError, TaskExecutor, WorkerRunner
+from tests.support.lifecycle import lifecycle
 
 
 class _RecordingSink(ResultSink):
@@ -349,11 +350,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -370,11 +367,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -388,11 +381,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         with self.assertLogs("testing_agent_ai_worker.worker.runner", level="ERROR") as logs:
@@ -407,11 +396,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_HeartbeatAwareExecutor(sink),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=1,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(heartbeat_interval_seconds=1),
         )
 
         result = runner.process_task(self._make_task())
@@ -424,11 +409,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_ExplodingExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -452,11 +433,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=KnownFailureExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -474,11 +451,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=SecretExecutor(),
             result_sink=_RecordingSink(),
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         with self.assertLogs("testing_agent_ai_worker.worker.runner", level="ERROR") as logs:
@@ -494,11 +467,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_BlankErrorExecutor(),
             result_sink=_RecordingSink(),
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -513,11 +482,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_ProgressThenExplodingExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -537,11 +502,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_ExplodingExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(task)
@@ -556,11 +517,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_CheckpointPauseExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=60,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(),
         )
 
         result = runner.process_task(self._make_task())
@@ -576,11 +533,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_LeaseCheckExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=0.01,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(heartbeat_interval_seconds=0.01),
             heartbeat_max_failures=3,
         )
 
@@ -600,11 +553,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_LeaseCheckExecutor(),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=0.05,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(heartbeat_interval_seconds=0.05),
             heartbeat_max_failures=100,
         )
 
@@ -623,11 +572,7 @@ class WorkerRunnerTests(unittest.TestCase):
         runner = WorkerRunner(
             executor=_SleepingExecutor(0.15),
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=0.01,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(heartbeat_interval_seconds=0.01),
             heartbeat_max_failures=3,
         )
 
@@ -644,11 +589,7 @@ class WorkerRunnerTests(unittest.TestCase):
         return WorkerRunner(
             executor=executor,
             result_sink=sink,
-            lifecycle=WorkerLifecycle(
-                poll_interval_seconds=10,
-                heartbeat_interval_seconds=interval,
-                run_once=False,
-            ),
+            lifecycle=lifecycle(heartbeat_interval_seconds=interval),
             heartbeat_max_failures=max_failures,
         )
 
@@ -761,11 +702,7 @@ class WorkerRunnerTests(unittest.TestCase):
             runner = WorkerRunner(
                 executor=_SuccessfulExecutor(),
                 result_sink=sink,
-                lifecycle=WorkerLifecycle(
-                    poll_interval_seconds=10,
-                    heartbeat_interval_seconds=60,
-                    run_once=False,
-                ),
+                lifecycle=lifecycle(),
                 outbox=outbox,
             )
 

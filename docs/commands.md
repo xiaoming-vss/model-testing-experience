@@ -39,6 +39,7 @@
 | K8s values 部署一致性检查 | `python3 scripts/check_k8s_config.py --platform-config config/platform.toml --values-dir .runtime/k8s` | 已执行 `init` 并填写实际 values；strict，关键字段缺失或漂移时非零 |
 | 文档一致性检查 | `python3 scripts/check_docs.py` | 默认不访问外部网络；`--check-urls` 可选检查外部链接 |
 | 文档检查脚本测试 | `python3 -m unittest tests.test_documents -v` | — |
+| 契约副本一致性检查 | `python3 scripts/sync_contract_copies.py --check` | 逐字节比较规范源与各项目副本；漂移时非零 |
 | 集成 Worker 容器隔离验收（opt-in） | `MTX_TEST_INTEGRATION_WORKER_RUNTIME=1 python3 -m unittest tests.test_integration_worker_runtime -v` | Docker Engine；先构建 `mtx/integration-worker:split-validation` 或用 `MTX_TEST_INTEGRATION_WORKER_IMAGE` 指定镜像；默认跳过 |
 | 禅道 MCP 容器验收（opt-in） | `MTX_TEST_ZENTAO_MCP_RUNTIME=1 python3 -m unittest tests.test_zentao_mcp_runtime -v` | Docker Engine；创建一次性 MCP 容器，默认跳过 |
 | 禅道 MCP 附件验收（opt-in） | `MTX_TEST_ZENTAO_MCP_ATTACHMENTS=1 python3 -m unittest tests.test_zentao_mcp_attachment_runtime -v` | Docker Engine 与附件容器依赖；默认跳过 |
@@ -68,6 +69,7 @@ scripts/build_images.sh control-plane studio
 | 仅静态检查 | `uv run --locked --extra dev python scripts/check.py --static-only` | — |
 | 全量测试（串行） | `uv run --locked --extra dev pytest -q` | 全量约 28 分钟；本仓库约定不与其它 pytest 并发执行 |
 | 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
+| 默认技能自带测试 | `for skill in default-skills/*/; do (cd "$skill" && python3 -m unittest discover -s tests -t tests); done` | 在 `apps/control-plane/` 下执行；每个技能独立进程，避免同名脚本模块冲突 |
 | Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
 | Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
 | mypy | `uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>` | — |
@@ -154,9 +156,10 @@ Remote Write 验收需要 Prometheus 开启接收能力（例如 `--web.enable-r
 | CSS 全部检查 | `npm run check:css:all` | 等价于 `check:css` + `check:css:structure` |
 | feature 边界检查 | `npm run check:boundaries` | — |
 | 首屏 bundle 预算 | `npm run check:bundle` | 先执行 `npm run build`；HTML 初始资源及登录、默认项目页预算见[结构规范](studio/STRUCTURE.md#已知验证盲区) |
+| 体积基线收缩检查 | `npm run check:size` | 基线只能下降；文件缩短后需同步收紧 `apps/studio/scripts/size-budget.json` |
 | Tailwind className 检查 | `npm run check:tailwind` | `!` 零容忍；重复 utility 串按 `apps/studio/scripts/tailwind-class-budget.json` ratchet |
 | 构建 | `npm run build` | — |
-| 完整静态验证 | `npm run verify` | 包含 type-check、lint、主题/CSS/边界/Tailwind 检查、build、首屏 bundle 预算和 `npm test` |
+| 完整静态验证 | `npm run verify` | 包含 type-check、lint、体积基线收缩、主题/CSS/边界/Tailwind 检查、build、首屏 bundle 预算和 `npm test` |
 
 前端交付前执行一次 `npm run verify`，其中已包含 `npm test`。真实浏览器布局、窄屏、浅色/深色和列表表面观感仍需按[界面规范](studio/UI-GUIDELINES.md)人工核对；jsdom 不能替代真实布局验收。
 

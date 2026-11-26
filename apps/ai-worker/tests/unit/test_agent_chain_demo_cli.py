@@ -64,6 +64,8 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             source_path.write_text(
                 '{"interfaces":[{"interfaceId":"interface-1"}]}', encoding="utf-8"
             )
+            config_path = str(Path(temp_dir) / "config.json")
+            workspace = str(Path(temp_dir) / "workspace")
             printer = _Printer()
             captured: dict[str, str | None] = {}
 
@@ -98,8 +100,8 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
                 session_key="demo:chain",
                 extractor_skill_name="mtx-extract-interface-test-config",
                 generator_skill_name="mtx-generate-api-test-case",
-                config_path="D:/tmp/config.json",
-                workspace="D:/tmp/workspace",
+                config_path=config_path,
+                workspace=workspace,
                 extra_instruction="帮我生成登录、项目增删改查的用例",
                 runner=fake_chain_runner,
                 printer=printer,
@@ -113,8 +115,8 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
                 "session_key": "demo:chain",
                 "extractor_skill_name": "mtx-extract-interface-test-config",
                 "generator_skill_name": "mtx-generate-api-test-case",
-                "config_path": "D:/tmp/config.json",
-                "workspace": "D:/tmp/workspace",
+                "config_path": config_path,
+                "workspace": workspace,
                 "extra_instruction": "帮我生成登录、项目增删改查的用例",
             },
         )

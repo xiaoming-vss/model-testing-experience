@@ -56,9 +56,10 @@ class ApiCaseExecutorTests(unittest.TestCase):
                 generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
             )
 
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = ApiCaseExecutor(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=fake_chain_runner,
         )
@@ -92,7 +93,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["extractor_skill_name"], "mtx-extract-interface-test-config")

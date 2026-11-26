@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { api, listItems } from '@/services/api'
 import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
+import { CANDIDATE_ACTIVE_POLL_INTERVAL, CANDIDATE_IDLE_POLL_INTERVAL } from '@/domain/runs/polling'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { randomId } from '@/shared/utils/crypto'
 import { notify } from '@/shared/utils/toast'
@@ -123,13 +124,13 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     queryKey: ['candidateWorkflow', requirementId, kind, stage.stage, 'current'],
     queryFn: () => generationCandidatesApi.current(requirementId, kind, stage.stage),
     enabled: open,
-    refetchInterval: query => query.state.data?.active ? 5_000 : 15_000,
+    refetchInterval: query => query.state.data?.active ? CANDIDATE_ACTIVE_POLL_INTERVAL : CANDIDATE_IDLE_POLL_INTERVAL,
   })
   const candidates = useQuery({
     queryKey: ['candidateWorkflow', requirementId, kind, stage.stage, 'list', page],
     queryFn: () => generationCandidatesApi.list(requirementId, kind, stage.stage, page, PAGE_SIZE),
     enabled: open,
-    refetchInterval: current.data?.active ? 5_000 : false,
+    refetchInterval: current.data?.active ? CANDIDATE_ACTIVE_POLL_INTERVAL : false,
   })
   const refetchCandidates = candidates.refetch
   useEffect(() => {

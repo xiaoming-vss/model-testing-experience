@@ -56,6 +56,11 @@ class WorkerConventionTests(unittest.TestCase):
             "--healthcheck",
             source("apps/integration-worker/src/testing_agent_integration_worker/main.py"),
         )
+        self.assertIn("def stop(self) -> None:", perf)
+        self.assertIn("unlink", perf)
+        perf_io = source("apps/perf-worker/src/testing_agent_perf_worker/core/io.py")
+        self.assertIn("os.replace", perf_io)
+        self.assertNotIn("O_TRUNC", perf_io)
 
     def test_all_workers_use_monotonic_lease_windows(self):
         paths = (

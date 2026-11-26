@@ -1,5 +1,11 @@
 # 候选内容改造验证记录
 
+- 日期：2026-11-21
+- 状态：已实施并验证
+- 负责人：platform maintainers
+- 来源：生成链多候选与单一当前内容改造验证
+- 关联：[候选内容改造方案](2026-11-20-generation-candidates-spec.md)、[ADR 0024](../control-plane/adr/0024-generation-candidates-current.md)
+
 本记录对应[候选内容改造方案](2026-11-20-generation-candidates-spec.md)。用户已明确：旧生成版本、候选和运行历史不要求迁移；已有正式功能、API 和 UI 测试用例必须保留。候选不设数量上限，也不自动删除。
 
 ## 自动化结果

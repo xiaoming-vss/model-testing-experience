@@ -177,11 +177,11 @@ def upgrade_config(root=ROOT):
             while value in shared.values():
                 value = secrets.token_hex(32)
             shared[key] = value
-    example_control_plane = read(root / "config/platform.example.toml").get(
-        "control_plane", {}
-    )
+    example = read(root / "config/platform.example.toml")
+    example_control_plane = example.get("control_plane", {})
     control_plane = data.setdefault("control_plane", {})
     _fill_missing(control_plane, example_control_plane)
+    _fill_missing(data.setdefault("api_ui_worker", {}), example.get("api_ui_worker", {}))
     security = control_plane.setdefault("security", {})
     for section in ("super_admin", "login", "jwt"):
         target = security.setdefault(section, {})
@@ -396,11 +396,6 @@ def configurations(data, mode, root=ROOT):
         {
             "control_plane": {"base_url": cp_url, "worker_token": s["worker_token"]},
             "notifications": {"redis_url": redis_url},
-            "worker": {
-                "poll_interval_ms": data.get("api_ui_worker", {}).get("worker", {}).get(
-                    "poll_interval_ms", 30000
-                )
-            },
             "ui": {
                 "artifacts_dir": "/app/artifacts" if docker else "artifacts",
             },
@@ -487,7 +482,6 @@ def configure(mode, root=ROOT):
                 MYSQL_ROOT_PASSWORD=db["root_password"],
             )
         write(runtime / "compose.env", env_text(env))
-        (runtime / "compose.ldap-ca.json").unlink(missing_ok=True)
     else:
         write(
             root / PROJECTS["studio"] / ".env.local",
@@ -516,9 +510,6 @@ def compose_command(root=ROOT):
         command.extend(["-f", str(root / "deploy/compose.external-db.yaml")])
     if external_redis_url(data):
         command.extend(["-f", str(root / "deploy/compose.external-redis.yaml")])
-    ca_override = root / ".runtime/compose.ldap-ca.json"
-    if ca_override.exists():
-        command.extend(["-f", str(ca_override)])
     return command
 
 

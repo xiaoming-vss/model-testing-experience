@@ -57,6 +57,7 @@ class _FakeFactory:
 class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
     async def test_run_chain_uses_skill_names_and_reuses_one_session_key(self) -> None:
         workspace = self.enterContext(tempfile.TemporaryDirectory())
+        config_path = str(Path(workspace) / "config.json")
         factory = _FakeFactory(
             [
                 '{"login":{"path":"/login","method":"POST"}}',
@@ -67,7 +68,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         result = await run_chain(
             source_text='{"interfaces":[{"interfaceId":"interface-1","method":"POST","path":"/login"}]}',
             session_key="demo:chain",
-            config_path="D:/tmp/config.json",
+            config_path=config_path,
             workspace=workspace,
             extractor_skill_name="mtx-extract-interface-test-config",
             generator_skill_name="mtx-generate-api-test-case",
@@ -83,7 +84,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             factory.last_kwargs,
             {
-                "config_path": "D:/tmp/config.json",
+                "config_path": config_path,
                 "workspace": workspace,
             },
         )

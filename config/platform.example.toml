@@ -144,6 +144,9 @@ traceable_review_concurrency = 4
 traceable_review_global_concurrency = 4
 poll_interval_seconds = 5
 
+[api_ui_worker.worker]
+poll_interval_ms = 3000
+
 [api_ui_worker.ui]
 trace_enabled = true
 
@@ -184,4 +187,3 @@ addressing_style = "path"
 signature_seconds = 900
 temporary_hours = 24
 max_bytes = 104857600
-# LDAP 认证仅在管理员页面配置，存储于数据库。

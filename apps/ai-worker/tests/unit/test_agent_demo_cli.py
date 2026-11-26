@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from testing_agent_ai_worker.cli.agent_demo import main, run_cli_demo
@@ -14,6 +16,9 @@ class _Printer:
 
 class PiDemoCliTests(unittest.IsolatedAsyncioTestCase):
     async def test_run_cli_demo_forwards_arguments_and_prints_content(self) -> None:
+        root = self.enterContext(tempfile.TemporaryDirectory())
+        config_path = str(Path(root) / "config.json")
+        workspace = str(Path(root) / "workspace")
         printer = _Printer()
         captured: dict[str, str | None] = {}
 
@@ -37,8 +42,8 @@ class PiDemoCliTests(unittest.IsolatedAsyncioTestCase):
         result = await run_cli_demo(
             message="hello",
             session_key="demo:session",
-            config_path="D:/tmp/config.json",
-            workspace="D:/tmp/workspace",
+            config_path=config_path,
+            workspace=workspace,
             runner=fake_runner,
             printer=printer,
         )
@@ -49,8 +54,8 @@ class PiDemoCliTests(unittest.IsolatedAsyncioTestCase):
             {
                 "message": "hello",
                 "session_key": "demo:session",
-                "config_path": "D:/tmp/config.json",
-                "workspace": "D:/tmp/workspace",
+                "config_path": config_path,
+                "workspace": workspace,
             },
         )
         self.assertEqual(printer.lines, ["demo reply"])

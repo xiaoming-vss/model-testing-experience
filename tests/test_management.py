@@ -50,7 +50,7 @@ class ManagementTests(unittest.TestCase):
                          "redis://127.0.0.1:16379/0")
         self.assertEqual(docker["api-ui-worker"]["notifications"]["redis_url"],
                          "redis://redis:6379/0")
-        self.assertEqual(docker["api-ui-worker"]["worker"]["poll_interval_ms"], 30000)
+        self.assertEqual(docker["api-ui-worker"]["worker"]["poll_interval_ms"], 3000)
         self.data["redis"]["url"] = "rediss://shared.example:6380/1"
         for mode in ("local", "docker"):
             configs = manage.configurations(self.data, mode, self.root)
@@ -176,6 +176,18 @@ class ManagementTests(unittest.TestCase):
         # 已有统一配置优先，不被旧 pi 配置覆盖。
         self.assertEqual(upgraded["ai_worker"]["worker"]["max_concurrent_tasks"], 2)
 
+    def test_upgrade_adds_api_ui_worker_poll_interval(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old.pop("api_ui_worker", None)
+        manage.write(path, manage.toml_text(old), permissions=0o600)
+
+        manage.upgrade_config(self.root)
+        upgraded = manage.read(path)
+
+        self.assertEqual(upgraded["api_ui_worker"]["worker"]["poll_interval_ms"], 3000)
+        self.assertTrue(upgraded["api_ui_worker"]["ui"]["trace_enabled"])
+
     def test_upgrade_removes_retired_public_host(self):
         path = self.root / "config/platform.toml"
         old = manage.read(path)
@@ -226,11 +238,6 @@ class ManagementTests(unittest.TestCase):
         for mode in ("local", "docker"):
             config = manage.configurations(self.data, mode, self.root)["control-plane"]
             self.assertNotIn("ldap", config["security"])
-        override = self.root / ".runtime/compose.ldap-ca.json"
-        override.parent.mkdir(exist_ok=True)
-        override.write_text("{}")
-        manage.configure("docker", self.root)
-        self.assertFalse(override.exists())
 
     def test_mysql_slow_log_is_generated_and_configurable(self):
         manage.configure("docker", self.root)

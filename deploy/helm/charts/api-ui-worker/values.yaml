@@ -47,7 +47,7 @@ config:
   worker:
     # 留空时根据 Pod hostname 和进程号自动生成，保证多副本不冲突。
     id: ""
-    poll_interval_ms: 30000
+    poll_interval_ms: 3000
     request_timeout_ms: 15000
     heartbeat_interval_ms: 10000
 

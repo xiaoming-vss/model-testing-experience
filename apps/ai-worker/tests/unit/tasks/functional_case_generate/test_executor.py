@@ -159,9 +159,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 detailed_cases_output=detailed_cases_json,
             )
 
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = executor_cls(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=fake_chain_runner,
         )
@@ -191,7 +192,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["analysis_skill_name"], "mtx-analyze-functional-requirements")
@@ -393,9 +394,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 ensure_ascii=False,
             ),
         )
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = executor_cls(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=lambda **kwargs: None,
             skill_runner=fake_skill_runner,
@@ -415,7 +417,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(
