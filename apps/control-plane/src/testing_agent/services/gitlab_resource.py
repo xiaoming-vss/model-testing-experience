@@ -10,7 +10,6 @@ from testing_agent.services.connection_security import (
     warn_if_insecure,
 )
 from testing_agent.services.gitlab_auth import normalize_gitlab_base_url
-from testing_agent.services.zentao_resource import truncate_error
 
 GITLAB_PAGE_SIZE_LIMIT = 100
 
@@ -435,7 +434,7 @@ class GitLabResourceClient:
             normalized_base_url = normalize_gitlab_base_url(base_url)
             require_secure_scheme(normalized_base_url, allow_http=allow_http)
         except ValueError as exc:
-            raise GitLabResourceError(f"GitLab 地址不合法: {truncate_error(str(exc))}") from exc
+            raise GitLabResourceError(f"GitLab 地址不合法: {exc}") from exc
         warn_if_insecure(
             "gitlab",
             normalized_base_url,
@@ -452,11 +451,14 @@ class GitLabResourceClient:
             ) as client:
                 response = await client.get(url, headers=headers, params=params)
         except httpx.HTTPError as exc:
-            raise GitLabResourceError(f"GitLab 请求失败: {truncate_error(str(exc))}") from exc
-        if response.status_code < 200 or response.status_code >= 300:
-            detail = truncate_error(response.text)
+            # httpx messages can carry the request line; the class name is enough.
             raise GitLabResourceError(
-                f"GitLab 资源查询失败，HTTP {response.status_code}: {detail}",
+                f"GitLab 请求失败: {type(exc).__name__}", status_code=0
+            ) from exc
+        if response.status_code < 200 or response.status_code >= 300:
+            # GitLab's response body may echo request data; report the status only.
+            raise GitLabResourceError(
+                f"GitLab 资源查询失败，HTTP {response.status_code}",
                 status_code=response.status_code,
             )
         try:

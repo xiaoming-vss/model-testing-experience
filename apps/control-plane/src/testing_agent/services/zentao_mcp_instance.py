@@ -17,7 +17,13 @@ def parse_instance_info(data):
             if not isinstance(value, str) or not value or len(value) > 512:
                 raise ValueError()
             url = urlsplit(value)
-            if url.query or url.fragment or any(c.isspace() for c in value):
+            if (
+                url.query
+                or url.fragment
+                or url.username is not None
+                or url.password is not None
+                or any(c.isspace() for c in value)
+            ):
                 raise ValueError()
             result[key] = normalize_instance_url(value)
         return result

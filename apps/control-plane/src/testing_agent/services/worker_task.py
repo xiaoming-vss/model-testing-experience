@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from testing_agent.core.enums import RUN_CLOSED_STATUSES, RUN_TERMINAL_STATUSES, RunStatus
+from testing_agent.core.enums import RUN_CLOSED_STATUSES, RunStatus
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
@@ -55,7 +55,11 @@ from testing_agent.services.worker_domains import api as api_domain
 from testing_agent.services.worker_domains import perf as perf_domain
 from testing_agent.services.worker_domains import ui as ui_domain
 from testing_agent.services.worker_domains.events import ensure_final_status
-from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
+from testing_agent.services.worker_domains.guard import (
+    ensure_task_id,
+    ensure_terminal_event,
+    ensure_worker_match,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +211,9 @@ class WorkerTaskService:
             )
         try:
             authority = await authorize_execution(self.repository.session, task, pending=True)
-        except type(ErrForbidden):
+        except AppError as exc:
+            if exc.code != ErrForbidden.code:
+                raise
             return None
         run = authority.run
         direct_debug = (
@@ -265,12 +271,11 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.started(task, body)
             raise ErrNotFound()
-        await authorize_execution(self.repository.session, task)
-        ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if task.status in RUN_TERMINAL_STATUSES:
+        if ensure_terminal_event(task, body):
             # A late start must not reopen a run that already finished.
             return {"taskId": task_id, "workerId": body.worker_id}
+        await authorize_execution(self.repository.session, task)
+        ensure_worker_match(task, body.worker_id)
         if body.run_id and body.run_id != task.run_id:
             raise ErrBadRequest()
         if domain in {"api", "ui"} and task.status == "stopping":
@@ -320,14 +325,13 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.heartbeat(task, body)
             raise ErrNotFound()
-        if task.status in RUN_TERMINAL_STATUSES:
+        if ensure_terminal_event(task, body, require_owner=False):
             # A late heartbeat must not rewrite finished_at or extend the lease.
             return {"taskId": task_id, "workerId": body.worker_id}
         if body.run_id and body.run_id != task.run_id:
             raise ErrBadRequest()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
         heartbeat_at = parse_event_time(body.heartbeat_at)
         if body.heartbeat_at and heartbeat_at is None:
             raise ErrBadRequest()
@@ -348,12 +352,11 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.complete(task, body)
             raise ErrNotFound()
-        authority = await authorize_execution(self.repository.session, task)
-        ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if domain in {"api", "ui"} and task.status in RUN_TERMINAL_STATUSES:
+        if domain in {"api", "ui"} and ensure_terminal_event(task, body):
             # Duplicate completion after the run closed is a no-op.
             return {"taskId": task_id, "workerId": body.worker_id, "status": task.status}
+        authority = await authorize_execution(self.repository.session, task)
+        ensure_worker_match(task, body.worker_id)
         if domain == "ui":
             await self.validate_ui_artifacts(task_id, body)
         status = ensure_final_status(body.status, {"success", "failed", "error", "canceled"})

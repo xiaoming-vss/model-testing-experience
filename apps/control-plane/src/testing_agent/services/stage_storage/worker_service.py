@@ -6,7 +6,6 @@ from typing import Any, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.core.enums import RUN_TERMINAL_STATUSES
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.domain.ai_tasks import AUXILIARY_EXECUTION_TYPES
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
@@ -81,40 +80,39 @@ class DirectStageWorkerService:
     async def retire_authorization(self, task: WorkerTask) -> None:
         """Retire a task inside the caller's transaction, preserving current content."""
         message = "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
-        attempt = await self.session.scalar(
-            select(AiGenerationAttempt).where(
-                AiGenerationAttempt.id == task.run_id,
-                AiGenerationAttempt.worker_task_id == task.task_id,
-            )
-        )
-        if attempt is not None:
-            try:
-                await self.transitions.failed(
-                    attempt.stage_id, attempt.id, task.task_id, error_message=message
-                )
-            except type(ErrBadRequest):
-                pass  # An obsolete task cannot change the currently active attempt.
+        await self._fail_attempt(task, message)
         task.status = "failed"
         task.error_message = message
         task.finished_at = datetime.now(UTC)
         task.lease_expires_at = task.finished_at
 
-    async def expire(self, task: WorkerTask) -> None:
-        """Expire only the queue's still-current stage attempt; caller commits."""
+    async def _fail_attempt(self, task: WorkerTask, message: str) -> None:
+        """Fail the task's own stage attempt inside the caller's transaction.
+
+        An obsolete task no longer owns the active attempt, and its stage may be gone;
+        either way there is nothing to fail. Any other business error is a defect and
+        must surface instead of being swallowed.
+        """
         attempt = await self.session.scalar(
             select(AiGenerationAttempt).where(
                 AiGenerationAttempt.id == task.run_id,
                 AiGenerationAttempt.worker_task_id == task.task_id,
             )
         )
+        if attempt is None:
+            return
+        try:
+            await self.transitions.failed(
+                attempt.stage_id, attempt.id, task.task_id, error_message=message
+            )
+        except AppError as exc:
+            if exc.code not in {ErrBadRequest.code, ErrNotFound.code}:
+                raise
+
+    async def expire(self, task: WorkerTask) -> None:
+        """Expire only the queue's still-current stage attempt; caller commits."""
         message = "Worker 心跳超时，执行已终止，请重试"
-        if attempt is not None:
-            try:
-                await self.transitions.failed(
-                    attempt.stage_id, attempt.id, task.task_id, error_message=message
-                )
-            except type(ErrBadRequest):
-                pass
+        await self._fail_attempt(task, message)
         task.status = "failed"
         task.error_message = message
         task.finished_at = datetime.now(UTC)
@@ -139,15 +137,17 @@ class DirectStageWorkerService:
         return snapshot
 
     async def started(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
-        from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
+        from testing_agent.services.worker_domains.guard import (
+            ensure_terminal_event,
+            ensure_worker_match,
+        )
 
-        ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if body.run_id and body.run_id != task.run_id:
-            raise ErrBadRequest()
-        if task.status in RUN_TERMINAL_STATUSES:
+        if ensure_terminal_event(task, body):
             # A late start must not reopen a run that already finished.
             return {"taskId": task.task_id, "workerId": body.worker_id}
+        ensure_worker_match(task, body.worker_id)
+        if body.run_id and body.run_id != task.run_id:
+            raise ErrBadRequest()
         authority = await self.authorize(task)
         await self.transitions.started(authority.stage_id, authority.attempt_id, task.task_id)
         await apply_event_to_task(task, body, "running")
@@ -155,15 +155,17 @@ class DirectStageWorkerService:
         return {"taskId": task.task_id, "workerId": body.worker_id}
 
     async def heartbeat(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
-        from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
+        from testing_agent.services.worker_domains.guard import (
+            ensure_terminal_event,
+            ensure_worker_match,
+        )
 
-        ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if body.run_id and body.run_id != task.run_id:
-            raise ErrBadRequest()
-        if task.status in RUN_TERMINAL_STATUSES:
+        if ensure_terminal_event(task, body, require_owner=False):
             # A late heartbeat must not rewrite finished_at or extend the lease.
             return {"taskId": task.task_id, "workerId": body.worker_id}
+        ensure_worker_match(task, body.worker_id)
+        if body.run_id and body.run_id != task.run_id:
+            raise ErrBadRequest()
         authority = await self.authorize(task)
         await self.transitions.current(authority.stage_id, authority.attempt_id, task.task_id)
         await apply_event_to_task(task, body, task.status)
@@ -205,20 +207,17 @@ class DirectStageWorkerService:
         return {"taskId": task.task_id}
 
     async def complete(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
-        from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
+        from testing_agent.services.worker_domains.guard import (
+            ensure_terminal_event,
+            ensure_worker_match,
+        )
 
-        if (
-            task.task_type == "test_order_case_visualization"
-            and task.status in RUN_TERMINAL_STATUSES
-        ):
-            if not body.worker_id or body.worker_id != task.worker_id:
-                raise ErrForbidden()
-            ensure_task_id(task, body)
+        if ensure_terminal_event(task, body):
+            # A retried completion after the run closed is acknowledged, not applied.
             if body.run_id and body.run_id != task.run_id:
                 raise ErrBadRequest()
             return {"taskId": task.task_id, "workerId": body.worker_id, "status": task.status}
         ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
         authority = await self.authorize(task)
         stage = await self._stage(authority.stage_id)
         snapshot = authority.input_snapshot

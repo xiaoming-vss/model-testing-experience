@@ -97,7 +97,7 @@ async def apply_event_to_task(
     task.lease_expires_at = now + timedelta(seconds=lease_seconds)
     if body.started_at:
         task.started_at = parse_event_time(body.started_at)
-    if body.finished_at or status in {"success", "failed", "error", "completed"}:
+    if body.finished_at or status in {"success", "failed", "error", "completed", "canceled"}:
         task.finished_at = parse_event_time(body.finished_at) or now
     if body.error_message is not None:
         task.error_message = body.error_message

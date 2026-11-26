@@ -831,3 +831,36 @@ def test_import_database_failure_rolls_back_all_rows_and_allows_same_request_ret
     assert response.status_code == 200, response.text
     assert response.json()["data"]["items"][0]["status"] == "success"
     assert asyncio.run(counts())[0] == before[0] + 1
+
+
+def test_import_replay_is_bound_to_the_original_actor_and_project(api, pull_files):
+    from testing_agent.core.sid import new_id
+    from testing_agent.repositories.bug import BugRepository
+    from testing_agent.services.bug_import.writer import BugImportWriter
+
+    field = pull_files
+    owner = field["owner"]
+    body = {
+        "requestId": "req-20261009-0010",
+        "items": [import_item(field["sprint"], 55, field["owner_id"])],
+    }
+    first = api.post(field["import"], headers=owner, json=body).json()["data"]["items"][0]
+    assert first["status"] == "success"
+
+    # The same request from the same actor and project still returns the original result.
+    again = api.post(field["import"], headers=owner, json=body).json()["data"]["items"][0]
+    assert again == first
+
+    async def replay(user_id: str, project_id: str) -> dict:
+        async with api.app.state.test_sessions() as session:
+            writer = BugImportWriter(BugRepository(session), id_factory=new_id)
+            return await writer.replay(
+                "req-20261009-0010:55", user_id=user_id, project_id=project_id
+            )
+
+    # The request id is client-provided; a stranger must not learn the Bug's number or title.
+    for user_id, project_id in (("someone-else", field["pid"]), (field["owner_id"], "other")):
+        stranger = asyncio.run(replay(user_id, project_id))
+        assert stranger["status"] == "conflict"
+        assert stranger["bug_id"] == "" and stranger["bug_no"] == 0 and stranger["title"] == ""
+        assert "请求编号已被" in stranger["error_message"]

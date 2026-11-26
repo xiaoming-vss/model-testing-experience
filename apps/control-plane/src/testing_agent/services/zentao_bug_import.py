@@ -211,7 +211,7 @@ class ZentaoBugImportService:
         item: ZentaoBugImportItemRequest,
     ) -> BugImportResult:
         operation_id = f"{request_id}:{item.remote_bug_id}"
-        replayed = await self.writer.replay(operation_id)
+        replayed = await self.writer.replay(operation_id, user_id=user_id, project_id=project_id)
         if replayed is not None:
             return replayed
         detail = await fetch_detail(client, item.remote_bug_id)

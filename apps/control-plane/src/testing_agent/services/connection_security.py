@@ -17,6 +17,9 @@ def require_secure_scheme(base_url: str, *, allow_http: bool) -> None:
     parsed = urlsplit(str(base_url or "").strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("服务地址不合法")
+    if parsed.username is not None or parsed.password is not None:
+        # The address is logged and stored; credentials belong in the token field only.
+        raise ValueError("服务地址不能包含用户名或密码，请只填写访问令牌")
     if parsed.scheme == "http" and not allow_http:
         raise ValueError("HTTP 服务地址需要显式允许（allowHttp=true）")
 
