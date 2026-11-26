@@ -141,10 +141,6 @@ def _compare(actual: str, expected: str, comparator: str) -> bool:
         return expected in actual
     if cmp == "not_contains":
         return expected not in actual
-    if cmp == "empty":
-        return actual == ""
-    if cmp == "not_empty":
-        return actual != ""
     if cmp == "exists":
         return actual != ""
     if cmp == "regex":
