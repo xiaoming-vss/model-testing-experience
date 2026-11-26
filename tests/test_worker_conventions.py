@@ -141,11 +141,9 @@ class WorkerConventionTests(unittest.TestCase):
             "apps/integration-worker/src/testing_agent_integration_worker/services/step_execution.py"
         )
         self.assertIn('error_code="lease_lost"', integration)
-        self.assertIn('status = "unknown" if uncertain else "failed"', integration)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        # A failure after the write began may have been applied, so it is never "failed".
+        self.assertIn('status, outcome = "unknown", RemoteResult(error_code="remote_uncertain")', integration)
+        self.assertIn('status = "unknown" if wrote else "failed"', integration)
 
 
 class WorkerContractTests(unittest.TestCase):
@@ -168,7 +166,12 @@ class WorkerContractTests(unittest.TestCase):
 
 def _assignment(tree: ast.Module, name: str) -> ast.expr:
     for node in ast.walk(tree):
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
         if any(isinstance(target, ast.Name) and target.id == name for target in targets):
             return node.value
     raise AssertionError(f"{name} is not defined")
@@ -180,3 +183,7 @@ def _int_product(node: ast.expr) -> int:
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
         return _int_product(node.left) * _int_product(node.right)
     raise AssertionError(f"not an integer product: {ast.dump(node)}")
+
+
+if __name__ == "__main__":
+    unittest.main()
