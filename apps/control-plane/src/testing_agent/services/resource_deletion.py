@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent import models as m
-from testing_agent.core.errors import AppError, ErrNotFound
+from testing_agent.core.enums import RUN_ACTIVE_STATUSES
+from testing_agent.core.errors import AppError, ErrAiGenerateTaskRunRunning, ErrNotFound
 from testing_agent.db.base import Base
 from testing_agent.domain.resource_deletion import AUXILIARY_TASK_TYPES
 from testing_agent.repositories.deletion import (
@@ -49,8 +50,45 @@ async def delete_resource(session: AsyncSession, obj: Base) -> None:
     await delete_owned_data(session, obj)
 
 
+async def _reject_running_generation_tasks(session, requirement: m.Requirement) -> None:
+    """A requirement owns its generation tasks, so none of them may still be running."""
+    task_ids = list(
+        await session.scalars(
+            select(m.AiGenerateTask.task_id)
+            .where(m.AiGenerateTask.requirement_id == requirement.requirement_id)
+            .with_for_update()
+        )
+    )
+    if not task_ids:
+        return
+    active_stage = await session.scalar(
+        select(m.AiGenerationStage.id)
+        .where(
+            m.AiGenerationStage.task_id.in_(task_ids),
+            m.AiGenerationStage.active_attempt_id.is_not(None),
+        )
+        .limit(1)
+        .with_for_update()
+    )
+    if active_stage:
+        raise ErrAiGenerateTaskRunRunning()
+    active_execution = await session.scalar(
+        select(m.AiExecution.execution_id)
+        .where(
+            m.AiExecution.task_id.in_(task_ids),
+            m.AiExecution.workflow_status.in_(RUN_ACTIVE_STATUSES),
+        )
+        .limit(1)
+        .with_for_update()
+    )
+    if active_execution:
+        raise ErrAiGenerateTaskRunRunning()
+
+
 async def _blockers(session, obj):
     """Use locking reads so MySQL REPEATABLE READ cannot hide newly committed children."""
+    if isinstance(obj, m.Requirement):
+        await _reject_running_generation_tasks(session, obj)
     checks = []
     if isinstance(obj, m.Project):
         checks += [

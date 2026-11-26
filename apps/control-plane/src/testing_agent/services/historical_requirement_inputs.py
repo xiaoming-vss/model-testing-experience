@@ -165,7 +165,13 @@ async def _shortlist(
         historical = json.loads(row.functions) if isinstance(row.functions, str) else row.functions
         if not isinstance(historical, list):
             continue
-        for item in _items(historical):
+        try:
+            historical_items = _items(historical)
+        except (KeyError, TypeError, ValueError):
+            # Adopted legacy material that is not readable-material 0.2 cannot supply
+            # evidence; skip it instead of blocking the whole stage.
+            continue
+        for item in historical_items:
             item_terms = historical_search_terms(f"{item['functionName']} {item['text']}")
             for index, (name, body) in enumerate(queries):
                 overlap = len(terms[index] & item_terms)

@@ -10,8 +10,7 @@ from sqlalchemy import delete, inspect, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent import models as m
-from testing_agent.core.enums import RUN_ACTIVE_STATUSES
-from testing_agent.core.errors import ErrAiGenerateTaskRunRunning, ErrNotFound
+from testing_agent.core.errors import ErrNotFound
 from testing_agent.db.base import Base
 from testing_agent.domain.resource_deletion import AUXILIARY_TASK_TYPES
 from testing_agent.repositories.generation_current_chain import delete_chain_storage_for_task
@@ -27,32 +26,6 @@ async def _workers(session, domain, run_ids):
         await _erase(
             session, m.WorkerTask, m.WorkerTask.domain == domain, m.WorkerTask.run_id.in_(run_ids)
         )
-
-
-async def _reject_running_task(session, task_id: str) -> None:
-    """A requirement's generation task must not be deleted while it is running."""
-    active_stage = await session.scalar(
-        select(m.AiGenerationStage.id)
-        .where(
-            m.AiGenerationStage.task_id == task_id,
-            m.AiGenerationStage.active_attempt_id.is_not(None),
-        )
-        .limit(1)
-        .with_for_update()
-    )
-    if active_stage:
-        raise ErrAiGenerateTaskRunRunning()
-    active_execution = await session.scalar(
-        select(m.AiExecution.execution_id)
-        .where(
-            m.AiExecution.task_id == task_id,
-            m.AiExecution.workflow_status.in_(RUN_ACTIVE_STATUSES),
-        )
-        .limit(1)
-        .with_for_update()
-    )
-    if active_execution:
-        raise ErrAiGenerateTaskRunRunning()
 
 
 async def _api_runs(session, condition):
@@ -281,8 +254,6 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
                 )
             )
         )
-        for task in tasks:
-            await _reject_running_task(session, task.task_id)
         for task in tasks:
             await _delete_owned_child(session, task)
     await session.delete(obj)
