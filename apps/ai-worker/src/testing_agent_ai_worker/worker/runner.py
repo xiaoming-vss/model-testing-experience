@@ -298,7 +298,6 @@ class WorkerRunner:
                 if latest_progress is not None
                 else task.config_json
             ),
-            output_yaml=latest_progress.output_yaml if latest_progress is not None else "",
             result_summary_json=(
                 latest_progress.result_summary_json if latest_progress is not None else ""
             ),

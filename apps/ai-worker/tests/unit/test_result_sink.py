@@ -89,7 +89,6 @@ class ResultSinkTests(unittest.TestCase):
                 current_stage="interface_extract",
                 stage_status="running",
                 intermediate_json_text='{"cases":[]}',
-                output_yaml="",
                 result_summary_json=summary,
             )
         )

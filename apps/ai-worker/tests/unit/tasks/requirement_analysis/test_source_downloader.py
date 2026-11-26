@@ -29,7 +29,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"docx bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker-task-1", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker-task-1",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -52,7 +55,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"text bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker task 2", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker task 2",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -72,7 +78,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"text bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker task 2", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker task 2",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:

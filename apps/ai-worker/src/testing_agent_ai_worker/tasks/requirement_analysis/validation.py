@@ -91,7 +91,6 @@ def generate_validated(
                     current_stage=stage,
                     stage_status="running",
                     intermediate_json_text=task.config_json or "{}",
-                    output_yaml="",
                     result_summary_json=json.dumps(
                         {
                             "outputValidation": {

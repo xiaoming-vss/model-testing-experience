@@ -185,7 +185,7 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 
 每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
 
-需求生成链的新 API 三阶段运行使用快照标记 `apiWorkflowVersion: api_three_stage/1.0`。任务只保存所选接口 ID，运行开始时读取接口库最新定义并校验接口存在；快照向 Worker 提供 `softwareRepositories`、`interfaces` 和需求上下文，不冻结 OpenAPI/Swagger 原文。`interface_extract` 只调用 `mtx-extract-interface-test-config`，输入为选中接口的结构化 JSON（含 base path 拼接后的 `fullPath`、security 和 securitySchemes），结果校验通过后等待审核；`api_design` 读取已审核提取版本调用 `api-case-designer`，每 5 个接口一批，产出 `api_test_design/1.0` 设计 JSON 后等待审核；`generate` 同时读取已审核提取和设计版本调用 `mtx-generate-api-test-case`，每 10 条设计用例一批，逐条落实设计并校验名称、顺序、请求、状态区间断言、设计断言和 patch 效果。每次只获取当前阶段的 Skill；任一批失败则阶段失败，不发布部分结果；历史 API 任务已清理。需求生成链统一使用三阶段协议，旧的非 checkpoint 独立 API 运行链路保持不变。
+需求生成链的新 API 三阶段运行使用快照标记 `apiWorkflowVersion: api_three_stage/1.0`。任务只保存所选接口 ID，运行开始时读取接口库最新定义并校验接口存在；快照向 Worker 提供 `softwareRepositories`、`interfaces` 和需求上下文，不冻结 OpenAPI/Swagger 原文。`interface_extract` 只调用 `mtx-extract-interface-test-config`，输入为选中接口的结构化 JSON（含 base path 拼接后的 `fullPath`、security 和 securitySchemes），结果校验通过后等待审核；`api_design` 读取已审核提取版本调用 `api-case-designer`，每 5 个接口一批，产出 `api_test_design/1.0` 设计 JSON 后等待审核；`generate` 同时读取已审核提取和设计版本调用 `mtx-generate-api-test-case`，每 10 条设计用例一批，逐条落实设计并校验名称、顺序、请求、状态区间断言、设计断言和 patch 效果。每次只获取当前阶段的 Skill；任一批失败则阶段失败，不发布部分结果；历史 API 任务已清理。需求生成链统一使用三阶段协议。
 
 测试点阶段契约与审查见 [可追溯测试点生成](traceable-test-points.md)。
 

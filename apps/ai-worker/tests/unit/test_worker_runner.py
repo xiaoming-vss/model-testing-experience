@@ -265,7 +265,6 @@ class _ProgressThenExplodingExecutor(TaskExecutor):
                 current_stage="case_names",
                 stage_status="running",
                 intermediate_json_text='{"enhancedText":"progress text","caseNames":[]}',
-                output_yaml='{"cases":[]}',
                 result_summary_json='{"status":"running","stage":"case_names"}',
             )
         )
@@ -281,7 +280,6 @@ class _CheckpointPauseExecutor(TaskExecutor):
                 current_stage="requirement_analysis",
                 stage_status="waiting_review",
                 intermediate_json_text='{"enhancedText":"text"}',
-                output_yaml='{"cases":[]}',
                 result_summary_json='{"status":"running"}',
             )
         )
@@ -530,7 +528,7 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(
             result.intermediate_json_text, '{"enhancedText":"progress text","caseNames":[]}'
         )
-        self.assertEqual(result.output_yaml, '{"cases":[]}')
+        self.assertEqual(result.output_yaml, "")
         self.assertEqual(result.result_summary_json, '{"status":"running","stage":"case_names"}')
 
     def test_process_task_submits_failed_result_when_credentials_are_missing(self) -> None:

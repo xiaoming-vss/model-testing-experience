@@ -284,7 +284,6 @@ class RelationCheckpointTests(unittest.TestCase):
         cases_json = json.dumps(cases, ensure_ascii=False)
         with tempfile.TemporaryDirectory() as tmp:
             task = Task(
-                claim_id="c",
                 task_id="t",
                 attempt_id="r",
                 generate_task_id="g",
@@ -334,7 +333,6 @@ class RelationCheckpointTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             task = Task(
-                claim_id="c",
                 task_id="t",
                 attempt_id="r",
                 generate_task_id="g",

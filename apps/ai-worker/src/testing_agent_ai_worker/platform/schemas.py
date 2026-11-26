@@ -23,20 +23,13 @@ class PlatformResponseModel(BaseModel):
 
 
 class PlatformClaimTask(PlatformResponseModel):
-    claim_id: str = Field(
-        default="",
-        validation_alias=AliasChoices("id", "claimId", "claim_id", "leaseId", "lease_id"),
-    )
     task_id: str = Field(validation_alias=AliasChoices("taskId", "task_id", "id"))
     attempt_id: str = Field(default="", validation_alias=AliasChoices("attemptId", "attempt_id"))
     generate_task_id: str = Field(
         default="",
         validation_alias=AliasChoices("generateTaskId", "generate_task_id"),
     )
-    task_type: str = Field(
-        default="api_case_generate",
-        validation_alias=AliasChoices("taskType", "task_type", "type"),
-    )
+    task_type: str = Field(validation_alias=AliasChoices("taskType", "task_type", "type"))
     project_id: str = Field(default="", validation_alias=AliasChoices("projectId", "project_id"))
     sprint_id: str = Field(default="", validation_alias=AliasChoices("sprintId", "sprint_id"))
     requirement_id: str = Field(
@@ -63,10 +56,6 @@ class PlatformClaimTask(PlatformResponseModel):
         default="",
         validation_alias=AliasChoices("configJson", "config_json"),
     )
-    daily_metrics: dict[str, object] = Field(
-        default_factory=dict,
-        validation_alias=AliasChoices("dailyMetrics", "daily_metrics"),
-    )
 
 
 class PlatformLlmCredentials(PlatformResponseModel):
@@ -76,16 +65,14 @@ class PlatformLlmCredentials(PlatformResponseModel):
 
 
 class PlatformSnapshotRun(PlatformResponseModel):
-    workflow_version: int = Field(default=2, validation_alias="workflowVersion")
+    workflow_version: int = Field(
+        default=2, validation_alias=AliasChoices("workflowVersion", "workflow_version")
+    )
     task_id: str = Field(validation_alias=AliasChoices("taskId", "task_id", "id"))
     attempt_id: str = Field(default="", validation_alias=AliasChoices("attemptId", "attempt_id"))
     generate_task_id: str = Field(
         default="",
         validation_alias=AliasChoices("generateTaskId", "generate_task_id"),
-    )
-    task_type: str = Field(
-        default="api_case_generate",
-        validation_alias=AliasChoices("taskType", "task_type", "type"),
     )
     name: str = ""
     project_id: str = Field(default="", validation_alias=AliasChoices("projectId", "project_id"))
@@ -122,18 +109,6 @@ class PlatformSnapshotRun(PlatformResponseModel):
         validation_alias=AliasChoices("targetScope", "target_scope"),
     )
     instruction: str = ""
-    checkpoint_enabled: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("checkpointEnabled", "checkpoint_enabled"),
-    )
-    current_stage: str = Field(
-        default="",
-        validation_alias=AliasChoices("currentStage", "current_stage"),
-    )
-    config_json: str = Field(
-        default="",
-        validation_alias=AliasChoices("configJson", "config_json"),
-    )
     interfaces: list[dict[str, object]] = Field(default_factory=list)
     software_repositories: list[dict[str, object]] = Field(
         default_factory=list,
@@ -143,7 +118,7 @@ class PlatformSnapshotRun(PlatformResponseModel):
         default_factory=dict,
         validation_alias=AliasChoices("dailyMetrics", "daily_metrics"),
     )
-    # code_risk_analysis 快照字段(可能落在 run 内或顶层,两层都声明以兼容位置漂移)。
+    # code_risk_analysis 快照字段位于 run 内。
     requirement: dict[str, object] | None = None
     bindings: list[dict[str, object]] = Field(default_factory=list)
     existing_tests: dict[str, object] | None = Field(
@@ -154,11 +129,7 @@ class PlatformSnapshotRun(PlatformResponseModel):
         default="",
         validation_alias=AliasChoices("gitlabCredentialsUrl", "gitlab_credentials_url"),
     )
-    # UI 仓库来源快照;旧 ZIP 运行没有这些字段,保持缺省为空。
-    source_kind: str = Field(
-        default="",
-        validation_alias=AliasChoices("sourceKind", "source_kind"),
-    )
+    # UI 仓库来源快照。
     source_repository: dict[str, object] | None = Field(
         default=None,
         validation_alias=AliasChoices("sourceRepository", "source_repository"),
@@ -177,10 +148,7 @@ class PlatformSnapshotResponse(PlatformResponseModel):
     candidate_input: FrozenCandidateInput | None = Field(
         default=None, validation_alias=AliasChoices("candidateInput", "candidate_input")
     )
-    task_type: str = Field(
-        default="",
-        validation_alias=AliasChoices("taskType", "task_type", "type"),
-    )
+    task_type: str = Field(validation_alias=AliasChoices("taskType", "task_type", "type"))
     checkpoint_enabled: bool | None = Field(
         default=None,
         validation_alias=AliasChoices("checkpointEnabled", "checkpoint_enabled"),
@@ -192,34 +160,6 @@ class PlatformSnapshotResponse(PlatformResponseModel):
     config_json: str = Field(
         default="",
         validation_alias=AliasChoices("configJson", "config_json"),
-    )
-    daily_metrics: dict[str, object] = Field(
-        default_factory=dict,
-        validation_alias=AliasChoices("dailyMetrics", "daily_metrics"),
-    )
-    # code_risk_analysis 快照字段,同样声明在顶层以兼容位置漂移。
-    requirement: dict[str, object] | None = None
-    bindings: list[dict[str, object]] = Field(default_factory=list)
-    existing_tests: dict[str, object] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("existingTests", "existing_tests"),
-    )
-    gitlab_credentials_url: str = Field(
-        default="",
-        validation_alias=AliasChoices("gitlabCredentialsUrl", "gitlab_credentials_url"),
-    )
-    # UI 仓库来源字段可能落在 snapshot 顶层或 run 内,两层都声明以兼容位置漂移。
-    source_kind: str = Field(
-        default="",
-        validation_alias=AliasChoices("sourceKind", "source_kind"),
-    )
-    source_repository: dict[str, object] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("sourceRepository", "source_repository"),
-    )
-    source_commit: str = Field(
-        default="",
-        validation_alias=AliasChoices("sourceCommit", "source_commit"),
     )
 
     @model_validator(mode="after")

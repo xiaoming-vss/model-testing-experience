@@ -50,10 +50,17 @@ class CandidateSnapshotProtocolTests(unittest.TestCase):
         raw = {
             "candidateProtocol": "single-current/1",
             "candidateInput": fixture,
-            "run": {"taskId": "task", "sourceContent": "selected content"},
+            "taskType": "api_case_generate",
+            "run": {
+                "taskId": "task",
+                "taskType": "api_case_generate",
+                "sourceContent": "selected content",
+            },
         }
         parsed = PlatformSnapshotResponse.model_validate(raw)
-        claim = PlatformClaimTask.model_validate({"taskId": "task", "attemptId": "attempt"})
+        claim = PlatformClaimTask.model_validate(
+            {"taskId": "task", "attemptId": "attempt", "taskType": "api_case_generate"}
+        )
         source = HttpClaimTaskSource(None, "", "", "", "worker")
         task = source._to_domain_task(claim, parsed, raw_snapshot=raw)
         self.assertEqual(task.candidate_input, fixture)
@@ -64,7 +71,9 @@ class CandidateSnapshotProtocolTests(unittest.TestCase):
         from testing_agent_ai_worker.platform.schemas import PlatformSnapshotResponse
 
         self.assertIsNone(
-            PlatformSnapshotResponse.model_validate({"run": {"taskId": "t"}}).candidate_input
+            PlatformSnapshotResponse.model_validate(
+                {"taskType": "api_case_generate", "run": {"taskId": "t"}}
+            ).candidate_input
         )
         for payload in (
             {"candidateProtocol": "single-current/1"},
@@ -72,4 +81,6 @@ class CandidateSnapshotProtocolTests(unittest.TestCase):
             {"candidateProtocol": "unknown", "candidateInput": {}},
         ):
             with self.assertRaises(ValidationError):
-                PlatformSnapshotResponse.model_validate({"run": {"taskId": "t"}, **payload})
+                PlatformSnapshotResponse.model_validate(
+                    {"taskType": "api_case_generate", "run": {"taskId": "t"}, **payload}
+                )

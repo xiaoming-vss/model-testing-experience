@@ -26,7 +26,6 @@ from tests.unit.tasks.functional_case_generate.fixtures import (
 class FunctionalRevisionTests(unittest.TestCase):
     def task(self, stage, checkpoint=True):
         return Task(
-            claim_id="claim",
             task_id="task",
             attempt_id="run",
             generate_task_id="generate",

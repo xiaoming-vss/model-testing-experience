@@ -218,7 +218,6 @@ def execute_stage(
                 current_stage=stage,
                 stage_status="waiting_review",
                 intermediate_json_text=json.dumps(effective, ensure_ascii=False),
-                output_yaml="",
                 result_summary_json=json.dumps(
                     {
                         "uiWorkflowVersion": UI_WORKFLOW_VERSION,

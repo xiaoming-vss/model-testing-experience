@@ -20,7 +20,6 @@ from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExec
 
 def make_api_case_task(*, task_type: str = "api_case_generate") -> Task:
     return Task(
-        claim_id="claim-api-1",
         task_id="task-1",
         attempt_id="run-1",
         generate_task_id="generate-1",

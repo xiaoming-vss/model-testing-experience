@@ -38,7 +38,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         config_json: str = "",
     ) -> Task:
         return Task(
-            claim_id="claim-functional-1",
             task_id="task-functional-1",
             attempt_id="run-functional-1",
             generate_task_id="generate-functional-1",
@@ -184,10 +183,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(progress_events[1].stage_status, "running")
         self.assertEqual(progress_events[2].stage_status, "running")
         self.assertEqual(progress_events[3].stage_status, "running")
-        self.assertEqual(progress_events[0].output_yaml, "")
-        self.assertEqual(progress_events[1].output_yaml, "")
-        self.assertEqual(progress_events[2].output_yaml, "")
-        self.assertEqual(progress_events[3].output_yaml, "")
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
@@ -645,7 +640,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(len(progress_events), 2)
         self.assertEqual(progress_events[0].current_stage, "detailed_cases")
         self.assertEqual(progress_events[0].stage_status, "running")
-        self.assertEqual(progress_events[1].output_yaml, "")
         self.assertEqual(result.status, TaskStatus.SUCCESS)
         self.assertEqual(result.output_yaml, final_batch_json)
         final_config = json.loads(result.intermediate_json_text)

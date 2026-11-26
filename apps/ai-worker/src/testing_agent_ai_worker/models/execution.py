@@ -36,6 +36,4 @@ class TaskProgress(BaseModel):
     current_stage: str = ""
     stage_status: str = ""
     intermediate_json_text: str = ""
-    output_yaml: str = ""
     result_summary_json: str = ""
-    error_message: str | None = None

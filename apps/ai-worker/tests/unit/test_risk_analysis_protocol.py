@@ -18,6 +18,7 @@ from testing_agent_ai_worker.platform.task_source import (
 
 def _snapshot_missing_new_fields() -> dict[str, Any]:
     return {
+        "taskType": "api_case_generate",
         "run": {
             "taskId": "worker-task-1",
             "attemptId": "run-1",
@@ -29,7 +30,7 @@ def _snapshot_missing_new_fields() -> dict[str, Any]:
             "sourceType": "openapi",
             "sourceContent": '{"openapi":"3.0.0"}',
             "instruction": "",
-        }
+        },
     }
 
 
@@ -69,7 +70,7 @@ class FakePlatformHttpClient:
         }
 
 
-def _risk_snapshot(*, fields_inside_run: bool = False) -> dict[str, Any]:
+def _risk_snapshot() -> dict[str, Any]:
     base_run = {
         "taskId": "worker-task-1",
         "attemptId": "run-1",
@@ -170,9 +171,7 @@ def _risk_snapshot(*, fields_inside_run: bool = False) -> dict[str, Any]:
         "existingTests": existing_tests,
         "gitlabCredentialsUrl": "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials",
     }
-    if fields_inside_run:
-        return {"taskType": "code_risk_analysis", "run": {**base_run, **fields}}
-    return {"taskType": "code_risk_analysis", "run": base_run, **fields}
+    return {"taskType": "code_risk_analysis", "run": {**base_run, **fields}}
 
 
 def _profile_snapshot() -> dict[str, Any]:
@@ -293,18 +292,6 @@ class RiskAnalysisSnapshotTests(_PollingTestCase):
             task.gitlab_credentials_url,
         )
 
-    def test_poll_maps_risk_fields_placed_inside_run_for_backward_compatibility(self) -> None:
-        task = self._poll(_risk_snapshot(fields_inside_run=True))
-
-        assert task.requirement_input is not None
-        self.assertEqual("需求理解记录正文", task.requirement_input.document_content)
-        self.assertEqual(2, len(task.bindings))
-        self.assertEqual("a-case-1", task.existing_tests.api_cases[0].case_id)
-        self.assertEqual(
-            "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials",
-            task.gitlab_credentials_url,
-        )
-
     def test_poll_tolerates_snapshot_without_risk_analysis_fields(self) -> None:
         task = self._poll(_snapshot_missing_new_fields())
 
@@ -316,10 +303,10 @@ class RiskAnalysisSnapshotTests(_PollingTestCase):
 
     def test_poll_tolerates_snake_case_fields_and_unknown_extras(self) -> None:
         payload = _risk_snapshot()
-        payload["existing_tests"] = payload.pop("existingTests")
-        payload["gitlab_credentials_url"] = payload.pop("gitlabCredentialsUrl")
-        payload["requirement"]["futureMeta"] = {"x": 1}
-        payload["bindings"][0] = {
+        payload["run"]["existing_tests"] = payload["run"].pop("existingTests")
+        payload["run"]["gitlab_credentials_url"] = payload["run"].pop("gitlabCredentialsUrl")
+        payload["run"]["requirement"]["futureMeta"] = {"x": 1}
+        payload["run"]["bindings"][0] = {
             "binding_id": "binding-1",
             "repository_id": "repo-1",
             "group_id": "group-1",

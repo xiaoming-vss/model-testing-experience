@@ -34,7 +34,6 @@ def build_progress(
         intermediate_json_text=""
         if current_stage == "detailed_cases" and stage_status == "running"
         else config_json,
-        output_yaml="",
         result_summary_json=build_result_summary_json(
             task=task,
             status="running",

@@ -128,12 +128,7 @@ class TestReportExecutor(TaskExecutor):
 
     @staticmethod
     def _resolve_daily_metrics(task: Task) -> dict[str, object]:
-        if task.payload.daily_metrics:
-            return task.payload.daily_metrics
-        daily_metrics = task.payload.metadata.get("dailyMetrics", {})
-        if isinstance(daily_metrics, dict):
-            return daily_metrics
-        return {}
+        return task.payload.daily_metrics
 
     @staticmethod
     def _build_result_summary_json(
