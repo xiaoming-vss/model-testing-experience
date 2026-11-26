@@ -64,9 +64,6 @@
     "src/features/ai-testing/pages/AiSkillLibraryPage.tsx": {
       "maxLinesPerFunction": 206
     },
-    "src/features/ai-testing/types.ts": {
-      "maxLines": 437
-    },
     "src/features/ai-testing/utils/caseRelationsGraph.ts": {
       "maxLines": 424
     },

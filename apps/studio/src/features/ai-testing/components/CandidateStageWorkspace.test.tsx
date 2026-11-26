@@ -40,11 +40,16 @@ vi.mock('../api/generationCandidates.api', () => ({
   },
 }))
 
+let workspaceInspector: HTMLDivElement
+
 beforeEach(() => {
+  workspaceInspector = document.createElement('div')
+  document.body.append(workspaceInspector)
   vi.spyOn(api, 'getLlmConnections').mockResolvedValue({ items: [{ connectionId: 'llm', name: '本人模型', modelId: 'model', status: 'active' }], total: 1 } as never)
 })
 afterEach(() => {
   cleanup()
+  workspaceInspector.remove()
   document.querySelectorAll('[data-test-inspector]').forEach(element => element.remove())
   document.querySelectorAll('.ant-modal-root').forEach(element => element.remove())
   vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals()
@@ -75,7 +80,7 @@ function setup(overrides: Partial<CurrentStage> = {}, workspaceStage = stage) {
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'candidate body', format: 'text' })
   const client = createClient()
   const onClose = vi.fn()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={workspaceStage} open embedded onClose={onClose} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={workspaceStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={onClose} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   return { client, onClose }
 }
 
@@ -98,7 +103,7 @@ it('shows the adopted candidate in the current card', async () => {
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, candidateId: 'adopted-1' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [adopted, candidate], total: 2, page: 1, pageSize: 20 })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   const currentCard = await screen.findByRole('region', { name: '当前查看' })
   await waitFor(() => expect(currentCard).toHaveTextContent('adopted-'))
   expect(currentCard).toHaveTextContent('当前采用')
@@ -118,7 +123,7 @@ it('refreshes candidates when a running attempt completes', async () => {
     .mockResolvedValue({ items: [next], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, active: true })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect(await screen.findByText('生成中')).toBeInTheDocument()
   expect(await screen.findByText('暂无其他候选，生成后会显示在这里。')).toBeInTheDocument()
   act(() => client.setQueryData(['candidateWorkflow', 'req', 'requirement_analysis', 'extracting_text', 'current'], { ...current, active: false }))
@@ -196,7 +201,7 @@ it('lets historical test case verification fill the canvas reading pane edge to 
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   const client = createClient()
   const inspector = document.createElement('div')
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={verificationStage} open embedded
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={verificationStage} open
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   const rail = await screen.findByRole('complementary', { name: '历史用例核验导航' })
@@ -217,7 +222,7 @@ it.each([
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: stageName, content: body, format })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind={kind} stage={visualStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind={kind} stage={visualStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect((await screen.findAllByText(expected)).length).toBeGreaterThan(0)
   fireEvent.click(screen.getByRole('radio', { name: format === 'yaml' ? 'YAML' : 'JSON' }))
   const raw = (screen.getByLabelText('当前内容') as HTMLTextAreaElement).value
@@ -234,7 +239,7 @@ it.each([
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: stageName, content: JSON.stringify(artifact), format: 'json' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={functionalStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={functionalStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect((await screen.findAllByText(expected)).length).toBeGreaterThan(0)
 })
 
@@ -249,7 +254,7 @@ it('lets scope analysis fill the canvas reading pane edge to edge', async () => 
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   const client = createClient()
   const inspector = document.createElement('div')
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={scopeStage} open embedded
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={scopeStage} open
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   const detail = await screen.findByRole('region', { name: '测试对象详情' })
@@ -264,7 +269,7 @@ it('does not offer a next-stage action for a final candidate', async () => {
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'name: example', format: 'yaml' })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   expect(await screen.findByRole('button', { name: '采用' })).toBeEnabled()
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
@@ -283,7 +288,7 @@ it('shows the frozen source selection for the selected current content or candid
     sourceTrace: [{ chainKind: 'function', stage: 'requirement_analysis', sourceKind: 'candidate', candidateId: 'candidate-source', snapshotId: 'snapshot-candidate' }],
   })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={downstream} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={downstream} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect(await screen.findByTitle(/当前采用内容 current-source/)).toBeInTheDocument()
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   expect(await screen.findByTitle(/候选 candidate-source/)).toBeInTheDocument()
@@ -418,7 +423,7 @@ it('uses free-form instructions when revising requirement review', async () => {
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: JSON.stringify({ questions: [{ id: 'Q1', question: '待补充？' }] }), format: 'json' })
   vi.mocked(generationCandidatesApi.revise).mockResolvedValue({ attemptId: 'next', requestId: 'req', replayed: false })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={reviewStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={reviewStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '继续优化' }))
   expect(screen.queryByLabelText('补充答复')).not.toBeInTheDocument()
@@ -449,7 +454,7 @@ it('reports adoption separately when starting the next stage fails', async () =>
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: true, lineageHash: 'lineage', blockingSources: [] })
   vi.mocked(generationCandidatesApi.adopt).mockResolvedValue({ requestId: 'r', candidateId: 'candidate-b', contentToken: 'new', replayed: false, continuationError: '上游已变化，请刷新后重试' })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '补充场景' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '补充场景' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
   fireEvent.click(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' }))
@@ -470,7 +475,7 @@ it.each([
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: true, lineageHash: 'lineage', blockingSources: [] })
   vi.mocked(generationCandidatesApi.adopt).mockResolvedValue({ requestId: 'r', candidateId: 'candidate-b', contentToken: 'new', replayed: false, continuationAttemptId: 'next' })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={apiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '覆盖边界' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={apiStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '覆盖边界' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
   fireEvent.click(await screen.findByRole('menuitem', { name: '采用并生成下一阶段' }))
@@ -532,7 +537,7 @@ it('edits a generated test case through the candidate visual form', async () => 
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: body, format: 'json' })
   vi.mocked(generationCandidatesApi.edit).mockResolvedValue({} as never)
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={caseStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={caseStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
   fireEvent.change(await screen.findByRole('textbox', { name: '用例名称' }), { target: { value: '新名称' } })
@@ -564,7 +569,7 @@ it('passes an explicitly selected candidate as the trial upstream', async () => 
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
   const chooseConnection = vi.fn(async () => ({ connectionId: 'separate-dialog', instruction: '' }))
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open embedded onClose={() => {}} chooseConnection={chooseConnection} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={chooseConnection} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
   fireEvent.click(generateButton)
@@ -588,7 +593,7 @@ it('defaults to the current upstream without a separate source mode choice', asy
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'separate-dialog', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'separate-dialog', instruction: '' })} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
   fireEvent.click(generateButton)
@@ -612,7 +617,7 @@ it('blocks normal generation without an adopted upstream but allows a candidate 
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
   fireEvent.click(generateButton)
@@ -635,7 +640,7 @@ it('UI 首阶段把当前画像、仓库、正式用例和个人授权作为候�
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
   await waitFor(() => expect(screen.getByRole('button', { name: '开始生成' })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
   fireEvent.click(screen.getByRole('button', { name: '确认 UI 输入' }))
@@ -653,7 +658,7 @@ it('检查候选冻结 commit，不改变候选来源', async () => {
   } })
   vi.mocked(generationCandidatesApi.checkUiSource).mockResolvedValue({ pinnedCommit: 'fixed', currentCommit: 'new', branch: 'main', changed: true })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '检查分支更新' }))
   expect(await screen.findByText('分支已有新提交，候选仍使用冻结的 commit。')).toBeInTheDocument()
@@ -671,7 +676,7 @@ it('shows both sides of an import conflict before confirming the overwrite', asy
     conflicts: [{ normalizedName: '登录', existingCase: { title: '已有用例' }, generatedCase: { title: '新用例' } }],
   })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
   expect(await screen.findByText('登录')).toBeInTheDocument()
   expect(screen.getByText(/已有用例/, { selector: 'pre' })).toBeInTheDocument()
@@ -685,7 +690,7 @@ it('requires a formal target before previewing an API import', async () => {
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   vi.spyOn(api, 'getApiCollections').mockResolvedValue({ items: [{ collectionId: 'collection-a', name: '接口用例集' }] } as never)
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
   expect(await screen.findByRole('combobox', { name: '正式导入目标' })).toBeInTheDocument()
@@ -705,7 +710,7 @@ it('does not offer import for stale adopted current content', async () => {
   })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   expect(await screen.findByText(/已采用 · 待更新/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '预览并导入' })).not.toBeInTheDocument()
@@ -729,7 +734,7 @@ it('moves the final-stage import entry into the sidebar footer and previews in a
   inspector.dataset.testInspector = 'true'
   document.body.append(inspector)
   const client = createClient()
-  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded
+  render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   const trigger = await within(inspector).findByRole('button', { name: '预览并导入' })

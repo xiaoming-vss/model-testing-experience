@@ -64,6 +64,7 @@ class RequirementDesignRepository:
                 "sourceType": row.source_type,
                 "hasSource": bool(row.has_source or row.interface_ids_json),
                 "sourceFilename": "",
+                "interfaceIds": list(row.interface_ids_json or []),
                 "createdAt": row.created_at,
                 "updatedAt": row.updated_at,
             }

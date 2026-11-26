@@ -194,11 +194,10 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   const candidateRelations = functionChain?.candidateMode && currentCases.data?.candidateId
     ? { requirementId, currentToken: currentCases.data.currentToken }
     : undefined
-  const relationsRunId = currentCases.data?.sourceAttemptId ?? currentCases.data?.candidateId ?? undefined
-  const relations = relationsRunId ? { active: inspectorOpen && special === 'relations', onOpen: (origin?: HTMLElement) => openSpecial('relations', origin) } : undefined
+  const relations = candidateRelations ? { active: inspectorOpen && special === 'relations', onOpen: (origin?: HTMLElement) => openSpecial('relations', origin) } : undefined
   const profileSelectedCandidate = profileWorkspace.selectedProfileView
   const profileModel = profileWorkspace.latestRun
-    ? getRunPipelineModel(profileWorkspace.latestRun, { stages: ['generate'] })
+    ? getRunPipelineModel(profileWorkspace.latestRun)
     : undefined
   const profileLatestCandidate = profileWorkspace.latestProfileView
   const profileRunning = profileModel?.statusTone === 'processing'
@@ -237,12 +236,10 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   if (overview.error) return <div className="gc-panorama flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-auto p-4"><Alert type="error" showIcon title={getErrorMessage(overview.error)} action={<Button onClick={refresh}>重试读取</Button>} /></div>
   const activeStage = special || sourceSelected ? undefined : stage
   const activeChain = sourceSelected ? sourceChain : special === 'relations' ? functionChain : special ? undefined : chain
-  const frozenCurrentMaterial = profileSelectedCandidate?.requirementMaterialCurrent
-  const profileMaterialLabel = frozenCurrentMaterial
-    ? `候选 ${frozenCurrentMaterial.candidateId.slice(0, 8)}`
-    : profileWorkspace.profileCandidateMode && profileSelectedCandidate ? '已冻结，采用时核对'
-      : profileSelectedCandidate ? '未记录'
-        : profileWorkspace.currentMaterialAvailable ? '当前已采用' : '未选择'
+  const profileMaterialLabel = profileWorkspace.profileCandidateMode && profileSelectedCandidate
+    ? '已冻结，采用时核对'
+    : profileSelectedCandidate ? '未记录'
+      : profileWorkspace.currentMaterialAvailable ? '当前已采用' : '未选择'
   const stageRunning = activeStage?.state === 'running'
   const details = special === 'repositoryProfile'
     ? `画像 ${profileSelectedCandidate?.label ?? '未选择'} · 材料整理 ${profileMaterialLabel} · ${profileWorkspace.bindings.length} 个仓库`
@@ -252,19 +249,19 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
     {workspace.personalLlm.dialog}
     <div className="gc-canvas-workspace flex min-h-0 min-w-0 flex-1 gap-3 max-[900.01px]:flex-col max-[900.01px]:overflow-auto"><div ref={stageRef} className={`gc-canvas-stage relative flex min-h-0 min-w-0 flex-1 max-[900.01px]:h-[min(60vh,600px)] max-[900.01px]:min-h-[380px] max-[900.01px]:flex-none${modalOpen || relationsOpen || documentOpen || profileReadingOpen ? ' is-reading' : ''}`}><div className="gc-canvas-map flex min-h-0 min-w-0 flex-1" inert={modalOpen || relationsOpen || documentOpen || profileReadingOpen}><RequirementGenerationCanvas canWrite={canWrite} chains={visibleChains} selected={inspectorOpen && !sourceSelected ? selected : undefined} special={inspectorOpen ? special : null} profile={profileCard} relations={relations}
       sourceSelected={inspectorOpen ? sourceSelected : null} onSelectSource={kind => { if (!guardChanges()) return; setInspectorOpen(true); setSourceSelected(kind); setSpecial(null); setModalOpen(false); setDocumentOpen(false); setRelationsOpen(false) }}
-      onOpenStage={openStageContent} onOpenSpecial={openSpecial} onOpenTab={tab => { if (guardChanges()) onOpenTab(tab) }} /></div>      <GenerationArtifactFrame embedded hideHeader open={documentOpen} title="需求文档" onCancel={() => closeReading(() => setDocumentOpen(false))}
+      onOpenStage={openStageContent} onOpenSpecial={openSpecial} onOpenTab={tab => { if (guardChanges()) onOpenTab(tab) }} /></div>      <GenerationArtifactFrame hideHeader open={documentOpen} title="需求文档" onCancel={() => closeReading(() => setDocumentOpen(false))}
         className="generation-chain-document">{documentPreview}</GenerationArtifactFrame>
-      <GenerationChainModal embedded inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} workspace={workspace} requirementId={requirementId} projectId={projectId} open={modalOpen}
+      <GenerationChainModal inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} workspace={workspace} requirementId={requirementId} projectId={projectId} open={modalOpen}
         uiSourceOptions={uiSourceOptionsState} onOpenProfile={openProfileGuide}
         chooseGitlab={profileWorkspace.personalGitlab.choose} gitlabDialog={profileWorkspace.personalGitlab.dialog}
         onClose={closeStageReading} onOpenLegacy={onOpenTab} />
-      <GenerationArtifactFrame embedded hideHeader open={profileReadingOpen} title="仓库画像" onCancel={closeProfileReading}
+      <GenerationArtifactFrame hideHeader open={profileReadingOpen} title="仓库画像" onCancel={closeProfileReading}
         className="generation-chain-modal generation-profile-reading">
         <RequirementRepositoryProfileReading workspace={profileWorkspace} />
       </GenerationArtifactFrame>
-      <FunctionalCaseRelationsModal embedded inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} open={relationsOpen} onClose={() => closeReading(() => setRelationsOpen(false))}
-        taskId={functionChain?.taskId ?? ''} runId={relationsRunId} disabled={detailedStage?.state === 'running'}
-        chooseConnection={workspace.personalLlm.choose} candidate={candidateRelations} />
+      {candidateRelations ? <FunctionalCaseRelationsModal inspectorContainer={inspectorContainer} inspectorActionContainer={inspectorActionContainer} open={relationsOpen} onClose={() => closeReading(() => setRelationsOpen(false))}
+        projectId={projectId} disabled={detailedStage?.state === 'running'}
+        chooseConnection={workspace.personalLlm.choose} candidate={candidateRelations} /> : null}
     </div>{inspectorOpen ? <InspectorPortal host={inspectorHost}><div className={`gc-inspector-drawer${inspectorCollapsed ? ' is-collapsed' : ''}`}>
       <div className="gc-inspector-rail" aria-hidden="true"><FileTextOutlined /><HistoryOutlined /><EllipsisOutlined /></div>
       {readingOpen ? <button type="button" className="gc-inspector-toggle" aria-controls={inspectorId} aria-expanded={!inspectorCollapsed} aria-label={inspectorCollapsed ? '展开阶段详情' : '收起阶段详情'} title={inspectorCollapsed ? '展开阶段详情' : '收起阶段详情'} onClick={() => setInspectorCollapsed(value => !value)}>{inspectorCollapsed ? <LeftOutlined aria-hidden /> : <RightOutlined aria-hidden />}</button> : null}

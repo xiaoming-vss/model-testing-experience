@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
-import { aiTestingApi } from '../api/aiTesting.api'
+import { requirementDesignApi } from '../api/requirementDesign.api'
 import type { RepositoryProfileCandidateView } from '../types'
 import { ApiGenerationSourcePanel } from './ApiGenerationSourcePanel'
 
-vi.mock('../api/aiTesting.api', () => ({
-  aiTestingApi: { getApiCaseGenerateTask: vi.fn() },
-}))
+vi.mock('../api/requirementDesign.api', async importOriginal => {
+  const actual = await importOriginal<typeof import('../api/requirementDesign.api')>()
+  return { ...actual, requirementDesignApi: { ...actual.requirementDesignApi, overview: vi.fn() } }
+})
 
 vi.mock('@/features/interface-library/api/interfaceLibrary.api', () => ({
   interfaceLibraryApi: {
@@ -38,7 +39,6 @@ function profileCandidate(): RepositoryProfileCandidateView {
     candidateId: 'profile-v1',
     label: 'v1',
     resultYaml: '',
-    sourceRunId: 'run',
     createdAt: '2026-11-15T10:00:00Z',
     profile: {
       overallSummary: '',
@@ -90,12 +90,9 @@ function mount() {
 }
 
 beforeEach(() => {
-  vi.mocked(aiTestingApi.getApiCaseGenerateTask).mockResolvedValue({
-    taskId: 'task',
-    name: 'API 测试',
-    interfaceIds: [],
-    interfaceCount: 0,
-    instruction: '',
+  vi.mocked(requirementDesignApi.overview).mockResolvedValue({
+    tasks: [],
+    runCounts: { requirement_analysis: 0, function: 0, api: 0, ui: 0 },
   })
   vi.mocked(
     interfaceLibraryApi.getRequirementSoftwareRepositories,

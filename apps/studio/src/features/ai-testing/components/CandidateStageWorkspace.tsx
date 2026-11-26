@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Empty, Input, Modal, Pagination, Radio, Select, Spin, Tag } from 'antd'
-import { CheckOutlined, ClockCircleOutlined, ImportOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { CheckOutlined, ClockCircleOutlined, InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { api, listItems } from '@/services/api'
@@ -18,7 +18,6 @@ import type {
   CandidateSourceSelection, CandidateSummary, CurrentImportPreview, CurrentSourceSelection,
 } from '../api/generationCandidates.contract'
 import type { GenerationChainStage, UiGenerationRunInputs, UiGenerationSourceCheck } from '../api/generationChain.api'
-import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { CandidateStageActions } from './CandidateStageActions'
 import { RevisionSidePanel } from './RevisionSidePanel'
@@ -49,7 +48,6 @@ import uiStageStyles from '../styles/ui-stage-visual.module.css'
 
 type SourceChoice = CandidateSourceSelection | CurrentSourceSelection
 const PAGE_SIZE = 20
-const FLEX_MIN = 'min-w-0 flex-1'
 const CONTINUATION_STAGES = new Set(['requirement_review', 'requirement_analysis', 'case_names', 'interface_extract', 'api_design', 'ui_surface', 'ui_design', 'historical_requirement_relations'])
 
 function sourceKind(stage: string, ownKind: CandidateChainKind): CandidateChainKind {
@@ -77,13 +75,12 @@ function canRenderVisual(kind: CandidateChainKind, content: string) {
 }
 
 /** A single stage workspace; it reads current content and candidates separately. */
-export function CandidateStageWorkspace({ requirementId, projectId, kind, stage, open, embedded, onClose, chooseConnection, chooseGitlab, gitlabDialog, uiSourceOptions, onOpenProfile, inspectorContainer, inspectorActionContainer }: {
+export function CandidateStageWorkspace({ requirementId, projectId, kind, stage, open, onClose, chooseConnection, chooseGitlab, gitlabDialog, uiSourceOptions, onOpenProfile, inspectorContainer, inspectorActionContainer }: {
   requirementId: string
   projectId: string
   kind: CandidateChainKind
   stage: GenerationChainStage
   open: boolean
-  embedded?: boolean
   inspectorContainer?: HTMLElement | null
   inspectorActionContainer?: HTMLElement | null
   onClose: () => void
@@ -451,7 +448,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   }
   const loading = operation.isPending
   // 画布内阅读时，候选内容与阶段操作分别挂到详情侧栏的内容区和底部操作区。
-  const sidebarMode = Boolean(embedded && inspectorContainer && inspectorActionContainer)
+  const sidebarMode = Boolean(inspectorContainer && inspectorActionContainer)
   const selectedIsCurrent = selectedId === 'current'
   const selectedCandidateId = selectedIsCurrent ? current.data?.candidateId ?? '' : candidate?.candidateId ?? selectedId
   const selectedMode = selectedIsCurrent ? undefined : candidate ? candidateModeLabel(candidate) : undefined
@@ -602,20 +599,10 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     <p className="m-0 text-[11px] leading-[1.55] text-app-surface-text-muted">{importTargetText}；先预览同名冲突，确认后写入正式用例库。</p>
     <Button className="gc-candidate-primary" type="primary" block loading={loading} onClick={openImport}>预览并导入</Button>
   </section> : null
-  const importBar = canImportCurrent ? <div className="flex flex-none flex-wrap items-center gap-3 border-t border-[var(--app-surface-divider)] px-4 py-3" aria-label="导入正式用例">
-    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[7px] border border-app-accent-border bg-app-accent-surface text-app-accent" aria-hidden><ImportOutlined /></span>
-    <div className={FLEX_MIN}>
-      <strong className="block text-[12px] font-semibold text-app-surface-text">导入正式用例</strong>
-      <span className="block text-[10.5px] leading-[1.45] text-app-surface-text-muted">{importTargetText}；先预览同名冲突，确认后写入正式用例库。</span>
-    </div>
-    <Button type="primary" loading={loading} onClick={openImport}>预览并导入</Button>
-  </div> : null
   const inspectorDock = candidateActions ?? (selectedIsCurrent ? importDock : null)
-  return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={close} title={`${stage.label} · 候选与当前内容`} width={ARTIFACT_MODAL_WIDTH} className={`${chainStyles.scope} ${canvasStyles.scope} ${candidateStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope} generation-chain-modal`} footer={null}>
+  return <><GenerationArtifactFrame hideHeader={sidebarMode} open={open} onCancel={close} title={`${stage.label} · 候选与当前内容`} className={`${chainStyles.scope} ${canvasStyles.scope} ${candidateStyles.scope} ${caseArtifactStyles.scope} ${uiStageStyles.scope} generation-chain-modal`} footer={null}>
     <div className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${edgeToEdgeRaw || edgeToEdgeRail || edgeToEdgeGraph ? 'p-0' : 'p-4'}`}>
       {stage.state === 'failed' ? <Alert showIcon type="error" title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
-      {!sidebarMode ? currentTools : null}
-      {!sidebarMode ? generationTools : null}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
           {stage.moduleGeneration && (stage.state === 'running' || stage.state === 'failed') ? <ModuleGenerationProgressPanel key={stage.moduleGeneration.attemptId} progress={stage.moduleGeneration} /> : null}
           {detail.isPending && selectedId !== 'current' ? <Spin /> : null}
@@ -641,8 +628,6 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
             {...(kind === 'ui' ? {} : { attachments: revisionAttachments.attachments, onAddAttachment: revisionAttachments.addAttachment, onRemoveAttachment: revisionAttachments.removeAttachment })}
             onSubmit={revise} onCancel={() => setRevisionOpen(false)} /> : null}
         </section>
-      {!sidebarMode ? candidateActions : null}
-      {!sidebarMode ? importBar : null}
     </div>
   </GenerationArtifactFrame>
     {sidebarMode && open && inspectorContainer ? createPortal(currentTools, inspectorContainer) : null}

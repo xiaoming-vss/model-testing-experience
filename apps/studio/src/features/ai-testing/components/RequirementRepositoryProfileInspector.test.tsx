@@ -22,7 +22,7 @@ function workspace(isCurrent: boolean) {
       materialCandidateMode: true,
       currentMaterialAvailable: true,
       selectedCandidateId: 'profile-a',
-      selectedProfileView: { candidateId: 'profile-a', label: '候选 profile-', resultYaml: '{}', sourceRunId: '' },
+      selectedProfileView: { candidateId: 'profile-a', label: '候选 profile-', resultYaml: '{}' },
       latestProfileView: { candidateId: 'profile-a' },
       candidateViews: [{ candidateId: 'profile-a', label: '候选 profile-' }],
       candidateSummaries: [{ candidateId: 'profile-a', disposition: 'available' }],

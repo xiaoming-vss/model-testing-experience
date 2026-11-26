@@ -38,11 +38,12 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
       className="requirement-code-risk-dialog" title="代码风险分析">
       <RequirementCodeRiskPanel workspace={codeRisk} canWrite={canWrite} />
     </Modal>
-    {configureKind ? <RequirementDesignConfigurationModal key={configureKind} requirementId={requirementId} projectId={projectId} kind={configureKind} tasks={[]}
+    {configureKind ? <RequirementDesignConfigurationModal key={configureKind} requirementId={requirementId} projectId={projectId} kind={configureKind}
       onClose={() => setConfigureKind(undefined)}
       onSaved={() => {
         setConfigureKind(undefined)
         void client.invalidateQueries({ queryKey: ['generationChain', requirementId] })
+        void client.invalidateQueries({ queryKey: ['requirementDesignOverview', requirementId] })
       }} /> : null}
   </div>
 }

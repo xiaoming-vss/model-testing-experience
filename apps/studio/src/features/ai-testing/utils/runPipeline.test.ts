@@ -1,51 +1,20 @@
 import { expect, it } from 'vitest'
 import { getRunPipelineModel } from './runPipeline'
 
-it('需求分析只展示生成和审核时，已通过的审核不能显示待审核', () => {
-  const model = getRunPipelineModel(
-    { status: 'success', reviewStatus: 'approved' },
-    { stages: ['generate', 'review'] },
-  )
-  expect(model.stages.map(stage => stage.state)).toEqual(['done', 'done'])
-  expect(model.statusLabel).toBe('审核通过')
-})
-
-it('完整流程审核通过后显示待导入', () => {
-  expect(getRunPipelineModel({ status: 'success', reviewStatus: 'approved' }).statusLabel).toBe('待导入')
-})
-
-it('审核通过后图谱分析运行中仍显示执行中', () => {
-  const model = getRunPipelineModel({
-    status: 'pending',
-    reviewStatus: 'approved',
-    importStatus: 'pending',
-  })
-  expect(model.statusLabel).toBe('执行中')
-  expect(model.statusTone).toBe('processing')
-  expect(model.filterKey).toBe('running')
-})
-
-it('旧数据的等待审核且审核通过仍显示待导入', () => {
-  expect(
-    getRunPipelineModel({ status: 'waiting_review', reviewStatus: 'approved' }).statusLabel,
-  ).toBe('待导入')
-})
-
-it('未审核和拒绝仍显示各自状态', () => {
-  for (const [reviewStatus, label] of [['pending', '待审核'], ['rejected', '已拒绝']]) {
-    expect(getRunPipelineModel({ status: 'success', reviewStatus }, { stages: ['generate', 'review'] }).statusLabel).toBe(label)
-  }
-})
-
-
-it('两种待审核状态统一为琥珀色，执行中仍为蓝色', () => {
-  const stages = ['generate', 'review'] as const
-  for (const status of ['waiting_review', 'success']) {
-    const model = getRunPipelineModel({ status, reviewStatus: 'pending' }, { stages: [...stages] })
-    expect(model.statusLabel).toBe('待审核')
-    expect(model.statusTone).toBe('warning')
-  }
-  expect(getRunPipelineModel({ status: 'running' }).statusTone).toBe('processing')
+it('失败和异常使用不同的状态文案', () => {
+  expect(getRunPipelineModel({ status: 'failed' }).statusLabel).toBe('失败')
+  expect(getRunPipelineModel({ status: 'error' }).statusLabel).toBe('异常')
   expect(getRunPipelineModel({ status: 'error' }).statusTone).toBe('error')
-  expect(getRunPipelineModel({ status: 'success', reviewStatus: 'approved' }, { stages: [...stages] }).statusTone).toBe('success')
+})
+
+it('排队、领取和审核等待都属于执行中', () => {
+  for (const status of ['queued', 'pending', 'claimed', 'running', 'waiting_review']) {
+    expect(getRunPipelineModel({ status })).toEqual({ statusLabel: '执行中', statusTone: 'processing' })
+  }
+})
+
+it('取消和结束状态', () => {
+  expect(getRunPipelineModel({ status: 'canceled' })).toEqual({ statusLabel: '已取消', statusTone: 'muted' })
+  expect(getRunPipelineModel({ status: 'success' })).toEqual({ statusLabel: '成功', statusTone: 'success' })
+  expect(getRunPipelineModel({})).toEqual({ statusLabel: '成功', statusTone: 'success' })
 })

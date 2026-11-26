@@ -12,10 +12,7 @@ import { RunListStatus } from './RunListStatus'
 import type { RequirementCodeRiskWorkspace } from '../hooks/useRequirementCodeRiskWorkspace'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { aiTestingApi } from '../api/aiTesting.api'
-import type { RunPipelineStageKey } from '../utils/runPipeline'
 import { getErrorMessage } from '@/utils/format'
-
-const STAGES: RunPipelineStageKey[] = ['generate']
 
 /** 需求详情「代码风险」弹窗：发起入口加上按需求汇总的运行历史，历史列表与设计类页签共用外观与分页。 */
 export function RequirementCodeRiskPanel({ workspace, canWrite }: {
@@ -56,10 +53,10 @@ export function RequirementCodeRiskPanel({ workspace, canWrite }: {
     </div>
     {workspace.runsError ? <Alert showIcon type="error" title={getErrorMessage(workspace.runsError)} action={<Button onClick={workspace.refresh}>重试读取</Button>} /> : null}
     <section className="ai-requirement-design-history flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 rounded-none bg-transparent [&>.ant-empty]:flex [&>.ant-empty]:flex-1 [&>.ant-empty]:flex-col [&>.ant-empty]:items-center [&>.ant-empty]:justify-center [&_.ant-table-wrapper]:m-0 [&_.ant-table-wrapper]:min-h-0 [&_.ant-table-wrapper]:flex-1 [&_.ant-table-wrapper]:overflow-auto [&_.ant-table-wrapper]:p-4">
-      {workspace.runsLoading ? <Spin /> : workspace.pagedRows.length ? <RunHistoryTable appearance="list" className="tp-list-table" rows={workspace.pagedRows} getRunId={row => row.runId} selectedRunId={workspace.selectedRunId}
-        resolveRow={row => row} onSelect={workspace.setSelectedRunId} pagination={pagination}
+      {workspace.runsLoading ? <Spin /> : workspace.pagedRows.length ? <RunHistoryTable className="tp-list-table" rows={workspace.pagedRows} getRunId={row => row.runId} selectedRunId={workspace.selectedRunId}
+        onSelect={workspace.setSelectedRunId} pagination={pagination}
         getCreatedAt={row => row.createdAt}
-        renderStatus={row => <RunListStatus run={row} stages={STAGES}
+        renderStatus={row => <RunListStatus run={row}
           stageTag={row.currentStage && row.currentStage !== 'completed' ? <span className="tp-tone-tag tone-slate">代码风险分析</span> : undefined} />}
         renderArtifacts={row => <RunArtifacts artifacts={[{ key: 'report', label: '分析报告', available: Boolean(row.hasResult) }]} onOpen={() => setReportRunId(row.runId)} />}
         renderActions={row => <RunRowActions inline={<>
