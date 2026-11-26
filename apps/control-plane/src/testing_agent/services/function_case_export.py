@@ -18,7 +18,6 @@ from testing_agent.core.errors import (
 )
 from testing_agent.domain.function_case_export import FunctionCaseExportReference
 from testing_agent.domain.integration_execution import digest
-from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding
@@ -27,7 +26,6 @@ from testing_agent.repositories.function_test_case import FunctionTestCaseReposi
 from testing_agent.schemas.function_test_case import (
     CasePushReconcileRequest,
     ImportFunctionCasesToZentaoRequest,
-    ImportFunctionSuitesToZentaoRequest,
 )
 from testing_agent.services.function_case_access import FunctionCaseAccess
 from testing_agent.services.function_case_push_flow import (
@@ -229,7 +227,7 @@ class FunctionCaseExporter:
         self,
         user_id: str,
         scope: CasePushScope,
-        request: ImportFunctionCasesToZentaoRequest | ImportFunctionSuitesToZentaoRequest,
+        request: ImportFunctionCasesToZentaoRequest,
         gateway: ZentaoCaseGateway,
         manifest: dict[str, dict[str, str]],
         fingerprint: str,
@@ -296,135 +294,6 @@ class FunctionCaseExporter:
             else "partial_failure"
             if count
             else "failed",
-            "items": items,
-        }
-
-    async def import_requirement_to_zentao(
-        self, user_id: str, requirement_id: str, payload: Any
-    ) -> dict:
-        try:
-            request = (
-                payload
-                if isinstance(payload, ImportFunctionSuitesToZentaoRequest)
-                else ImportFunctionSuitesToZentaoRequest.model_validate(payload)
-            )
-        except ValidationError as exc:
-            raise ErrBadRequest() from exc
-        requirement, sprint, project = await self.access.get_accessible_requirement_context(
-            user_id, requirement_id, action="execute"
-        )
-        suites = await self.resolve_suites_for_zentao_import(requirement_id, request.suite_ids)
-        suite_ids = [suite.suite_id for suite in suites]
-        sprint_id, project_id = sprint.sprint_id, project.project_id
-        target = await self.resolve_zentao_import_target(
-            user_id,
-            requirement,
-            sprint,
-            project,
-            request.product_id,
-            request.module_id,
-            request.connection_id,
-        )
-        fingerprint = digest(
-            {
-                "requirementId": requirement_id,
-                "request": request.model_dump(mode="json", exclude={"request_id"}),
-            }
-        )
-        selected = await self.workflow().frozen_selection(user_id, request.request_id, fingerprint)
-        entries: dict[str, dict[str, str]] = {}
-        for suite_id in suite_ids:
-            scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
-            references = await self.repository.export_references(suite_id)
-            case_ids = [
-                case.case_id for case in references if selected is None or case.case_id in selected
-            ]
-            entries.update(await self.prepare_manifest(scope, case_ids, order_offset=len(entries)))
-        manifest = await self.workflow().admit(
-            user_id,
-            self.scope(suite_ids[0], requirement_id, sprint_id, project_id, target),
-            request.request_id,
-            fingerprint,
-            entries,
-        )
-        items: list[dict[str, Any]] = []
-        uncertain = False
-        async with self.gateway_factory(target.connection) as gateway:
-            for suite_id in suite_ids:
-                if uncertain:
-                    items.append(
-                        {
-                            "suiteId": suite_id,
-                            "status": "failed",
-                            "importedCaseCount": 0,
-                            "errorMessage": "前序测试集写入结果待核对，本测试集未推送",
-                        }
-                    )
-                    continue
-                try:
-                    if not any(entry["suiteId"] == suite_id for entry in manifest.values()):
-                        raise dynamic_error(
-                            ErrFunctionTestCaseImportInvalid, "测试集下没有可导入用例"
-                        )
-                    scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
-                    result = await self.push_suite(
-                        user_id, scope, request, gateway, manifest, fingerprint
-                    )
-                    if result["importedCaseCount"] == 0 and result["items"][0].get("errorCode"):
-                        error = result["items"][0]
-                        items.append(
-                            {
-                                "suiteId": suite_id,
-                                "status": "failed",
-                                "importedCaseCount": 0,
-                                "errorCode": error["errorCode"],
-                                "errorMessage": error["errorMessage"],
-                            }
-                        )
-                        continue
-                    uncertain = any(
-                        item["status"] in {"uncertain", "pending"} for item in result["items"]
-                    )
-                    items.append(
-                        {
-                            "suiteId": suite_id,
-                            "status": "success" if result["status"] == "success" else "failed",
-                            "importedCaseCount": result["importedCaseCount"],
-                            "items": result["items"],
-                            "errorMessage": next(
-                                (
-                                    item.get("errorMessage")
-                                    for item in result["items"]
-                                    if item.get("errorMessage")
-                                ),
-                                None,
-                            ),
-                        }
-                    )
-                except AppError as exc:
-                    await self.repository.session.rollback()
-                    items.append(
-                        {
-                            "suiteId": suite_id,
-                            "status": "failed",
-                            "importedCaseCount": 0,
-                            "errorCode": exc.code,
-                            "errorMessage": exc.message,
-                        }
-                    )
-        count = sum(item["importedCaseCount"] for item in items)
-        succeeded = sum(item["status"] == "success" for item in items)
-        return {
-            "requirementId": requirement_id,
-            "status": "success"
-            if succeeded == len(items)
-            else "partial_failure"
-            if count
-            else "failed",
-            "totalSuiteCount": len(items),
-            "succeededSuiteCount": succeeded,
-            "failedSuiteCount": len(items) - succeeded,
-            "importedCaseCount": count,
             "items": items,
         }
 
@@ -499,26 +368,6 @@ class FunctionCaseExporter:
             remote_story_id=remote_story_id,
         )
 
-    async def resolve_suites_for_zentao_import(
-        self,
-        requirement_id: str,
-        suite_ids: list[str],
-    ) -> list[FunctionTestSuite]:
-        if not suite_ids or len(set(suite_ids)) != len(suite_ids):
-            raise ErrBadRequest()
-        rows = await self.repository.list_suites_by_ids(suite_ids)
-        suites_by_id = {suite.suite_id: suite for suite in rows}
-        for suite_id in suite_ids:
-            suite = suites_by_id.get(suite_id)
-            if suite is None:
-                raise ErrNotFound()
-            if suite.requirement_id != requirement_id:
-                raise dynamic_error(
-                    ErrFunctionTestCaseImportInvalid,
-                    f"测试集不属于当前需求: {suite_id}",
-                )
-        return [suites_by_id[suite_id] for suite_id in suite_ids]
-
     async def resolve_cases_for_zentao_import(
         self,
         suite_id: str,
@@ -576,44 +425,6 @@ class FunctionCaseExporter:
         allowed_types = aliases.get(remote_resource_type, {remote_resource_type})
         if binding.provider != "zentao" or binding.remote_resource_type not in allowed_types:
             raise dynamic_error(ErrResourceBindingInvalid, "资源绑定不是有效的禅道绑定")
-
-    async def preview_requirement(
-        self,
-        actor: str,
-        requirement_id: str,
-        request: ImportFunctionSuitesToZentaoRequest,
-    ) -> dict[str, Any]:
-        requirement, sprint, project = await self.access.get_accessible_requirement_context(
-            actor, requirement_id, action="execute"
-        )
-        suites = await self.resolve_suites_for_zentao_import(requirement_id, request.suite_ids)
-        suite_ids = [suite.suite_id for suite in suites]
-        sprint_id, project_id = sprint.sprint_id, project.project_id
-        target = await self.resolve_zentao_import_target(
-            actor,
-            requirement,
-            sprint,
-            project,
-            request.product_id,
-            request.module_id,
-            request.connection_id,
-        )
-        owner = project.user_id == actor
-        await self.repository.session.rollback()
-        result: list[dict[str, Any]] = []
-        restore_required = False
-        async with self.gateway_factory(target.connection) as gateway:
-            for suite_id in suite_ids:
-                scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
-                cases = await self.repository.export_references(suite_id)
-                payloads = {case.case_id: {"title": case.title} for case in cases}
-                preview = await self.workflow().preview(actor, scope, gateway, payloads)
-                result.extend(preview["items"])
-                restore_required = restore_required or preview["restoreRequired"]
-        return {"items": result, "restoreRequired": restore_required, "canConfirmNotApplied": owner}
-
-    async def operation_status(self, actor: str, operation_id: str) -> dict[str, Any]:
-        return await self.workflow().status(actor, operation_id)
 
     async def reconcile_operation(
         self,

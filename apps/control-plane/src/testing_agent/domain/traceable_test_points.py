@@ -48,6 +48,18 @@ def validate_traceable_test_points(
                 raise ValueError("审查遗漏问题目标无效")
         elif target not in (point_ids if target_type == "testPoint" else gap_ids):
             raise ValueError("审查问题引用了不存在的目标")
+        if not any(
+            issue[field]
+            for field in (
+                "materialBlockIds",
+                "materialQuestionIds",
+                "testObjectIds",
+                "impactAreaIds",
+                "riskIds",
+                "scopeQuestionIds",
+            )
+        ):
+            raise ValueError("审查问题至少引用一个输入")
     targets = {
         "materialBlockIds": (material, "materialBlocks"),
         "materialQuestionIds": (material, "questions"),

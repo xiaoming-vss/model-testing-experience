@@ -168,7 +168,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   const targets = useQuery({
     queryKey: ['candidateWorkflow', requirementId, kind, 'targets'],
     queryFn: async () => kind === 'api'
-      ? listItems(await api.getApiCollections(requirementId)).map(item => ({ value: item.collectionId ?? item.collection_id ?? '', label: item.name }))
+      ? listItems(await api.getApiCollections(requirementId)).map(item => ({ value: item.collectionId ?? '', label: item.name }))
       : listItems(await api.getUiTestSuites(requirementId)).map(item => ({ value: item.suiteId ?? '', label: item.name })),
     enabled: open && finalStage && kind !== 'function',
   })
@@ -587,7 +587,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       loading={loading} editing={edit !== null} revisionOpen={revisionOpen} revisionDirty={revisionDirty} currentActive={Boolean(current.data?.active)}
       onAdopt={adopt} onEdit={startEdit} onSave={save} onCancelEdit={cancelEdit} onRevise={openRevision} onDispose={dispose}
     />
-    {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{stageLabel(item.stage)}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
+    {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{stageLabel(item.stage)}：内容或来源已变化，请刷新后重试</li>)}</ul>} /> : null}
   </section> : null
   const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt)
   const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'

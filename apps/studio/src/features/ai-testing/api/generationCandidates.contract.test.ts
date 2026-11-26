@@ -17,7 +17,7 @@ it('keeps trial selection separate from adoption', () => {
   const blocked = {
     canAdopt: false,
     lineageHash: 'sha256:lineage',
-    blockingSources: [{ chainKind: 'function', stage: 'case_names', reason: 'source_conflict' }],
+    blockingSources: [{ chainKind: 'function', stage: 'case_names', reason: 'concurrent_change' }],
   } satisfies AdoptionCheck
   const adopt = {
     action: 'adopt',
@@ -29,6 +29,6 @@ it('keeps trial selection separate from adoption', () => {
   } satisfies CandidateAdoptBody
 
   expect(trial.generationMode).toBe('trial')
-  expect(blocked.blockingSources[0].reason).toBe('source_conflict')
+  expect(blocked.blockingSources[0].reason).toBe('concurrent_change')
   expect(adopt.action).toBe('adopt')
 })

@@ -87,11 +87,9 @@ class SprintDailyMetricsService:
         self,
         repository: SprintDailyMetricsRepository,
         integration_connection_service: Any | None = None,
-        zentao_resource_client: Any | None = None,
     ):
         self.repository = repository
         self.integration_connection_service = integration_connection_service
-        self.zentao_resource_client = zentao_resource_client
 
     async def get_accessible_sprint(
         self, user_id: str, sprint_id: str, *, action: ProjectAction = "read"

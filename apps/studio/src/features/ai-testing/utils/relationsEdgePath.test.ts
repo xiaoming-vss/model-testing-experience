@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { routeRelationsEdge, type RoutePoint, type RouteRect } from './relationsEdgePath'
 import { computeRelationsRoutes } from './relationsRouting'
-import { buildRelationsGraphModel, layoutRelationsFishbone, parseCaseRelationsContent } from './caseRelationsGraph'
+import { buildRelationsGraphModel } from './caseRelationsGraph'
 
 const card = (id: string, x: number, y: number): RouteRect => ({ id, x, y, width: 236, height: 96 })
 // Sample the actual SVG, independently of the routing collision checks.
@@ -108,32 +108,6 @@ describe('card-aware relation paths', () => {
     expect(after).not.toBe(before)
     expectClear(after, [a, b, moved])
   })
-  it.each(['horizontal', 'vertical'] as const)('keeps all multi-level branch edges visible in %s', (orientation) => {
-    const pairs = [['1', '8'], ['8', '9'], ['9', '21'], ['1', '2'], ['1', '3'], ['1', '4'], ['1', '5'], ['1', '6'], ['3', '7'], ['9', '10'], ['9', '12'], ['9', '14'], ['9', '15'], ['9', '16'], ['10', '11'], ['10', '22'], ['10', '13'], ['14', '17'], ['14', '18'], ['16', '19'], ['16', '20']]
-    const data = parseCaseRelationsContent(JSON.stringify({
-      main_paths: [{ case_ids: ['1', '8', '9', '21'] }],
-      edges: pairs.map(([from, to], i) => ({ from_case_id: from, to_case_id: to, relation_type: i < 3 ? 'next' : 'branch', order: i })),
-    }))!
-    const model = buildRelationsGraphModel(data, new Map())
-    const layout = layoutRelationsFishbone(model, orientation)
-    const cards = [...layout.nodes.values()].map((n) => card(n.caseId, n.x, n.y))
-    expect(cards).toHaveLength(22)
-    for (const edge of model.edges) {
-      const a = cards.find((r) => r.id === edge.fromCaseId)!, b = cards.find((r) => r.id === edge.toCaseId)!
-      expectClear(routeRelationsEdge(a, b, cards, edge.relationType === 'next'), cards)
-    }
-  })
-  it.each(['horizontal', 'vertical'] as const)('routes dense fishbone branches in %s layout', (orientation) => {
-    const edges = Array.from({ length: 12 }, (_, i) => ({ from_case_id: 'root', to_case_id: `b${i}`, relation_type: 'branch' }))
-    const data = parseCaseRelationsContent(JSON.stringify({ main_paths: [{ case_ids: ['root', 'end'] }], edges }))!
-    const model = buildRelationsGraphModel(data, new Map())
-    const layout = layoutRelationsFishbone(model, orientation)
-    const cards = [...layout.nodes.values()].map((n) => card(n.caseId, n.x, n.y))
-    for (const e of model.edges) {
-      const a = cards.find((r) => r.id === e.fromCaseId)!, b = cards.find((r) => r.id === e.toCaseId)!
-      expectClear(routeRelationsEdge(a, b, cards, false), cards)
-    }
-  })
 })
 
 // Match the reported test order, including routes across other rows. Full routing
@@ -153,9 +127,12 @@ it('keeps every relation in a 126-node multi-mainline layout without crossing or
   ]))
   edges.push({ edgeId: 'cross1', fromCaseId: 'p0m4', toCaseId: 'p2m6', relationType: 'next', order: 1 })
   edges.push({ edgeId: 'cross2', fromCaseId: 'p0m4', toCaseId: 'p4m3', relationType: 'next', order: 2 })
-  const model = buildRelationsGraphModel({ paths, edges }, new Map())
-  const layout = layoutRelationsFishbone(model, 'horizontal')
-  const cards = [...layout.nodes.values()].map((n) => card(n.caseId, n.x, n.y))
+  buildRelationsGraphModel({ paths, edges }, new Map())
+  const cards = paths.flatMap((path, row) => path.caseIds.flatMap((id, column) => [
+    card(id, column * 300, row * 600),
+    card(`${id}b0`, column * 300, row * 600 + 180),
+    card(`${id}b1`, column * 300, row * 600 + 360),
+  ]))
   const links = edges.map((e) => ({ id: e.edgeId, source: e.fromCaseId, target: e.toCaseId, straight: e.edgeId.startsWith('main-') }))
   const result = computeRelationsRoutes({ cards, links })
   expect(cards).toHaveLength(126)

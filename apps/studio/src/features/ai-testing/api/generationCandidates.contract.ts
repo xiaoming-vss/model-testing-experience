@@ -44,11 +44,7 @@ export type CandidateDetail = CandidateSummary & {
   sourceTrace?: CandidateSourceTrace[]
   basisSources?: CandidateBasisSource[]
 }
-export type AdoptionBlockReason =
-  | 'source_stale'
-  | 'source_unknown'
-  | 'source_conflict'
-  | 'concurrent_change'
+export type AdoptionBlockReason = 'concurrent_change'
 
 type SourceNode = { chainKind: CandidateChainKind; stage: string }
 export type CandidateSourceSelection = SourceNode & {

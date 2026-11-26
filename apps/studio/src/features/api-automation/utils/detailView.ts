@@ -24,7 +24,7 @@ export function isApiRunTerminalStatus(status?: string) {
 }
 
 export function getApiCaseRunId(run?: ApiCaseRunResult | null) {
-  return run?.runId ?? run?.caseRunId ?? run?.run_id ?? run?.case_run_id ?? ''
+  return run?.runId ?? run?.caseRunId ?? ''
 }
 
 export function validateJsonText(value?: string) {

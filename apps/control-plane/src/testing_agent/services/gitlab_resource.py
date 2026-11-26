@@ -96,41 +96,6 @@ def response_total(headers: httpx.Headers, item_count: int) -> int:
     return item_count
 
 
-def diff_line_stats(diff_text: str) -> tuple[int, int]:
-    """unified diff 文本的增删行数(跳过 +++/--- 文件头行)。"""
-    additions = 0
-    deletions = 0
-    for line in str(diff_text or "").splitlines():
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        if line.startswith("+"):
-            additions += 1
-        elif line.startswith("-"):
-            deletions += 1
-    return additions, deletions
-
-
-def compare_payload(item: dict[str, Any]) -> dict[str, Any]:
-    """compare API 响应 → 概览统计:commits 数与增删行数(工单 08)。"""
-    commits = item.get("commits")
-    commits_count = len(commits) if isinstance(commits, list) else 0
-    diffs = item.get("diffs")
-    diff_list = diffs if isinstance(diffs, list) else []
-    additions = 0
-    deletions = 0
-    for diff in diff_list:
-        if not isinstance(diff, dict):
-            continue
-        part_additions, part_deletions = diff_line_stats(str(diff.get("diff") or ""))
-        additions += part_additions
-        deletions += part_deletions
-    return {
-        "commitsCount": commits_count,
-        "additions": additions,
-        "deletions": deletions,
-    }
-
-
 class GitLabResourceClient:
     """直连 GitLab API v4 的资源客户端(手写 httpx,沿用 gitlab_auth 风格)。
 
@@ -367,36 +332,6 @@ class GitLabResourceClient:
             "items": [branch_payload(item) for item in data],
             "total": response_total(headers, len(data)),
         }
-
-    async def compare_repository_branches(
-        self,
-        base_url: str,
-        access_token: str,
-        repository_id: str,
-        from_ref: str,
-        to_ref: str,
-        *,
-        allow_http: bool = False,
-        insecure_skip_verify: bool = False,
-    ) -> dict[str, Any]:
-        """GitLab compare API:from 到 to 的 commits 数与增删行数。
-
-        from_ref 可为 git 空树 SHA(工单 08 无基线仓库口径)。任一 ref 不存在
-        时 GitLab 返回 404,抛 GitLabResourceError 由服务层映射为仓库级错误。
-        """
-        encoded_repository_id = encode_gitlab_id(repository_id)
-        params = {"from": str(from_ref), "to": str(to_ref)}
-        data, _ = await self._request_json(
-            base_url,
-            access_token,
-            f"/api/v4/projects/{encoded_repository_id}/repository/compare",
-            params,
-            allow_http=allow_http,
-            insecure_skip_verify=insecure_skip_verify,
-        )
-        if not isinstance(data, dict):
-            raise GitLabResourceError("GitLab 响应数据格式不合法")
-        return compare_payload(data)
 
     async def _request(
         self,

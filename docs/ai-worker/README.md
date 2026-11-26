@@ -30,6 +30,8 @@
 
 选择方式、Pi 的会话/超时/进程回收语义和容器验收见 [Pi 后端](pi-backend.md)；收敛决策见 [ADR 0001](adr/0001-unified-agent-backend.md)。两个底座共用的技能下载、阶段检查点、产物校验和控制面协议保持一致；代码风险分析与仓库画像仅支持 Pi。切换前处理在途任务和人工检查点，会话历史不跨底座迁移。
 
+`agent/nanobot.py` 的 `migrate_legacy_sessions` 只把升级前运行卷中的 `temp-configs/sessions` 移到 `sessions`，在启动接收任务前执行；源和目标同时存在时显式失败，不覆盖历史。当所有受支持部署的 Nanobot 运行卷都已是新目录结构，或 Nanobot 后端退役后，可删除该迁移。
+
 ## 源码结构
 
 `apps/ai-worker/src/testing_agent_ai_worker/`：

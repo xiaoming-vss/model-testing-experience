@@ -13,12 +13,7 @@ from testing_agent.schemas.generation_chain import ChainSourceInputsView
 
 ChainKind = Literal["requirement_analysis", "function", "api", "ui"]
 CandidateDisposition = Literal["available", "rejected"]
-AdoptionBlockReason = Literal[
-    "source_stale",
-    "source_unknown",
-    "source_conflict",
-    "concurrent_change",
-]
+AdoptionBlockReason = Literal["concurrent_change"]
 Identifier = Annotated[str, Field(min_length=1, max_length=64)]
 
 

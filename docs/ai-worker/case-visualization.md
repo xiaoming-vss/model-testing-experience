@@ -6,7 +6,7 @@
 
 - [执行器](../../apps/ai-worker/src/testing_agent_ai_worker/tasks/case_visualization/executor.py) 读取 `configJson.visualizationInput`；校验平台来源目录与快照哈希后，只调用一次模型。
 - [默认技能](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/SKILL.md) 包含规范及机器 Schema；Worker 校验下载的 Schema 与自身打包版本一致。实际使用的技能文件摘要与模型标识由运行代码记录，不要求模型输出。
-- [Schema](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/output.schema.json) 和 [contract.py](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/contract.py) 为唯一维护源。控制面和 Worker 拥有独立打包副本；从仓库根目录运行 `python3 scripts/sync_case_visualization_contract.py --check` 检查漂移，去掉 `--check` 更新副本及 Studio 测试样例。
+- [Schema](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/output.schema.json) 和 [contract.py](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/contract.py) 为唯一维护源。控制面和 Worker 拥有独立打包副本；从仓库根目录运行 `python3 scripts/sync_contract_copies.py --check` 检查漂移，去掉 `--check` 更新副本及 Studio 测试样例。
 - 四种业务图块为 `options/interval/state/quantity`。确定性步骤流程由 Studio 读取快照生成。全部图解文字按普通文本显示；数值范围、条件、否定、数量、归属和引用通过受限字段表达。
 - 格式错误、非法引用或不完整模型输出均失败，不自动语义重试；合法 `unsupported` 是任务成功完成，但不会成为可用图解。回传失败按现有 Worker 结果上报语义记录错误，不重跑模型；瞬时回传失败先进入本地 outbox 并在租约内重试，租约失效后才需要重新生成。
 
@@ -68,7 +68,7 @@ python3 scripts/evaluate_case_visualization.py \
 
 本次只调整 `SKILL.md` 的生成指导，1.0 Schema、校验器和 Worker 执行协议不变。已生成产物不会被自动改写；后续新生成或用户手动重新生成时获取当前已发布 Skill。独立代理试跑只能验证这次指令在有限样例上的行为，不替代运行环境实际模型的再生成，也不代表前述 50 条人工验收门槛已经通过。
 
-调整后的独立代理试跑使用原运行产物对应的三段有效区间输入，以及选项集合、保存不触发切片两条输入：三条均通过 `validate_artifact`。区间样例生成 1 个 interval 主图、3 条核验断言、3 个步骤 action 短标签，保留 ≥3 秒、总量 3、一一对应、不拆分和不跨段合并；选项与否定触发样例各 1 个图块。[历史试跑记录和输出](records/2026-11-14-case-visualization-skill-trial.md)不属于运行环境模型的新产物。`test_case_visualization_contract.py` 与 `test_project_skill_space.py` 合计 37 项通过，Skill 元数据校验及协议副本同步检查通过。
+调整后的独立代理试跑使用原运行产物对应的三段有效区间输入，以及选项集合、保存不触发切片两条输入：三条均通过 `validate_artifact`。区间样例生成 1 个 interval 主图、3 条核验断言、3 个步骤 action 短标签，保留 ≥3 秒、总量 3、一一对应、不拆分和不跨段合并；选项与否定触发样例各 1 个图块。[历史试跑记录和输出](records/2026-11-14-case-visualization-skill-trial.md)不属于运行环境模型的新产物。`test_contract_copies.py` 与 `test_project_skill_space.py` 合计 37 项通过，Skill 元数据校验及协议副本同步检查通过。
 
 已通过既有发布服务更新运行环境的单个系统默认技能，并同步到 `/home/xiaoming/下载/skills/default-skill-new-11-14/mtx-analyze-case-visualization/`。4 个文件均回读 S3 比对内容、大小与 SHA-256；其他技能不变。此次 `SKILL.md` SHA-256 为 `f8cee6e3e76304c7e9c27c591a3b45c6f4a3db3eb1f3a74179e7e1456cb12c5f`。未重新生成或覆盖既有业务图解。
 

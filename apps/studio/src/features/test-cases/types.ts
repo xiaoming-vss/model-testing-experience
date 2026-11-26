@@ -1,17 +1,11 @@
 export type FunctionTestSuite = {
   suiteId?: string
   requirementId?: string
-  requirement_id?: string
   name: string
   description?: string
   caseCount?: number
-  case_count?: number
-  testcaseCount?: number
-  testcase_count?: number
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type CreateFunctionTestSuitePayload = {
@@ -39,9 +33,7 @@ export type FunctionTestCase = {
   expectedResults?: string
   orderNo?: number
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
   invalidatedAt?: string | null
 }
 
@@ -64,24 +56,17 @@ export type FunctionTestCaseZentaoImportItem = {
 
   errorMessage?: string
   caseId?: string
-  case_id?: string
   remoteCaseId?: number
-  remote_case_id?: number
   status?: string
 }
 
 export type FunctionTestCaseZentaoImportResult = {
   status?: string
   suiteId?: string
-  suite_id?: string
   productId?: number
-  product_id?: number
   remoteProjectId?: number
-  remote_project_id?: number
   remoteExecutionId?: number
-  remote_execution_id?: number
   importedCaseCount?: number
-  imported_case_count?: number
   items?: FunctionTestCaseZentaoImportItem[]
 }
 

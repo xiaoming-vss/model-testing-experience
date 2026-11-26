@@ -168,13 +168,6 @@ def test_source_does_not_call_foreign_private_interfaces():
             if not method.startswith("_") or method.startswith("__"):
                 continue
             receiver = ast.unparse(node.func.value)
-            # urllib's parsed URL is a named tuple; _replace is its documented public API.
-            if (
-                path.relative_to(root).as_posix() == "services/zentao_auth.py"
-                and receiver == "parsed"
-                and method == "_replace"
-            ):
-                continue
             assert receiver in local, f"{path}:{node.lineno}: expose a public interface"
 
 
@@ -248,7 +241,7 @@ def test_provider_bindings_do_not_depend_on_the_binding_facade_or_each_other():
 
 def test_provider_queries_do_not_import_connection_management_or_commit():
     root = PROJECT_ROOT / "src/testing_agent/services"
-    for name in ("gitlab_queries.py", "zentao_queries.py"):
+    for name in ("gitlab_queries.py",):
         for node in ast.walk(ast.parse((root / name).read_text())):
             if isinstance(node, ast.ImportFrom):
                 assert node.module != "testing_agent.services.integration_connection"
@@ -281,7 +274,7 @@ def test_integration_connections_are_split_by_provider():
     assert len(service_path.read_text().splitlines()) < 400
 
     package = root / "services/integration_connections"
-    for name in ("common.py", "zentao.py", "gitlab.py", "mcp.py", "llm.py"):
+    for name in ("common.py", "gitlab.py", "mcp.py", "llm.py"):
         assert (package / name).exists(), f"integration_connections/{name} is missing"
     for path in package.glob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):

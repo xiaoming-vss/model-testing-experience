@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import re
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 from testing_agent.core.enums import (
@@ -255,7 +255,7 @@ class PerfRunService:
             monitoring_connection_name=run.monitoring_connection_name,
             trigger_user_id=run.trigger_user_id,
             trigger_type=run.trigger_type,
-            status=run.status,
+            status=cast(PerfRunStatus, run.status),
             outcome=run.outcome,
             flags=run.flags_json or [],
             error_message=run.error_message,
@@ -282,7 +282,7 @@ class PerfRunService:
             monitoring_connection_name=run.monitoring_connection_name,
             trigger_user_id=run.trigger_user_id,
             trigger_type=run.trigger_type,
-            status=run.status,
+            status=cast(PerfRunStatus, run.status),
             outcome=run.outcome,
             flags=run.flags_json or [],
             error_message=run.error_message,

@@ -9,7 +9,6 @@ from testing_agent.handlers.ai_worker import (
     get_snapshot,
     gitlab_credentials,
     heartbeat,
-    list_project_skills,
     llm_credentials,
     mark_started,
     report_progress,
@@ -23,7 +22,6 @@ from testing_agent.schemas.workers import (
     AiWorkerClaimPayload,
     WorkerGitlabCredentialsResponse,
     WorkerLlmCredentialsResponse,
-    WorkerProjectSkillsResponse,
     WorkerSnapshotResponse,
 )
 
@@ -38,9 +36,6 @@ router.get("/tasks/{task_id}/snapshot", response_model=WorkerSnapshotResponse)(g
 router.post("/tasks/{task_id}/started", status_code=204)(mark_started)
 router.post("/tasks/{task_id}/heartbeat", status_code=204)(heartbeat)
 router.post("/tasks/{task_id}/completed", status_code=204)(complete_task)
-router.get("/projects/{project_id}/skills", response_model=WorkerProjectSkillsResponse)(
-    list_project_skills
-)
 router.get(
     "/tasks/{task_id}/llm-credentials",
     response_model=WorkerLlmCredentialsResponse,

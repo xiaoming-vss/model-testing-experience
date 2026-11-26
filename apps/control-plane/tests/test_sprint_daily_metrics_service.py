@@ -251,7 +251,7 @@ async def test_snapshot_never_uses_retired_external_connections():
     repository = FakeSprintDailyMetricsRepository()
     repository.function_entry_statuses = ["passed", "pending"]
     retired = RetiredExternalAccess()
-    service = SprintDailyMetricsService(repository, retired, retired)
+    service = SprintDailyMetricsService(repository, retired)
     result = await service.upsert("s1", "2026-01-23", "old-connection", "u1")
     assert repository.committed
     assert result["function"]["total"] == 2

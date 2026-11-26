@@ -128,14 +128,6 @@ def test_same_target_endpoint_change_keeps_personal_authorizations(api, remote):
     assert {url for url, _, _ in remote["calls"]} == {"https://new-mcp.test/routed/mcp/"}
     assert response.json()["data"]["instanceResetRequired"] is False
     assert api.get(f"/v1/projects/{pid}/bindings", headers=owner).json()["data"]["total"] == 1
-    assert (
-        api.post(
-            service + "/instance-reset",
-            headers=owner,
-            json={"instanceUrl": "https://zentao-a.test/subpath"},
-        ).status_code
-        == 409
-    )
 
 
 def test_changed_target_requires_owner_confirmation_and_invalidates_others(api, remote):
@@ -194,14 +186,12 @@ def test_recreated_catalog_preserves_bindings_until_owner_confirms_target_switch
     assert pending["instanceResetRequired"] is True
     assert api.get(f"/v1/projects/{pid}/zentao/mcp/projects", headers=owner).status_code == 400
     assert api.get(f"/v1/projects/{pid}/bindings", headers=owner).json()["data"]["total"] == 1
-    assert (
-        api.post(
-            new_service + "/instance-reset",
-            headers=owner,
-            json={"instanceUrl": "https://zentao-b.test"},
-        ).status_code
-        == 200
+    confirmed = api.patch(
+        new_service,
+        headers=owner,
+        json={"name": "ZenTao-MCP", "baseUrl": endpoint, "confirmInstanceSwitch": True},
     )
+    assert confirmed.status_code == 200, confirmed.text
     assert api.get(f"/v1/projects/{pid}/bindings", headers=owner).json()["data"]["total"] == 0
     assert api.get(f"/v1/projects/{pid}/zentao/mcp/projects", headers=owner).status_code == 200
 
@@ -243,7 +233,8 @@ def test_owner_confirmed_target_switch_clears_only_this_projects_zentao_bindings
 
     owner_id, owner = account(api, "switch-owner")
     _, member = account(api, "switch-member")
-    pid, service = configure(api, owner, "switch-project", "http://switch-mcp.test/zentao/mcp")
+    endpoint = "http://switch-mcp.test/zentao/mcp"
+    pid, service = configure(api, owner, "switch-project", endpoint)
     other_pid, _ = configure(api, owner, "untouched-project", "http://other-mcp.test/zentao/mcp")
     api.post(
         f"/v1/projects/{pid}/members",
@@ -318,29 +309,13 @@ def test_owner_confirmed_target_switch_clears_only_this_projects_zentao_bindings
             await session.commit()
 
     asyncio.run(seed())
-    remote["targets"]["http://switch-mcp.test/zentao/mcp"] = "https://zentao-b.test"
+    remote["targets"][endpoint] = "https://zentao-b.test"
     listing = api.get(f"/v1/projects/{pid}/services/mcp", headers=owner).json()["data"]["items"][0]
     assert listing["instanceResetRequired"] is True
     assert listing["pendingInstanceUrl"] == "https://zentao-b.test"
-    assert (
-        api.post(
-            service + "/instance-reset",
-            headers=member,
-            json={"instanceUrl": "https://zentao-b.test"},
-        ).status_code
-        == 403
-    )
-    assert (
-        api.post(
-            service + "/instance-reset",
-            headers=owner,
-            json={"instanceUrl": "https://unexpected.test"},
-        ).status_code
-        == 409
-    )
-    switched = api.post(
-        service + "/instance-reset", headers=owner, json={"instanceUrl": "https://zentao-b.test"}
-    )
+    confirm = {"name": "ZenTao-MCP", "baseUrl": endpoint, "confirmInstanceSwitch": True}
+    assert api.patch(service, headers=member, json=confirm).status_code == 403
+    switched = api.patch(service, headers=owner, json=confirm)
     assert switched.status_code == 200, switched.text
     assert switched.json()["data"]["authorization"]["status"] == "invalid"
 
@@ -369,7 +344,8 @@ def test_mixed_legacy_bindings_can_be_cleared_without_changing_the_current_token
     from testing_agent.services.service_instance import instance_key
 
     user, owner = account(api, "mixed-owner")
-    pid, service = configure(api, owner, "mixed-project", "http://mixed.test/mcp")
+    endpoint = "http://mixed.test/mcp"
+    pid, service = configure(api, owner, "mixed-project", endpoint)
     authorize(api, owner, service, "current-local-token")
 
     async def seed():
@@ -400,22 +376,12 @@ def test_mixed_legacy_bindings_can_be_cleared_without_changing_the_current_token
             return len(list(await session.scalars(select(ResourceBinding))))
 
     assert asyncio.run(count()) == 1  # GET and refresh never delete associations.
+    confirm = {"name": "ZenTao-MCP", "baseUrl": endpoint, "confirmInstanceSwitch": True}
     remote["offline"] = True
-    assert (
-        api.post(
-            service + "/instance-reset",
-            headers=owner,
-            json={"instanceUrl": before["pendingInstanceUrl"]},
-        ).status_code
-        == 502
-    )
+    assert api.patch(service, headers=owner, json=confirm).status_code == 502
     assert asyncio.run(count()) == 1
     remote["offline"] = False
-    cleared = api.post(
-        service + "/instance-reset",
-        headers=owner,
-        json={"instanceUrl": before["pendingInstanceUrl"]},
-    )
+    cleared = api.patch(service, headers=owner, json=confirm)
     assert cleared.status_code == 200, cleared.text
     assert cleared.json()["data"]["connectionStatus"] == "available"
     assert cleared.json()["data"]["authorization"]["status"] == "authorized"

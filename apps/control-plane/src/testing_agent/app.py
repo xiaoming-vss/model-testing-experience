@@ -51,7 +51,6 @@ from testing_agent.routers.requirement_software_repositories import (
 from testing_agent.routers.requirements import router as requirements_router
 from testing_agent.routers.resource_bindings import router as resource_bindings_router
 from testing_agent.routers.shared_services import router as shared_services_router
-from testing_agent.routers.sprint_code_overview import router as sprint_code_overview_router
 from testing_agent.routers.sprint_metrics import router as sprint_metrics_router
 from testing_agent.routers.sprints import router as sprints_router
 from testing_agent.routers.test_debug_stream import router as test_debug_stream_router
@@ -177,7 +176,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(requirement_software_repositories_router, tags=["Software Repositories"])
     v1.include_router(project_skills_router, tags=["Project Skills"])
     v1.include_router(sprint_metrics_router, tags=["Sprint Metrics"])
-    v1.include_router(sprint_code_overview_router, tags=["Sprint Metrics"])
     v1.include_router(requirement_analysis_runs_router, tags=["Requirement Analysis Tasks"])
     v1.include_router(code_risk_analysis_tasks_router, tags=["Code Risk Analysis Tasks"])
     v1.include_router(repository_profile_tasks_router, tags=["Repository Profile Tasks"])

@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from pydantic.alias_generators import to_camel
+
+from testing_agent.core.enums import PerfRunStatus
+
+PerfSuiteItemStatus = Literal[
+    "pending", "queued", "running", "completed", "failed", "canceled", "skipped"
+]
 
 
 class PerfSuiteRunCreate(BaseModel):
@@ -19,7 +26,7 @@ class PerfSuiteRunItemResponse(BaseModel):
     case_id: str
     case_name: str
     order_no: int
-    status: str
+    status: PerfSuiteItemStatus
     outcome: str | None = None
     child_run_id: str = ""
     error_message: str = ""
@@ -48,7 +55,7 @@ class PerfSuiteRunSummaryResponse(BaseModel):
     monitoring_connection_name: str
     trigger_user_id: str
     trigger_type: str
-    status: str
+    status: PerfRunStatus
     outcome: str | None = None
     total_count: int = 0
     completed_count: int = 0

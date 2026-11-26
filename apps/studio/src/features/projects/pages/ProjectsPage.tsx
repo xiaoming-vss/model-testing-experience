@@ -171,7 +171,7 @@ export function ProjectsPage() {
   })
   const requirements: RequirementPoolItem[] = listItems(requirementsQuery.data).map(requirement => ({
     ...requirement,
-    sprintIdForCreate: requirement.sprintId ?? requirement.sprint_id ?? '',
+    sprintIdForCreate: requirement.sprintId ?? '',
   }))
   const visibleRequirements = requirements
 
@@ -441,8 +441,8 @@ export function ProjectsPage() {
                 renderBinding={sprint => {
                   const binding = sprint.zentaoBinding
                   const pending = Boolean(binding?.status && binding.status !== 'active')
-                  const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
-                  const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
+                  const remoteName = binding?.remoteNameSnapshot
+                  const remoteId = binding?.remoteResourceId
                   const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
                   return <Tooltip title={binding ? <div className="sprint-board-binding-tooltip grid gap-0.5 text-[12px] leading-[18px] [&_span]:opacity-[0.68]">
                     <div>{remoteName || remoteId || '-'}</div>
@@ -494,8 +494,8 @@ export function ProjectsPage() {
                       const binding = requirement.zentaoBinding
                       const pending = Boolean(binding?.status && binding.status !== 'active')
                       const className = `requirements-binding-item inline-flex items-center gap-1 whitespace-nowrap text-[10.5px] font-medium leading-[18px] [&_img]:h-[13px] [&_img]:w-[13px] [&_img]:opacity-40 [&_img]:grayscale focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--srf-accent)] ${binding ? pending ? 'is-pending text-[var(--app-status-warning-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'is-bound text-[var(--srf-text)] [&_img]:opacity-100 [&_img]:grayscale-0' : 'text-[var(--srf-text-secondary)]'}`
-                      const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
-                      const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
+                      const remoteName = binding?.remoteNameSnapshot
+                      const remoteId = binding?.remoteResourceId
                       const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
                       return <Tooltip title={binding ? <div className="requirements-binding-tooltip grid gap-0.5 text-[12px] leading-[18px] [&_span]:opacity-[0.68]">
                         <div>{remoteName || remoteId || '-'}</div>

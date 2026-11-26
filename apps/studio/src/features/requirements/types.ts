@@ -6,9 +6,7 @@ export type Requirement = {
   codeBindings?: { repository: string; branch: string; baselineBranch?: string }[]
   zentaoBinding?: ZentaoBinding | null
   requirementId?: string
-  requirement_id?: string
   sprintId?: string
-  sprint_id?: string
   name: string
   documentType?: RequirementDocumentType
   documentContent?: string
@@ -17,9 +15,7 @@ export type Requirement = {
   documentFileId?: string
   documentDownloadUrl?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type RequirementListItem = Requirement & { sprintName: string }

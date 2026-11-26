@@ -12,6 +12,9 @@ from support.project_api import (
     api as api,
 )
 from support.project_api import (
+    delete_connection as delete_connection,
+)
+from support.project_api import (
     gitlab_connection as gitlab_connection,
 )
 from support.project_api import (
@@ -22,6 +25,9 @@ from support.project_api import (
 )
 from support.project_api import (
     requirement as requirement,
+)
+from support.project_api import (
+    seed_llm_connection as seed_llm_connection,
 )
 from support.project_api import (
     seed_requirement_source as seed_requirement_source,
@@ -371,33 +377,19 @@ def test_environment_secrets_are_hidden_and_other_members_cannot_use_them(api):
     assert "private-token" not in saved_run.text
 
 
-def test_viewer_manages_own_llm_connection_but_owner_cannot_read_it(api):
+def test_connection_list_only_returns_the_callers_own_connections(api):
     _, owner = account(api, "owner")
     _, viewer = account(api, "viewer")
     pid = project(api, owner)
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "viewer", "role": "viewer"}
     )
+    seed_llm_connection(api, owner, project_id=pid, name="owner")
+    mine = seed_llm_connection(api, viewer, project_id=pid, name="viewer")
     base = f"/v1/projects/{pid}/integrations/llm/connections"
-    created = api.post(
-        base,
-        headers=viewer,
-        json={
-            "name": "mine",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "viewer-secret",
-            "modelId": "model",
-        },
-    )
-    assert created.status_code == 200, created.text
-    cid = created.json()["data"]["connectionId"]
-    assert "viewer-secret" not in created.text
-    for invalid_key in ("", "   "):
-        updated = api.patch(f"{base}/{cid}", headers=viewer, json={"apiKey": invalid_key})
-        assert updated.status_code == 400, updated.text
-    assert api.get(f"{base}/{cid}", headers=viewer).status_code == 200
-    assert api.get(f"{base}/{cid}", headers=owner).status_code == 404
-    assert api.delete(f"{base}/{cid}", headers=owner).status_code == 404
+    items = api.get(base, headers=viewer).json()["data"]["items"]
+    assert [item["connectionId"] for item in items] == [mine]
+    assert "viewer-secret" not in api.get(base, headers=viewer).text
 
 
 def test_only_owner_binds_gitlab_and_group_listing_uses_personal_access(api, gitlab_remote):
@@ -423,44 +415,6 @@ def test_only_owner_binds_gitlab_and_group_listing_uses_personal_access(api, git
     assert api.get(f"{remote}/{own}/groups", headers=member).status_code == 404
     assert api.get(f"{remote}/{other}/groups", headers=member).status_code == 200
     assert gitlab_remote[-1] == ("groups", "https://gitlab.example", "member-token")
-
-
-def test_gitlab_overview_does_not_reuse_another_members_authorization(
-    api, gitlab_remote, monkeypatch
-):
-    from testing_agent.services.gitlab_resource import GitLabResourceClient
-
-    async def branch(self, base_url, token, repository_id, branch_name, **kwargs):
-        return {"name": branch_name, "commitId": "sha"}
-
-    async def compare(self, base_url, token, repository_id, **kwargs):
-        gitlab_remote.append(("compare", base_url, token))
-        return {"commitsCount": 1, "additions": 3, "deletions": 0}
-
-    monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
-    monkeypatch.setattr(GitLabResourceClient, "compare_repository_branches", compare)
-    _, owner = account(api, "owner")
-    _, member = account(api, "member")
-    pid = project(api, owner)
-    rid = requirement(api, owner, pid)
-    sid = api.get(f"/v1/requirements/{rid}", headers=owner).json()["data"]["sprintId"]
-    api.post(
-        f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
-    )
-    gitlab_connection(api, owner, pid, "owner")
-    repository_id = f"repository-{pid}"
-    seed_software_repository(api, pid, repository_id, name="订单服务")
-    seed_requirement_software_repository(api, rid, repository_id)
-    url = f"/v1/sprints/{sid}/code-overview"
-    own = api.get(url, headers=owner)
-    assert own.status_code == 200, own.text
-    assert gitlab_remote[-1] == ("compare", "https://gitlab.example", "owner-token")
-    denied = api.get(url, headers=member)
-    assert denied.status_code == 200, denied.text
-    assert denied.json()["data"]["repositories"][0]["error"]
-    gitlab_connection(api, member, pid, "member")
-    assert api.get(url, headers=member).status_code == 200
-    assert gitlab_remote[-1] == ("compare", "https://gitlab.example", "member-token")
 
 
 def test_zentao_bindings_keep_instance_identity_without_sharing_credentials(api, monkeypatch):
@@ -534,21 +488,10 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
-    base = f"/v1/projects/{pid}/integrations/llm/connections"
-    ids = []
-    for headers in (owner, member):
-        response = api.post(
-            base,
-            headers=headers,
-            json={
-                "name": "llm",
-                "baseUrl": "https://llm.example/v1",
-                "apiKey": "personal-key",
-                "modelId": "model",
-            },
-        )
-        assert response.status_code == 200, response.text
-        ids.append(response.json()["data"]["connectionId"])
+    ids = [
+        seed_llm_connection(api, headers, project_id=pid, api_key="personal-key")
+        for headers in (owner, member)
+    ]
     url = (
         f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/"
         "candidate-run"
@@ -580,16 +523,13 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
-    cid = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=member,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example",
-            "apiKey": "private-key",
-            "modelId": "model",
-        },
-    ).json()["data"]["connectionId"]
+    cid = seed_llm_connection(
+        api,
+        member,
+        project_id=pid,
+        base_url="https://llm.example",
+        api_key="private-key",
+    )
     response = api.post(
         f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/candidate-run",
         headers=member,
@@ -656,16 +596,13 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
         seed_software_repository(api, pid, repository_id, name=f"订单服务{index}", instance_url=url)
         seed_requirement_software_repository(api, rid, repository_id)
         personal.append(gitlab_connection(api, member, pid, f"member-{index}", url))
-    cid = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=member,
-        json={
-            "name": "llm",
-            "apiKey": "member-llm",
-            "modelId": "model",
-            "baseUrl": "https://llm.example",
-        },
-    ).json()["data"]["connectionId"]
+    cid = seed_llm_connection(
+        api,
+        member,
+        project_id=pid,
+        base_url="https://llm.example",
+        api_key="member-llm",
+    )
     seed_approved_understanding(api, rid, member, cid)
     response = api.post(
         f"/v1/projects/{pid}/code-risk-analysis-tasks",
@@ -692,10 +629,7 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
         "member-1-token",
     }
     assert "owner-" not in response.text
-    response = api.delete(
-        f"/v1/projects/{pid}/integrations/gitlab/connections/{personal[0]}", headers=member
-    )
-    assert response.status_code == 200, response.text
+    delete_connection(api, personal[0])
     assert api.get(f"/internal/ai-worker/tasks/{wid}/gitlab-credentials").status_code == 403
 
 
@@ -713,20 +647,17 @@ def test_material_candidate_reexecution_uses_current_actor(api, operation, creat
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
-    credentials = {}
-    for role, headers in (("owner", owner), ("member", member)):
-        response = api.post(
-            f"/v1/projects/{pid}/integrations/llm/connections",
-            headers=headers,
-            json={
-                "name": "llm",
-                "apiKey": f"{role}-key",
-                "modelId": "model",
-                "baseUrl": "https://llm.example",
-            },
+    credentials = {
+        role: seed_llm_connection(
+            api,
+            headers,
+            project_id=pid,
+            name="llm",
+            api_key=f"{role}-key",
+            base_url="https://llm.example",
         )
-        assert response.status_code == 200, response.text
-        credentials[role] = response.json()["data"]["connectionId"]
+        for role, headers in (("owner", owner), ("member", member))
+    }
     rid = requirement(api, owner, pid)
     seed_requirement_source(api, rid)
     actors = {"owner": owner, "member": member}

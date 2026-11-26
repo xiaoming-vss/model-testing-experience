@@ -88,7 +88,7 @@ export function buildRequirementMetadataUpdatePayload(
 
 export function buildApiCollectionUpdatePayload(collection: ApiCollection, values: CollectionFormValues) {
   const payload: Partial<Pick<ApiCollection, 'name' | 'description' | 'requirementId'>> = {}
-  const currentRequirementId = collection.requirementId ?? collection.requirement_id ?? null
+  const currentRequirementId = collection.requirementId ?? null
   const nextRequirementId = values.requirementId ?? null
 
   if (nextRequirementId !== currentRequirementId) payload.requirementId = nextRequirementId
@@ -113,7 +113,7 @@ export function buildUiTestSuiteUpdatePayload(suite: UiTestSuite, values: UiTest
       | 'requirementId'
     >
   > = {}
-  const currentRequirementId = suite.requirementId ?? suite.requirement_id ?? null
+  const currentRequirementId = suite.requirementId ?? null
   const nextRequirementId = values.requirementId ?? null
 
   if (nextRequirementId !== currentRequirementId) payload.requirementId = nextRequirementId

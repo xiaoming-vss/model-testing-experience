@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.core.enums import RunStatus
 from testing_agent.schemas.common import StrictRequest
 
 
@@ -40,7 +41,7 @@ class UiCaseRunResponse(BaseModel):
     project_id: str = Field(default="")
     trigger_user_id: str = Field()
     trigger_type: str = Field()
-    status: str
+    status: RunStatus
     success: bool = False
     snapshot: Any | None = Field(
         default=None,
@@ -84,7 +85,7 @@ class UiSuiteRunResponse(BaseModel):
     project_id: str = Field()
     trigger_user_id: str = Field()
     trigger_type: str = Field()
-    status: str
+    status: RunStatus
     total_count: int = Field()
     success_count: int = Field()
     failed_count: int = Field()
@@ -113,7 +114,7 @@ class UiSuiteRunReportItem(BaseModel):
     item_id: str = Field()
     case_id: str = Field()
     case_name: str = Field(default="")
-    status: str
+    status: RunStatus
     order_no: int = Field()
     step_results: list[Any] | None = Field(default_factory=list)
     error_message: str = Field(default="")

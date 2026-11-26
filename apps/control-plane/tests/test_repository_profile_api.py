@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock
 
-from support.project_api import account, project, requirement
+from support.project_api import account, project, requirement, seed_llm_connection
 from support.project_api import api as api
 
 from testing_agent.api.deps import verify_worker_token
@@ -48,18 +48,13 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
     from support.requirement_versions import adopt_material
 
     material_id = adopt_material(api, requirement_id, headers=owner)
-    connection = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=owner,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "secret",
-            "modelId": "model",
-        },
+    connection_id = seed_llm_connection(
+        api,
+        owner,
+        project_id=pid,
+        base_url="https://llm.example/v1",
+        api_key="secret",
     )
-    assert connection.status_code == 200, connection.text
-    connection_id = connection.json()["data"]["connectionId"]
 
     task = api.post(
         f"/v1/projects/{pid}/repository-profile-tasks",
@@ -172,16 +167,6 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             },
         )
         assert complete.status_code == 204, complete.text
-
-        detail = api.get(f"/v1/repository-profile-runs/{run_id}", headers=owner)
-        assert detail.status_code == 200, detail.text
-        assert detail.json()["data"]["profile"]["overallSummary"] == "当前需求主要涉及后端仓库"
-        assert detail.json()["data"]["profile"]["repositories"][0]["role"] == "backend"
-        assert (
-            detail.json()["data"]["snapshotJson"]["requirementMaterialCurrent"]["candidateId"]
-            == material_id
-        )
-        assert api.get(f"/v1/repository-profile-runs/{run_id}", headers=viewer).status_code == 200
 
         history = api.get(f"/v1/repository-profile-tasks/{task_id}/runs", headers=owner)
         assert history.status_code == 200, history.text

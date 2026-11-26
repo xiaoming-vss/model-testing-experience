@@ -59,11 +59,11 @@ export type FunctionCaseEditorTarget =
   | { mode: 'create'; suiteId: string; suiteName: string; nextOrderNo: number }
 
 export function suiteRequirementId(suite: FunctionTestSuite) {
-  return suite.requirementId ?? suite.requirement_id ?? ''
+  return suite.requirementId ?? ''
 }
 
 export function suiteCaseCount(suite: FunctionTestSuite) {
-  return suite.caseCount ?? suite.case_count ?? 0
+  return suite.caseCount ?? 0
 }
 
 function getFunctionCaseErrorMessage(error: unknown) {

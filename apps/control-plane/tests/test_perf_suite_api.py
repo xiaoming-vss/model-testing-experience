@@ -191,13 +191,13 @@ def _setup(api, prefix):
     return headers, suite, first, second, environment_id, connection_id
 
 
-def test_perf_suite_crud_and_case_order(api):
+def test_perf_suite_crud(api):
     _settings(api)
     _, headers = account(api, "suite-owner")
     project_id = project(api, headers, "suite-project")
     suite = _suite(api, headers, project_id)
-    first = _case(api, headers, project_id, suite["suiteId"], "first")
-    second = _case(api, headers, project_id, suite["suiteId"], "second")
+    _case(api, headers, project_id, suite["suiteId"], "first")
+    _case(api, headers, project_id, suite["suiteId"], "second")
 
     detail = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers)
     assert detail.status_code == 200, detail.text
@@ -205,22 +205,6 @@ def test_perf_suite_crud_and_case_order(api):
     assert [item["name"] for item in data["cases"]] == ["first", "second"]
     assert [item["orderNo"] for item in data["cases"]] == [1, 2]
     assert data["caseCount"] == 2
-
-    reordered = api.put(
-        f"/v1/perf-suites/{suite['suiteId']}/case-order",
-        headers=headers,
-        json={"caseIds": [second["caseId"], first["caseId"]]},
-    )
-    assert reordered.status_code == 200, reordered.text
-    assert [item["name"] for item in reordered.json()["data"]["cases"]] == ["second", "first"]
-    assert [item["orderNo"] for item in reordered.json()["data"]["cases"]] == [1, 2]
-
-    invalid = api.put(
-        f"/v1/perf-suites/{suite['suiteId']}/case-order",
-        headers=headers,
-        json={"caseIds": [first["caseId"]]},
-    )
-    assert invalid.status_code == 400, invalid.text
 
     listed = api.get(f"/v1/projects/{project_id}/perf-suites", headers=headers)
     assert listed.status_code == 200, listed.text
@@ -492,7 +476,7 @@ def test_suite_stop_leaves_no_open_child_run(api):
 
 
 def test_deleting_suite_cascades_cases_and_run_history(api):
-    headers, suite, first, _second, environment_id, connection_id = _setup(api, "suite-delete")
+    headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-delete")
     run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
     child_ids = [item["childRunId"] for item in run["items"]]
     first_task = _claim(api)
@@ -502,7 +486,6 @@ def test_deleting_suite_cascades_cases_and_run_history(api):
     deleted = api.delete(f"/v1/perf-suites/{suite['suiteId']}", headers=headers)
     assert deleted.status_code == 200, deleted.text
     assert api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).status_code == 404
-    assert api.get(f"/v1/perf-cases/{first['caseId']}", headers=headers).status_code == 404
     assert api.get(f"/v1/perf-suite-runs/{run['suiteRunId']}", headers=headers).status_code == 404
     assert api.get(f"/v1/perf-runs/{child_ids[0]}", headers=headers).status_code == 404
     assert _pending_tasks(api, child_ids) == 0

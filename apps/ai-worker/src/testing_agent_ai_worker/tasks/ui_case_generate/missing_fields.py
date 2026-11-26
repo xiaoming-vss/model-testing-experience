@@ -12,7 +12,7 @@ def validate_missing(step: dict[str, Any]) -> set[str]:
     entries = step.get("missingFields", [])
     if not isinstance(entries, list):
         raise ValueError("missingFields must be an array")
-    pending = set()
+    pending: set[str] = set()
     for index, entry in enumerate(entries, 1):
         prefix = f"missingFields[{index}]"
         if not isinstance(entry, dict) or set(entry) != KEYS:
@@ -37,7 +37,8 @@ def validate_missing(step: dict[str, Any]) -> set[str]:
             raise ValueError(
                 f"{prefix}: operationValue for {step['keyword']} is milliseconds, not a "
                 "business expected value. Supply the wait duration; implement the intended "
-                "business assertion in its own step. Do not clear a known timeout to pass validation."
+                "business assertion in its own step. "
+                "Do not clear a known timeout to pass validation."
             )
         for field in fields:
             if field not in step or step[field] is not None:

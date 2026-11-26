@@ -19,7 +19,6 @@ from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_suite import PerfSuiteRepository
 from testing_agent.repositories.perf_suite_run import PerfSuiteRunRepository
 from testing_agent.schemas.perf_suite import (
-    PerfSuiteCaseOrderUpdate,
     PerfSuiteCaseResponse,
     PerfSuiteCreate,
     PerfSuiteResponse,
@@ -183,20 +182,6 @@ class PerfSuiteService:
             await self.repository.rollback()
             raise dynamic_error(ErrPerfCaseNameAlreadyUse, "该性能测试集名称已存在") from exc
         await self.repository.refresh(suite)
-        return await self._detail(suite, include_cases=True)
-
-    async def reorder(
-        self, user_id: str, suite_id: str, body: PerfSuiteCaseOrderUpdate
-    ) -> dict[str, Any]:
-        suite = await self._accessible(user_id, suite_id, action="write")
-        cases = await self.cases.list_by_suite(suite.suite_id)
-        by_id = {case.case_id: case for case in cases}
-        if len(body.case_ids) != len(set(body.case_ids)) or set(body.case_ids) != set(by_id):
-            raise ErrBadRequest()
-        for index, case_id in enumerate(body.case_ids, start=1):
-            by_id[case_id].order_no = index
-        suite.updated_at = datetime.now(UTC)
-        await self.repository.commit()
         return await self._detail(suite, include_cases=True)
 
     async def delete(self, user_id: str, suite_id: str) -> dict[str, Any]:

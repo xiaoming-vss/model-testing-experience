@@ -48,9 +48,6 @@ class UpdateFields:
     name: Any
     base_url: Any
     account: Any
-    allow_http: bool
-    insecure_skip_verify: bool
-    flags_changed: bool
     secret: dict[str, Any]
     secret_changed: bool
     extra: dict[str, Any]
@@ -62,9 +59,7 @@ class ConnectionSupport:
 
     repository: Any
     credential_cipher: Any
-    zentao_auth_provider: Any
     gitlab_auth_provider: Any
-    zentao_resources: Any
     gitlab_resources: Any
 
     async def get_owned(
@@ -147,32 +142,22 @@ class ConnectionSupport:
         return connection
 
     def _candidate_update(
-        self, connection: IntegrationConnection, body: dict[str, Any], provider: str
+        self, connection: IntegrationConnection, body: dict[str, Any]
     ) -> UpdateFields:
         if "apiKey" in body and not str(body["apiKey"] or "").strip():
             raise ErrBadRequest()
-        allow_http, insecure_skip_verify = self._updated_security_flags(connection, body)
-        old_allow, old_insecure = connection_security_flags(connection.extra_json)
         secret = dict(connection.secret_json or {})
-        secret_changed = "password" in body or "apiKey" in body
-        if "password" in body:
-            secret["password"] = self._encrypt_secret(str(body["password"]))
-        if "apiKey" in body:
+        secret_changed = "apiKey" in body
+        if secret_changed:
             secret["apiKey"] = self._encrypt_secret(str(body["apiKey"]))
         extra = dict(connection.extra_json or {})
-        extra_changed = provider == "zentao" or "modelId" in body
-        if provider == "zentao":
-            extra["allowHttp"] = allow_http
-            extra["insecureSkipVerify"] = insecure_skip_verify
-        if "modelId" in body:
+        extra_changed = "modelId" in body
+        if extra_changed:
             extra["modelId"] = body["modelId"]
         return UpdateFields(
             name=body.get("name", connection.name),
             base_url=body.get("baseUrl", connection.base_url),
             account=body.get("account", connection.account),
-            allow_http=allow_http,
-            insecure_skip_verify=insecure_skip_verify,
-            flags_changed=(allow_http, insecure_skip_verify) != (old_allow, old_insecure),
             secret=secret,
             secret_changed=secret_changed,
             extra=extra,

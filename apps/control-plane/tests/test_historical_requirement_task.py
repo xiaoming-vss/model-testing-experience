@@ -10,7 +10,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 from support.mysql_initialization import mysql  # noqa: F401
-from support.project_api import account, api, project, requirement  # noqa: F401
+from support.project_api import (  # noqa: F401
+    account,
+    api,
+    project,
+    requirement,
+    seed_llm_connection,
+)
 from support.requirement_versions import adopt_material, material_artifact
 
 from testing_agent.api.deps import verify_worker_token
@@ -150,16 +156,14 @@ def test_history_candidate_uses_same_project_adopted_material_and_independent_at
     previous_candidate = adopt_material(client, previous, headers=headers, content=json.dumps(old))
     adopt_material(client, foreign, headers=headers, content=json.dumps(old))
     current_candidate = adopt_material(client, rid, headers=headers)
-    connection = client.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=headers,
-        json={
-            "name": "history",
-            "baseUrl": "https://llm.example",
-            "apiKey": "test",
-            "modelId": "test",
-        },
-    ).json()["data"]["connectionId"]
+    connection = seed_llm_connection(
+        client,
+        headers,
+        project_id=pid,
+        name="history",
+        base_url="https://llm.example",
+        api_key="test",
+    )
 
     async def remove_new_slot_from_existing_chain():
         async with client.app.state.test_sessions() as session:

@@ -27,37 +27,12 @@ class PerfCaseRepository(ResourceRepository):
             select(PerfCase).where(PerfCase.project_id == project_id, PerfCase.name == name)
         )
 
-    async def list_by_project(
-        self, project_id: str, *, invalidated: bool | None = None
-    ) -> list[PerfCase]:
-        conditions = [PerfCase.project_id == project_id]
-        if invalidated is True:
-            conditions.append(PerfCase.invalidated_at.is_not(None))
-        elif invalidated is False:
-            conditions.append(PerfCase.invalidated_at.is_(None))
+    async def list_by_suite(self, suite_id: str) -> list[PerfCase]:
         return list(
             (
                 await self.session.scalars(
                     select(PerfCase)
-                    .where(*conditions)
-                    .order_by(PerfCase.created_at.desc(), PerfCase.id.desc())
-                )
-            ).all()
-        )
-
-    async def list_by_suite(
-        self, suite_id: str, *, invalidated: bool | None = None
-    ) -> list[PerfCase]:
-        conditions = [PerfCase.suite_id == suite_id]
-        if invalidated is True:
-            conditions.append(PerfCase.invalidated_at.is_not(None))
-        elif invalidated is False:
-            conditions.append(PerfCase.invalidated_at.is_(None))
-        return list(
-            (
-                await self.session.scalars(
-                    select(PerfCase)
-                    .where(*conditions)
+                    .where(PerfCase.suite_id == suite_id)
                     .order_by(PerfCase.order_no.asc(), PerfCase.created_at.asc(), PerfCase.id.asc())
                 )
             ).all()

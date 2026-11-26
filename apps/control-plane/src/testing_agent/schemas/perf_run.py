@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from pydantic.alias_generators import to_camel
 
+from testing_agent.core.enums import PerfRunStatus
 from testing_agent.schemas.perf_case import PerfDataFile
 
 
@@ -38,7 +39,7 @@ class PerfRunSummaryResponse(BaseModel):
     monitoring_connection_name: str
     trigger_user_id: str
     trigger_type: str
-    status: str
+    status: PerfRunStatus
     outcome: str | None = ""
     flags: list[str] = Field(default_factory=list)
     error_message: str = ""

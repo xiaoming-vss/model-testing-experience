@@ -22,7 +22,7 @@ export function useSprintDetailPage() {
     queryFn: () => api.getSprint(sprintId),
     enabled: Boolean(sprintId),
   })
-  const projectId = sprintQuery.data?.projectId || sprintQuery.data?.project_id || ''
+  const projectId = sprintQuery.data?.projectId || ''
   const projectMismatch = Boolean(routeProjectId && projectId && routeProjectId !== projectId)
   const projectScopeError = sprintQuery.error ?? (projectMismatch
     ? new Error('迭代所属项目与访问路径不一致')

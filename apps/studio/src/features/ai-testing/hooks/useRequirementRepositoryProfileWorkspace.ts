@@ -63,7 +63,7 @@ export function useRequirementRepositoryProfileWorkspace(
   })
   const currentMaterialAvailable = Boolean(currentMaterialQuery.data?.candidateId && !currentMaterialQuery.data.invalidatedAt)
   const personalLlm = usePersonalLlmChoice(projectId)
-  const personalGitlab = usePersonalConnectionChoice('gitlab')
+  const personalGitlab = usePersonalConnectionChoice()
 
   const bindingsQuery = useQuery({
     queryKey: ['requirementSoftwareRepositories', requirementId],

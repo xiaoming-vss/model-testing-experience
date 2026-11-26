@@ -394,8 +394,10 @@ async def test_positive_proof_links_external_bug_cancels_old_task_and_allows_onl
                 ),
             )
             assert not receipt["writeAllowed"]
-        current = await coordinator.get("u", "b", response["jobId"])
-        assert current["jobStatus"] == "succeeded"
+        current = await session.scalar(
+            select(IntegrationJob).where(IntegrationJob.job_id == response["jobId"])
+        )
+        assert current is not None and current.status == "succeeded"
         assert (
             await session.scalar(select(IntegrationJob).where(IntegrationJob.job_id == job_id))
         ).status == "canceled"

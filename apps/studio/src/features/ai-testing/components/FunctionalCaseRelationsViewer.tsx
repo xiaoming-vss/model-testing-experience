@@ -117,8 +117,6 @@ export function FunctionalCaseRelationsViewer({ projectId, embedded = false, con
               ref={graphRef}
               content={relationsContent}
               casesContent={view?.resultYaml}
-              orientation="horizontal"
-              presentation="hierarchy"
               onSelectionChange={handleSelectionChange}
             />
           ) : (

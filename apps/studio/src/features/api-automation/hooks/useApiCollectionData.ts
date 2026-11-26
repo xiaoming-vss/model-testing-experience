@@ -32,7 +32,7 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
     enabled: Boolean(collectionId),
   })
 
-  const requirementId = collectionQuery.data?.requirementId ?? collectionQuery.data?.requirement_id
+  const requirementId = collectionQuery.data?.requirementId
 
   const requirementQuery = useQuery({
     queryKey: ['requirement', requirementId],
@@ -40,7 +40,7 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
     enabled: Boolean(requirementId),
   })
 
-  const sprintId = requirementQuery.data?.sprintId ?? requirementQuery.data?.sprint_id
+  const sprintId = requirementQuery.data?.sprintId
 
   const sprintQuery = useQuery({
     queryKey: ['sprint', sprintId],
@@ -49,7 +49,7 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
   })
 
   // 测试集归属项目，需求/迭代只是可选的来源关联，不能再用它们反推项目。
-  const projectId = collectionQuery.data?.projectId ?? collectionQuery.data?.project_id
+  const projectId = collectionQuery.data?.projectId
 
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', projectId, 'api'],

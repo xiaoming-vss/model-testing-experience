@@ -69,7 +69,7 @@ async def check_ui_generation_source(
     reader = RepositoryProfileCurrent(service)
     current = await reader.read(requirement_id=requirement_id, actor_id=user_id)
     if current is None or current.candidate_id != body.profile_candidate_id:
-        raise source_error("source_mismatch")
+        raise source_error("concurrent_change")
     result = await service.ui_sources.check_current(
         current=current,
         project_id=project_id,

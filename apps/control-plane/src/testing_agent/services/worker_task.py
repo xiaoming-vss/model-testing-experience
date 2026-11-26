@@ -43,7 +43,6 @@ from testing_agent.services.worker import (
     find_task,
     llm_credentials_payload,
     parse_event_time,
-    project_skill_worker_payload,
     task_payload,
     update_task_claimed,
 )
@@ -446,13 +445,6 @@ class WorkerTaskService:
         await self.repository.commit()
         await notify_run_changed("ui", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "status": status}
-
-    async def list_project_skills(self, project_id: str) -> dict:
-        rows = await self.repository.list_project_skills(project_id)
-        return {
-            "projectId": project_id,
-            "skills": [project_skill_worker_payload(row) for row in rows],
-        }
 
     async def ai_worker_task(self, task_id: str) -> WorkerTask:
         """Load an AI task and validate its current execution authority."""

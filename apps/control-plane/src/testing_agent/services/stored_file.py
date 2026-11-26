@@ -289,21 +289,6 @@ class StoredFileService:
             ).all()
         )
 
-    async def metadata(self, user_id: str, file_id: str):
-        row = await self.accessible(user_id, file_id)
-        return {
-            "fileId": row.file_id,
-            "projectId": row.project_id,
-            "filename": row.filename,
-            "contentType": row.content_type,
-            "size": row.size,
-            "sha256": row.sha256,
-            "status": row.status,
-            "uploadedBy": row.uploaded_by,
-            "createdAt": row.created_at,
-            "completedAt": row.completed_at,
-        }
-
     async def download(self, user_id: str, file_id: str):
         return await self.ticket(await self.accessible(user_id, file_id))
 

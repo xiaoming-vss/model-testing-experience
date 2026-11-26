@@ -99,9 +99,7 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
     task_id = first.json()["data"]["taskId"]
     overview = api.get(base, headers=owner)
     assert overview.status_code == 200
-    api_task = next(
-        item for item in overview.json()["data"]["tasks"] if item["taskId"] == task_id
-    )
+    api_task = next(item for item in overview.json()["data"]["tasks"] if item["taskId"] == task_id)
     assert api_task["interfaceIds"] == ["interface-1"]
     second = api.post(base + "/api/configuration", headers=owner, json=configuration)
     assert second.status_code == 200, second.text

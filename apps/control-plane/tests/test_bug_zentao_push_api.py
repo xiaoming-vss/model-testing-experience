@@ -336,8 +336,15 @@ def test_confirmed_switch_archives_bug_and_attachment_associations(api, setup):
 
     asyncio.run(seed_attachment())
     s["remote"].instance = "http://new-zen.test"
-    endpoint = f"{s['path']}/{s['sid']}/instance-reset"
-    switched = api.post(endpoint, headers=s["owner"], json={"instanceUrl": "http://new-zen.test"})
+    switched = api.patch(
+        f"{s['path']}/{s['sid']}",
+        headers=s["owner"],
+        json={
+            "name": "禅道 MCP",
+            "baseUrl": "http://mcp.test/zentao/mcp",
+            "confirmInstanceSwitch": True,
+        },
+    )
     assert switched.status_code == 200, switched.text
 
     async def check():
@@ -411,10 +418,14 @@ def test_switch_waits_for_attachment_uploads(api, setup):
 
     asyncio.run(seed())
     s["remote"].instance = "http://new-zen.test"
-    reset = api.post(
-        f"{s['path']}/{s['sid']}/instance-reset",
+    reset = api.patch(
+        f"{s['path']}/{s['sid']}",
         headers=s["owner"],
-        json={"instanceUrl": "http://new-zen.test"},
+        json={
+            "name": "禅道 MCP",
+            "baseUrl": "http://mcp.test/zentao/mcp",
+            "confirmInstanceSwitch": True,
+        },
     )
     assert reset.status_code == 409
     assert "附件正在同步" in reset.json()["message"]

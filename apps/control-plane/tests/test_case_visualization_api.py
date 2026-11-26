@@ -232,7 +232,7 @@ def test_order_and_source_case_deletion_clean_visualizations(api):
     assert api.delete(f"/v1/test-orders/{order}", headers=owner).status_code == 200
 
 
-def test_snapshot_changes_hide_old_artifact_and_summary_has_no_body(api):
+def test_snapshot_changes_hide_old_artifact(api):
     import asyncio
 
     from testing_agent.models.test_order_entry import TestOrderEntry
@@ -240,10 +240,7 @@ def test_snapshot_changes_hide_old_artifact_and_summary_has_no_body(api):
     owner, order, entry, conn, _ = setup(api)
     assert submit(api, owner, order, entry, conn).status_code == 200
     finish(api, entry)
-    summary = api.post(
-        f"/v1/test-orders/{order}/visualizations/lookup", headers=owner, json={"entryIds": [entry]}
-    ).json()["data"]["items"][0]
-    assert summary["effectiveArtifact"]["content"] is None
+    assert view(api, owner, order, entry)["effectiveArtifact"]["content"] is not None
 
     async def mutate_snapshot():
         async with api.app.state.test_sessions() as session:

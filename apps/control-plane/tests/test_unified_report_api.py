@@ -4,7 +4,7 @@ import asyncio
 from datetime import date
 
 from support.function_case_library import make_sprint
-from support.project_api import account, project
+from support.project_api import account, project, seed_llm_connection
 from support.project_api import api as api
 
 from testing_agent.api.deps import verify_worker_token
@@ -25,18 +25,13 @@ def test_report_worker_history_delete_and_pdf(api):
         == 200
     )
     sprint_id = make_sprint(api, owner, pid)
-    connection = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=owner,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "secret",
-            "modelId": "model",
-        },
+    connection_id = seed_llm_connection(
+        api,
+        owner,
+        project_id=pid,
+        base_url="https://llm.example/v1",
+        api_key="secret",
     )
-    assert connection.status_code == 200, connection.text
-    connection_id = connection.json()["data"]["connectionId"]
 
     async def seed_metrics():
         async with api.app.state.test_sessions() as session:

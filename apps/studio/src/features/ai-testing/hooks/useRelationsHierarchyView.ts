@@ -5,7 +5,7 @@ import { layoutHierarchy } from '../utils/relationsHierarchyLayout'
 
 type HierarchyLayout = ReturnType<typeof layoutHierarchy>
 /*
- * 布局是图谱里最贵的一步（dagre 全量重排）。navigate 需要先算出展开后的节点才能定位选中项，
+ * 布局是图谱里最贵的一步（全量重排）。navigate 需要先算出展开后的节点才能定位选中项，
  * 把结果按 model + expanded 缓存起来，下一次渲染的 useMemo 直接复用，避免同一组输入连算两遍。
  * 用模块级 WeakMap 而不是 ref：渲染期间读取 ref 会被 react-hooks/refs 判定为不安全。
  */

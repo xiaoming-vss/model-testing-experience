@@ -41,7 +41,7 @@ export function SharedServiceDialogs({ provider, providerLabel, editor, authoriz
       <Form form={configuration} layout="vertical" preserve={false}>
         <Form.Item name="name" label="服务名称" rules={[{ required: true, whitespace: true }]}><Input maxLength={120} placeholder={provider === 'mcp' ? '例如：项目禅道 MCP' : undefined} /></Form.Item>
         <Form.Item name="baseUrl" label={provider === 'mcp' ? 'MCP 服务地址' : '服务地址'} rules={[{ required: true }, provider === 'mcp' ? { validator: validateMcpUrl } : { type: 'url', message: '请输入完整的 http 或 https 地址' }]}><Input placeholder={provider === 'mcp' ? 'http://服务器地址:9091/zentao/mcp' : 'https://…'} disabled={provider !== 'mcp' && editor !== 'create'} onChange={() => configuration.setFieldValue('confirmInstanceSwitch', false)} /></Form.Item>
-        {(provider === 'zentao' || provider === 'gitlab') && <>
+        {provider === 'gitlab' && <>
           <Form.Item name="allowHttp" valuePropName="checked" initialValue={false}><Checkbox>允许明文 HTTP（仅限自部署或内网实例）</Checkbox></Form.Item>
           <Form.Item name="insecureSkipVerify" valuePropName="checked" initialValue={false}><Checkbox>跳过 HTTPS 证书校验（自签名或内网 CA）</Checkbox></Form.Item>
           {(allowHttp || insecureSkipVerify) && <Alert type="warning" showIcon title="不安全连接" description="明文 HTTP 或跳过证书校验会降低连接安全性；仅在确认网络可信且无法使用受信任 HTTPS 时开启。" style={{ marginBottom: 12 }} />}
@@ -68,10 +68,6 @@ export function SharedServiceDialogs({ provider, providerLabel, editor, authoriz
         {provider === 'mcp' && <Form.Item name="token" label="我的 Token" rules={[{ required: true, whitespace: true }]}><Input.Password autoComplete="new-password" /></Form.Item>}
         {provider === 'llm' && <Form.Item name="apiKey" label="API Key" rules={[{ required: true, whitespace: true }]}><Input.Password autoComplete="new-password" /></Form.Item>}
         {provider === 'gitlab' && <Form.Item name="accessToken" label="个人访问令牌" rules={[{ required: true, whitespace: true }]}><Input.Password autoComplete="new-password" /></Form.Item>}
-        {provider === 'zentao' && <>
-          <Form.Item name="account" label="我的禅道账号" rules={[{ required: true, whitespace: true }]}><Input autoComplete="off" /></Form.Item>
-          <Form.Item name="password" label="密码" rules={[{ required: true, whitespace: true }]}><Input.Password autoComplete="new-password" /></Form.Item>
-        </>}
       </Form>
     </Modal>
   </>

@@ -90,8 +90,16 @@
       "properties": {
         "locatorType": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "\\S"
+          "enum": [
+            "css",
+            "xpath",
+            "role",
+            "text",
+            "placeholder",
+            "label",
+            "test_id",
+            "testid"
+          ]
         },
         "locatorValue": {
           "type": "string",

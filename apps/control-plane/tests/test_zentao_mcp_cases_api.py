@@ -282,11 +282,7 @@ def test_unknown_state_survives_new_request_and_has_authorized_status_endpoint(a
     )
     assert repeated.json()["data"]["importedCaseCount"] == 0
     assert len(state["writes"]) == writes
-    status_url = "/v1/function-case-push-operations/" + uncertain["operationId"]
-    status = api.get(status_url, headers=s["owner"])
-    assert status.status_code == 200 and status.json()["data"]["status"] == "uncertain"
-    _, outsider = account(api, "receipt-outsider")
-    assert api.get(status_url, headers=outsider).status_code == 403
+    assert repeated.json()["data"]["items"][0]["status"] == "uncertain"
 
 
 def test_retry_does_not_include_cases_added_after_original_batch(api, push):
@@ -327,35 +323,3 @@ def test_request_identity_cannot_be_reused_for_a_disjoint_case_selection(api, pu
     )
     assert second.status_code == 409, second.text
     assert len(state["writes"]) == 1
-
-
-def test_bulk_preview_and_push_share_one_remote_catalog_per_request(api, push):
-    s, state, url = push
-    first_suite = url.split("/")[3]
-    second_suite = make_suite(api, s["owner"], s["req"], name="第二测试集")
-    make_case(
-        api,
-        s["owner"],
-        second_suite,
-        title="第二测试集的新用例",
-        content={"preconditions": [], "steps": [{"action": "第二步骤", "expected": "第二预期"}]},
-    )
-    body = {
-        "productId": 9,
-        "suiteIds": [first_suite, second_suite],
-        "choices": state["choices"],
-        "requestId": "bulk-manifest",
-    }
-    root = f"/v1/requirements/{s['req']}/zentao/testcases"
-    preview = api.post(root + "/preview", headers=s["owner"], json=body)
-    assert preview.status_code == 200, preview.text
-    assert len(preview.json()["data"]["items"]) == 4
-    assert preview.json()["data"]["canConfirmNotApplied"]
-    assert state["reads"].count("get_executions_executionID_testcases") == 1
-    assert not state["writes"]
-    state["reads"].clear()
-    result = api.post(root + "/import", headers=s["owner"], json=body)
-    assert result.status_code == 200, result.text
-    assert result.json()["data"]["importedCaseCount"] == 4, result.text
-    assert state["reads"].count("get_executions_executionID_testcases") == 1
-    assert len(state["writes"]) == 4

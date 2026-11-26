@@ -21,12 +21,16 @@ from testing_agent.core.errors import (
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.binding_support import LocalBindingAccess, commit_binding, dump_binding
-from testing_agent.services.integration_connection import IntegrationConnectionService, item_value
+from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
 from testing_agent.services.zentao_mcp import ZentaoMcpAccess
 from testing_agent.services.zentao_mcp_selection import binding_service_id, inherited_mcp_service_id
-from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
+from testing_agent.services.zentao_resource import (
+    item_value,
+    parse_zentao_remote_id,
+    truncate_error,
+)
 
 ZENTAO_REMOTE_TYPE_DEFAULTS = {"project": "project", "sprint": "execution", "requirement": "story"}
 

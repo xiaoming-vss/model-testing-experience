@@ -70,7 +70,7 @@ def adopt_material(
     """Create and adopt material through the candidate workflow for API tests."""
     from uuid import uuid4
 
-    from support.project_api import seed_requirement_source
+    from support.project_api import seed_llm_connection, seed_requirement_source
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.models.requirement import Requirement
     from testing_agent.models.sprint import Sprint
@@ -93,24 +93,22 @@ def adopt_material(
 
     project = asyncio.run(find_project())
     seed_requirement_source(client, requirement_id)
-    connection = client.post(
-        f"/v1/projects/{project}/integrations/llm/connections",
-        headers=headers,
-        json={
-            "name": f"material-{uuid4()}",
-            "baseUrl": "https://llm.example",
-            "apiKey": "test",
-            "modelId": "test",
-        },
+    connection_id = seed_llm_connection(
+        client,
+        headers,
+        project_id=project,
+        name=f"material-{uuid4()}",
+        base_url="https://llm.example",
+        api_key="test",
+        model_id="test",
     )
-    assert connection.status_code == 200, connection.text
     base = (
         f"/v1/requirements/{requirement_id}/generation/requirement_analysis/stages/extracting_text"
     )
     launched = client.post(
         base + "/candidate-run",
         headers=headers,
-        json={"connectionId": connection.json()["data"]["connectionId"]},
+        json={"connectionId": connection_id},
     )
     assert launched.status_code == 200, launched.text
     run = launched.json()["data"]

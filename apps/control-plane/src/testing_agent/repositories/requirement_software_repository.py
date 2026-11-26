@@ -95,33 +95,6 @@ class RequirementSoftwareRepositoryRepository(BaseRepository):
             for association, repository in rows
         ]
 
-    async def list_for_sprint_with_repository(
-        self, sprint_id: str
-    ) -> list[RequirementRepositoryBinding]:
-        rows = (
-            await self.session.execute(
-                select(RequirementSoftwareRepository, SoftwareRepository)
-                .join(
-                    Requirement,
-                    Requirement.requirement_id == RequirementSoftwareRepository.requirement_id,
-                )
-                .join(
-                    SoftwareRepository,
-                    SoftwareRepository.software_repository_id
-                    == RequirementSoftwareRepository.software_repository_id,
-                )
-                .where(Requirement.sprint_id == sprint_id)
-                .order_by(
-                    RequirementSoftwareRepository.created_at.asc(),
-                    RequirementSoftwareRepository.id.asc(),
-                )
-            )
-        ).all()
-        return [
-            RequirementRepositoryBinding(association=association, software_repository=repository)
-            for association, repository in rows
-        ]
-
     async def list_code_summaries(self, requirement_ids: Sequence[str]) -> list[dict[str, Any]]:
         if not requirement_ids:
             return []

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { request } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
+import { isRunStoppable, normalizeRunStatus } from './status'
 
 type RunKind = 'api-case' | 'api-collection' | 'ui-case' | 'ui-suite'
 
@@ -22,7 +23,7 @@ export function StopRunButton({ kind, runId, status }: { kind: RunKind; runId?: 
     },
     onError: (error) => { message.error(getErrorMessage(error)) },
   })
-  if (!runId || !status || !['pending', 'queued', 'claimed', 'running', 'stopping'].includes(status)) return null
+  if (!runId || !status || (!isRunStoppable(status) && normalizeRunStatus(status) !== 'stopping')) return null
   return (
     <Button size="small" danger loading={stop.isPending} disabled={status === 'stopping'} onClick={() => stop.mutate()}>
       {status === 'stopping' ? '正在停止' : '停止'}

@@ -170,29 +170,3 @@ def proxy_client(repository, resource_client, cipher=None):
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     app.dependency_overrides[get_integration_connection_service] = lambda: service
     return TestClient(app)
-
-
-COMPARE_RESPONSE = {
-    "commit": {"id": "abc123"},
-    "commits": [{"id": "c1"}, {"id": "c2"}, {"id": "c3"}],
-    "diffs": [
-        {
-            "old_path": "src/auth.py",
-            "new_path": "src/auth.py",
-            "diff": (
-                "@@ -1,3 +1,4 @@\n"
-                " import os\n"
-                "+import jwt\n"
-                "-old_token = os.getenv('TOKEN')\n"
-                "+token = os.getenv('TOKEN')\n"
-                "+    \n"
-            ),
-        },
-        {
-            "old_path": "README.md",
-            "new_path": "README.md",
-            "diff": "@@ -1,1 +1,1 @@\n-old\n+new\n",
-        },
-        {"old_path": "renamed.py", "new_path": "moved.py", "diff": ""},
-    ],
-}

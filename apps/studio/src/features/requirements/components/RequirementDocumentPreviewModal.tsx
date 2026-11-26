@@ -19,6 +19,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store'
 import type { Requirement } from '@/features/requirements/types'
 import {
   getRequirementDocumentDisplayName,
+  isWordRequirementDocument as isWordDocument,
   resolveRequirementDocumentPreviewUrl,
   resolveRequirementDocumentUrl,
 } from '@/features/requirements/utils/requirementDocument'
@@ -26,10 +27,6 @@ import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import detailStyles from '../styles/requirement-detail.module.css'
-
-function isWordDocument(documentType?: Requirement['documentType']) {
-  return documentType === 'word' || documentType === 'docx'
-}
 
 async function fetchBlobWithAuth(url: string, token?: string | null) {
   const authorize = () => fetch(url, {

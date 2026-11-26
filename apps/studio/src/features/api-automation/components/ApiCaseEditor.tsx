@@ -112,11 +112,11 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
 
   /* `useWatch` 对没挂载的 Form.Item 返回 undefined：请求体与设置两个页签只有被打开时才挂载，
      所以首屏的请求体类型 / 超时 / 启用状态要回落到已加载的用例记录上。 */
-  const bodyType = watchedBodyType ?? editingCase?.bodyType ?? editingCase?.body_type ?? 'none'
-  const caseTimeoutMs = watchedTimeoutMs ?? editingCase?.timeoutMs ?? editingCase?.timeout_ms
+  const bodyType = watchedBodyType ?? editingCase?.bodyType ?? 'none'
+  const caseTimeoutMs = watchedTimeoutMs ?? editingCase?.timeoutMs
   const caseEnabled = watchedEnabled ?? editingCase?.enabled ?? true
   const caseName = watchedName ?? editingCase?.name ?? ''
-  const caseUpdatedAt = editingCase?.updatedAt ?? editingCase?.updated_at
+  const caseUpdatedAt = editingCase?.updatedAt
   const stateLabel = saving ? '保存中…' : isCreatingCase ? (dirty ? '有未保存的修改' : '新建用例') : dirty ? '有未保存的修改' : '已保存'
   const stateDot = saving
     ? 'bg-[var(--srf-accent)]'

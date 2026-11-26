@@ -153,23 +153,6 @@ class WorkerTaskRepository(BaseRepository):
             )
         )
 
-    async def list_project_skills(self, project_id: str) -> list[ProjectSkillSpace]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ProjectSkillSpace)
-                    .where(
-                        (ProjectSkillSpace.project_id == project_id)
-                        | ProjectSkillSpace.is_default.is_(True),
-                    )
-                    .order_by(
-                        ProjectSkillSpace.is_default.desc(),
-                        ProjectSkillSpace.created_at.desc(),
-                    )
-                )
-            ).all()
-        )
-
     async def get_requirement(self, requirement_id: str) -> Requirement | None:
         return await self.session.scalar(
             select(Requirement).where(

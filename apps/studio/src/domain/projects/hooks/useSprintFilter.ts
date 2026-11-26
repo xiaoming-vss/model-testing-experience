@@ -10,11 +10,9 @@ export const ALL_SPRINTS_VALUE = 'all'
 
 export type SprintSource = {
   sprintId?: string
-  sprint_id?: string
   name: string
   status?: Sprint['status']
   createdAt?: string
-  created_at?: string
 }
 
 type SprintFilterController = {
@@ -36,7 +34,7 @@ type UseSprintFilterOptions<S extends SprintSource> = {
 }
 
 function sprintIdOf(sprint: SprintSource) {
-  return sprint.sprintId ?? sprint.sprint_id ?? ''
+  return sprint.sprintId ?? ''
 }
 
 function byCreatedAtDesc(left: SprintSource, right: SprintSource) {

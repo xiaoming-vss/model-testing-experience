@@ -335,12 +335,12 @@ it('names basis stages from the server overview, including stages added after th
   expect(await screen.findByText(/历史需求关联 history- · 接口用例设计 design-/)).toBeInTheDocument()
 })
 
-it('checks adoption and explains a branch conflict without adopting', async () => {
+it('checks adoption and explains a concurrent change without adopting', async () => {
   setup()
-  vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: false, lineageHash: 'lineage', blockingSources: [{ chainKind: 'requirement_analysis', stage: 'extracting_text', reason: 'source_conflict' }] })
+  vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: false, lineageHash: 'lineage', blockingSources: [{ chainKind: 'requirement_analysis', stage: 'extracting_text', reason: 'concurrent_change' }] })
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '采用' }))
-  expect(await screen.findByText('材料整理：当前上游来自不同分支，请用试生成选择来源一致的候选')).toBeInTheDocument()
+  expect(await screen.findByText('材料整理：内容或来源已变化，请刷新后重试')).toBeInTheDocument()
   expect(generationCandidatesApi.adopt).not.toHaveBeenCalled()
 })
 

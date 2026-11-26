@@ -21,7 +21,7 @@ export function ProfilePage() {
   const [profileForm] = Form.useForm()
   const [passwordForm] = Form.useForm()
   const isLdap = user?.authSource === 'ldap'
-  const isSuperAdmin = Boolean(user?.isSuperAdmin ?? user?.is_super_admin)
+  const isSuperAdmin = Boolean(user?.isSuperAdmin)
 
   useEffect(() => {
     if (user) profileForm.setFieldsValue(user)

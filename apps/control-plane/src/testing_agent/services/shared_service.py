@@ -107,7 +107,7 @@ class SharedServiceService:
             base_url = self.normalize_mcp_endpoint(body.base_url)
         allow_http = bool(body.allow_http)
         insecure_skip_verify = bool(body.insecure_skip_verify)
-        if provider in {"zentao", "gitlab"}:
+        if provider == "gitlab":
             try:
                 require_secure_scheme(base_url, allow_http=allow_http)
             except ValueError as exc:
@@ -214,7 +214,7 @@ class SharedServiceService:
         resource.base_url = endpoint
         # Instance identity is read from MCP, including for legacy catalog rows.
         resource.name = name.strip()
-        if provider in {"zentao", "gitlab"}:
+        if provider == "gitlab":
             resource.allow_http = (
                 bool(getattr(resource, "allow_http", False))
                 if allow_http is None
@@ -239,7 +239,7 @@ class SharedServiceService:
         )
         for connection in connections:
             extra = {**(connection.extra_json or {}), "serviceName": resource.name}
-            if provider in {"zentao", "gitlab"}:
+            if provider == "gitlab":
                 extra["allowHttp"] = resource.allow_http
                 extra["insecureSkipVerify"] = resource.insecure_skip_verify
             connection.extra_json = extra
@@ -263,7 +263,6 @@ class SharedServiceService:
             "mcp": {"token"},
             "llm": {"apiKey"},
             "gitlab": {"accessToken"},
-            "zentao": {"account", "password"},
         }[provider]
         if set(credentials) != required or any(
             not str(value).strip() for value in credentials.values()
@@ -271,7 +270,7 @@ class SharedServiceService:
             raise ErrBadRequest()
         endpoint = resource.base_url
         security = {}
-        if provider in {"zentao", "gitlab"}:
+        if provider == "gitlab":
             security = {
                 "allowHttp": bool(getattr(resource, "allow_http", False)),
                 "insecureSkipVerify": bool(getattr(resource, "insecure_skip_verify", False)),
@@ -349,42 +348,6 @@ class SharedServiceService:
             if not await needs_instance_reset(self.session, resource, info):
                 resource.zentao_instance_url = info["instanceUrl"]
         await self.session.commit()
-        return await self.dump(resource, user_id)
-
-    async def reset_instance(self, user_id, project_id, provider, service_id, expected_instance):
-        if provider != "mcp":
-            raise ErrNotFound()
-        expected_instance = normalize_instance_url(expected_instance)
-        resource = await self.get_resource(user_id, project_id, provider, service_id, "manage")
-        own = await self.own_connection(resource, user_id)
-        if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
-            raise AppError(400, "请先保存本人的 MCP Token，以核对新禅道目标", 400)
-        endpoint = resource.base_url
-        token = self.connections.credentials.mcp_token(
-            own, user_id=user_id, project_id=resource.project_id
-        )
-        await self.session.commit()
-        info = await discover_instance(endpoint, token)
-        if instance_key(info["instanceUrl"]) != instance_key(expected_instance):
-            raise AppError(409, "MCP 禅道目标已再次变化，请刷新后重新确认", 409)
-        resource = await self.get_resource(user_id, project_id, provider, service_id, "manage")
-        own = await self.own_connection(resource, user_id)
-        if (
-            resource.base_url != endpoint
-            or own is None
-            or own.status != "active"
-            or not (own.secret_json or {}).get("token")
-            or self.connections.credentials.mcp_token(
-                own, user_id=user_id, project_id=resource.project_id
-            )
-            != token
-        ):
-            raise AppError(409, "服务地址或本人授权已变更，请刷新后重新确认", 409)
-        if not await needs_instance_reset(self.session, resource, info):
-            raise AppError(409, "禅道目标未变更，无需清除绑定", 409)
-        revoked = await self.accept_mcp_instance(resource, own, user_id, info)
-        await self.session.commit()
-        await notify_revoked_executions(revoked)
         return await self.dump(resource, user_id)
 
     async def accept_mcp_instance(self, resource, own, user_id, info):

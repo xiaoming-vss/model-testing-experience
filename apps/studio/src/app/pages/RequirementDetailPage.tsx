@@ -8,6 +8,7 @@ import { RequirementDrawer, type RequirementFormValues } from '@/features/requir
 import { RequirementDesignWorkspace } from '@/features/ai-testing/components/RequirementDesignWorkspace'
 import type { RequirementReadingNode } from '@/features/ai-testing/components/RequirementGenerationPanorama'
 import { requirementsApi } from '@/features/requirements/api/requirements.api'
+import { normalizeRequirementDocumentType } from '@/features/requirements/utils/requirementDocument'
 import { projectsApi } from '@/domain/projects/api/projects.api'
 import { useProjectAccess } from '@/domain/projects/hooks/useProjectAccess'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
@@ -50,7 +51,7 @@ export function RequirementDetailPage() {
   const query = useQuery({ queryKey: ['requirement', requirementId],
     queryFn: () => requirementsApi.getRequirement(requirementId), enabled: Boolean(requirementId) })
   const requirement = query.data
-  const sprintId = requirement?.sprintId ?? requirement?.sprint_id ?? ''
+  const sprintId = requirement?.sprintId ?? ''
   const sprint = useQuery({ queryKey: ['sprint', sprintId], queryFn: () => projectsApi.getSprint(sprintId), enabled: Boolean(sprintId) })
   const access = useProjectAccess(sprint.data?.projectId ?? '')
   const canRead = access.can('read')
@@ -114,7 +115,7 @@ export function RequirementDetailPage() {
               setDocumentError(undefined)
               setDocumentLoading(requirement.documentType === 'richtext')
               form.setFieldsValue({ name: requirement.name,
-                documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
+                documentType: normalizeRequirementDocumentType(requirement.documentType) ?? 'richtext',
                 documentContent: '', documentFilename: requirement.documentFilename,
                 documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
                 file: undefined }); setEditing(true)

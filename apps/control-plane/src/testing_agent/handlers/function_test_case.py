@@ -19,7 +19,6 @@ from testing_agent.schemas.function_test_case import (
     FunctionCasesBatchDeleteRequest,
     FunctionCaseUpdateRequest,
     ImportFunctionCasesToZentaoRequest,
-    ImportFunctionSuitesToZentaoRequest,
 )
 from testing_agent.services.function_case_export import FunctionCaseExporter
 from testing_agent.services.function_case_import import FunctionCaseImporter
@@ -52,17 +51,6 @@ async def import_function_cases_to_zentao(
     service: FunctionCaseExporter = Depends(get_function_case_exporter),
 ):
     return success_payload(await service.import_to_zentao(user_id, suite_id, payload))
-
-
-async def import_function_suites_to_zentao(
-    requirement_id: str,
-    payload: ImportFunctionSuitesToZentaoRequest = Body(),
-    user_id: str = Depends(get_current_user_id),
-    service: FunctionCaseExporter = Depends(get_function_case_exporter),
-):
-    return success_payload(
-        await service.import_requirement_to_zentao(user_id, requirement_id, payload)
-    )
 
 
 async def list_function_cases(
@@ -163,23 +151,6 @@ async def preview_function_case_push(
     service: FunctionCaseExporter = Depends(get_function_case_exporter),
 ):
     return success_payload(await service.preview_suite(user_id, suite_id, body))
-
-
-async def preview_function_suite_push(
-    requirement_id: str,
-    body: ImportFunctionSuitesToZentaoRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: FunctionCaseExporter = Depends(get_function_case_exporter),
-):
-    return success_payload(await service.preview_requirement(user_id, requirement_id, body))
-
-
-async def function_case_push_status(
-    operation_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: FunctionCaseExporter = Depends(get_function_case_exporter),
-):
-    return success_payload(await service.operation_status(user_id, operation_id))
 
 
 async def reconcile_function_case_push(

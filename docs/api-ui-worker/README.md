@@ -77,7 +77,7 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 
-- 统一领取：`/internal/api-worker/tasks/claim-next` 按 API/UI 队列优先级返回下一个任务；控制面不支持时回退到下面的分域领取接口
+- 统一领取：`/internal/api-worker/tasks/claim-next` 按 API/UI 队列优先级返回下一个任务；控制面不支持时回退到下面的分域领取接口（滚动升级垫片，移除条件见[实时执行](../control-plane/realtime-test-execution.md)）
 - UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`，文件授权与完成为 `/{task_id}/files/uploads`、`/{task_id}/files/{file_id}/complete`；控制面校验 Worker、租约、执行人和项目归属
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 

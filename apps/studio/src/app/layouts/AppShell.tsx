@@ -51,8 +51,8 @@ export function AppShell() {
   const logout = useLogout()
   const { token, userQuery } = useCurrentUser()
   const currentUser = userQuery.data
-  const mustChangePassword = Boolean(currentUser?.mustChangePassword ?? currentUser?.must_change_password)
-  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin ?? currentUser?.is_super_admin)
+  const mustChangePassword = Boolean(currentUser?.mustChangePassword)
+  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin)
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const access = useProjectAccess(activeProjectId)
   const bugOnly = isBugOnlyProject(access.project)

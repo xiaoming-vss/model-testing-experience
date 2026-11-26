@@ -1,13 +1,9 @@
 import { Modal } from 'antd'
+import { isRunWorkerActive } from '@/domain/runs/status'
 
-/**
- * 运行仍在推进时 worker 可能写回结果，后端拒绝删除；这里的集合必须与其保持一致。
- * 与 runPipeline 的「进行中」不同：待审核的运行已经不占 worker，可以删除。
- */
-const undeletableRunStatuses = ['pending', 'queued', 'claimed', 'running']
-
+/** 后端只拒绝 worker 仍可能写回结果的运行；待审核已经不占 worker，可以删除。 */
 export function isRunDeletable(status?: string) {
-  return !undeletableRunStatuses.includes((status ?? '').toLowerCase())
+  return !isRunWorkerActive(status)
 }
 
 /** 运行记录是硬删除：审核与导入痕迹一并消失，导入产生的正式资产保留。 */

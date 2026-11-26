@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：control-plane maintainers
-- 最近复核：2026-11-20
+- 最近复核：2026-11-27
 - 复核周期：每季度
 - 适用范围：`docs/control-plane/adr/`
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行。
@@ -42,3 +42,6 @@
 - [0029 历史用例核验阶段](adr/0029-historical-test-case-verification-stage.md)
 - [0030 历史用例核验以测试点表达补测建议](adr/0030-historical-supplemental-test-points.md)
 - [0031 删除候选是物理删除](adr/0031-candidate-removal-is-physical-delete.md)
+- [0032 重放只对原身份幂等](adr/0032-replays-are-idempotent-for-the-original-identity.md)
+- [0033 退役独立多阶段执行](adr/0033-retire-independent-multistage-execution.md)
+- [0034 退役旧连接管理路由与禅道 REST 通道](adr/0034-retire-legacy-connection-routes-and-zentao-rest-channel.md)

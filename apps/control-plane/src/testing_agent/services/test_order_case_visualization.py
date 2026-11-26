@@ -49,59 +49,6 @@ class TestOrderCaseVisualizationService:
         await self.orders.get_accessible_entity(actor, order_id, action="read")
         return await self._view(order_id, entry_id, content=True)
 
-    async def lookup(self, actor: str, order_id: str, entry_ids: list[str]) -> dict[str, Any]:
-        await self.orders.get_accessible_entity(actor, order_id, action="read")
-        entries = await self.repository.entries(order_id, entry_ids)
-        bindings = {
-            x.entry_id: x for x in await self.repository.bindings([e.entry_id for e in entries])
-        }
-        rows = await self.repository.summary_attempts(
-            [x.task_id for x in bindings.values()],
-            [x.effective_attempt_id for x in bindings.values() if x.effective_attempt_id],
-        )
-        attempts = {attempt.id: attempt for _, attempt in rows}
-        latest: dict[str, AiGenerationAttempt] = {}
-        for task_id, attempt in rows:
-            if task_id not in latest or attempt.attempt_no > latest[task_id].attempt_no:
-                latest[task_id] = attempt
-        items = []
-        for entry in entries:
-            binding = bindings.get(entry.entry_id)
-            result: dict[str, Any] = {
-                "executionEntryId": entry.entry_id,
-                "snapshotHash": None,
-                "effectiveArtifact": None,
-                "latestRun": None,
-            }
-            try:
-                frozen = freeze_input(entry.entry_id, entry.snapshot_json)
-                result["snapshotHash"] = frozen["snapshotHash"]
-            except ValueError as exc:
-                result["unavailableReason"] = str(exc)
-                items.append(result)
-                continue
-            if binding:
-                result["latestRun"] = run_summary(latest.get(binding.task_id))
-                effective = attempts.get(binding.effective_attempt_id or "")
-                context = (effective.output_context_json or {}) if effective else {}
-                if (
-                    effective
-                    and effective.status == "success"
-                    and effective.invalidated_at is None
-                    and binding.effective_snapshot_hash == frozen["snapshotHash"]
-                    and context.get("schemaVersion") == "1.0"
-                    and context.get("artifactStatus") in {"ready", "partial"}
-                ):
-                    result["effectiveArtifact"] = {
-                        "artifactId": effective.id,
-                        "runId": effective.execution_id,
-                        "schemaVersion": "1.0",
-                        "status": context["artifactStatus"],
-                        "content": None,
-                    }
-            items.append(result)
-        return {"items": items, "total": len(items)}
-
     async def _view(self, order_id: str, entry_id: str, *, content: bool) -> dict[str, Any]:
         entry = await self.repository.entry(order_id, entry_id)
         if entry is None:

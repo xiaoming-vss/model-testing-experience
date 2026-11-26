@@ -6,8 +6,6 @@ from testing_agent.handlers.perf_case import (
     batch_invalidate_perf_cases,
     create_perf_case,
     delete_perf_case,
-    get_perf_case,
-    list_perf_cases,
     update_perf_case,
 )
 from testing_agent.handlers.perf_run import (
@@ -21,7 +19,6 @@ from testing_agent.handlers.perf_suite import (
     delete_perf_suite,
     get_perf_suite,
     list_perf_suites,
-    reorder_perf_suite_cases,
     update_perf_suite,
 )
 from testing_agent.handlers.perf_suite_run import (
@@ -32,7 +29,7 @@ from testing_agent.handlers.perf_suite_run import (
 )
 from testing_agent.schemas.case_lifecycle import CaseInvalidationResponse
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse, StatusData
-from testing_agent.schemas.perf_case import PerfCaseResponse, PerfCaseSummaryResponse
+from testing_agent.schemas.perf_case import PerfCaseResponse
 from testing_agent.schemas.perf_run import PerfRunResponse, PerfRunSummaryResponse
 from testing_agent.schemas.perf_suite import PerfSuiteResponse, PerfSuiteSummaryResponse
 from testing_agent.schemas.perf_suite_run import (
@@ -46,18 +43,10 @@ router.post(
     "/projects/{project_id}/perf-cases",
     response_model=ApiResponse[PerfCaseResponse],
 )(create_perf_case)
-router.get(
-    "/projects/{project_id}/perf-cases",
-    response_model=ApiResponse[ListResponse[PerfCaseSummaryResponse]],
-)(list_perf_cases)
 router.post(
     "/projects/{project_id}/perf-cases/batch-invalidation",
     response_model=ApiResponse[CaseInvalidationResponse],
 )(batch_invalidate_perf_cases)
-router.get(
-    "/perf-cases/{case_id}",
-    response_model=ApiResponse[PerfCaseResponse],
-)(get_perf_case)
 router.patch(
     "/perf-cases/{case_id}",
     response_model=ApiResponse[PerfCaseResponse],
@@ -99,10 +88,6 @@ router.patch(
     "/perf-suites/{suite_id}",
     response_model=ApiResponse[PerfSuiteResponse],
 )(update_perf_suite)
-router.put(
-    "/perf-suites/{suite_id}/case-order",
-    response_model=ApiResponse[PerfSuiteResponse],
-)(reorder_perf_suite_cases)
 router.delete(
     "/perf-suites/{suite_id}",
     response_model=ApiResponse[EmptyData],

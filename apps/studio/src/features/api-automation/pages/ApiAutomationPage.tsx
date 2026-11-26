@@ -94,13 +94,13 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         const collections = await api.getApiCollections(selectedRequirementId)
         return collections.map((collection) => ({
           ...collection,
-          requirementId: collection.requirementId ?? collection.requirement_id ?? selectedRequirementId,
+          requirementId: collection.requirementId ?? selectedRequirementId,
         }))
       }
       const response = await api.getProjectApiCollections(activeProjectId!)
       return listItems(response).map((collection) => ({
         ...collection,
-        requirementId: collection.requirementId ?? collection.requirement_id,
+        requirementId: collection.requirementId,
       }))
     },
   })
@@ -131,7 +131,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
   const saveCollectionMutation = useMutation({
     mutationFn: (values: CollectionFormValues) => {
-      const editingCollectionId = editingCollection?.collectionId ?? editingCollection?.collection_id
+      const editingCollectionId = editingCollection?.collectionId
 
       if (editingCollectionId && editingCollection) {
         return api.updateApiCollection(editingCollectionId, buildApiCollectionUpdatePayload(editingCollection, values))
@@ -149,7 +149,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       })
     },
     onSuccess: (_result, values) => {
-      const previousRequirementId = editingCollection?.requirementId ?? editingCollection?.requirement_id
+      const previousRequirementId = editingCollection?.requirementId
       for (const requirementId of new Set([previousRequirementId, values.requirementId])) {
         if (requirementId) void queryClient.invalidateQueries({ queryKey: ['generationChain', requirementId, 'api', 'importOptions'] })
       }
@@ -223,7 +223,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }
 
   function openEditDrawer(collection: ApiCollection) {
-    const requirementId = collection.requirementId ?? collection.requirement_id ?? undefined
+    const requirementId = collection.requirementId ?? undefined
 
     setEditingCollection(collection)
     drawerForm.setFieldsValue({
@@ -254,8 +254,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }
 
   function getCollectionRowContext(collection: ApiCollection) {
-    const collectionId = collection.collectionId ?? collection.collection_id ?? ''
-    const requirementId = collection.requirementId ?? collection.requirement_id
+    const collectionId = collection.collectionId ?? ''
+    const requirementId = collection.requirementId
     const requirementName =
       scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '项目级')
     const collectionDescription = collection.description || '暂无API测试集描述'

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from testing_agent.core.enums import PERF_RUN_TERMINAL_STATUSES, PerfRunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
@@ -17,6 +17,7 @@ from testing_agent.repositories.perf_suite import PerfSuiteRepository
 from testing_agent.repositories.perf_suite_run import PerfSuiteRunRepository
 from testing_agent.schemas.perf_run import PerfRunCreate
 from testing_agent.schemas.perf_suite_run import (
+    PerfSuiteItemStatus,
     PerfSuiteRunCreate,
     PerfSuiteRunItemResponse,
     PerfSuiteRunResponse,
@@ -115,7 +116,7 @@ class PerfSuiteRunService:
             monitoring_connection_name=run.monitoring_connection_name,
             trigger_user_id=run.trigger_user_id,
             trigger_type=run.trigger_type,
-            status=run.status,
+            status=cast(PerfRunStatus, run.status),
             outcome=run.outcome,
             total_count=run.total_count,
             completed_count=run.completed_count,
@@ -163,7 +164,7 @@ class PerfSuiteRunService:
             case_id=item.case_id,
             case_name=item.case_name,
             order_no=item.order_no,
-            status=status,
+            status=cast(PerfSuiteItemStatus, status),
             outcome=outcome,
             child_run_id=item.child_run_id,
             error_message=error_message,

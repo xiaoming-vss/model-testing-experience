@@ -465,7 +465,6 @@ it('搜索框支持 Ctrl / ⌘ + K 聚焦', async () => {
 it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果重试', async () => {
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
   vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
-  const oldConnections = vi.spyOn(api, 'getZentaoConnections')
   vi.spyOn(functionTestingApi, 'previewFunctionCasePush').mockResolvedValue({ items: [{ caseId: 'case-1', title: '待推送用例', candidates: [], mappedRemoteCaseId: null, operation: null }] })
   const push = vi.spyOn(functionTestingApi, 'importFunctionTestCasesToZentao').mockResolvedValue({
     status: 'partial_failure', importedCaseCount: 1,
@@ -483,7 +482,6 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   expect(await screen.findByText('推送未全部完成')).toBeInTheDocument()
   expect(screen.getByText(/请先在禅道核对/)).toBeInTheDocument()
   expect(button('用原请求查询／重试')).toBeDisabled()
-  expect(oldConnections).not.toHaveBeenCalled()
   client.clear()
 })
 

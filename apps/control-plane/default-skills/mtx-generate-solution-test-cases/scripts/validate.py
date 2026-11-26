@@ -29,7 +29,7 @@ def validate(data, schema):
     titles = set()
     for index, case in enumerate(data['cases'], 1):
         label = f'用例 {index}'
-        identity = (case['case_module'].strip(), case['case_title'].strip())
+        identity = (case['case_module'].strip().casefold(), case['case_title'].strip().casefold())
         if identity in titles:
             errors.append(f'{label}: 同模块标题重复')
         titles.add(identity)

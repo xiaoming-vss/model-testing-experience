@@ -36,14 +36,15 @@ def test_adoption_block_reasons_are_distinct_and_consistent() -> None:
     cases = json.loads(FIXTURE.read_text())
     check = AdoptionCheck.model_validate(cases["blockedAdoption"])
     assert not check.can_adopt
-    assert check.blocking_sources[0].reason == "source_stale"
-    for reason in ("source_unknown", "source_conflict", "concurrent_change"):
-        block = AdoptionBlock(chain_kind="function", stage="case_names", reason=reason)
-        assert block.reason == reason
+    assert check.blocking_sources[0].stage == "case_names"
+    assert check.blocking_sources[0].reason == "concurrent_change"
+    block = AdoptionBlock(chain_kind="function", stage="case_names", reason="concurrent_change")
+    assert block.reason == "concurrent_change"
     with pytest.raises(ValidationError):
         AdoptionCheck(can_adopt=True, lineage_hash="h", blocking_sources=check.blocking_sources)
-    with pytest.raises(ValidationError):
-        AdoptionBlock(chain_kind="function", stage="case_names", reason="pending_upstream")
+    for reason in ("pending_upstream", "source_conflict", "source_stale", "source_unknown"):
+        with pytest.raises(ValidationError):
+            AdoptionBlock(chain_kind="function", stage="case_names", reason=reason)
 
 
 def test_frozen_trial_contract_matches_worker_fixture() -> None:

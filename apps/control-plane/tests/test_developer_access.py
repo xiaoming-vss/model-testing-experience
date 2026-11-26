@@ -2,7 +2,13 @@
 
 from support.bug_api import activities_of, create_bug, transition
 from support.function_case_library import make_requirement, make_sprint
-from support.project_api import account, project, requirement, seed_requirement_source
+from support.project_api import (
+    account,
+    project,
+    requirement,
+    seed_llm_connection,
+    seed_requirement_source,
+)
 from support.project_api import api as api
 
 from testing_agent.api.deps import verify_worker_token
@@ -178,16 +184,14 @@ def test_downgrade_to_developer_revokes_worker_access_even_after_repromotion(api
         ).status_code
         == 200
     )
-    cid = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=member,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example",
-            "apiKey": "private",
-            "modelId": "model",
-        },
-    ).json()["data"]["connectionId"]
+    cid = seed_llm_connection(
+        api,
+        member,
+        project_id=pid,
+        base_url="https://llm.example",
+        api_key="private",
+    )
+
     launched = api.post(
         f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/candidate-run",
         headers=member,

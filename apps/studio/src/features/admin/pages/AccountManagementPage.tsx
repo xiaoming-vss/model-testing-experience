@@ -20,7 +20,7 @@ type Operation = { action: () => Promise<unknown>; success: string }
 export function AccountManagementPage() {
   const { userQuery } = useCurrentUser()
   const currentUser = userQuery.data
-  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin ?? currentUser?.is_super_admin)
+  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin)
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<'' | AdminUser['status']>('')

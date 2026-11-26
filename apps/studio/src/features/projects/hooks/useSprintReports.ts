@@ -5,10 +5,10 @@ import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { saveBlob } from '@/shared/utils/download'
 import { message } from '@/shared/utils/feedback'
 import { api, listItems, type TestReportGenerateRun } from '@/services/api'
+import { normalizeRunStatus } from '@/domain/runs/status'
 import {
   getRunId,
   getRunReportMarkdown,
-  getRunStatusMeta,
   isTestReportRunGenerating,
   type TestReportGenerateFormValues,
 } from '../utils/sprintReport'
@@ -83,7 +83,7 @@ export function useSprintReports({
 
   const reportRuns = listItems(reportRunsQuery.data)
   const latestReportRun = reportRuns[0]
-  const latestSuccessfulReport = reportRuns.find(run => getRunStatusMeta(run.status).value === 'success' && Boolean(getRunId(run)))
+  const latestSuccessfulReport = reportRuns.find(run => normalizeRunStatus(run.status) === 'success' && Boolean(getRunId(run)))
   const isReportGenerating = createReportRunMutation.isPending || isTestReportRunGenerating(latestReportRun)
   const canViewLatestReport = Boolean(latestSuccessfulReport)
 
@@ -126,7 +126,7 @@ export function useSprintReports({
   }
 
   function handleDownloadReportPdf(run: TestReportGenerateRun) {
-    if (getRunStatusMeta(run.status).value !== 'success' || !getRunReportMarkdown(run)) {
+    if (normalizeRunStatus(run.status) !== 'success' || !getRunReportMarkdown(run)) {
       message.warning('报告未生成完成，暂不能导出 PDF')
       return
     }

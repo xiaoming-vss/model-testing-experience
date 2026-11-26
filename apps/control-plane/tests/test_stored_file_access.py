@@ -151,17 +151,16 @@ async def linked_file(files, kind, *, suite_run=False):
         ("ui_worker_task", "sprint"),
     ],
 )
-async def test_deleted_business_blocks_metadata_and_new_ticket(files, kind, removed, monkeypatch):
+async def test_deleted_business_blocks_download_and_new_ticket(files, kind, removed, monkeypatch):
     row, entities = await linked_file(files, kind)
     assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
     await files.session.delete(entities[removed])
     await files.session.commit()
     signer = Mock(side_effect=AssertionError("Must reject before signing"))
     monkeypatch.setattr(files.storage, "download_ticket", signer)
-    for operation in (files.metadata, files.download):
-        with pytest.raises(AppError) as rejected:
-            await operation("viewer", row.file_id)
-        assert rejected.value.http_code == 404
+    with pytest.raises(AppError) as rejected:
+        await files.download("viewer", row.file_id)
+    assert rejected.value.http_code == 404
     # Worker-facing ticket creation shares the same business validity check.
     with pytest.raises(AppError) as rejected:
         await files.ticket(row)
@@ -243,9 +242,6 @@ async def test_live_ui_debug_artifact_is_private_but_manual_artifact_is_shared(f
     assert (await files.download("owner", row.file_id))["size"] == row.size
     with pytest.raises(AppError) as rejected:
         await files.download("viewer", row.file_id)
-    assert rejected.value.http_code == 403
-    with pytest.raises(AppError) as rejected:
-        await files.metadata("viewer", row.file_id)
     assert rejected.value.http_code == 403
 
 

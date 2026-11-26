@@ -6,6 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.core.enums import RunStatus
+
 
 class AiGenerateTaskRunRequest(BaseModel):
     stage: str | None = None
@@ -174,11 +176,11 @@ class AiGenerateRunSummary(BaseModel):
     project_id: str = Field()
     trigger_user_id: str = Field()
     trigger_type: str = Field()
-    status: str
+    status: RunStatus
     checkpoint_enabled: bool = Field()
     generation_chain_managed: bool = False
     current_stage: str = Field()
-    stage_status: str = Field()
+    stage_status: RunStatus | Literal["completed", "waiting_review", ""] = Field()
     error_message: str = Field()
     review_status: str = Field()
     import_status: Literal["pending", "imported"] = Field()

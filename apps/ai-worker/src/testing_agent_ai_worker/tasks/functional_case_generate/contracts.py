@@ -282,6 +282,19 @@ class RelationAnalysisOutput(Contract):
                         "主骨相邻用例必须有同方向的 next 边",
                         [previous, current],
                     )
+        for index, path in enumerate(self.main_paths):
+            for other_index, other in enumerate(self.main_paths):
+                if len(path.case_ids) >= len(other.case_ids):
+                    continue
+                if any(
+                    other.case_ids[start : start + len(path.case_ids)] == path.case_ids
+                    for start in range(len(other.case_ids) - len(path.case_ids) + 1)
+                ):
+                    reject(
+                        ("main_paths", index, "case_ids"),
+                        "主骨不能是另一条主骨的连续子路径",
+                        path.case_ids,
+                    )
         return self
 
 

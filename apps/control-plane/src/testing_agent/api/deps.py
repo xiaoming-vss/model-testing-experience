@@ -58,7 +58,6 @@ from testing_agent.api.deps_projects import (
     get_requirement_software_repository_service,
     get_resource_binding_service,
     get_software_repository_service,
-    get_sprint_code_overview_service,
     get_sprint_daily_metrics_service,
     get_sprint_service,
 )
@@ -114,7 +113,6 @@ __all__ = [
     "get_software_repository_service",
     "get_requirement_software_repository_service",
     "get_resource_binding_service",
-    "get_sprint_code_overview_service",
     "get_project_skill_space_service",
     "get_sprint_daily_metrics_service",
     "get_integration_connection_service",

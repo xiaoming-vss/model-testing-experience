@@ -53,7 +53,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
     </div>,
   }
   const personalLlm = usePersonalLlmChoice(projectId, understandingRunOptions)
-  const personalGitlab = usePersonalConnectionChoice('gitlab')
+  const personalGitlab = usePersonalConnectionChoice()
 
   const tasksQuery = useQuery({
     queryKey: ['codeRiskTasks', projectId, requirementId],

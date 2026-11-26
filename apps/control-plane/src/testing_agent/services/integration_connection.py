@@ -21,26 +21,14 @@ from testing_agent.services.integration_connections.common import dump_connectio
 from testing_agent.services.integration_connections.gitlab import GitLabConnectionCommands
 from testing_agent.services.integration_connections.llm import ApiKeyConnectionCommands
 from testing_agent.services.integration_connections.mcp import McpConnectionCommands
-from testing_agent.services.integration_connections.zentao import ZentaoConnectionCommands
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.personal_credentials import PersonalCredentialAccess
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.service_instance import normalize_instance_url
-from testing_agent.services.worker_authorization import (
-    notify_revoked_executions,
-    revoke_executions,
-)
-from testing_agent.services.zentao_auth import ZentaoAuthProvider
-from testing_agent.services.zentao_queries import ZentaoResources
-from testing_agent.services.zentao_queries import item_value as item_value
-from testing_agent.services.zentao_queries import visible_zentao_items as visible_zentao_items
-from testing_agent.services.zentao_queries import zentao_candidate_total as zentao_candidate_total
-from testing_agent.services.zentao_queries import zentao_list_payload as zentao_list_payload
 
 
 class IntegrationConnectionService(
-    ZentaoConnectionCommands,
     GitLabConnectionCommands,
     McpConnectionCommands,
     ApiKeyConnectionCommands,
@@ -48,8 +36,6 @@ class IntegrationConnectionService(
     def __init__(
         self,
         repository: IntegrationConnectionRepository,
-        zentao_resource_client: Any | None = None,
-        zentao_auth_provider: Any | None = None,
         gitlab_auth_provider: Any | None = None,
         gitlab_resource_client: Any | None = None,
         credential_cipher: IntegrationCredentialCipher | None = None,
@@ -58,17 +44,10 @@ class IntegrationConnectionService(
     ) -> None:
         self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
-        self.zentao_resource_client = zentao_resource_client
-        self.zentao_auth_provider = zentao_auth_provider or ZentaoAuthProvider()
         self.gitlab_auth_provider = gitlab_auth_provider or GitLabAuthProvider()
         self.gitlab_resource_client = gitlab_resource_client or GitLabResourceClient()
         self.credential_cipher = credential_cipher
         self.credentials = PersonalCredentialAccess(credential_cipher)
-        self.zentao_resources = ZentaoResources(
-            authorize=self.get_active_personal,
-            ensure_token=self._ensure_zentao_token,
-            client=self.zentao_resource_client,
-        )
         self.gitlab_resources = GitLabResources(
             authorize=self.get_active_personal,
             credentials=self.credentials,
@@ -111,14 +90,6 @@ class IntegrationConnectionService(
         project_id = str(project_id or body.get("projectId") or body.get("project_id") or "")
         await self.ensure_project_access(user_id, project_id)
         connection_id = new_id()
-        if provider == "zentao":
-            return await self._create_zentao(
-                connection_id=connection_id,
-                body=body,
-                user_id=user_id,
-                project_id=project_id,
-                commit=commit,
-            )
         if provider == "mcp":
             return await self._create_mcp(
                 connection_id=connection_id,
@@ -148,12 +119,6 @@ class IntegrationConnectionService(
         await self.ensure_project_access(user_id, project_id)
         rows = await self.repository.list(user_id, provider, project_id)
         return list_payload([dump_connection(row) for row in rows])
-
-    async def get(
-        self, provider: str, connection_id: str, user_id: str, project_id: str = ""
-    ) -> dict:
-        await self.ensure_project_access(user_id, project_id)
-        return dump_connection(await self.get_owned(user_id, provider, connection_id, project_id))
 
     async def update(
         self,
@@ -191,24 +156,7 @@ class IntegrationConnectionService(
             )
         if provider == "mcp":
             return await self._update_mcp(connection, body, commit=commit)
-        if provider == "zentao":
-            return await self._update_zentao(
-                connection, connection_id, body, user_id, project_id, commit=commit
-            )
-        return await self._update_api_key(connection, body, provider, commit=commit)
-
-    async def delete(
-        self, provider: str, connection_id: str, user_id: str, project_id: str = ""
-    ) -> dict:
-        await self.ensure_project_access(user_id, project_id)
-        connection = await self.get_owned(user_id, provider, connection_id, project_id)
-        revoked = await revoke_executions(
-            self.repository.session, actor=user_id, connection_id=connection_id
-        )
-        await self.deletion.delete(self.repository.session, connection)
-        await self.repository.commit()
-        await notify_revoked_executions(revoked)
-        return {}
+        return await self._update_api_key(connection, body, commit=commit)
 
     async def get_active_personal(
         self, user_id: str, provider: str, connection_id: str, project_id: str = ""

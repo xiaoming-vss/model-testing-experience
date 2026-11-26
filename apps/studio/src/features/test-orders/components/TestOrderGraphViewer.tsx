@@ -21,6 +21,7 @@ import {
   isApiCaseGenerateTaskRunInProgress,
 } from '@/features/ai-testing/utils/taskStatus'
 import { api, listItems } from '@/services/api'
+import { getRunPollingInterval } from '@/domain/runs/polling'
 import { TestOrderGraphExecutionPanel } from './TestOrderGraphExecutionPanel'
 import { TestOrderGraphHistoryDrawer } from './TestOrderGraphHistoryDrawer'
 import { getTestOrderEntryStatusMeta } from '../utils/testOrderStatus'
@@ -31,9 +32,6 @@ import { getErrorMessage } from '@/utils/format'
 import caseRelationsStyles from '@/shared/styles/case-relations.module.css'
 
 const { Text } = Typography
-
-// 图谱任务要跑多轮 skill 调用，运行中按固定间隔刷新。
-const GRAPH_POLL_INTERVAL = 5000
 
 /**
  * 图谱只存 case_id，节点名称要来用例本身；派发时回显在 configJson 里的 `graphInput.cases` 就是它。
@@ -87,10 +85,7 @@ export function TestOrderGraphViewer({
     queryFn: () => api.getTestOrderGraph(orderId),
     enabled: Boolean(orderId),
     refetchOnWindowFocus: true,
-    refetchInterval: (query) =>
-      isApiCaseGenerateTaskRunInProgress(query.state.data?.run?.status)
-        ? GRAPH_POLL_INTERVAL
-        : false,
+    refetchInterval: (query) => getRunPollingInterval(query.state.data?.run?.status),
   })
   const selectedRunQuery = useQuery({
     queryKey: ['testOrderGraphRun', selectedRunId],
@@ -198,8 +193,6 @@ export function TestOrderGraphViewer({
         ref={graphRef}
         content={graphContent}
         casesContent={casesContent}
-        orientation="horizontal"
-        presentation="hierarchy"
         onSelectionChange={handleSelectionChange}
         renderCaseDetails={renderExecutionPanel}
         caseBadges={caseBadges}

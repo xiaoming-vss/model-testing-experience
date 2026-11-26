@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getRunPollingInterval } from '@/domain/runs/polling'
+import { isRunInProgress } from '@/domain/runs/status'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
 import type { CandidateRelationsView } from '../api/generationCandidates.contract'
 
@@ -9,11 +10,10 @@ export function relationQueryKey(candidate: CandidateRelationsSource) {
   return ['candidateRelations', candidate.requirementId, candidate.currentToken]
 }
 
-const generatingStatuses = ['pending', 'queued', 'claimed', 'running']
 const failedStatuses = ['failed', 'error', 'canceled']
 
 export function relationGenerating(view?: Pick<CandidateRelationsView, 'status'>) {
-  return generatingStatuses.includes(view?.status ?? '')
+  return isRunInProgress(view?.status)
 }
 
 export function relationFailed(view?: Pick<CandidateRelationsView, 'status'>) {

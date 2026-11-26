@@ -32,6 +32,6 @@
   "blockedAdoption": {
     "canAdopt": false,
     "lineageHash": "sha256:lineage",
-    "blockingSources": [{"chainKind": "function", "stage": "requirement_analysis", "reason": "source_stale"}]
+    "blockingSources": [{"chainKind": "function", "stage": "case_names", "reason": "concurrent_change"}]
   }
 }
