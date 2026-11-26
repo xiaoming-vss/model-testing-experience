@@ -4,6 +4,7 @@ from datetime import datetime
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
@@ -19,7 +20,6 @@ from testing_agent_ai_worker.tasks.requirement_analysis.material_stage import ex
 from testing_agent_ai_worker.tasks.requirement_analysis.review_stage import (
     execute_review_stage,
 )
-from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     RequirementSourceDownloader,
 )

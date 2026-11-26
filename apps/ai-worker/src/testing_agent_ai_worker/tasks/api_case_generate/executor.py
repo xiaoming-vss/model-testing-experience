@@ -12,7 +12,10 @@ from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.platform.revision_attachments import (
+    load_revision_images,
+    revision_image_paths,
+)
 from testing_agent_ai_worker.skill_names import API_EXTRACT_SKILL, API_GENERATE_SKILL
 from testing_agent_ai_worker.tasks.api_case_generate.chain import (
     ChainRunResult,
@@ -205,14 +208,15 @@ class ApiCaseExecutor(TaskExecutor):
                 payload["revisionInstruction"] = revision
             source = json.dumps(payload, ensure_ascii=False)
         media = []
-        attachments = parse_revision_attachments(config) if revision else []
-        if attachments:
-            if self.attachment_downloader is None:
-                raise UserFacingError("未配置继续优化图片下载器")
-            images = self.attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
+        if revision:
+            media = revision_image_paths(
+                load_revision_images(
+                    task_id=task.task_id,
+                    workspace=workspace,
+                    config=config,
+                    downloader=self.attachment_downloader,
+                )
             )
-            media = [image["sourcePath"] for image in images]
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             output = _resolve_runner_result(
                 self.stage_runner(

@@ -32,6 +32,7 @@ from testing_agent_ai_worker.core.errors import (
 )
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.skill_names import TEST_ORDER_GRAPH_SKILL
 from testing_agent_ai_worker.tasks.functional_case_generate.summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.test_order_graph.rounds import (
     GRAPH_BATCH_SIZE,
@@ -52,7 +53,7 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 TEST_ORDER_GRAPH_TASK_TYPE = "test_order_graph"
 # 与控制端 layout 的单阶段同名，进度和产物因此落在同一个阶段上。
 GRAPH_STAGE = "generate"
-TEST_ORDER_GRAPH_SKILL_NAME = "update-test-case-graph"
+TEST_ORDER_GRAPH_SKILL_NAME = TEST_ORDER_GRAPH_SKILL
 # 一轮内的调用次数上限：1 次生成 + 2 次带错误反馈的重试，仍失败则该轮失败。
 ROUND_ATTEMPTS = 3
 GRAPH_INPUT_LISTS = ("requirements", "cases", "case_requirement_links")

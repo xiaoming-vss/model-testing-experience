@@ -11,6 +11,11 @@ import yaml
 from pydantic import ValidationError
 
 from testing_agent_ai_worker.core.errors import UserFacingError
+from testing_agent_ai_worker.tasks.runtime_json import (
+    is_truncated,
+    response_content,
+    response_finish_reason,
+)
 
 
 async def generate_validated(
@@ -36,12 +41,8 @@ async def generate_validated(
             response = await response
         if getattr(response, "error", None):
             raise UserFacingError(f"{stage} 模型调用失败，请检查模型服务或授权")
-        raw = response if isinstance(response, str) else getattr(response, "content", None)
-        reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
-        metadata = getattr(response, "metadata", None)
-        if reason is None and isinstance(metadata, dict):
-            reason = metadata.get("finish_reason")
-        truncated = reason in {"length", "max_tokens", "max_output_tokens"}
+        raw = response_content(response)
+        truncated = is_truncated(response_finish_reason(response))
         error = None
         if truncated:
             error = "模型报告输出长度截断，请调整输出限制或缩小生成范围"

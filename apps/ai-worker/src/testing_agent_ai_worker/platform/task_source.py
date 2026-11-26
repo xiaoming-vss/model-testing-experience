@@ -1,7 +1,7 @@
 """Platform task source and protocol adaptation.
 
 调用链路：
-- `TaskPoller.poll -> TaskService.poll_one -> HttpClaimTaskSource.poll_task`
+- `TaskPoller.poll -> HttpClaimTaskSource.poll_task`
 - `poll_task -> claim -> snapshot -> llm-credentials`
 - `poll_task -> _to_domain_task`
 

@@ -21,7 +21,7 @@ from testing_agent_ai_worker.skill_names import SCOPE_SKILL, TEST_POINTS_SKILL
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     _build_functional_case_names_body,
     run_functional_chain,
-    run_skill_step,
+    run_functional_skill_step,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     _build_functional_detailed_case_body,
@@ -108,7 +108,7 @@ class FunctionalChainPromptTests(unittest.TestCase):
             return bot
 
         asyncio.run(
-            run_skill_step(
+            run_functional_skill_step(
                 input_text="登录需求",
                 session_key="task:1",
                 skill_name="mtx-analyze-functional-requirements",

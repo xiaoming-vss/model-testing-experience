@@ -383,7 +383,7 @@ class CheckpointValidationTests(unittest.TestCase):
             with (
                 tempfile.TemporaryDirectory() as tmp,
                 patch(
-                    "testing_agent_ai_worker.tasks.functional_case_generate.chain._default_from_config",
+                    "testing_agent_ai_worker.tasks.functional_case_generate.chain.create_agent",
                     return_value=Bot(),
                 ),
             ):

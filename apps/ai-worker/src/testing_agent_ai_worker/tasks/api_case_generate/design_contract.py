@@ -12,10 +12,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from testing_agent_ai_worker.tasks.api_case_generate.contracts import (
-    invalid_constant,
-    unique_pairs,
-)
+from testing_agent_ai_worker.tasks.runtime_json import strict_json as loads_strict_json
 
 DESIGN_SCHEMA_VERSION = "api_test_design/1.0"
 
@@ -61,7 +58,11 @@ def strict_json(raw: str) -> Any:
     if not isinstance(raw, str):
         raise DesignValidationError("设计产物必须是 JSON 文本")
     try:
-        return json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+        return loads_strict_json(
+            raw,
+            duplicate_message="重复字段",
+            constant_message="非法 JSON 数值",
+        )
     except (TypeError, ValueError) as exc:
         raise DesignValidationError(f"设计产物必须是合法 JSON：{exc}") from exc
 

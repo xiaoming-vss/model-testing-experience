@@ -45,6 +45,10 @@ export const bugsApi = {
   reconcileBugZentaoPush: (bugId: string, remoteBugId: number) => request<BugZentaoPush>(`/v1/bugs/${bugId}/zentao-push/reconcile`, {
     method: 'POST', body: JSON.stringify({ remoteBugId }),
   }),
+  reconcileBugZentaoAttachment: (bugId: string, fileId: string, remoteFileId: number) =>
+    request<BugZentaoPush>(`/v1/bugs/${bugId}/zentao-push/attachments/${encodeURIComponent(fileId)}/reconcile`, {
+      method: 'POST', body: JSON.stringify({ remoteFileId }),
+    }),
   listZentaoBugCandidates: (
     projectId: string,
     params: { sprintId?: string; status?: string; keyword?: string; page?: number; pageSize?: number } = {},

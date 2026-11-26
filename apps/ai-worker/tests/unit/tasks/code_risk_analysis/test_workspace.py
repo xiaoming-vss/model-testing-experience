@@ -20,6 +20,8 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspaceError,
     cleanup_code_workspace,
     prepare_code_workspace,
+)
+from testing_agent_ai_worker.tasks.git_workspace import (
     retain_failed_workspace,
     sweep_expired_workspaces,
 )

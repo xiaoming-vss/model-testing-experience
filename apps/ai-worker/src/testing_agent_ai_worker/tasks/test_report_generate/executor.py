@@ -15,10 +15,11 @@ from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.skill_names import TEST_REPORT_SKILL
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
 
-TEST_REPORT_SKILL_NAME = "advanced-test-report-generator"
+TEST_REPORT_SKILL_NAME = TEST_REPORT_SKILL
 
 
 def _resolve_report_text(result) -> str:

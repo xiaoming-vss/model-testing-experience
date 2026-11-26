@@ -17,6 +17,7 @@ from testing_agent_ai_worker.skill_names import (
     API_GENERATE_SKILL,
     CASE_RELATIONS_SKILL,
     CASE_VISUALIZATION_SKILL,
+    CODE_RISK_SKILL,
     DETAILED_CASES_SKILL,
     HISTORICAL_REQUIREMENT_SKILL,
     HISTORICAL_TEST_CASE_SKILL,
@@ -24,7 +25,9 @@ from testing_agent_ai_worker.skill_names import (
     REPOSITORY_PROFILE_SKILL,
     REQUIREMENT_REVIEW_SKILL,
     SCOPE_SKILL,
+    TEST_ORDER_GRAPH_SKILL,
     TEST_POINTS_SKILL,
+    TEST_REPORT_SKILL,
     UI_YAML_SKILL,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
@@ -45,10 +48,10 @@ TASK_SKILLS = {
     "test_order_case_visualization": [CASE_VISUALIZATION_SKILL],
     "api_case_generate": [API_EXTRACT_SKILL, API_GENERATE_SKILL],
     "ui_case_generate": [UI_YAML_SKILL],
-    "code_risk_analysis": ["code-risk-analysis"],
+    "code_risk_analysis": [CODE_RISK_SKILL],
     "repository_profile": [REPOSITORY_PROFILE_SKILL],
-    "test_report_generate": ["advanced-test-report-generator"],
-    "test_order_graph": ["update-test-case-graph"],
+    "test_report_generate": [TEST_REPORT_SKILL],
+    "test_order_graph": [TEST_ORDER_GRAPH_SKILL],
 }
 
 

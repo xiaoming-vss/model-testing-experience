@@ -20,7 +20,7 @@ from testing_agent_ai_worker.core.errors import safe_execution_error, safe_trace
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.http_client import lease_rejected
-from testing_agent_ai_worker.services.result_service import ResultService
+from testing_agent_ai_worker.platform.result_sink import ResultSink
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.outbox import OutboxDrain, ResultOutbox
 
@@ -143,13 +143,13 @@ class WorkerRunner:
         self,
         *,
         executor: TaskExecutor,
-        result_service: ResultService,
+        result_sink: ResultSink,
         lifecycle: WorkerLifecycle,
         outbox: ResultOutbox | None = None,
         heartbeat_max_failures: int = 3,
     ) -> None:
         self.executor = executor
-        self.result_service = result_service
+        self.result_sink = result_sink
         self.lifecycle = lifecycle
         self.outbox = outbox
         self.heartbeat_max_failures = max(1, heartbeat_max_failures)
@@ -179,7 +179,7 @@ class WorkerRunner:
             latest_progress = progress
             requested_at = time.monotonic()
             try:
-                self.result_service.submit_progress(
+                self.result_sink.submit_progress(
                     progress, timeout_seconds=lease_state.remaining_seconds() / 2
                 )
             except Exception as exc:
@@ -221,7 +221,7 @@ class WorkerRunner:
 
         try:
             requested_at = time.monotonic()
-            self.result_service.mark_started(
+            self.result_sink.mark_started(
                 task.task_id,
                 task.attempt_id,
                 started_at.isoformat(),
@@ -314,7 +314,7 @@ class WorkerRunner:
         lease_state: _LeaseState,
     ) -> None:
         try:
-            self.result_service.submit(result)
+            self.result_sink.submit_result(result)
         except Exception as exc:
             self._preserve_result(task, result, lease_state)
             # The task already ran; surface the lost delivery instead of
@@ -358,7 +358,7 @@ class WorkerRunner:
             return None
         with self._outbox_lock:
             try:
-                outcome = self.outbox.drain(self.result_service.submit)
+                outcome = self.outbox.drain(self.result_sink.submit_result)
             except OSError as exc:
                 LOGGER.error(
                     "result outbox recovery failed: error_type=%s",
@@ -390,7 +390,7 @@ class WorkerRunner:
             requested_at = time.monotonic()
             try:
                 # Give up while half the lease is left, so another beat can still renew it.
-                self.result_service.send_heartbeat(
+                self.result_sink.send_heartbeat(
                     task.task_id,
                     task.attempt_id,
                     datetime.now().astimezone().isoformat(),

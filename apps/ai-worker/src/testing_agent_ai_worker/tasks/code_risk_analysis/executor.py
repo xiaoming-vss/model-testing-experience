@@ -35,9 +35,13 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspace,
     CodeWorkspaceError,
     cleanup_code_workspace,
-    code_run_root,
     prepare_code_workspace,
+)
+from testing_agent_ai_worker.tasks.git_workspace import (
     retain_failed_workspace,
+)
+from testing_agent_ai_worker.tasks.git_workspace import (
+    task_run_root as code_run_root,
 )
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor

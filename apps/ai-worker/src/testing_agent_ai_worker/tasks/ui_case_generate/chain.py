@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +12,7 @@ from uuid import uuid4
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.output_repair import generate_validated
+from testing_agent_ai_worker.tasks.runtime_json import strict_json, strip_json_fence
 from testing_agent_ai_worker.tasks.ui_case_generate.artifacts import (
     DEFAULT_CAPABILITIES,
     UI_FIELDS,
@@ -24,7 +24,6 @@ from testing_agent_ai_worker.tasks.ui_case_generate.artifacts import (
 )
 
 from .batches import generate_batches
-from .design_contract import strict_json
 from .yaml_batches import generate_yaml_batches
 
 
@@ -36,9 +35,8 @@ def read_stage_json(raw: str, output_path: Path) -> Any:
         if not output_path.is_file():
             raise ValueError("约定产物路径不是文件")
         return strict_json(output_path.read_text(encoding="utf-8-sig"))
-    text = raw.strip()
-    fenced = re.fullmatch(r"```(?:json)?\s*\n(.*)\n```", text, flags=re.DOTALL)
-    parsed = strict_json(fenced.group(1).strip() if fenced else text)
+    text = strip_json_fence(raw)
+    parsed = strict_json(text)
     if isinstance(parsed, dict) and "artifactPath" in parsed:
         raise ValueError("模型未在约定 outputPath 写入阶段产物；不得使用其他路径")
     return parsed

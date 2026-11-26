@@ -5,7 +5,7 @@ import { AppIcon } from '@/shared/icons'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { EntityCard } from '@/shared/components/EntityCard'
 import { ListSurface } from '@/shared/components/ListSurface'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { entityCardGridClass } from '@/shared/utils/surfaceClasses'
 import { formatTime, getErrorMessage, normalizeSprintId, pickEndTime, pickStartTime } from '@/utils/format'
 import type { Sprint } from '@/domain/projects/types'
@@ -30,8 +30,7 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const ordered = groups.flatMap(group => sprints.filter(sprint => groupKey(sprint.status) === group.key))
-  const current = Math.min(page, Math.max(1, Math.ceil(ordered.length / pageSize)))
-  const visible = ordered.slice((current - 1) * pageSize, current * pageSize)
+  const visible = pageSlice(ordered, page, pageSize)
   return <ListSurface className="sprint-board-shell tp-surface" bodyClassName="sprint-board text-[var(--srf-text)]"
     scrollClassName="sprint-board-scroll" scrollAriaBusy={loading}
     footer={<ListPagination current={page} pageSize={pageSize} total={ordered.length}

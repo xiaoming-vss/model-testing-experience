@@ -1,5 +1,5 @@
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { SharedServiceDialogs } from './SharedServiceDialogs'
 import { ZentaoMcpServiceCard } from './ZentaoMcpServiceCard'
@@ -135,8 +135,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     finally { setSaving(false) }
   }
   const services = listItems(query.data)
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(services.length / pageSize)))
-  const pagedServices = services.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pagedServices = pageSlice(services, page, pageSize)
   const createButton = <ProjectActionButton action="manage" projectId={projectId} type="primary" className="action-btn-create" operation="create" disabled={provider === 'mcp' && (templates.isPending || templates.isError || query.isPending || query.isError)} onClick={() => openEditor('create')}>{provider === 'mcp' ? '新增 MCP' : '新建服务'}</ProjectActionButton>
   return <>
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}

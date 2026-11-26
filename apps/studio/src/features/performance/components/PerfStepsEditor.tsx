@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { isJsonText } from '@/shared/utils/value'
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
@@ -63,16 +64,6 @@ const BODY_MODES = [{ value: 'none', label: 'none' }, { value: 'json', label: 'J
 
 function updateAt<T>(items: T[], index: number, next: T): T[] {
   return items.map((item, itemIndex) => itemIndex === index ? next : item)
-}
-
-function isJsonText(value: string) {
-  if (!value.trim()) return true
-  try {
-    JSON.parse(value)
-    return true
-  } catch {
-    return false
-  }
 }
 
 function NumericInput({

@@ -1,5 +1,5 @@
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { EntityCard } from '@/shared/components/EntityCard'
@@ -194,7 +194,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }, [collections, keyword])
 
   const pagedCollections = useMemo(
-    () => filteredCollections.slice((page - 1) * pageSize, page * pageSize),
+    () => pageSlice(filteredCollections, page, pageSize),
     [filteredCollections, page, pageSize],
   )
 

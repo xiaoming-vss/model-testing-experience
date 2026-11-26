@@ -7,7 +7,9 @@ from pathlib import Path
 from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.platform.revision_attachments import (
-    parse_revision_attachments,
+    load_revision_images,
+    revision_attachment_refs,
+    revision_image_paths,
 )
 from testing_agent_ai_worker.requirement_artifacts import validate_artifact
 from testing_agent_ai_worker.tasks.requirement_analysis.confirmation_coverage import (
@@ -86,18 +88,14 @@ def execute_material_stage(
     else:
         raise UserFacingError(f"需求分析不支持阶段: {stage}")
     if revision:
-        attachments = parse_revision_attachments(config)
-        if attachments:
-            if attachment_downloader is None:
-                raise UserFacingError("未配置继续优化图片下载器")
-            revision_images = attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
-            )
-            media.extend(entry["sourcePath"] for entry in revision_images)
-            body["revisionAttachments"] = [
-                {"fileId": entry["fileId"], "filename": entry["filename"]}
-                for entry in revision_images
-            ]
+        images = load_revision_images(
+            task_id=task.task_id,
+            workspace=workspace,
+            config=config,
+            downloader=attachment_downloader,
+        )
+        media.extend(revision_image_paths(images))
+        body["revisionAttachments"] = revision_attachment_refs(images)
         body["revisionInstruction"] = revision
     artifact = generate_validated(
         kind=kind,

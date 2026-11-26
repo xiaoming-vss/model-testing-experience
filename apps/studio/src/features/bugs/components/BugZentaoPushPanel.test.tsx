@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { bugsApi } from '../api/bugs.api'
-import type { BugZentaoJob, BugZentaoPush, BugZentaoPushOptions } from '../types'
+import type { BugAttachment, BugZentaoJob, BugZentaoPush, BugZentaoPushOptions } from '../types'
 import { BugZentaoPushPanel } from './BugZentaoPushPanel'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }))
@@ -35,10 +35,10 @@ function submitted(result: BugZentaoPush, taskType: BugZentaoJob['taskType'] = '
   vi.mocked(bugsApi.getBugZentaoPush).mockResolvedValue({ ...result, activeJob: null, latestJob: job })
   return { ...job, jobStatus: 'queued' }
 }
-function mount(canWrite = true) {
+function mount(canWrite = true, attachments?: BugAttachment[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
-  render(<QueryClientProvider client={client}><BugZentaoPushPanel bugId="b1" canWrite={canWrite} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><BugZentaoPushPanel bugId="b1" canWrite={canWrite} attachments={attachments} /></QueryClientProvider>)
   return client
 }
 
@@ -136,6 +136,24 @@ it('does not allow retrying an uncertain attachment write', async () => {
   expect(screen.queryByRole('button', { name: '重试推送到禅道' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '核对并关联' })).not.toBeInTheDocument()
   expect(push).not.toHaveBeenCalled()
+})
+
+it('recovers an uncertain attachment by remote file id', async () => {
+  const { message } = await import('@/shared/utils/feedback')
+  const uncertain = { ...ready, status: 'succeeded' as const, ready: false, remoteBugId: 50,
+    attachmentStatus: 'unknown' as const }
+  vi.spyOn(bugsApi, 'getBugZentaoPush').mockResolvedValue(uncertain)
+  const reconcile = vi.spyOn(bugsApi, 'reconcileBugZentaoAttachment').mockResolvedValue({
+    ...uncertain, attachmentStatus: 'succeeded' as const, ready: true,
+  })
+  mount(true, [{ fileId: 'f1', filename: 'a.png', size: 1, contentType: 'image/png' }])
+  const input = await screen.findByLabelText('a.png 的禅道文件编号')
+  const button = screen.getByRole('button', { name: '按远端文件编号恢复关联' })
+  expect(button).toBeDisabled()
+  await userEvent.type(input, '77')
+  await userEvent.click(button)
+  await waitFor(() => expect(reconcile).toHaveBeenCalledExactlyOnceWith('b1', 'f1', 77))
+  await waitFor(() => expect(message.success).toHaveBeenCalledWith('已关联禅道 Bug #50'))
 })
 
 it('offers retry and reports incomplete when only description images are missing', async () => {

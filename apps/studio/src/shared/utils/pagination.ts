@@ -7,3 +7,12 @@ export function footerRange(total: number, currentPage: number, currentPageSize:
   const end = Math.min(currentPage * currentPageSize, total)
   return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
 }
+
+export function clampPage(page: number, total: number, pageSize: number) {
+  return Math.min(Math.max(1, page), Math.max(1, Math.ceil(total / pageSize)))
+}
+
+export function pageSlice<T>(items: readonly T[], page: number, pageSize: number) {
+  const current = clampPage(page, items.length, pageSize)
+  return items.slice((current - 1) * pageSize, current * pageSize)
+}

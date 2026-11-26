@@ -11,7 +11,6 @@ if str(SRC_DIR) not in sys.path:
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
-from testing_agent_ai_worker.services.task_service import TaskService
 from testing_agent_ai_worker.worker.poller import TaskPoller
 
 
@@ -740,7 +739,7 @@ class TaskSourceTests(unittest.TestCase):
         assert task is not None
         self.assertEqual("word", task.payload.document_type)
 
-    def test_task_service_and_poller_return_polled_task(self) -> None:
+    def test_poller_returns_polled_task(self) -> None:
         client = FakePlatformHttpClient()
         task_source = HttpClaimTaskSource(
             client=client,
@@ -750,7 +749,7 @@ class TaskSourceTests(unittest.TestCase):
             worker_id="worker-local",
         )
 
-        poller = TaskPoller(TaskService(task_source))
+        poller = TaskPoller(task_source)
         task = poller.poll()
 
         self.assertIsNotNone(task)

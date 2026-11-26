@@ -4,20 +4,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, InputNumber, Space, Typography } from 'antd'
 import { SendOutlined, SyncOutlined } from '@ant-design/icons'
 import { bugsApi } from '../api/bugs.api'
-import type { BugZentaoJob, BugZentaoPush } from '../types'
+import type { BugAttachment, BugZentaoJob, BugZentaoPush } from '../types'
 import { useBugZentaoStatus } from '../hooks/useBugZentaoStatus'
 import { isZentaoJobActive, sameBuilds, zentaoJobLabel } from '../utils/zentaoJobs'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { BugZentaoPullModal } from './BugZentaoPullModal'
 import { BugZentaoPushModal } from './BugZentaoPushModal'
+import { BugZentaoAttachmentRecovery } from './BugZentaoAttachmentRecovery'
 
 const labels: Record<BugZentaoPush['status'], string> = {
   not_pushed: '尚未推送', preparing: '正在核对目标', creating: '正在推送',
   succeeded: '已推送', failed: '推送失败', unknown: '结果待核对',
 }
 
-export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: string; projectId?: string; canWrite: boolean }) {
+export function BugZentaoPushPanel({ bugId, projectId, canWrite, attachments = [] }: {
+  bugId: string; projectId?: string; canWrite: boolean; attachments?: BugAttachment[]
+}) {
   const client = useQueryClient()
   const [open, setOpen] = useState(false)
   const [pullOpen, setPullOpen] = useState(false)
@@ -116,6 +119,10 @@ export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: stri
       {data?.reason && <Alert type="info" showIcon title={data.reason} />}
       {data?.errorMessage && <Alert type="warning" showIcon title={data.errorMessage} />}
       {data?.fieldUpdateError && <Alert type="warning" showIcon title={data.fieldUpdateError} />}
+      {data?.attachmentStatus === 'unknown' && attachments.length > 0 && (
+        <BugZentaoAttachmentRecovery bugId={bugId} attachments={attachments} busy={busy}
+          canWrite={canWrite} onSaved={saved} />
+      )}
       {data?.status === 'unknown' && <>
         <Alert type="warning" showIcon title="请先在禅道核对创建结果，勿重复创建。找到对应 Bug 后可填写编号完成关联。" />
         {canWrite && <Space wrap>

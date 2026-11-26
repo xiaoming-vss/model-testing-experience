@@ -11,16 +11,18 @@ from dataclasses import replace
 from typing import Any
 from uuid import uuid4
 
+from testing_agent_ai_worker.agent import create_agent
 from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION,
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.tasks.runtime_json import strip_json_fence
 from testing_agent_ai_worker.traceable_test_points import validate_traceable_test_points
 
 from .case_ids import assign_case_ids
 from .module_execution import ModuleProgress, prepare_module_workspace
-from .validation import CaseRetentionError, context, generate_validated, normalize_json
+from .validation import CaseRetentionError, context, generate_validated
 
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
@@ -65,14 +67,6 @@ def _retention_check(previous: list[Any]) -> Callable[[dict[str, Any]], None]:
     return check
 
 
-def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
-
-    from testing_agent_ai_worker.agent import create_agent
-
-    return create_agent(**kwargs)
-
-
 def _build_functional_detailed_case_body(
     *,
     requirement_analysis_json: str,
@@ -104,7 +98,7 @@ def _build_functional_detailed_case_instruction(extra_instruction: str) -> str:
 def _normalize_json_text(raw_json_text: str) -> str:
     """移除模型可能返回的 markdown fence，保留纯 JSON 文本。"""
 
-    return normalize_json(raw_json_text)
+    return strip_json_fence(raw_json_text)
 
 
 def _build_model_batches(case_names_json: str) -> list[dict[str, Any]]:
@@ -185,7 +179,7 @@ async def run_functional_detailed_case_batches(
 ) -> str:
     """执行 detailed cases 的分片生成并合并结果。"""
 
-    factory = from_config or _default_from_config
+    factory = from_config or create_agent
     merged_cases: list[Any] = []
     batches = _build_model_batches(case_names_json)
     current_cases = []

@@ -18,7 +18,10 @@ from testing_agent_ai_worker.historical_test_case_artifacts import (
 )
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.platform.revision_attachments import (
+    load_revision_images,
+    revision_image_paths,
+)
 from testing_agent_ai_worker.skill_names import HISTORICAL_TEST_CASE_SKILL
 from testing_agent_ai_worker.tasks.requirement_analysis.history_stage import (
     read_history_model_output,
@@ -50,15 +53,13 @@ def execute_history_verification_stage(
             config.get("historicalTestCaseVerification"), source
         )
         prior = {item["firstPass"]["batchId"]: item for item in previous["batches"]}
-    attachments = parse_revision_attachments(config)
-    media = []
-    if attachments:
-        if attachment_downloader is None:
-            raise UserFacingError("未配置继续优化图片下载器")
-        images = attachment_downloader.download(
-            task_id=task.task_id, workspace=workspace, attachments=attachments
-        )
-        media = [image["sourcePath"] for image in images]
+    images = load_revision_images(
+        task_id=task.task_id,
+        workspace=workspace,
+        config=config,
+        downloader=attachment_downloader,
+    )
+    media = revision_image_paths(images)
 
     def run_pass(batch: dict[str, Any], pass_name: str) -> dict[str, Any]:
         instructions = [task.payload.extra_instruction, "正式响应只返回本阶段完整 JSON 对象。"]

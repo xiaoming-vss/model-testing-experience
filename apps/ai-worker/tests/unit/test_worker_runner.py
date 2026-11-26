@@ -17,7 +17,6 @@ from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.result_sink import ResultSink
-from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.outbox import ResultOutbox
 from testing_agent_ai_worker.worker.runner import LeaseLostError, TaskExecutor, WorkerRunner
@@ -349,7 +348,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -370,7 +369,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _FailingProgressSink()
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -388,7 +387,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _FailingResultSink()
         runner = WorkerRunner(
             executor=_SuccessfulExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -407,7 +406,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=_HeartbeatAwareExecutor(sink),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=1,
@@ -424,7 +423,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=_ExplodingExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -452,7 +451,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=KnownFailureExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -474,7 +473,7 @@ class WorkerRunnerTests(unittest.TestCase):
 
         runner = WorkerRunner(
             executor=SecretExecutor(),
-            result_service=ResultService(_RecordingSink()),
+            result_sink=_RecordingSink(),
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -494,7 +493,7 @@ class WorkerRunnerTests(unittest.TestCase):
     def test_process_task_never_publishes_a_blank_error_message(self) -> None:
         runner = WorkerRunner(
             executor=_BlankErrorExecutor(),
-            result_service=ResultService(_RecordingSink()),
+            result_sink=_RecordingSink(),
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -513,7 +512,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=_ProgressThenExplodingExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -537,7 +536,7 @@ class WorkerRunnerTests(unittest.TestCase):
         task.credential_error = "credentials unavailable"
         runner = WorkerRunner(
             executor=_ExplodingExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -556,7 +555,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _RecordingSink()
         runner = WorkerRunner(
             executor=_CheckpointPauseExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=60,
@@ -576,7 +575,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _FailingProgressAndHeartbeatSink()
         runner = WorkerRunner(
             executor=_LeaseCheckExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=0.01,
@@ -600,7 +599,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _FailingProgressAndHeartbeatSink()
         runner = WorkerRunner(
             executor=_LeaseCheckExecutor(),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=0.05,
@@ -623,7 +622,7 @@ class WorkerRunnerTests(unittest.TestCase):
         sink = _FlakyHeartbeatSink(failures_before_success=2)
         runner = WorkerRunner(
             executor=_SleepingExecutor(0.15),
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=0.01,
@@ -644,7 +643,7 @@ class WorkerRunnerTests(unittest.TestCase):
     def _lease_runner(self, sink, executor, *, interval=0.01, max_failures=3) -> WorkerRunner:
         return WorkerRunner(
             executor=executor,
-            result_service=ResultService(sink),
+            result_sink=sink,
             lifecycle=WorkerLifecycle(
                 poll_interval_seconds=10,
                 heartbeat_interval_seconds=interval,
@@ -761,7 +760,7 @@ class WorkerRunnerTests(unittest.TestCase):
             outbox = ResultOutbox(temp_dir)
             runner = WorkerRunner(
                 executor=_SuccessfulExecutor(),
-                result_service=ResultService(sink),
+                result_sink=sink,
                 lifecycle=WorkerLifecycle(
                     poll_interval_seconds=10,
                     heartbeat_interval_seconds=60,

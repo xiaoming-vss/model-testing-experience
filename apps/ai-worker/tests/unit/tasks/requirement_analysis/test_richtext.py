@@ -5,13 +5,13 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.skills import required_skills
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
     RequirementAnalysisExecutor,
 )
-from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     PlatformRequirementSourceDownloader,
 )

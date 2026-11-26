@@ -10,7 +10,9 @@ from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.revision_attachments import (
-    parse_revision_attachments,
+    load_revision_images,
+    revision_attachment_note,
+    revision_image_paths,
 )
 from testing_agent_ai_worker.skill_names import (
     CASE_RELATIONS_SKILL,
@@ -61,17 +63,14 @@ def execute_checkpoint_task(
     media: list[str] = []
     attachment_note = ""
     if revision:
-        attachments = parse_revision_attachments(config)
-        if attachments:
-            if attachment_downloader is None:
-                raise UserFacingError("未配置继续优化图片下载器")
-            images = attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
-            )
-            media = [entry["sourcePath"] for entry in images]
-            attachment_note = "\n\n【本轮优化依据图片】\n" + "\n".join(
-                f"- {entry['filename'] or entry['fileId']}" for entry in images
-            )
+        images = load_revision_images(
+            task_id=task.task_id,
+            workspace=workspace,
+            config=config,
+            downloader=attachment_downloader,
+        )
+        media = revision_image_paths(images)
+        attachment_note = revision_attachment_note(images)
 
     def revision_input(source: str, field: str) -> str:
         if not revision:

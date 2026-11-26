@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from testing_agent_ai_worker.config.models import AI_WORKER_TASKS_PATH
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 MAX_REVISION_ATTACHMENTS = 6
@@ -74,3 +75,35 @@ class PlatformRevisionAttachmentDownloader:
                 }
             )
         return images
+
+
+def load_revision_images(
+    *,
+    task_id: str,
+    workspace: Path,
+    config: dict,
+    downloader: PlatformRevisionAttachmentDownloader | None,
+) -> list[dict[str, str]]:
+    """Download configured revision images or return an empty list."""
+    attachments = parse_revision_attachments(config)
+    if not attachments:
+        return []
+    if downloader is None:
+        raise UserFacingError("未配置继续优化图片下载器")
+    return downloader.download(task_id=task_id, workspace=workspace, attachments=attachments)
+
+
+def revision_image_paths(images: list[dict[str, str]]) -> list[str]:
+    return [image["sourcePath"] for image in images]
+
+
+def revision_attachment_refs(images: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [{"fileId": image["fileId"], "filename": image["filename"]} for image in images]
+
+
+def revision_attachment_note(images: list[dict[str, str]]) -> str:
+    if not images:
+        return ""
+    return "\n\n【本轮优化依据图片】\n" + "\n".join(
+        f"- {image['filename'] or image['fileId']}" for image in images
+    )

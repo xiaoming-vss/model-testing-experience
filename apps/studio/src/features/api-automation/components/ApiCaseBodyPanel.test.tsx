@@ -88,3 +88,12 @@ it('非 JSON 类型隐藏 JSON 专属动作，状态条只报大小与编码', a
   expect(screen.queryByRole('button', { name: /插入变量/ })).toBeNull()
   expect(screen.getByText('编码: UTF-8')).toBeInTheDocument()
 })
+
+it('表单请求体用键值表写回 JSON 对象', async () => {
+  const formRef = renderPanel('form', '{}')
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /添加字段/ }))
+  await user.type(screen.getByLabelText('表单字段名1'), 'name')
+  await user.type(screen.getByLabelText('表单字段值1'), 'alice')
+  await waitFor(() => expect(JSON.parse(formRef.current?.getFieldValue('bodyJson') ?? '{}')).toEqual({ name: 'alice' }))
+})

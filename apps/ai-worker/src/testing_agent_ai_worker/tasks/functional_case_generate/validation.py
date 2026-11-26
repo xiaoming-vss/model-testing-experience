@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-import re
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -16,6 +15,13 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from testing_agent_ai_worker.core.errors import UserFacingError
+from testing_agent_ai_worker.tasks.runtime_json import (
+    is_truncated,
+    response_content,
+    response_finish_reason,
+    strict_json,
+    strip_json_fence,
+)
 from testing_agent_ai_worker.traceable_test_points import (
     _validator as traceable_validator,
 )
@@ -49,29 +55,14 @@ class CaseRetentionError(ValueError):
     """A revision dropped current cases that it did not declare in ``removedCases``."""
 
 
-def normalize_json(raw: str) -> str:
-    text = raw.strip()
-    match = re.fullmatch(r"```(?:json)?\s*\n(.*)\n```", text, re.DOTALL)
-    return match.group(1).strip() if match else text
-
-
-def _pairs(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate object key: {key}")
-        result[key] = value
-    return result
-
-
-def _constant(value):
-    raise ValueError(f"non-standard JSON value: {value}")
-
-
 def validate_output(
     stage: str, raw: str, previous_cases=(), expected_case_ids=None, material=None, analysis=None
 ):
-    parsed = json.loads(normalize_json(raw), object_pairs_hook=_pairs, parse_constant=_constant)
+    parsed = strict_json(
+        strip_json_fence(raw),
+        duplicate_message="duplicate object key",
+        constant_message="non-standard JSON value",
+    )
     if stage == "traceable_case_names":
         validate_traceable_test_points(parsed, material, analysis)
         return json.dumps(parsed, ensure_ascii=False)
@@ -189,14 +180,11 @@ async def generate_validated(
         if getattr(response, "error", None):
             # Provider error text can carry prompts or credentials; it never enters a message.
             raise UserFacingError("模型调用出错，请检查模型服务或授权后重试")
-        raw = response if isinstance(response, str) else response.content
-        reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
-        metadata = getattr(response, "metadata", None)
-        if reason is None and isinstance(metadata, dict):
-            reason = metadata.get("finish_reason")
+        raw = response_content(response)
+        reason = response_finish_reason(response)
         errors = []
         normalized = None
-        if reason in {"length", "max_tokens", "max_output_tokens"}:
+        if is_truncated(reason):
             errors = [
                 {
                     "path": "$",

@@ -85,14 +85,14 @@ const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: 'numeric', minute: 'numeric', second: 'numeric',
 })
 
-function parseApiTime(value: string) {
+export function parseUtcAssumedTime(value: string) {
   const isTimezoneLessIso = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)
   return new Date(isTimezoneLessIso ? `${value.replace(' ', 'T')}Z` : value)
 }
 
 export function formatTime(value?: string) {
   if (!value) return '-'
-  const date = parseApiTime(value)
+  const date = parseUtcAssumedTime(value)
   return Number.isNaN(date.getTime())
     ? value
     : timeFormatter.format(date)
@@ -100,7 +100,7 @@ export function formatTime(value?: string) {
 
 export function formatCompactTime(value?: string | null) {
   if (!value) return ''
-  const parsed = parseApiTime(value)
+  const parsed = parseUtcAssumedTime(value)
   if (Number.isNaN(parsed.getTime())) return ''
   return parsed.toLocaleString('zh-CN', {
     timeZone: displayTimeZone,

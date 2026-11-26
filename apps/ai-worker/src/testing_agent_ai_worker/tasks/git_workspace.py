@@ -131,6 +131,35 @@ def sweep_expired_workspaces(
             shutil.rmtree(marker.parent, ignore_errors=True)
 
 
+def prepare_task_run_root(
+    agent_config: AgentBackendConfig,
+    task: Task,
+    *,
+    now: datetime | None = None,
+) -> Path:
+    """Reset this attempt's run directory and mark it active."""
+    run_root = task_run_root(agent_config, task)
+    sweep_expired_workspaces(agent_config, now=now)
+    if run_root.exists():
+        shutil.rmtree(run_root, ignore_errors=True)
+    run_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    (run_root / ".active").write_text("1", encoding="utf-8")
+    return run_root
+
+
+def cleanup_task_run_root(
+    run_root: Path,
+    *,
+    success: bool,
+    retention_hours: float,
+) -> None:
+    """Delete successful runs; retain failed ones for the diagnostic window."""
+    if success:
+        shutil.rmtree(run_root, ignore_errors=True)
+        return
+    retain_failed_workspace(run_root, retention_hours)
+
+
 def clone_repository(
     binding: RepositoryBinding,
     repo_path: Path,

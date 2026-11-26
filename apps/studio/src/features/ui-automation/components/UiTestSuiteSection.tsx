@@ -1,5 +1,5 @@
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { EntityCard } from '@/shared/components/EntityCard'
 import '@/shared/styles/surface-tokens.css'
@@ -113,7 +113,7 @@ export const UiTestSuiteSection = forwardRef<
   }, [orderedSuites, keyword])
 
   const pagedSuites = useMemo(
-    () => filteredSuites.slice((page - 1) * pageSize, page * pageSize),
+    () => pageSlice(filteredSuites, page, pageSize),
     [filteredSuites, page, pageSize],
   )
 

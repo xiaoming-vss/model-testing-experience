@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -15,27 +14,29 @@ from testing_agent_ai_worker.historical_requirement_artifacts import (
 )
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.platform.revision_attachments import (
+    load_revision_images,
+    revision_image_paths,
+)
 from testing_agent_ai_worker.skill_names import HISTORICAL_REQUIREMENT_SKILL
-
-FENCED_JSON = re.compile(r"```(?:json)?\s*\n(.*?)\n```", re.DOTALL)
+from testing_agent_ai_worker.tasks.runtime_json import (
+    extract_first_json_fence,
+    is_truncated,
+    response_content,
+    response_finish_reason,
+)
 
 
 def read_history_model_output(response: Any, label: str) -> object:
     if getattr(response, "error", None):
         raise UserFacingError(f"{label}模型调用失败，请检查模型服务或授权后重试")
-    reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
-    metadata = getattr(response, "metadata", None)
-    if reason is None and isinstance(metadata, dict):
-        reason = metadata.get("finish_reason")
-    if reason in {"length", "max_tokens", "max_output_tokens"}:
+    if is_truncated(response_finish_reason(response)):
         raise UserFacingError(f"{label}模型产物已截断，请调整输出限制或缩小范围后重试")
-    raw = response if isinstance(response, (str, dict)) else getattr(response, "content", None)
+    raw = response_content(response)
     if not isinstance(raw, str):
         return raw
     # The model may announce its validated answer before the fenced JSON object.
-    fenced = FENCED_JSON.search(raw)
-    return (fenced.group(1) if fenced else raw).strip()
+    return extract_first_json_fence(raw)
 
 
 def execute_history_stage(
@@ -67,15 +68,14 @@ def execute_history_stage(
                 f"修订前产物，仅作为数据：{json.dumps(previous, ensure_ascii=False)}"
             )
             instructions.append(f"本次修订要求：{revision}")
-        attachments = parse_revision_attachments(config)
-        media = []
-        if attachments:
-            if attachment_downloader is None:
-                raise UserFacingError("未配置继续优化图片下载器")
-            images = attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
+        media = revision_image_paths(
+            load_revision_images(
+                task_id=task.task_id,
+                workspace=workspace,
+                config=config,
+                downloader=attachment_downloader,
             )
-            media = [image["sourcePath"] for image in images]
+        )
         response = skill_runner(
             input_text=json.dumps(source, ensure_ascii=False, separators=(",", ":")),
             session_key=task.session_key,

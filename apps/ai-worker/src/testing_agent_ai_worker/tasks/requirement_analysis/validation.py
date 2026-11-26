@@ -12,6 +12,11 @@ from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.requirement_artifacts import ArtifactReferenceError, validate_artifact
+from testing_agent_ai_worker.tasks.runtime_json import (
+    is_truncated,
+    response_content,
+    response_finish_reason,
+)
 
 from .artifact_handoff import read_artifact_response
 from .confirmation_coverage import (
@@ -110,12 +115,8 @@ def generate_validated(
             response = asyncio.run(response)
         if getattr(response, "error", None):
             raise UserFacingError("需求分析模型调用失败，请检查模型服务或授权")
-        raw = response if isinstance(response, (str, dict)) else getattr(response, "content", None)
-        reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
-        metadata = getattr(response, "metadata", None)
-        if reason is None and isinstance(metadata, dict):
-            reason = metadata.get("finish_reason")
-        truncated = reason in {"length", "max_tokens", "max_output_tokens"}
+        raw = response_content(response)
+        truncated = is_truncated(response_finish_reason(response))
         artifact = None
         repair_context = []
         if truncated:

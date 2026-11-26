@@ -7,6 +7,8 @@ import type { TemplatesProps } from '@/features/api-automation/components/apiCas
 import { validateJsonText } from '@/features/api-automation/utils/detailView'
 import type { ApiCaseFormValues } from '@/features/api-automation/utils/apiCaseEditor'
 import { JsonEditor, type JsonEditorCursor } from '@/shared/components/JsonEditor/JsonEditor'
+import { FormBodyEditor } from './FormBodyEditor'
+import { isJsonText as isJsonTextValid } from '@/shared/utils/value'
 import {
   KV_EMPTY_CLASS,
   KV_EMPTY_HINT_CLASS,
@@ -25,16 +27,6 @@ import type { ApiCase } from '@/services/api'
 type Props = {
   bodyType: NonNullable<ApiCase['bodyType']>
   templates: TemplatesProps
-}
-
-function isJsonTextValid(value?: string) {
-  if (!value?.trim()) return true
-  try {
-    JSON.parse(value)
-    return true
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -115,13 +107,28 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
       ) : null}
 
       {bodyType === 'form' ? (
-        <div className={`mx-4 my-3 ${KV_EMPTY_CLASS}`}>
-          <ApiOutlined className={KV_EMPTY_ICON_CLASS} aria-hidden />
-          <div className={KV_EMPTY_TEXT_CLASS}>
-            <strong className={KV_EMPTY_TITLE_CLASS}>表单请求体暂未提供键值编辑器</strong>
-            <span className={KV_EMPTY_HINT_CLASS}>当前版本先保留类型切换，后续补充键值表单。</span>
-          </div>
-        </div>
+        <Form.Item
+          name="bodyJson"
+          className="api-body-editor-form-item"
+          style={{ marginBottom: 0 }}
+          validateTrigger={['onChange', 'onBlur']}
+          rules={[{
+            validator: async (_, value) => {
+              if (!value?.trim()) return
+              let parsed: unknown
+              try {
+                parsed = JSON.parse(value)
+              } catch {
+                throw new Error('表单请求体必须是合法 JSON 对象')
+              }
+              if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('表单请求体必须是 JSON 对象')
+              }
+            },
+          }]}
+        >
+          <FormBodyEditor />
+        </Form.Item>
       ) : null}
 
       {bodyType === 'none' ? (

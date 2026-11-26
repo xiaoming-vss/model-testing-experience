@@ -1,7 +1,7 @@
 """Platform lifecycle callback sink.
 
 调用链路：
-- `WorkerRunner -> ResultService -> HttpResultSink`
+- `WorkerRunner -> HttpResultSink`
 - `HttpResultSink -> started/heartbeat/progress/completed`
 
 这里统一维护 worker 内部结果模型到平台接口字段的映射关系。

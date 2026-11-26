@@ -10,8 +10,14 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Literal, TypedDict
 
+from testing_agent_ai_worker.tasks.runtime_json import (
+    is_truncated,
+    response_content,
+    response_finish_reason,
+    strict_json,
+)
+
 from ..output_repair import parse_yaml
-from .design_contract import strict_json
 
 REVIEW_INSTRUCTION = """当前调用提供辅助审核意见，不生成或改写用例，也不决定生成是否成功。读取技能的缺口判断规则。
 重点检查候选是否忠实实现已审核设计；发现上游设计矛盾时说明需人工确认设计，不重新裁决全部设计。
@@ -123,14 +129,8 @@ async def check_missing_semantics(
                     response = await response
                 if getattr(response, "error", None):
                     return SemanticReview(status="incomplete", issues=[], errorCode="model_error")
-                text = response if isinstance(response, str) else getattr(response, "content", None)
-                reason = getattr(response, "finish_reason", None) or getattr(
-                    response, "stop_reason", None
-                )
-                metadata = getattr(response, "metadata", None)
-                if reason is None and isinstance(metadata, dict):
-                    reason = metadata.get("finish_reason")
-                if reason in {"length", "max_tokens", "max_output_tokens"}:
+                text = response_content(response)
+                if is_truncated(response_finish_reason(response)):
                     return SemanticReview(status="incomplete", issues=[], errorCode="truncated")
                 phase = "invalid_report"
                 error = None

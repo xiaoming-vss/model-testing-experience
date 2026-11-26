@@ -30,8 +30,8 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspace,
     CodeWorkspaceError,
     RepoWorkspace,
-    code_run_root,
 )
+from testing_agent_ai_worker.tasks.git_workspace import task_run_root as code_run_root
 
 
 def _task(

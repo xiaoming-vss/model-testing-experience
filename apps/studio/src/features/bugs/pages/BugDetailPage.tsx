@@ -109,7 +109,7 @@ export function BugDetailPage() {
               <div className="bug-detail-subtitle text-xs text-[var(--srf-text-muted)]"><UserDisplayName name={resolveUserName(bug.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(bug))}</div>
             </BugDetailPanel>
             <BugDescriptionView html={bug.descriptionHtml} />
-            {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} projectId={bug.projectId} canWrite={canWrite} />}
+            {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} projectId={bug.projectId} canWrite={canWrite} attachments={bug.attachments ?? []} />}
             <BugEvidencePanel key={`evidence:${bug.bugId}`} descriptionHtml={bug.descriptionHtml} attachments={bug.attachments ?? []} download={downloadAttachment} />
 
           </div>
