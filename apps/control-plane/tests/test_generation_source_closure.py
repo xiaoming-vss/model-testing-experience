@@ -64,6 +64,60 @@ def test_mixed_branch_is_rejected_even_if_analyses_have_same_content():
         resolve(("a", "pb"), (MATERIAL, ANALYSIS_A, ANALYSIS_B, POINTS_B))
 
 
+def test_detailed_cases_can_freeze_history_but_must_share_its_material():
+    relation = StageSnapshot(
+        "req",
+        "requirement_analysis",
+        "historical_requirement_relations",
+        "relation",
+        "r",
+        "history-content",
+        "history-basis",
+        parent_snapshot_ids=("m",),
+    )
+    history = replace(
+        relation,
+        stage="historical_test_case_verification",
+        candidate_id="verification",
+        snapshot_id="h",
+        parent_snapshot_ids=("r",),
+    )
+    complete = StageSnapshot(
+        "req",
+        "function",
+        "detailed_cases",
+        "complete",
+        "c",
+        "cases",
+        "basis",
+        parent_snapshot_ids=("a", "pa", "h"),
+    )
+    nodes = (MATERIAL, ANALYSIS_A, POINTS_A, relation, history, complete)
+
+    def selected(*extras):
+        return resolve_source_closure(
+            requirement_id="req",
+            selected_snapshot_ids=("c",),
+            required_stages=frozenset({("function", "detailed_cases")}),
+            stage_snapshots=(*nodes, *extras) if extras else nodes,
+            root_snapshots=(ROOT,),
+            current_root_hashes={ROOT.key: ROOT.content_hash},
+        )
+
+    assert history in selected().stages
+    mixed_material = replace(MATERIAL, candidate_id="material-b", snapshot_id="m2")
+    nodes = (
+        MATERIAL,
+        ANALYSIS_A,
+        POINTS_A,
+        replace(relation, parent_snapshot_ids=("m2",)),
+        history,
+        complete,
+    )
+    with pytest.raises(SourceClosureError, match="source_conflict"):
+        selected(mixed_material)
+
+
 def test_complete_branch_is_stable_across_order_and_duplicates():
     closure = resolve()
     reordered = resolve(("pa", "a"), (POINTS_A, MATERIAL, ANALYSIS_A))

@@ -33,6 +33,10 @@
         "expected_results"
       ],
       "properties": {
+        "generationTargetId": {
+          "type": "string",
+          "pattern": "\\S"
+        },
         "case_module": {
           "$ref": "#/$defs/text"
         },

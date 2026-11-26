@@ -156,6 +156,11 @@ def execute_checkpoint_task(
                 workspace=str(workspace),
                 extra_instruction=task.payload.extra_instruction,
                 **(
+                    {"history_planning": config["historyCasePlanning"]}
+                    if not revision and "historyCasePlanning" in config
+                    else {}
+                ),
+                **(
                     {
                         "current_cases_json": _require_config_json_text(
                             config, "resultYaml", stage

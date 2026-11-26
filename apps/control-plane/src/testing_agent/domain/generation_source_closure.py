@@ -10,7 +10,12 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Literal
 
-from testing_agent.domain.generation_chain import kind_for_stage, stage_names, upstream_stages
+from testing_agent.domain.generation_chain import (
+    kind_for_stage,
+    optional_upstream_stages,
+    stage_names,
+    upstream_stages,
+)
 
 StageKey = tuple[str, str]
 RootKey = tuple[str, str]
@@ -182,9 +187,14 @@ def resolve_source_closure(
         expected_parents = {
             (kind_for_stage(name), name) for name in upstream_stages(node.chain_kind, node.stage)
         }
-        if len(parents) != len(actual_parents) or actual_parents - expected_parents:
+        optional_parents = {
+            (kind_for_stage(name), name)
+            for name in optional_upstream_stages(node.chain_kind, node.stage)
+        }
+        allowed_parents = expected_parents | optional_parents
+        if len(parents) != len(actual_parents) or actual_parents - allowed_parents:
             raise SourceClosureError("source_conflict")
-        if actual_parents != expected_parents:
+        if expected_parents - actual_parents:
             raise SourceClosureError("source_unknown")
         if not parents and not node.root_snapshot_ids:
             raise SourceClosureError("source_unknown")

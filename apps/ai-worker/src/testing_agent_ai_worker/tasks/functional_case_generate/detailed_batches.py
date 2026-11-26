@@ -19,6 +19,7 @@ from testing_agent_ai_worker.agent.prompt import (
 from testing_agent_ai_worker.traceable_test_points import validate_traceable_test_points
 
 from .case_ids import assign_case_ids
+from .case_planning import CasePlan, plan_case_generation
 from .module_execution import ModuleProgress, prepare_module_workspace
 from .validation import context, generate_validated, normalize_json
 
@@ -67,14 +68,27 @@ def _normalize_json_text(raw_json_text: str) -> str:
     return normalize_json(raw_json_text)
 
 
-def _build_model_batches(case_names_json: str) -> list[dict[str, Any]]:
+def _build_model_batches(
+    case_names_json: str, plan: CasePlan | None = None
+) -> list[dict[str, Any]]:
     """按功能项拆分，保留测试点及其来源、覆盖缺口和相关审查问题。"""
     artifact = json.loads(_normalize_json_text(case_names_json))
     validate_traceable_test_points(artifact)
     groups: dict[str, list[dict[str, Any]]] = {}
-    for point in artifact["testPoints"]:
-        groups.setdefault(point["module"], []).append(point)
-    if not groups:
+    targets: dict[str, list[dict[str, Any]]] = {}
+    if plan is None:
+        for point in artifact["testPoints"]:
+            groups.setdefault(point["module"], []).append(point)
+    else:
+        by_id = {point["id"]: point for point in artifact["testPoints"]}
+        for target in plan.targets:
+            module = target["module"]
+            targets.setdefault(module, []).append(target)
+            points = groups.setdefault(module, [])
+            primary = target["pointRefs"][0]
+            if primary["stage"] == "case_names":
+                points.append(by_id[primary["pointId"]])
+    if plan is None and not groups:
         groups["空测试点分组"] = []
     batches = []
     for module, points in groups.items():
@@ -86,7 +100,7 @@ def _build_model_batches(case_names_json: str) -> list[dict[str, Any]]:
                 for issue in payload["reviewIssues"]
                 if issue["targetType"] != "testPoint" or issue["targetId"] in point_ids
             ]
-        batches.append({"model_name": module, "payload": payload})
+        batches.append({"model_name": module, "payload": payload, "targets": targets.get(module)})
     return batches
 
 
@@ -142,14 +156,29 @@ async def run_functional_detailed_case_batches(
     revision_instruction: str = "",
     source_text: str = "",
     media: list[str] | None = None,
+    history_planning: dict | None = None,
 ) -> str:
     """执行 detailed cases 的分片生成并合并结果。"""
 
     factory = from_config or _default_from_config
     merged_cases: list[Any] = []
-    batches = _build_model_batches(case_names_json)
+    plan = None
+    previous_findings = None
+    if history_planning is not None:
+        plan = await plan_case_generation(
+            case_names_json=case_names_json,
+            material=source_text,
+            history=history_planning,
+            factory=factory,
+            config_path=config_path,
+            workspace=workspace,
+            session_key=session_key,
+        )
+    batches = _build_model_batches(case_names_json, plan)
     current_cases = []
     if current_cases_json.strip() and revision_instruction:
+        previous_result = json.loads(_normalize_json_text(current_cases_json))
+        previous_findings = previous_result.get("historicalCaseFindings")
         current_cases = _extract_cases(current_cases_json, "当前候选结果")
         # Edited candidates may contain modules absent from the original test points.
         known_modules = {batch["model_name"] for batch in batches}
@@ -181,6 +210,13 @@ async def run_functional_detailed_case_batches(
             requirement_analysis_json=requirement_analysis_json,
             case_names_json=json.dumps(batch["payload"], ensure_ascii=False),
         )
+        targets = batch.get("targets")
+        if targets is not None:
+            body += "\n\n【本批生成目标】\n" + json.dumps(targets, ensure_ascii=False)
+            body += (
+                "\n按目标清单逐项生成，每条用例填写 generationTargetId 为目标 id，"
+                "case_module 与该目标 module 一致。只展开此清单中的场景。"
+            )
         if revision_instruction:
             module_cases = [
                 case
@@ -217,6 +253,18 @@ async def run_functional_detailed_case_batches(
     async def run_module(index: int, *, initial: str | None = None) -> str:
         nonlocal stopping
         batch = batches[index]
+        targets = batch.get("targets")
+
+        def validate_targets(output: dict) -> None:
+            if targets is None:
+                return
+            expected = {target["id"] for target in targets}
+            actual = {case.get("generationTargetId") for case in output["cases"]}
+            if actual != expected or any(
+                case["case_module"] != batch["model_name"] for case in output["cases"]
+            ):
+                raise ValueError("用例与本模块待生成目标不一致，须覆盖全部目标并使用清单 ID")
+
         async with slots:
             if stopping:
                 raise asyncio.CancelledError()
@@ -250,6 +298,7 @@ async def run_functional_detailed_case_batches(
                             media_args={"media": media} if media else {},
                         ),
                         inputs=prompts[index],
+                        post_validate=validate_targets if targets is not None else None,
                     )
                 await progress.emit(
                     index, "completed", caseCount=len(_extract_cases(result, batch["model_name"]))
@@ -283,9 +332,23 @@ async def run_functional_detailed_case_batches(
                 await asyncio.to_thread(
                     on_progress, "", batches[index]["model_name"], index + 1, len(batches)
                 )
-        result = json.dumps(
-            {"cases": assign_case_ids(merged_cases, current_cases)}, ensure_ascii=False
-        )
+        cases = assign_case_ids(merged_cases, current_cases)
+        refs = {target["id"]: target["pointRefs"] for target in plan.targets} if plan else {}
+        previous_refs = {
+            case["case_id"]: case["sourcePoints"]
+            for case in current_cases
+            if case.get("case_id") and case.get("sourcePoints")
+        }
+        for case in cases:
+            source_points = refs.get(case.pop("generationTargetId", None)) or previous_refs.get(
+                case["case_id"]
+            )
+            if source_points:
+                case["sourcePoints"] = source_points
+        content = {"cases": cases}
+        if plan is not None or previous_findings is not None:
+            content["historicalCaseFindings"] = plan.findings if plan else previous_findings
+        result = json.dumps(content, ensure_ascii=False)
         await progress.emit(status="completed")
         return result
     except BaseException as error:

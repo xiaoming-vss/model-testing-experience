@@ -1,4 +1,11 @@
+import { toRecordArray } from '@/shared/utils/value'
 import { parseGeneratedCases, toDisplayText, type GeneratedTestCase } from './functionalOutput'
+import { parseJsonRecord } from './historicalRelationView'
+
+export function readGeneratedCaseHistory(content: string) {
+  const value = parseJsonRecord(content)?.historicalCaseFindings
+  return Array.isArray(value) ? toRecordArray(value) : null
+}
 
 export type GeneratedCaseEntry = {
   /** 稳定值，沿用旧的「模块名:源序号」约定，避免外部选中状态失效。 */

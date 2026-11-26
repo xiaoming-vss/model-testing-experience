@@ -39,6 +39,7 @@ import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 import { buildRevisionTemplate, createQuestionRevisionDraft, getRevisionQuestions, revisionInstructionText } from '../utils/functionalRevision'
 import { formatJsonArtifact } from '../utils/artifactFormat'
 import { stageContentStats } from '../utils/stageContentStats'
+import { parseJsonRecord } from '../utils/historicalRelationView'
 import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
 import chainStyles from '../styles/generation-chain.module.css'
 import canvasStyles from '../styles/generation-canvas.module.css'
@@ -595,7 +596,12 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     />
     {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{STAGE_LABELS[item.stage] ?? item.stage}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
   </section> : null
-  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt)
+  const plannedCases = stage.stage === 'detailed_cases' && current.data?.content
+    ? parseJsonRecord(current.data.content)
+    : null
+  const hasOnlyHistory = Array.isArray(plannedCases?.historicalCaseFindings)
+    && Array.isArray(plannedCases.cases) && plannedCases.cases.length === 0
+  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt && !hasOnlyHistory)
   const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'
   const importDock = canImportCurrent ? <section className="gc-candidate-dock" aria-label="导入正式用例">
     <div className="gc-candidate-dock-head">

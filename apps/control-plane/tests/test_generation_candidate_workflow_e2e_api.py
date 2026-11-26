@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import pytest
 import sqlalchemy as sa
 import yaml as yaml_module
 from support.order_api import make_order
@@ -17,6 +18,10 @@ from support.ui_generation_fixtures import FIXTURES as UI_FIXTURES
 from support.ui_generation_fixtures import read as ui_fixture
 
 from testing_agent.api.deps_common import get_file_service
+from testing_agent.domain.historical_test_case_artifacts import (
+    VERIFICATION_RUN_RESULT,
+    verification_run_header,
+)
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -62,7 +67,8 @@ class Storage:
         pass
 
 
-def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F811
+@pytest.mark.parametrize("with_history", (False, True))
+def test_http_candidate_trial_adoption_and_import(api, monkeypatch, with_history):  # noqa: F811
     user, headers = account(api, "workflow-complete")
     pid = project(api, headers)
     rid = requirement(api, headers, pid)
@@ -142,6 +148,10 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
         return body, response.json()["data"]
 
     def complete(kind, stage_name, request, result, output, fmt="json"):
+        if with_history and stage_name == "detailed_cases":
+            output = {**yaml_module.safe_load(output), "historicalCaseFindings": []}
+            fmt = "json"
+
         async def emit():
             async with api.app.state.test_sessions() as session:
                 stage = await session.scalar(
@@ -206,6 +216,52 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
 
     req, run = launch("requirement_analysis", "extracting_text")
     material = complete("requirement_analysis", "extracting_text", req, run, material_artifact())
+
+    async def read_snapshot(result):
+        async with api.app.state.test_sessions() as session:
+            attempt = await session.get(AiGenerationAttempt, result["attemptId"])
+            return attempt.input_snapshot_json
+
+    if with_history:
+        adopt(material, "requirement_analysis", "extracting_text")
+        relation_req, relation_run = launch(
+            "requirement_analysis", "historical_requirement_relations"
+        )
+        relation_snapshot = asyncio.run(read_snapshot(relation_run))
+        history_source = json.loads(relation_snapshot["source"]["sourceContent"])
+        relation = complete(
+            "requirement_analysis",
+            "historical_requirement_relations",
+            relation_req,
+            relation_run,
+            {
+                "schemaVersion": "0.1",
+                "artifactType": "historical_requirement_relation_analysis",
+                "requirementId": rid,
+                "materialSnapshotId": history_source["currentRequirement"]["materialSnapshotId"],
+                "relations": [],
+                "openQuestions": [],
+            },
+        )
+        adopt(relation, "requirement_analysis", "historical_requirement_relations")
+        history_req, history_run = launch(
+            "requirement_analysis", "historical_test_case_verification"
+        )
+        history_snapshot = asyncio.run(read_snapshot(history_run))
+        history_input = json.loads(history_snapshot["source"]["sourceContent"])
+        history_result = {
+            **verification_run_header(VERIFICATION_RUN_RESULT, history_input),
+            "batches": [],
+        }
+        verification = complete(
+            "requirement_analysis",
+            "historical_test_case_verification",
+            history_req,
+            history_run,
+            history_result,
+        )
+        adopt(verification, "requirement_analysis", "historical_test_case_verification")
+
     req, run = launch(
         "function",
         "requirement_analysis",
@@ -321,7 +377,13 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
         "cases:\n  - case_id: graph-case\n    title: example\n",
         "yaml",
     )
-    adopt(material, "requirement_analysis", "extracting_text")
+    if with_history:
+        case_snapshot = asyncio.run(read_snapshot(run))
+        planning = case_snapshot["config"]["historyCasePlanning"]
+        assert planning["verification"] == history_result
+        assert json.loads(planning["input"]) == history_input
+    else:
+        adopt(material, "requirement_analysis", "extracting_text")
     options_before_profile = api.get(
         f"/v1/requirements/{rid}/generation/ui/source-options", headers=headers
     )
@@ -391,14 +453,32 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
     ), graph_current.text
     current_leaf = api.get(bases["function"] + "/stages/detailed_cases/current", headers=headers)
     assert current_leaf.json()["data"]["sourceAttemptId"] == cases["currentAttemptId"]
-    assert {
-        (item["chainKind"], item["stage"], item["candidateId"], item["direct"])
-        for item in current_leaf.json()["data"]["basisSources"]
-    } == {
+    expected_basis = {
         ("requirement_analysis", "extracting_text", material["candidateId"], False),
         ("function", "requirement_analysis", analysis["candidateId"], True),
         ("function", "case_names", points["candidateId"], True),
     }
+    if with_history:
+        expected_basis.update(
+            {
+                (
+                    "requirement_analysis",
+                    "historical_requirement_relations",
+                    relation["candidateId"],
+                    False,
+                ),
+                (
+                    "requirement_analysis",
+                    "historical_test_case_verification",
+                    verification["candidateId"],
+                    True,
+                ),
+            }
+        )
+    assert {
+        (item["chainKind"], item["stage"], item["candidateId"], item["direct"])
+        for item in current_leaf.json()["data"]["basisSources"]
+    } == expected_basis
     url = bases["function"] + "/stages/detailed_cases/current"
     preview = api.post(
         url + "/import-preview", headers=headers, json={"expectedCurrentToken": token}
