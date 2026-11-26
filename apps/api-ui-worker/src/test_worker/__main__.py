@@ -182,9 +182,6 @@ async def _run_poll(config: WorkerConfig) -> None:
     case_runner = UiCaseRunner(config, control_plane_client)
     suite_runner = UiSuiteRunner(config, control_plane_client)
 
-    # 记录 API 契约
-    control_plane_client.log_planned_contract()
-
     # 创建轮询器
     from .poller.task_poller import TaskPoller
 

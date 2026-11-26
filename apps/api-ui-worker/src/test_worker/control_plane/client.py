@@ -1,7 +1,4 @@
-"""
-控制面客户端模块
-与 Go 服务端通信，领取任务、上报结果
-"""
+"""控制面客户端：领取任务、读取快照、上报进度与结果。"""
 
 from __future__ import annotations
 
@@ -14,7 +11,6 @@ from urllib.parse import urlencode
 
 import httpx
 
-from ..core import logger
 from .artifacts import ArtifactUploader
 from ..contracts.parsing import parse_snapshot_response, parse_ui_task
 from ..contracts.types import (
@@ -33,6 +29,7 @@ from ..contracts.types import (
 CONTROL_PLANE_ROUTE_LIMIT = 200
 _SAFE_ERROR_CODE = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
 _SAFE_STATUS_DETAILS = {
+    0: "no response",
     400: "bad request",
     401: "unauthorized",
     403: "forbidden",
@@ -100,20 +97,35 @@ class ControlPlaneRequestError(Exception):
         super().__init__(message)
 
 
+# The control plane answers with one of these only when this worker no longer holds
+# the execution: the lease expired or was taken over, the task or run is gone, or the
+# worker token is no longer accepted. A 400 or 422 means the request itself is wrong.
+LEASE_LOST_STATUSES = frozenset({401, 403, 404, 409, 410})
+
+
 class ExecutionLeaseLost(Exception):
-    """The control plane has definitively rejected this execution's authority."""
+    """This worker's execution authority ended; ``status_code`` is None for a local expiry."""
+
+    def __init__(self, status_code: int | None = None) -> None:
+        super().__init__("执行租约已失效")
+        self.status_code = status_code
 
 
-def is_execution_rejected(error: Exception) -> bool:
-    """Distinguish an explicit client rejection from a temporary outage."""
-    return isinstance(error, ControlPlaneRequestError) and error.status_code in {
-        400,
-        401,
-        403,
-        404,
-        409,
-        422,
-    }
+def lease_rejection_status(error: Exception) -> int | None:
+    """The status of the control plane's rejection of this execution, if that is ``error``."""
+    if (
+        isinstance(error, ControlPlaneRequestError)
+        and error.status_code in LEASE_LOST_STATUSES
+    ):
+        return error.status_code
+    return None
+
+
+def raise_if_lease_lost(error: Exception) -> None:
+    """Report the control plane's rejection of this execution as ``ExecutionLeaseLost``."""
+    status = lease_rejection_status(error)
+    if status is not None:
+        raise ExecutionLeaseLost(status) from None
 
 
 class ControlPlaneClient:
@@ -138,24 +150,14 @@ class ControlPlaneClient:
         )
 
     def claim_next_task(self) -> dict[str, Any] | None | NotImplementedType:
-        """Claim the globally oldest task, falling back against an older server."""
+        """Claim the globally oldest task; ``NotImplemented`` means an older server."""
         pathname = "/internal/api-worker/tasks/claim-next"
-        response = self._client.post(
-            pathname,
-            json={"workerId": self._config.worker_id},
-        )
-        if response.status_code == 404:
-            return NotImplemented
-        if response.status_code == 204:
-            return None
-        if response.is_error:
-            raise ControlPlaneRequestError(
-                "POST",
-                pathname,
-                response.status_code,
-                _safe_error_code(response),
-            )
-        return self._unwrap_response_data(response.json())
+        try:
+            return self._request("POST", pathname, {"workerId": self._config.worker_id})
+        except ControlPlaneRequestError as error:
+            if error.status_code == 404:
+                return NotImplemented
+            raise
 
     def claim_task(self) -> UiWorkerTask | None:
         """
@@ -347,7 +349,9 @@ class ControlPlaneClient:
             payload: 开始负载
         """
         self._request(
-            "POST", f"/internal/ui-worker/tasks/{task_id}/started", asdict(payload)
+            "POST",
+            f"/internal/ui-worker/tasks/{task_id}/started",
+            self._serialize(payload),
         )
 
     def report_task_heartbeat(
@@ -361,7 +365,9 @@ class ControlPlaneClient:
             payload: 心跳负载
         """
         self._request(
-            "POST", f"/internal/ui-worker/tasks/{task_id}/heartbeat", asdict(payload)
+            "POST",
+            f"/internal/ui-worker/tasks/{task_id}/heartbeat",
+            self._serialize(payload),
         )
 
     def report_ui_steps(
@@ -393,7 +399,7 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **asdict(payload),
+            **self._serialize(payload),
         }
         self._request(
             "POST",
@@ -414,9 +420,7 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **self._artifacts.publish(
-                task_id, self._serialize_suite_item_result(payload)
-            ),
+            **self._artifacts.publish(task_id, self._serialize(payload)),
         }
         self._request(
             "POST",
@@ -436,34 +440,12 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **self._artifacts.publish(task_id, self._serialize_task_result(payload)),
+            **self._artifacts.publish(task_id, self._serialize(payload)),
         }
         self._request(
             "POST", f"/internal/ui-worker/tasks/{task_id}/completed", body, timeout=300
         )
         self._artifacts.cleanup(task_id)
-
-    def log_planned_contract(self) -> None:
-        """记录 API 契约"""
-        logger.info(
-            "control plane contract",
-            {
-                "claim": "/internal/ui-worker/tasks/claim",
-                "apiClaim": "/internal/api-worker/tasks/claim",
-                "snapshot": "/internal/ui-worker/tasks/{taskId}/snapshot",
-                "apiSnapshot": "/internal/api-worker/tasks/{taskId}/snapshot",
-                "started": "/internal/ui-worker/tasks/{taskId}/started",
-                "apiStarted": "/internal/api-worker/tasks/{taskId}/started",
-                "heartbeat": "/internal/ui-worker/tasks/{taskId}/heartbeat",
-                "apiHeartbeat": "/internal/api-worker/tasks/{taskId}/heartbeat",
-                "suiteItemStarted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/started",
-                "suiteItemCompleted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/completed",
-                "apiCollectionItemStarted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/started",
-                "apiCollectionItemCompleted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/completed",
-                "completed": "/internal/ui-worker/tasks/{taskId}/completed",
-                "apiCompleted": "/internal/api-worker/tasks/{taskId}/completed",
-            },
-        )
 
     def _request(
         self,
@@ -488,7 +470,7 @@ class ControlPlaneClient:
             响应数据，如果状态码为 204 则返回 None
 
         Raises:
-            Exception: 请求失败时抛出
+            ControlPlaneRequestError: 控制面返回错误状态或连接失败时抛出
         """
         attempt = 0
         while True:
@@ -525,10 +507,8 @@ class ControlPlaneClient:
                     attempt += 1
                     time.sleep(0.2)
                     continue
-                raise Exception(
-                    f"control plane request failed: {method.upper()} "
-                    f"{_safe_route(pathname)} -> {type(e).__name__}"
-                ) from e
+                # No status exists, and the exception text may quote a URL or request line.
+                raise ControlPlaneRequestError(method, pathname, 0) from e
 
     def _unwrap_response_data(self, payload: Any) -> dict[str, Any] | None:
         """兼容后端标准响应包裹和 worker 裸响应。"""
@@ -539,20 +519,9 @@ class ControlPlaneClient:
             return data if isinstance(data, dict) else None
         return payload
 
-    def _serialize_task_result(
-        self, payload: UiCaseRunResult | UiSuiteRunResult
-    ) -> dict[str, Any]:
-        """序列化任务结果"""
-        result = asdict(payload)
-        # 转换字段名为驼峰命名
-        return self._to_camel_case(result)
-
-    def _serialize_suite_item_result(
-        self, payload: UiSuiteItemRunResult
-    ) -> dict[str, Any]:
-        """序列化测试集项结果"""
-        result = asdict(payload)
-        return self._to_camel_case(result)
+    def _serialize(self, payload: Any) -> dict[str, Any]:
+        """把负载数据类序列化为驼峰键的字典"""
+        return self._to_camel_case(asdict(payload))
 
     def _to_camel_case(self, data: dict[str, Any]) -> dict[str, Any]:
         """将下划线命名转换为驼峰命名"""

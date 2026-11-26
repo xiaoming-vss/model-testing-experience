@@ -19,6 +19,10 @@ def test_notification_during_queue_check_wakes_worker_without_waiting_for_timeou
         calls = []
 
         class Client:
+            # A control plane without the shared claim endpoint.
+            def claim_next_task(self):
+                return NotImplemented
+
             def claim_task(self):
                 calls.append("ui")
                 if len(calls) == 1:
@@ -398,5 +402,47 @@ def test_stopping_browser_step_drains_the_inflight_driver_reply():
         except asyncio.CancelledError:
             pass
         assert events == ["close", "driver replied"]
+
+    asyncio.run(run())
+
+
+def test_shared_fifo_ui_task_is_parsed_like_a_domain_claim():
+    from test_worker.contracts.types import UiWorkerTask
+
+    class Client:
+        def claim_next_task(self):
+            return {
+                "domain": "ui",
+                "taskId": "old",
+                "taskType": "suite_run",
+                "runId": "r",
+                "suiteId": "s",
+                "leaseSeconds": "45",
+            }
+
+    class Poller(TaskPoller):
+        async def _handle_task(self, task):
+            assert task == UiWorkerTask(
+                task_id="old",
+                task_type="suite_run",
+                run_id="r",
+                suite_id="s",
+                lease_seconds=45,
+            )
+            raise asyncio.CancelledError()
+
+    async def run():
+        poller = Poller(
+            SimpleNamespace(
+                worker_id="w", mode="poll", poll_interval_ms=1, redis_url=""
+            ),
+            Client(),
+            None,
+            None,
+        )
+        try:
+            await poller.start()
+        except asyncio.CancelledError:
+            pass
 
     asyncio.run(run())

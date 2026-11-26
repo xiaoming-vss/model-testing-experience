@@ -163,6 +163,31 @@ class WorkerContractTests(unittest.TestCase):
         self.assertEqual(default_mb * 1024 * 1024, control_bytes)
         self.assertEqual(example["perf_worker"]["runner"]["max_summary_mb"], default_mb)
 
+    def test_every_worker_treats_the_control_plane_lease_loss_status_as_lost(self):
+        # The control plane answers 409 when a worker's execution is no longer valid, so
+        # that a 400 can always mean "the request was sent wrong" (ADR 0032).
+        control = source("apps/control-plane/src/testing_agent/core/errors.py")
+        self.assertRegex(
+            control, r"ErrWorkerLeaseLost = AppError\(409, [^\n]*HTTPStatus\.CONFLICT\)"
+        )
+
+        rejection_sets = {
+            "api-ui-worker/src/test_worker/control_plane/client.py": (
+                "LEASE_LOST_STATUSES = frozenset({401, 403, 404, 409, 410})"
+            ),
+            "perf-worker/src/testing_agent_perf_worker/control_plane/client.py": (
+                "_LEASE_REJECTION_STATUSES = {400, 401, 403, 404, 409, 422}"
+            ),
+            "integration-worker/src/testing_agent_integration_worker/services/step_execution.py": (
+                "{403, 404, 409}"
+            ),
+            "integration-worker/src/testing_agent_integration_worker/services/bug_sync.py": (
+                "{403, 404, 409}"
+            ),
+        }
+        for path, literal in rejection_sets.items():
+            self.assertIn(literal, source(f"apps/{path}"), path)
+
 
 def _assignment(tree: ast.Module, name: str) -> ast.expr:
     for node in ast.walk(tree):

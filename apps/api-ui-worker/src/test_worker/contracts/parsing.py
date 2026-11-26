@@ -13,11 +13,8 @@ from typing import Any
 
 from .types import (
     ScreenshotPolicy,
-    UiBrowserOptionsSnapshot,
-    UiBrowserViewport,
     UiCaseRunSnapshot,
     UiCaseSnapshot,
-    UiRunOptionsSnapshot,
     UiStepDefinition,
     UiSuiteRunItemSnapshot,
     UiSuiteSnapshot,
@@ -104,8 +101,6 @@ def parse_case_run_snapshot(
         run_id=str(data.get("runId") or ""),
         case=case,
         suite=_parse_suite(data, default_screenshot_policy),
-        browser=_parse_browser(data),
-        options=_parse_options(data),
     )
 
 
@@ -144,8 +139,31 @@ def parse_suite_run_snapshot(
         run_id=str(data.get("runId") or data.get("suiteRunId") or ""),
         items=items,
         suite=_parse_suite(data, default_screenshot_policy),
-        browser=_parse_browser(data),
-        options=_parse_options(data),
+    )
+
+
+def parse_step_definition(raw: Mapping[str, Any], index: int) -> UiStepDefinition:
+    """Read one camelCase step payload; ``index`` is its 1-based position in messages."""
+    save_to = raw.get("saveTo")
+    if save_to is not None and (
+        not isinstance(save_to, list)
+        or not all(isinstance(item, dict) for item in save_to)
+    ):
+        raise ValueError(f"步骤 {index} 的 saveTo 必须是对象数组")
+    return UiStepDefinition(
+        keyword=str(raw.get("keyword") or ""),
+        order_no=raw.get("orderNo"),
+        step_name=raw.get("stepName"),
+        locator_type=raw.get("locatorType"),
+        locator_value=raw.get("locatorValue"),
+        operation_value=raw.get("operationValue"),
+        expect_value=raw.get("expectValue"),
+        timeout_ms=raw.get("timeoutMs"),
+        continue_on_failure=raw.get("continueOnFailure"),
+        enabled=raw.get("enabled"),
+        description=raw.get("description"),
+        comparator=raw.get("comparator"),
+        save_to=save_to,
     )
 
 
@@ -153,28 +171,11 @@ def _parse_steps(case_data: Mapping[str, Any]) -> list[UiStepDefinition] | None:
     raw_steps = case_data.get("steps")
     if not isinstance(raw_steps, list) or not raw_steps:
         return None
-    steps = []
-    for raw_step in raw_steps:
-        if not isinstance(raw_step, Mapping):
-            continue
-        steps.append(
-            UiStepDefinition(
-                keyword=str(raw_step.get("keyword", "")),
-                order_no=raw_step.get("orderNo"),
-                step_name=raw_step.get("stepName"),
-                locator_type=raw_step.get("locatorType"),
-                locator_value=raw_step.get("locatorValue"),
-                operation_value=raw_step.get("operationValue"),
-                expect_value=raw_step.get("expectValue"),
-                timeout_ms=raw_step.get("timeoutMs"),
-                continue_on_failure=raw_step.get("continueOnFailure"),
-                enabled=raw_step.get("enabled"),
-                description=raw_step.get("description"),
-                comparator=raw_step.get("comparator"),
-                save_to=raw_step.get("saveTo"),
-            )
-        )
-    return steps
+    return [
+        parse_step_definition(raw, index)
+        for index, raw in enumerate(raw_steps, 1)
+        if isinstance(raw, Mapping)
+    ]
 
 
 def _parse_suite(
@@ -192,31 +193,4 @@ def _parse_suite(
         viewport_height=suite_data.get("viewportHeight"),
         default_step_timeout_ms=suite_data.get("defaultStepTimeoutMs"),
         screenshot_policy=suite_data.get("screenshotPolicy", default_screenshot_policy),
-    )
-
-
-def _parse_browser(data: Mapping[str, Any]) -> UiBrowserOptionsSnapshot | None:
-    browser_data = _mapping(data.get("browser"))
-    if not browser_data:
-        return None
-    viewport_data = _mapping(browser_data.get("viewport"))
-    viewport = None
-    if viewport_data:
-        viewport = UiBrowserViewport(
-            width=int(viewport_data.get("width", 1280) or 1280),
-            height=int(viewport_data.get("height", 720) or 720),
-        )
-    return UiBrowserOptionsSnapshot(
-        headless=browser_data.get("headless"),
-        slow_mo_ms=browser_data.get("slowMoMs"),
-        viewport=viewport,
-    )
-
-
-def _parse_options(data: Mapping[str, Any]) -> UiRunOptionsSnapshot | None:
-    options_data = _mapping(data.get("options"))
-    if not options_data:
-        return None
-    return UiRunOptionsSnapshot(
-        default_step_timeout_ms=options_data.get("defaultStepTimeoutMs"),
     )

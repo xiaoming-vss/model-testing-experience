@@ -23,6 +23,7 @@ from .locator import resolve_locator
 from .templates import RenderContext, referenced_names, render_field
 from .variables import StepVariableResolver
 from ..contracts.types import UiStepDefinition, UiStepRunResult
+from ..control_plane.client import ExecutionLeaseLost
 
 
 class StepExecutionFailure(Exception):
@@ -412,6 +413,8 @@ class StepExecutor:
                 if context.variables is None:
                     raise ValueError("当前运行模式无法写入环境变量；请使用 poll 模式")
                 await context.variables.write(rule.name, value, order_no)
+            except ExecutionLeaseLost:
+                raise
             except Exception as exc:
                 raise StepExecutionFailure(
                     str(exc),

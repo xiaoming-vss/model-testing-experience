@@ -11,11 +11,18 @@ from test_worker.contracts.parsing import (
     parse_suite_run_snapshot,
     parse_ui_task,
 )
-from test_worker.contracts.types import WorkerConfig
+from test_worker.contracts.types import (
+    UiCaseSnapshot,
+    UiSuiteItemStartedPayload,
+    UiTaskHeartbeatPayload,
+    UiTaskStartedPayload,
+    WorkerConfig,
+)
 from test_worker.control_plane.client import (
     ControlPlaneClient,
     ControlPlaneRequestError,
 )
+from test_worker.ui.step_normalizer import normalize_case_steps
 
 
 class FakeHttpClient:
@@ -169,6 +176,36 @@ def test_snapshot_parser_ignores_unknown_control_plane_fields() -> None:
     assert not hasattr(snapshot.case_run.case.steps[0], "futureStepField")
     assert not hasattr(snapshot.case_run.case, "futureCaseField")
     assert not hasattr(snapshot.case_run, "futureRunField")
+
+
+def test_explicit_steps_and_steps_json_read_a_step_the_same_way() -> None:
+    step = {
+        "keyword": "input",
+        "orderNo": 2,
+        "locatorType": "css",
+        "saveTo": [{"name": "token", "source": "value"}],
+    }
+
+    from_steps = parse_case_run_snapshot(
+        {"case": {"caseId": "c", "name": "n", "steps": [step]}}
+    )
+    from_json = normalize_case_steps(
+        UiCaseSnapshot(case_id="c", name="n", steps_json=[step])
+    )
+
+    # The explicit path used to drop saveTo, so its extractions silently never ran.
+    assert from_steps is not None and from_steps.case.steps == from_json
+    assert from_json[0].save_to == [{"name": "token", "source": "value"}]
+
+
+@pytest.mark.parametrize("save_to", ["token", [{"name": "token"}, "x"]])
+def test_a_step_whose_save_to_is_not_an_object_array_is_refused(save_to) -> None:
+    step = {"keyword": "input", "saveTo": save_to}
+
+    with pytest.raises(ValueError, match="步骤 1 的 saveTo 必须是对象数组"):
+        parse_case_run_snapshot({"case": {"caseId": "c", "name": "n", "steps": [step]}})
+    with pytest.raises(ValueError, match="步骤 1 的 saveTo 必须是对象数组"):
+        normalize_case_steps(UiCaseSnapshot(case_id="c", name="n", steps_json=[step]))
 
 
 def test_serialization_keeps_local_path_until_artifact_publication(tmp_path) -> None:
@@ -349,3 +386,100 @@ def test_control_plane_error_constructor_drops_unsafe_error_codes() -> None:
     assert error.error_code == ""
     assert "SECRET-MARKER" not in str(error)
     assert "BAD CODE" not in str(error)
+
+
+class RecordingHttpClient(FakeHttpClient):
+    """Keeps every request body so a test can read the keys that go over the wire."""
+
+    def __init__(self, response: httpx.Response) -> None:
+        super().__init__(response)
+        self.bodies: list[dict | None] = []
+
+    def request(
+        self, method: str, pathname: str, json: dict | None = None
+    ) -> httpx.Response:
+        self.bodies.append(json)
+        return self.response
+
+
+def test_ui_lifecycle_payloads_use_camel_case_keys_like_every_other_payload() -> None:
+    client = ControlPlaneClient(_config())
+    http = RecordingHttpClient(
+        httpx.Response(204, request=httpx.Request("POST", "http://control-plane/x"))
+    )
+    client._client = http
+
+    client.report_task_started(
+        "task-1", UiTaskStartedPayload(worker_id="worker-a", started_at="t0")
+    )
+    client.report_task_heartbeat(
+        "task-1", UiTaskHeartbeatPayload(worker_id="worker-a", heartbeat_at="t1")
+    )
+    client.report_suite_item_started(
+        "task-1",
+        "item-1",
+        UiSuiteItemStartedPayload(run_id="run-1", case_id="case-1", started_at="t2"),
+    )
+
+    assert http.bodies == [
+        {"workerId": "worker-a", "startedAt": "t0"},
+        {"workerId": "worker-a", "heartbeatAt": "t1"},
+        {
+            "workerId": "worker-a",
+            "runId": "run-1",
+            "caseId": "case-1",
+            "startedAt": "t2",
+        },
+    ]
+
+
+def test_transport_failure_is_a_control_plane_error_without_the_exception_text() -> (
+    None
+):
+    class DisconnectingHttpClient:
+        def request(
+            self, method: str, pathname: str, json: dict | None = None
+        ) -> httpx.Response:
+            raise httpx.ConnectError(
+                "SECRET-MARKER https://user:pass@control-plane/internal",
+                request=httpx.Request("GET", "http://control-plane/internal"),
+            )
+
+    client = ControlPlaneClient(_config())
+    client._client = DisconnectingHttpClient()
+
+    with pytest.raises(ControlPlaneRequestError) as caught:
+        client._request("GET", "/internal/ui-worker/tasks/task-1/snapshot")
+
+    assert caught.value.status_code == 0
+    assert str(caught.value) == (
+        "control plane request failed: GET /internal/ui-worker/tasks/task-1/snapshot"
+        " -> 0 no response"
+    )
+
+
+@pytest.mark.parametrize("status, expected", [(204, None), (404, NotImplemented)])
+def test_claim_next_task_reports_an_empty_queue_and_an_older_server(
+    status, expected
+) -> None:
+    client = ControlPlaneClient(_config())
+    client._client = FakeHttpClient(
+        httpx.Response(
+            status, request=httpx.Request("POST", "http://control-plane/claim-next")
+        )
+    )
+
+    assert client.claim_next_task() is expected
+
+
+def test_claim_next_task_returns_the_unwrapped_task() -> None:
+    client = ControlPlaneClient(_config())
+    client._client = FakeHttpClient(
+        httpx.Response(
+            200,
+            json={"code": 0, "data": {"taskId": "task-1", "domain": "ui"}},
+            request=httpx.Request("POST", "http://control-plane/claim-next"),
+        )
+    )
+
+    assert client.claim_next_task() == {"taskId": "task-1", "domain": "ui"}
