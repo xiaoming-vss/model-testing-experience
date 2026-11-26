@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from ..app import build_result
 from ..compiler.compiler import CompiledPlan, compile_run_spec
 from ..contracts.result import (
@@ -84,8 +86,9 @@ class PerfPoller:
             while not self.shutdown_event.is_set():
                 try:
                     claim = await self.client.claim(self.worker_id)
-                except LeaseLostError:
+                except LeaseLostError as exc:
                     # A rejected token or server-side refusal must not spin.
+                    logger.warning("claim rejected status=%s", exc.status_code)
                     await self._wait_or_shutdown(self.settings.worker.poll_interval_seconds)
                     continue
                 except ControlPlaneError as exc:
@@ -120,7 +123,7 @@ class PerfPoller:
                     loop.remove_signal_handler(sig)
                 except (NotImplementedError, RuntimeError):
                     pass
-            self.health.progress("stopped")
+            self.health.stop()
             await self.client.close()
 
     def request_shutdown(self) -> None:
@@ -164,13 +167,7 @@ class PerfPoller:
         if self.shutdown_event.is_set():
             await self._report(
                 claim,
-                _special_result(
-                    claim.run_id,
-                    RunStatus.STOPPED,
-                    RunOutcome.STOPPED,
-                    datetime.now(UTC).isoformat(),
-                    "Worker 正在关闭，执行未启动",
-                ),
+                _stop_result(claim.run_id, StopReason.SHUTDOWN, started_iso),
                 None,
                 window,
             )
@@ -178,41 +175,28 @@ class PerfPoller:
             return
         workspace: Workspace | None = None
         heartbeat: asyncio.Task[None] | None = None
-        snapshot: SnapshotResponse | None = None
         compiled: CompiledPlan | None = None
         execution: K6Execution | None = None
         preflight_error = ""
         try:
             try:
                 snapshot = await self.client.snapshot(claim.task_id, self.worker_id)
-            except (LeaseLostError, ControlPlaneError, PerfWorkerError) as exc:
-                preflight_error = f"获取运行快照失败: {exc}"
-                await self._report(
-                    claim,
-                    _special_result(
-                        claim.run_id,
-                        RunStatus.FAILED,
-                        RunOutcome.EXECUTION_ERROR,
-                        started_iso,
-                        preflight_error,
-                    ),
-                    None,
-                    window,
+            except LeaseLostError:
+                # The control plane ends this attempt through its lease state; a
+                # synthesized result would only be rejected again.
+                self._request_stop(StopReason.LEASE_LOST, force=True)
+                return
+            except (ControlPlaneError, PerfWorkerError) as exc:
+                await self._preflight_failed(
+                    claim, started_iso, f"获取运行快照失败: {exc}", None, window
                 )
                 return
+            except ValidationError:
+                await self._preflight_failed(claim, started_iso, "运行快照不符合协议", None, window)
+                return
             if snapshot.run_id != claim.run_id:
-                preflight_error = "控制面返回的运行快照与任务不一致"
-                await self._report(
-                    claim,
-                    _special_result(
-                        claim.run_id,
-                        RunStatus.FAILED,
-                        RunOutcome.EXECUTION_ERROR,
-                        started_iso,
-                        preflight_error,
-                    ),
-                    None,
-                    window,
+                await self._preflight_failed(
+                    claim, started_iso, "控制面返回的运行快照与任务不一致", None, window
                 )
                 return
             try:
@@ -227,7 +211,9 @@ class PerfPoller:
             if self.stop_event.is_set():
                 await self._report(
                     claim,
-                    self._preflight_stop_result(claim, started_iso),
+                    _stop_result(
+                        claim.run_id, self.stop_reason or StopReason.SHUTDOWN, started_iso
+                    ),
                     None,
                     window,
                 )
@@ -237,18 +223,7 @@ class PerfPoller:
                     Path(self.settings.runner.workspace_root), claim.run_id
                 )
             except ExecutionError as exc:
-                await self._report(
-                    claim,
-                    _special_result(
-                        claim.run_id,
-                        RunStatus.FAILED,
-                        RunOutcome.EXECUTION_ERROR,
-                        started_iso,
-                        str(exc),
-                    ),
-                    None,
-                    window,
-                )
+                await self._preflight_failed(claim, started_iso, str(exc), None, window)
                 return
 
             self.health.progress("starting")
@@ -258,18 +233,8 @@ class PerfPoller:
                 self._request_stop(StopReason.LEASE_LOST, force=True)
                 return
             except ControlPlaneError as exc:
-                preflight_error = f"上报运行开始失败: {exc}"
-                await self._report(
-                    claim,
-                    _special_result(
-                        claim.run_id,
-                        RunStatus.FAILED,
-                        RunOutcome.EXECUTION_ERROR,
-                        started_iso,
-                        preflight_error,
-                    ),
-                    workspace,
-                    window,
+                await self._preflight_failed(
+                    claim, started_iso, f"上报运行开始失败: {exc}", workspace, window
                 )
                 return
 
@@ -308,41 +273,19 @@ class PerfPoller:
                         compiled, workspace, self.stop_event
                     )
             if execution is not None and compiled is not None:
-                result = build_result(snapshot.run_spec, compiled, execution)
-                result = self._apply_stop_reason(result, execution)
+                result = self._apply_stop_reason(
+                    build_result(snapshot.run_spec, compiled, execution), execution
+                )
+            elif self.stop_reason is not None:
+                result = _stop_result(claim.run_id, self.stop_reason, started_iso)
             else:
-                if self.stop_reason == StopReason.USER:
-                    result = _special_result(
-                        claim.run_id,
-                        RunStatus.CANCELED,
-                        RunOutcome.STOPPED,
-                        started_iso,
-                        "用户已停止运行",
-                    )
-                elif self.stop_reason == StopReason.SHUTDOWN:
-                    result = _special_result(
-                        claim.run_id,
-                        RunStatus.STOPPED,
-                        RunOutcome.STOPPED,
-                        started_iso,
-                        "Worker 正在关闭，执行已停止",
-                    )
-                elif self.stop_reason == StopReason.LEASE_LOST:
-                    result = _special_result(
-                        claim.run_id,
-                        RunStatus.STOPPED,
-                        RunOutcome.STOPPED,
-                        started_iso,
-                        "控制面执行租约已失效，执行已停止",
-                    )
-                else:
-                    result = _special_result(
-                        claim.run_id,
-                        RunStatus.FAILED,
-                        RunOutcome.EXECUTION_ERROR,
-                        started_iso,
-                        preflight_error or "执行未启动",
-                    )
+                result = _special_result(
+                    claim.run_id,
+                    RunStatus.FAILED,
+                    RunOutcome.EXECUTION_ERROR,
+                    started_iso,
+                    preflight_error or "执行未启动",
+                )
             await self._report(claim, result, workspace, window)
         finally:
             window.stop()
@@ -350,6 +293,28 @@ class PerfPoller:
                 heartbeat.cancel()
                 await asyncio.gather(heartbeat, return_exceptions=True)
             self._active = False
+
+    async def _preflight_failed(
+        self,
+        claim: ClaimResponse,
+        started_at: str,
+        message: str,
+        workspace: Workspace | None,
+        window: ExecutionWindow,
+    ) -> None:
+        """Report a failure that happened before k6 could start."""
+        await self._report(
+            claim,
+            _special_result(
+                claim.run_id,
+                RunStatus.FAILED,
+                RunOutcome.EXECUTION_ERROR,
+                started_at,
+                message,
+            ),
+            workspace,
+            window,
+        )
 
     async def _download_data_files(
         self,
@@ -407,60 +372,13 @@ class PerfPoller:
             self.stop_reason = reason
         self.stop_event.set()
 
-    def _preflight_stop_result(self, claim: ClaimResponse, started_at: str) -> RunResult:
-        """Classify a stop that arrived before k6 started."""
-        if self.stop_reason == StopReason.USER:
-            return _special_result(
-                claim.run_id,
-                RunStatus.CANCELED,
-                RunOutcome.STOPPED,
-                started_at,
-                "用户已停止运行",
-            )
-        if self.stop_reason == StopReason.LEASE_LOST:
-            return _special_result(
-                claim.run_id,
-                RunStatus.STOPPED,
-                RunOutcome.STOPPED,
-                started_at,
-                "控制面执行租约已失效，执行已停止",
-            )
-        return _special_result(
-            claim.run_id,
-            RunStatus.STOPPED,
-            RunOutcome.STOPPED,
-            started_at,
-            "Worker 正在关闭，执行未启动",
-        )
-
     def _apply_stop_reason(self, result: RunResult, execution: K6Execution) -> RunResult:
-        if not execution.stopped:
+        if not execution.stopped or self.stop_reason is None:
             return result
-        if self.stop_reason == StopReason.USER:
-            return result.model_copy(
-                update={
-                    "status": RunStatus.CANCELED,
-                    "outcome": RunOutcome.STOPPED,
-                    "error_message": "用户已停止运行",
-                }
-            )
-        if self.stop_reason == StopReason.SHUTDOWN:
-            return result.model_copy(
-                update={
-                    "status": RunStatus.STOPPED,
-                    "outcome": RunOutcome.STOPPED,
-                    "error_message": "Worker 正在关闭，执行已停止",
-                }
-            )
-        if self.stop_reason == StopReason.LEASE_LOST:
-            return result.model_copy(
-                update={
-                    "status": RunStatus.STOPPED,
-                    "outcome": RunOutcome.STOPPED,
-                    "error_message": "控制面执行租约已失效，执行已停止",
-                }
-            )
-        return result
+        status, outcome, _before, after = _STOP_RESULTS[self.stop_reason]
+        return result.model_copy(
+            update={"status": status, "outcome": outcome, "error_message": after}
+        )
 
     async def _report(
         self,
@@ -478,10 +396,12 @@ class PerfPoller:
             try:
                 await self.client.complete(claim.task_id, payload)
                 return
-            except LeaseLostError:
+            except LeaseLostError as exc:
                 # The control plane has already rejected this attempt; retrying
                 # cannot make the result valid again.
-                logger.warning("completion rejected task_id=%s", claim.task_id)
+                logger.warning(
+                    "completion rejected task_id=%s status=%s", claim.task_id, exc.status_code
+                )
                 return
             except ControlPlaneError as exc:
                 logger.warning(
@@ -505,6 +425,36 @@ class PerfPoller:
                 return
             await asyncio.sleep(delay)
             attempt += 1
+
+
+# Stop reason -> (status, outcome, message before k6 started, message after k6 started).
+# A lease loss is never an execution error: the control plane ends the attempt itself.
+_STOP_RESULTS: dict[StopReason, tuple[RunStatus, RunOutcome, str, str]] = {
+    StopReason.USER: (
+        RunStatus.CANCELED,
+        RunOutcome.STOPPED,
+        "用户已停止运行",
+        "用户已停止运行",
+    ),
+    StopReason.SHUTDOWN: (
+        RunStatus.STOPPED,
+        RunOutcome.STOPPED,
+        "Worker 正在关闭，执行未启动",
+        "Worker 正在关闭，执行已停止",
+    ),
+    StopReason.LEASE_LOST: (
+        RunStatus.STOPPED,
+        RunOutcome.STOPPED,
+        "控制面执行租约已失效，执行未启动",
+        "控制面执行租约已失效，执行已停止",
+    ),
+}
+
+
+def _stop_result(run_id: str, reason: StopReason, started_at: str) -> RunResult:
+    """The result of a stop that arrived before k6 started; nothing was executed."""
+    status, outcome, before, _after = _STOP_RESULTS[reason]
+    return _special_result(run_id, status, outcome, started_at, before)
 
 
 def _worker_id(settings: Settings) -> str:

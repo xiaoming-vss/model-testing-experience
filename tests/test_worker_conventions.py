@@ -1,3 +1,4 @@
+import ast
 import unittest
 from pathlib import Path
 
@@ -145,3 +146,37 @@ class WorkerConventionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorkerContractTests(unittest.TestCase):
+    """Values that independently packaged projects must agree on, read from their sources."""
+
+    def test_perf_summary_limit_is_the_same_in_the_worker_and_the_control_plane(self):
+        import tomllib
+
+        worker = ast.parse(source("apps/perf-worker/src/testing_agent_perf_worker/core/config.py"))
+        default_mb = _int_product(_assignment(worker, "max_summary_mb").keywords[0].value)
+        self.assertEqual(_assignment(worker, "max_summary_mb").keywords[0].arg, "default")
+        control = ast.parse(source("apps/control-plane/src/testing_agent/services/perf_worker.py"))
+        control_bytes = _int_product(_assignment(control, "_MAX_SUMMARY_BYTES"))
+        example = tomllib.loads(source("config/platform.example.toml"))
+
+        # A larger worker limit only produced a result the control plane rejects.
+        self.assertEqual(default_mb * 1024 * 1024, control_bytes)
+        self.assertEqual(example["perf_worker"]["runner"]["max_summary_mb"], default_mb)
+
+
+def _assignment(tree: ast.Module, name: str) -> ast.expr:
+    for node in ast.walk(tree):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            return node.value
+    raise AssertionError(f"{name} is not defined")
+
+
+def _int_product(node: ast.expr) -> int:
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        return _int_product(node.left) * _int_product(node.right)
+    raise AssertionError(f"not an integer product: {ast.dump(node)}")

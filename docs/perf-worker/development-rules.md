@@ -41,7 +41,7 @@
 
 - k6 通过 `asyncio.create_subprocess_exec(..., start_new_session=True)` 运行，停止时向整个进程组发送 `SIGINT`，宽限期后 `SIGKILL`。
 - 退出码 `0` 为执行完成，`99` 为阈值不达标但执行完成，其他非零为执行异常；阈值失败不能当作脚本失败。
-- `summary.json` 缺失时标记 `summary_missing`，不能伪造成功或零值。
+- `summary.json` 缺失时标记 `summary_missing`，不能伪造成功或零值；无法读取、超过上限或不是 JSON 对象时同样标记，并把原因写入 `errorMessage`。
 - 达到最大执行时长时终止进程并标记 `timed_out`；停止结果不能覆盖已完成状态，迟到的成功也不能覆盖停止状态。
 - 数据分配策略和用尽策略必须显式：`unique_per_iteration`、`per_vu`、`random`、`cycle`；`onExhausted` 为 `cycle` 或 `fail`。
 - 提取变量只在当前 VU 的当前迭代内有效；不实现跨 VU 共享可变状态。

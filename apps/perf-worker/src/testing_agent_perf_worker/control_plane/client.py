@@ -29,7 +29,6 @@ from ..core.errors import (
 )
 
 _LEASE_REJECTION_STATUSES = {400, 401, 403, 404, 409, 422}
-_RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
 
 class ControlPlaneClient:
@@ -136,12 +135,11 @@ class ControlPlaneClient:
                 if (
                     isinstance(exc, ControlPlaneError)
                     and exc.status_code
-                    and exc.status_code != 429
-                    and not 500 <= exc.status_code < 600
+                    and not _retryable(exc.status_code)
                 ):
                     raise
                 if attempt + 1 < self._attempts:
-                    await asyncio.sleep(0.1 * (2**attempt))
+                    await _backoff(attempt)
         if isinstance(last_error, ControlPlaneError | DataFileError):
             raise last_error
         raise DataFileError(f"下载数据文件失败: {file.filename}") from last_error
@@ -184,13 +182,13 @@ class ControlPlaneClient:
             except httpx.HTTPError as exc:
                 last_error = exc
                 if attempt + 1 < self._attempts:
-                    await asyncio.sleep(0.1 * (2**attempt))
+                    await _backoff(attempt)
                     continue
                 raise ControlPlaneError("控制面请求失败") from None
-            if response.status_code in _RETRYABLE_STATUSES:
+            if _retryable(response.status_code):
                 last_error = ControlPlaneError("控制面暂时不可用", response.status_code)
                 if attempt + 1 < self._attempts:
-                    await asyncio.sleep(0.1 * (2**attempt))
+                    await _backoff(attempt)
                     continue
                 raise last_error
             self._raise_for_status(response.status_code)
@@ -213,3 +211,12 @@ class ControlPlaneClient:
         if not isinstance(payload, dict):
             raise ControlPlaneError("控制面返回了非法 JSON", 502)
         return payload
+
+
+def _retryable(status_code: int) -> bool:
+    """Throttling and any server error are worth another attempt within the same lease."""
+    return status_code == 429 or 500 <= status_code < 600
+
+
+async def _backoff(attempt: int) -> None:
+    await asyncio.sleep(0.1 * (2**attempt))

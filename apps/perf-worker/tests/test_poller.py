@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 from support import base_spec_dict, make_settings
 
 from testing_agent_perf_worker.contracts.result import (
@@ -467,3 +469,120 @@ async def test_shutdown_grace_cancels_an_active_run_that_does_not_stop(tmp_path:
     assert time.monotonic() - started < 3
     assert poller._shutdown_watchdog is not None
     await asyncio.gather(poller._shutdown_watchdog, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_lease_rejection_does_not_synthesize_a_result(tmp_path: Path):
+    class RejectingSnapshotClient(FakeClient):
+        async def snapshot(self, task_id: str, worker_id: str) -> SnapshotResponse:
+            raise LeaseLostError("控制面已拒绝当前执行租约", 409)
+
+    client = RejectingSnapshotClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    await poller._execute(_CLAIM)
+
+    # The control plane ends the attempt by lease; a failed result would only be rejected.
+    assert client.completions == []
+    assert client.started_calls == []
+    assert poller.stop_reason is StopReason.LEASE_LOST
+
+
+@pytest.mark.asyncio
+async def test_snapshot_control_plane_failure_is_reported_as_a_failure(tmp_path: Path):
+    class UnavailableSnapshotClient(FakeClient):
+        async def snapshot(self, task_id: str, worker_id: str) -> SnapshotResponse:
+            raise ControlPlaneError("控制面暂时不可用", 503)
+
+    client = UnavailableSnapshotClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    await poller._execute(_CLAIM)
+
+    payload = client.completions[0]
+    assert payload["status"] == "failed"
+    assert payload["outcome"] == "execution_error"
+    assert "获取运行快照失败" in payload["errorMessage"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_protocol_violation_is_reported_instead_of_crashing(tmp_path: Path):
+    class MalformedSnapshotClient(FakeClient):
+        async def snapshot(self, task_id: str, worker_id: str) -> SnapshotResponse:
+            raise ValidationError.from_exception_data(
+                "SnapshotResponse", [{"type": "missing", "loc": ("runId",), "input": {}}]
+            )
+
+    client = MalformedSnapshotClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    # This used to escape the poll loop and take the whole worker down.
+    await poller._execute(_CLAIM)
+
+    payload = client.completions[0]
+    assert payload["status"] == "failed"
+    assert payload["errorMessage"] == "运行快照不符合协议"
+
+
+@pytest.mark.asyncio
+async def test_poll_loop_removes_the_health_file_on_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    FakeRunner.executions = [_execution()]
+    monkeypatch.setattr(poller_module, "K6Runner", FakeRunner)
+    settings = _settings(tmp_path)
+    health_path = Path(settings.worker.health_file)
+    holder: dict[str, PerfPoller] = {}
+
+    def shutdown_after_complete() -> None:
+        assert health_path.is_file()
+        holder["poller"].shutdown_event.set()
+
+    client = FakeClient(on_complete=shutdown_after_complete)
+    poller = PerfPoller(settings, client=client)  # type: ignore[arg-type]
+    holder["poller"] = poller
+
+    await asyncio.wait_for(poller.run(), timeout=5)
+
+    assert len(client.completions) == 1
+    # A leftover file with a dead PID is unreliable once the PID is reused.
+    assert not health_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_rejected_claim_and_completion_log_their_status_code(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    FakeRunner.executions = [_execution()]
+    monkeypatch.setattr(poller_module, "K6Runner", FakeRunner)
+    holder: dict[str, PerfPoller] = {}
+
+    class RejectingClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.claims = 0
+
+        async def claim(self, worker_id: str) -> ClaimResponse:
+            self.claims += 1
+            if self.claims > 1:
+                holder["poller"].shutdown_event.set()
+            raise LeaseLostError("控制面已拒绝当前执行租约", 401)
+
+        async def complete(self, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+            self.completions.append(payload)
+            raise LeaseLostError("控制面已拒绝当前执行租约", 400)
+
+    client = RejectingClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+    holder["poller"] = poller
+
+    with caplog.at_level(logging.WARNING, logger="testing_agent_perf_worker"):
+        await poller._execute(_CLAIM)
+        await asyncio.wait_for(poller.run(), timeout=5)
+
+    messages = [record.getMessage() for record in caplog.records]
+    # A misconfigured token or an oversized payload must be tellable apart in the log.
+    assert any(message == "completion rejected task_id=task-1 status=400" for message in messages)
+    assert sum(message == "claim rejected status=401" for message in messages) == 2

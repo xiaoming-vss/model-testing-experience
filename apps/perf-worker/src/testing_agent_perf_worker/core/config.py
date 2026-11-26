@@ -53,7 +53,8 @@ class RunnerSettings(BaseModel):
     max_duration_seconds: int = Field(default=3600, ge=1, le=86400)
     stop_grace_seconds: int = Field(default=30, ge=1, le=600)
     max_data_file_mb: int = Field(default=50, ge=1, le=1024)
-    max_summary_mb: int = Field(default=20, ge=1, le=1024)
+    # Same limit as the control plane, which rejects a larger summary outright.
+    max_summary_mb: int = Field(default=5, ge=1, le=1024)
 
 
 class OnceSettings(BaseModel):

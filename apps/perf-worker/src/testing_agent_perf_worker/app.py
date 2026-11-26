@@ -35,6 +35,9 @@ async def run_once(settings: Settings, spec_path: Path) -> RunResult:
 
 def build_result(spec: RunSpec, compiled: CompiledPlan, execution: K6Execution) -> RunResult:
     status, outcome, error_message = _classify(execution, bool(spec.case.acceptance.criteria))
+    if not error_message:
+        # Keep why a summary is unusable; otherwise "summary_missing" hides the cause.
+        error_message = execution.summary_error
     flags: list[ResultFlag] = []
     if execution.summary_missing:
         flags.append(ResultFlag.SUMMARY_MISSING)

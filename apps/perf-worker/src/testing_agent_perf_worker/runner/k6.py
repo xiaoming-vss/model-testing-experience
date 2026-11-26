@@ -38,6 +38,7 @@ class K6Execution:
     k6_version: str
     log_tail: str
     log_truncated: bool
+    summary_error: str = ""
     error_message: str = ""
     remote_write_error: bool = False
 
@@ -191,7 +192,7 @@ class K6Runner:
         finished_at = datetime.now(UTC)
         duration_ms = int((time.monotonic() - started_monotonic) * 1000)
         workspace.secure_summary()
-        summary, summary_missing = read_summary(
+        summary, summary_missing, summary_error = read_summary(
             workspace.summary_path, self._settings.runner.max_summary_mb
         )
         log_tail = tail.text()
@@ -206,6 +207,7 @@ class K6Runner:
             duration_ms=duration_ms,
             summary=summary,
             summary_missing=summary_missing,
+            summary_error=summary_error,
             stopped=stopped,
             timed_out=timed_out,
             k6_version=k6_version,
