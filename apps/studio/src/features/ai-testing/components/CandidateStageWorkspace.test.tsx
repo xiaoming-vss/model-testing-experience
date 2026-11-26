@@ -52,12 +52,28 @@ afterEach(() => {
 const stage: GenerationChainStage = { stage: 'extracting_text', label: '材料整理', order: 1, state: 'approved',  upstreamStages: [] }
 const current: CurrentStage = { stage: 'extracting_text', currentToken: 'current-token', candidateId: 'old', content: 'current body', format: 'text', invalidatedAt: null, invalidatedReason: null, active: false }
 const candidate: CandidateSummary = { candidateId: 'candidate-b', snapshotId: 'snapshot-b', candidateToken: 'token-b', currentAttemptId: 'attempt-b', derivedFromCandidateId: null, disposition: 'available', generationMode: 'trial', frozenAt: null, createdBy: 'u', createdAt: '2026-11-20T10:00:00Z', isCurrent: false }
+// Stage names come from the server-labelled overview, as the canvas already has it cached.
+const STAGE_NAMES: Record<string, string> = {
+  requirement_review: '需求评审', extracting_text: '材料整理', historical_requirement_relations: '历史需求关联', historical_test_case_verification: '历史用例核验',
+  requirement_analysis: '测试范围风险分析', case_names: '测试点', detailed_cases: '完整用例', interface_extract: '接口配置提取', api_design: '接口用例设计',
+  generate: 'API 用例生成', ui_surface: '元素控件清单', ui_design: 'UI 用例设计', ui_yaml: '用例 YAML',
+}
+function createClient() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['generationChain', 'req', 'overview'], {
+    chains: [['requirement_analysis', '需求分析'], ['function', '功能测试'], ['api', 'API 测试'], ['ui', 'UI 测试']].map(([kind, label]) => ({
+      kind, label, configured: true, pendingCandidateCount: 0,
+      stages: Object.entries(STAGE_NAMES).map(([name, text], order) => ({ stage: name, label: text, order, state: 'approved', upstreamStages: [] })),
+    })),
+  })
+  return client
+}
 
 function setup(overrides: Partial<CurrentStage> = {}, workspaceStage = stage) {
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, ...overrides })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'candidate body', format: 'text' })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   const onClose = vi.fn()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={workspaceStage} open embedded onClose={onClose} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   return { client, onClose }
@@ -81,7 +97,7 @@ it('shows the adopted candidate in the current card', async () => {
   const adopted = { ...candidate, candidateId: 'adopted-1', isCurrent: true }
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, candidateId: 'adopted-1' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [adopted, candidate], total: 2, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   const currentCard = await screen.findByRole('region', { name: '当前查看' })
   await waitFor(() => expect(currentCard).toHaveTextContent('adopted-'))
@@ -101,7 +117,7 @@ it('refreshes candidates when a running attempt completes', async () => {
     .mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 })
     .mockResolvedValue({ items: [next], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, active: true })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect(await screen.findByText('生成中')).toBeInTheDocument()
   expect(await screen.findByText('暂无其他候选，生成后会显示在这里。')).toBeInTheDocument()
@@ -178,7 +194,7 @@ it('lets historical test case verification fill the canvas reading pane edge to 
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue({ items: [], total: 0 } as never)
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: verificationStage.stage, content: JSON.stringify({ batches: [] }), format: 'json' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   const inspector = document.createElement('div')
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={verificationStage} open embedded
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
@@ -190,7 +206,7 @@ it('lets historical test case verification fill the canvas reading pane edge to 
 
 it.each([
   ['api', 'interface_extract', '接口配置提取', JSON.stringify({ login: { method: 'POST', path: '/v1/login', headers: { 'Content-Type': 'application/json' }, json: { name: 'string' }, response: { code: 'integer' } } }), '/v1/login'],
-  ['api', 'api_design', 'API 用例设计', JSON.stringify({ schemaVersion: 'api_test_design/1.0', interfaces: { get_task: { method: 'GET', path: '/tasks', cases: [{ id: 'c1', title: '查询任务', category: 'positive', priority: 'P0', intent: '查询任务', basis: { kind: 'positive', section: '', field: '', constraint: '' }, patch: {}, expected: { statusClass: '2xx', assertions: [] } }], uncovered: [] } } }), '查询任务'],
+  ['api', 'api_design', '接口用例设计', JSON.stringify({ schemaVersion: 'api_test_design/1.0', interfaces: { get_task: { method: 'GET', path: '/tasks', cases: [{ id: 'c1', title: '查询任务', category: 'positive', priority: 'P0', intent: '查询任务', basis: { kind: 'positive', section: '', field: '', constraint: '' }, patch: {}, expected: { statusClass: '2xx', assertions: [] } }], uncovered: [] } } }), '查询任务'],
   ['api', 'generate', 'API 用例生成', '- name: 查询任务\n  method: GET\n  path: /api/tasks\n', '查询任务'],
   ['ui', 'ui_surface', '元素控件清单', JSON.stringify({ schemaVersion: 'ui_test_surface/1.0', pages: [{ pageId: 'page', title: '数据检索', route: '/search' }], controls: [], unknowns: [], interactions: [] }), '数据检索'],
   ['ui', 'ui_design', 'UI 用例设计', JSON.stringify({ schemaVersion: 'ui_test_scenarios/2.0', cases: [{ caseId: 'case-1', name: '验证搜索', goal: '搜索', coverage: 'full', sourceTitle: '验证搜索', preconditions: [], limitations: [], steps: [] }], capabilities: { assertions: [], operations: [] } }), '验证搜索'],
@@ -200,7 +216,7 @@ it.each([
   const format = body.trimStart().startsWith('{') || body.trimStart().startsWith('[') ? 'json' : 'yaml'
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: stageName, content: body, format })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind={kind} stage={visualStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect((await screen.findAllByText(expected)).length).toBeGreaterThan(0)
   fireEvent.click(screen.getByRole('radio', { name: format === 'yaml' ? 'YAML' : 'JSON' }))
@@ -217,7 +233,7 @@ it.each([
   const functionalStage: GenerationChainStage = { ...stage, stage: stageName, label, upstreamStages: [] }
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: stageName, content: JSON.stringify(artifact), format: 'json' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={functionalStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect((await screen.findAllByText(expected)).length).toBeGreaterThan(0)
 })
@@ -231,7 +247,7 @@ it('lets scope analysis fill the canvas reading pane edge to edge', async () => 
   }
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: 'requirement_analysis', content: JSON.stringify(artifact), format: 'json' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   const inspector = document.createElement('div')
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={scopeStage} open embedded
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
@@ -247,7 +263,7 @@ it('does not offer a next-stage action for a final candidate', async () => {
   vi.mocked(generationCandidatesApi.current).mockResolvedValue(current)
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'name: example', format: 'yaml' })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   expect(await screen.findByRole('button', { name: '采用' })).toBeEnabled()
@@ -266,7 +282,7 @@ it('shows the frozen source selection for the selected current content or candid
     ...candidate, content: 'candidate body', format: 'text',
     sourceTrace: [{ chainKind: 'function', stage: 'requirement_analysis', sourceKind: 'candidate', candidateId: 'candidate-source', snapshotId: 'snapshot-candidate' }],
   })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={downstream} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   expect(await screen.findByTitle(/当前采用内容 current-source/)).toBeInTheDocument()
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
@@ -301,6 +317,17 @@ it('shows the frozen basis without an upstream alignment row or current generati
   expect(screen.queryByText('生成方式')).not.toBeInTheDocument()
   expect(screen.getByTitle(/候选 material-old-source · 快照 snapshot-old/)).toBeInTheDocument()
   expect(screen.getByDisplayValue('current body')).toBeInTheDocument()
+})
+
+it('names basis stages from the server overview, including stages added after the client shipped', async () => {
+  setup({
+    candidateId: 'adopted-1',
+    basisSources: [
+      { chainKind: 'requirement_analysis', stage: 'historical_requirement_relations', sourceKind: 'current', candidateId: 'history-source', snapshotId: 'snapshot-history', direct: true },
+      { chainKind: 'api', stage: 'api_design', sourceKind: 'current', candidateId: 'design-source', snapshotId: 'snapshot-design', direct: true },
+    ],
+  })
+  expect(await screen.findByText(/历史需求关联 history- · 接口用例设计 design-/)).toBeInTheDocument()
 })
 
 it('checks adoption and explains a branch conflict without adopting', async () => {
@@ -390,7 +417,7 @@ it('uses free-form instructions when revising requirement review', async () => {
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: JSON.stringify({ questions: [{ id: 'Q1', question: '待补充？' }] }), format: 'json' })
   vi.mocked(generationCandidatesApi.revise).mockResolvedValue({ attemptId: 'next', requestId: 'req', replayed: false })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={reviewStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '继续优化' }))
@@ -421,7 +448,7 @@ it('reports adoption separately when starting the next stage fails', async () =>
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'candidate body', format: 'text' })
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: true, lineageHash: 'lineage', blockingSources: [] })
   vi.mocked(generationCandidatesApi.adopt).mockResolvedValue({ requestId: 'r', candidateId: 'candidate-b', contentToken: 'new', replayed: false, continuationError: '上游已变化，请刷新后重试' })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '补充场景' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
@@ -434,7 +461,7 @@ it('reports adoption separately when starting the next stage fails', async () =>
 
 it.each([
   ['interface_extract', '接口配置提取'],
-  ['api_design', 'API 用例设计'],
+  ['api_design', '接口用例设计'],
 ])('adopts API stage %s before starting the next stage', async (stageName, label) => {
   const apiStage: GenerationChainStage = { ...stage, stage: stageName, label, upstreamStages: [] }
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: stageName })
@@ -442,7 +469,7 @@ it.each([
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: 'candidate body', format: 'text' })
   vi.mocked(generationCandidatesApi.checkAdoption).mockResolvedValue({ canAdopt: true, lineageHash: 'lineage', blockingSources: [] })
   vi.mocked(generationCandidatesApi.adopt).mockResolvedValue({ requestId: 'r', candidateId: 'candidate-b', contentToken: 'new', replayed: false, continuationAttemptId: 'next' })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={apiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '覆盖边界' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))
@@ -504,7 +531,7 @@ it('edits a generated test case through the candidate visual form', async () => 
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...candidate, content: body, format: 'json' })
   vi.mocked(generationCandidatesApi.edit).mockResolvedValue({} as never)
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={caseStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '编辑' }))
@@ -536,7 +563,7 @@ it('passes an explicitly selected candidate as the trial upstream', async () => 
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
   const chooseConnection = vi.fn(async () => ({ connectionId: 'separate-dialog', instruction: '' }))
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open embedded onClose={() => {}} chooseConnection={chooseConnection} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
@@ -560,7 +587,7 @@ it('defaults to the current upstream without a separate source mode choice', asy
   vi.mocked(generationCandidatesApi.current).mockResolvedValue(current)
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={sourceStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'separate-dialog', instruction: '' })} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
@@ -584,7 +611,7 @@ it('blocks normal generation without an adopted upstream but allows a candidate 
   vi.mocked(generationCandidatesApi.current).mockImplementation(async (_r, _k, name) => ({ ...current, stage: name, candidateId: null, invalidatedAt: null }))
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [candidate], total: 1, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={pointStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   const generateButton = await screen.findByRole('button', { name: '开始生成' })
   await waitFor(() => expect(generateButton).toBeEnabled())
@@ -607,7 +634,7 @@ it('UI 首阶段把当前画像、仓库、正式用例和个人授权作为候�
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: 'ui_surface' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   vi.mocked(generationCandidatesApi.run).mockResolvedValue({ requestId: 'request', attemptId: 'attempt', replayed: false })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
   await waitFor(() => expect(screen.getByRole('button', { name: '开始生成' })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: '开始生成' }))
@@ -625,7 +652,7 @@ it('检查候选冻结 commit，不改变候选来源', async () => {
     sourceKind: 'repository', repository: { repositoryId: 'repo-a', pathWithNamespace: 'team/ui', branch: 'main', commit: 'fixed', commitMode: 'profile', profileCandidateId: '', resolvedAt: '' }, cases: [], sourceBatchId: 'batch-a',
   } })
   vi.mocked(generationCandidatesApi.checkUiSource).mockResolvedValue({ pinnedCommit: 'fixed', currentCommit: 'new', branch: 'main', changed: true })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="ui" stage={uiStage} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} chooseGitlab={async () => 'gitlab'} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
   fireEvent.click(await screen.findByRole('button', { name: '检查分支更新' }))
@@ -643,7 +670,7 @@ it('shows both sides of an import conflict before confirming the overwrite', asy
     previewExpiresAt: Math.floor(Date.now() / 1000) + 60, requiresConfirmation: true,
     conflicts: [{ normalizedName: '登录', existingCase: { title: '已有用例' }, generatedCase: { title: '新用例' } }],
   })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
   fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
   expect(await screen.findByText('登录')).toBeInTheDocument()
@@ -657,7 +684,7 @@ it('requires a formal target before previewing an API import', async () => {
   vi.mocked(generationCandidatesApi.current).mockResolvedValue({ ...current, stage: 'generate', content: 'name: example', format: 'yaml' })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
   vi.spyOn(api, 'getApiCollections').mockResolvedValue({ items: [{ collectionId: 'collection-a', name: '接口用例集' }] } as never)
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="api" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   fireEvent.click(await screen.findByRole('button', { name: '预览并导入' }))
@@ -677,7 +704,7 @@ it('does not offer import for stale adopted current content', async () => {
     format: 'json',
   })
   vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 
   expect(await screen.findByText(/已采用 · 待更新/)).toBeInTheDocument()
@@ -701,7 +728,7 @@ it('moves the final-stage import entry into the sidebar footer and previews in a
   const inspector = document.createElement('div')
   inspector.dataset.testInspector = 'true'
   document.body.append(inspector)
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = createClient()
   render(<QueryClientProvider client={client}><CandidateStageWorkspace requirementId="req" projectId="project" kind="function" stage={final} open embedded
     inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
 

@@ -18,9 +18,9 @@ from testing_agent_ai_worker.agent.prompt_step import run_agent_prompt
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.skill_names import CASE_VISUALIZATION_SKILL
 from testing_agent_ai_worker.tasks.case_visualization.contract import (
     SCHEMA,
-    SKILL_NAME,
     STATE_IDENTITY_MESSAGE,
     TASK_TYPE,
     canonical,
@@ -61,7 +61,7 @@ class CaseVisualizationExecutor:
             if frozen != freeze_input(frozen["executionEntryId"], frozen["content"]):
                 raise ValueError("冻结输入或来源目录无效")
             workspace = resolve_task_workspace(self.agent_config, task)
-            skill = workspace / "skills" / SKILL_NAME
+            skill = workspace / "skills" / CASE_VISUALIZATION_SKILL
             instructions = (skill / "SKILL.md").read_text(encoding="utf-8")
             if not instructions.strip():
                 raise ValueError("技能内容为空")

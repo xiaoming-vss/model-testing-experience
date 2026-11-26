@@ -12,6 +12,7 @@ import { UNSAVED_NAVIGATION_EVENT } from '@/shared/utils/unsavedChanges'
 import { getErrorMessage, formatCompactTime } from '@/utils/format'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { useRevisionAttachments } from '../hooks/useRevisionAttachments'
+import { useGenerationStageLabels } from '../hooks/useRequirementGenerationChain'
 import type {
   AdoptionCheck, CandidateAdoptBody, CandidateChainKind, CandidateRunBody,
   CandidateSourceSelection, CandidateSummary, CurrentImportPreview, CurrentSourceSelection,
@@ -49,11 +50,6 @@ import uiStageStyles from '../styles/ui-stage-visual.module.css'
 type SourceChoice = CandidateSourceSelection | CurrentSourceSelection
 const PAGE_SIZE = 20
 const FLEX_MIN = 'min-w-0 flex-1'
-const STAGE_LABELS: Record<string, string> = {
-  extracting_text: '材料整理', requirement_analysis: '测试范围风险分析', case_names: '测试点',
-  detailed_cases: '完整用例', interface_extract: '接口配置提取', api_design: 'API 用例设计',
-  ui_surface: '元素控件清单', ui_design: 'UI 用例设计', ui_yaml: '用例 YAML', generate: 'API 用例生成',
-}
 const CONTINUATION_STAGES = new Set(['requirement_review', 'requirement_analysis', 'case_names', 'interface_extract', 'api_design', 'ui_surface', 'ui_design', 'historical_requirement_relations'])
 
 function sourceKind(stage: string, ownKind: CandidateChainKind): CandidateChainKind {
@@ -99,6 +95,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
 }) {
   const client = useQueryClient()
   const access = useProjectAccess(projectId)
+  const stageLabel = useGenerationStageLabels(requirementId, open)
   const [uiInputsOpen, setUiInputsOpen] = useState(false)
   const [uiSourceCheck, setUiSourceCheck] = useState<(UiGenerationSourceCheck & { candidateId: string }) | null>(null)
   const [page, setPage] = useState(1)
@@ -478,8 +475,8 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   const selectedUiSourceInputs = selectedIsCurrent ? current.data?.sourceInputs : candidate?.sourceInputs
   const sourceTraceView = <div className="gc-candidate-source">
     <span className="gc-candidate-source-prefix">基于</span>
-    {sourceTrace?.length ? sourceTrace.map(item => <span key={`${item.chainKind}:${item.stage}`} className="gc-trace-chip" title={`${STAGE_LABELS[item.stage] ?? item.stage} · ${item.sourceKind === 'current' ? '当前采用内容' : '候选'} ${item.candidateId}`}>
-      {STAGE_LABELS[item.stage] ?? item.stage}<b>{item.sourceKind === 'current' ? '当前' : '候选'} {item.candidateId.slice(0, 8)}</b>
+    {sourceTrace?.length ? sourceTrace.map(item => <span key={`${item.chainKind}:${item.stage}`} className="gc-trace-chip" title={`${stageLabel(item.stage)} · ${item.sourceKind === 'current' ? '当前采用内容' : '候选'} ${item.candidateId}`}>
+      {stageLabel(item.stage)}<b>{item.sourceKind === 'current' ? '当前' : '候选'} {item.candidateId.slice(0, 8)}</b>
     </span>) : stage.upstreamStages.length ? (selectedId !== 'current' && detail.isPending ? <span className="gc-trace-chip">读取来源…</span> : <span className="gc-trace-chip is-danger">来源信息不完整</span>) : <span className="gc-trace-chip">{kind === 'api' ? '接口库接口' : kind === 'ui' ? '源码输入' : '需求材料'}</span>}
     <span className="gc-candidate-source-prefix">产出</span>
   </div>
@@ -533,7 +530,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     {candidateGrid}
   </>
   const sourceLabel = sourceTrace?.length
-    ? sourceTrace.map(item => STAGE_LABELS[item.stage] ?? item.stage).join(' · ')
+    ? sourceTrace.map(item => stageLabel(item.stage)).join(' · ')
     : stage.upstreamStages.length ? '上游候选' : kind === 'api' ? '接口库' : kind === 'ui' ? '源码仓库' : '需求材料'
   const generationLabel = selectedIsCurrent
     ? current.data?.candidateId ? '当前采用内容' : '—'
@@ -542,10 +539,10 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
         : stage.upstreamStages.length ? '当前上游' : '直接生成'
   const basisSources = selectedIsCurrent ? current.data?.basisSources : candidate?.basisSources
   const basisLabel = basisSources?.length
-    ? `${basisSources.slice(0, 3).map(item => `${STAGE_LABELS[item.stage] ?? item.stage} ${item.candidateId.slice(0, 8)}`).join(' · ')}${basisSources.length > 3 ? ` 等 ${basisSources.length} 项` : ''}`
+    ? `${basisSources.slice(0, 3).map(item => `${stageLabel(item.stage)} ${item.candidateId.slice(0, 8)}`).join(' · ')}${basisSources.length > 3 ? ` 等 ${basisSources.length} 项` : ''}`
     : '依据未记录'
   const basisTitle = basisSources?.length
-    ? basisSources.map(item => `${STAGE_LABELS[item.stage] ?? item.stage} · 候选 ${item.candidateId} · 快照 ${item.snapshotId}`).join('\n')
+    ? basisSources.map(item => `${stageLabel(item.stage)} · 候选 ${item.candidateId} · 快照 ${item.snapshotId}`).join('\n')
     : undefined
   const sourceCard = <section className="gc-candidate-info-card" aria-label="来源与依据">
     <div className="gc-candidate-info-head"><InfoCircleOutlined aria-hidden />来源与依据</div>
@@ -593,7 +590,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
       loading={loading} editing={edit !== null} revisionOpen={revisionOpen} revisionDirty={revisionDirty} currentActive={Boolean(current.data?.active)}
       onAdopt={adopt} onEdit={startEdit} onSave={save} onCancelEdit={cancelEdit} onRevise={openRevision} onDispose={dispose}
     />
-    {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{STAGE_LABELS[item.stage] ?? item.stage}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
+    {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{stageLabel(item.stage)}：{item.reason === 'source_conflict' ? '当前上游来自不同分支，请用试生成选择来源一致的候选' : item.reason === 'concurrent_change' ? '内容或来源已变化，请刷新后重试' : '来源或内容已变化，请重新生成'}</li>)}</ul>} /> : null}
   </section> : null
   const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt)
   const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'
@@ -681,7 +678,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
               ...(info.data?.slot.candidateId && !info.data.slot.invalidatedAt ? [{ value: 'current', label: '当前采用内容' }] : []),
               ...(info.data?.list.items ?? []).filter(item => item.disposition === 'available').map(item => ({ value: item.candidateId, label: label(item) })),
             ]
-            return <div className="flex flex-col gap-1" key={name}><span className={candidateStyles.dialogHint}>{STAGE_LABELS[name] ?? name}</span><Select className="w-full" aria-label={`选择 ${STAGE_LABELS[name] ?? name} 来源`} placeholder="请选择一份来源" loading={info.isPending} value={chosen?.sourceKind === 'current' ? 'current' : chosen?.candidateId} options={options} onChange={value => {
+            return <div className="flex flex-col gap-1" key={name}><span className={candidateStyles.dialogHint}>{stageLabel(name)}</span><Select className="w-full" aria-label={`选择 ${stageLabel(name)} 来源`} placeholder="请选择一份来源" loading={info.isPending} value={chosen?.sourceKind === 'current' ? 'current' : chosen?.candidateId} options={options} onChange={value => {
               if (value === 'current' && info.data?.slot.currentToken) setChoices(old => ({ ...old, [name]: { chainKind: upstreamKind, stage: name, sourceKind: 'current', expectedCurrentToken: info.data!.slot.currentToken } }))
               else { const item = info.data?.list.items.find(candidateItem => candidateItem.candidateId === value); if (item) setChoices(old => ({ ...old, [name]: { chainKind: upstreamKind, stage: name, sourceKind: 'candidate', candidateId: item.candidateId, snapshotId: item.snapshotId, expectedCandidateToken: item.candidateToken } })) }
             }} />{(info.data?.list.total ?? 0) > PAGE_SIZE ? <Pagination size="small" current={sourcePages[name] ?? 1} pageSize={PAGE_SIZE} total={info.data?.list.total} onChange={next => setSourcePages(old => ({ ...old, [name]: next }))} showSizeChanger={false} /> : null}{info.error ? <span className={candidateStyles.dialogHint}>来源读取失败：{getErrorMessage(info.error)}</span> : null}</div>
