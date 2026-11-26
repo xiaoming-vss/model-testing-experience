@@ -77,18 +77,21 @@ export function pickUpdatedAt(entity?: { updatedAt?: string; updated_at?: string
   return entity?.updatedAt ?? entity?.updated_at
 }
 
+const displayTimeZone = 'Asia/Shanghai'
 const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  timeZone: 'Asia/Shanghai', hour12: false,
+  timeZone: displayTimeZone, hour12: false,
   year: 'numeric', month: 'numeric', day: 'numeric',
   hour: 'numeric', minute: 'numeric', second: 'numeric',
 })
 
+function parseApiTime(value: string) {
+  const isTimezoneLessIso = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)
+  return new Date(isTimezoneLessIso ? `${value.replace(' ', 'T')}Z` : value)
+}
+
 export function formatTime(value?: string) {
   if (!value) return '-'
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
-  const isIsoDateTime = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)
-  const normalizedValue = !hasTimezone && isIsoDateTime ? `${value.replace(' ', 'T')}Z` : value
-  const date = new Date(normalizedValue)
+  const date = parseApiTime(value)
   return Number.isNaN(date.getTime())
     ? value
     : timeFormatter.format(date)
@@ -96,9 +99,10 @@ export function formatTime(value?: string) {
 
 export function formatCompactTime(value?: string | null) {
   if (!value) return ''
-  const parsed = new Date(value)
+  const parsed = parseApiTime(value)
   if (Number.isNaN(parsed.getTime())) return ''
   return parsed.toLocaleString('zh-CN', {
+    timeZone: displayTimeZone,
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',

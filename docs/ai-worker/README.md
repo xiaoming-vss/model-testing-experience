@@ -17,7 +17,7 @@
 - Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
 - Python 依赖：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`、`jsonschema`
 - Node 运行时：`@earendil-works/pi-coding-agent==1.3.0`，由 `package.json` / `package-lock.json` 固定
-- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；不监听任何端口，Compose 中无 `ports`
+- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；默认不监听端口，设置 `TESTING_AGENT_HEALTH_PORT` 后提供 `/healthz` 探针，Compose 本地运行不注入该变量
 
 ## 执行底座
 

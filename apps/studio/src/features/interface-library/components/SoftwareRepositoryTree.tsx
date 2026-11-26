@@ -200,7 +200,7 @@ export function SoftwareRepositoryTree({
       >
         <button
           type="button"
-          className={`if-app-all mb-0.5 flex h-8 w-full cursor-pointer items-center justify-between rounded-[6px] border-0 px-2 py-0 text-left font-[inherit] text-[12.5px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
+          className={`if-app-all mb-0.5 flex h-8 w-full cursor-pointer items-center justify-between rounded-[var(--srf-radius-control)] border-0 px-2 py-0 text-left font-[inherit] text-[12.5px] ${selectedSoftwareRepositoryId === 'all' && mode === 'list' ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
           onClick={onShowAll}
         >
           <span className="if-app-all-main inline-flex min-w-0 items-center gap-2">
@@ -254,7 +254,7 @@ export function SoftwareRepositoryTree({
                     ? <FolderOpenOutlined className="flex-none text-[14px] text-[var(--srf-text-muted)]" aria-hidden />
                     : <FolderOutlined className="flex-none text-[14px] text-[var(--srf-text-muted)]" aria-hidden />}
                   <span className="if-app-name min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{repository.name}</span>
-                  <span className="if-app-count flex-none text-[10.5px] font-normal tabular-nums text-[var(--srf-text-muted)]">{repository.interfaceCount}</span>
+                  <span className={`if-app-count flex-none text-[10.5px] font-normal tabular-nums ${selectedRow ? ' text-[var(--srf-accent-strong)]' : ' text-[var(--srf-text-muted)]'}`}>{repository.interfaceCount}</span>
                 </button>
                 {canManageInterfaces ? (
                   <button
@@ -347,7 +347,7 @@ export function SoftwareRepositoryTree({
                                 <div className="if-app-child-row group relative flex min-w-0 items-center" key={item.interfaceId}>
                                   <button
                                     type="button"
-                                    className={`if-app-child flex h-[30px] min-w-0 flex-auto cursor-pointer items-center gap-2 rounded-[6px] border-0 py-0 pl-2 pr-1.5 text-left font-[inherit] text-[13px] ${item.interfaceId === selectedInterfaceId ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)] shadow-[inset_2px_0_0_var(--srf-accent)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
+                                    className={`if-app-child flex h-[30px] min-w-0 flex-auto cursor-pointer items-center gap-2 rounded-[var(--srf-radius-control)] border-0 py-0 pl-2 pr-1.5 text-left font-[inherit] text-[13px] ${item.interfaceId === selectedInterfaceId ? ' is-active bg-[var(--srf-accent-soft)] font-semibold text-[var(--srf-accent-strong)]' : ' bg-transparent text-[var(--srf-text-secondary)] hover:bg-[var(--srf-hover)] hover:text-[var(--srf-text)]'}`}
                                     title={`${item.name} ${item.path}`}
                                     onClick={() => onOpenInterface(item.interfaceId)}
                                   >

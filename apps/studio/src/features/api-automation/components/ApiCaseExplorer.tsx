@@ -167,7 +167,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
               return (
                 <div
                   key={caseId}
-                  className={`api-wb-case-item group relative flex items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border px-2 py-1.5 tone-${tone}${selected ? ' selected border-[var(--srf-accent-border)] bg-[var(--srf-accent-soft)] before:absolute before:-left-px before:top-1/2 before:h-[22px] before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--srf-accent)] before:content-[""]' : ' border-transparent hover:border-[var(--srf-card-border)] hover:bg-[var(--srf-hover)]'}${draggingCaseId === caseId ? ' dragging opacity-50' : ''}${canReorder ? ' can-drag cursor-grab' : ' cursor-pointer'}`}
+                  className={`api-wb-case-item group flex items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border px-2 py-1.5 tone-${tone}${selected ? ' selected border-transparent bg-[var(--srf-accent-soft)]' : ' border-transparent hover:bg-[var(--srf-hover)]'}${draggingCaseId === caseId ? ' dragging opacity-50' : ''}${canReorder ? ' can-drag cursor-grab' : ' cursor-pointer'}`}
                   role="button"
                   tabIndex={0}
                   title={path}
@@ -194,7 +194,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                 >
                   <span className="api-wb-case-item-head flex min-w-0 flex-auto items-center gap-1.5">
                     <span className="api-wb-case-method flex-none rounded-[4px] border border-[var(--srf-tone-border)] bg-[var(--srf-tone-bg)] px-[5px] font-mono text-[10px] font-bold leading-4 text-[var(--srf-tone-text)]">{item.method}</span>
-                    <span className="api-wb-case-item-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-[18px] text-[var(--srf-text)]">{item.name}</span>
+                    <span className={`api-wb-case-item-name min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-[18px] ${selected ? 'text-[var(--srf-accent-strong)]' : 'text-[var(--srf-text)]'}`}>{item.name}</span>
                     <CaseInvalidatedTag invalidatedAt={item.invalidatedAt} className="flex-none" />
                     {isDraft ? <span className="api-wb-case-draft rounded-full border border-[var(--srf-tone-border,var(--srf-card-border))] bg-[var(--srf-tone-bg,var(--srf-chip))] px-1.5 text-[10px] leading-4 text-[var(--srf-tone-text,var(--srf-chip-text))]">草稿</span> : null}
                   </span>

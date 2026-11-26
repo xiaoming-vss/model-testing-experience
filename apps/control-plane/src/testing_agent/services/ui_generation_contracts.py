@@ -7,9 +7,7 @@ from typing import Any
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.domain.ui_completion import compile_case
 from testing_agent.domain.ui_generation_artifacts import (
-    UI_FIELDS,
     UI_WORKFLOW_VERSION,
-    object_value,
     validate_design,
     validate_surface,
 )
@@ -75,28 +73,3 @@ def validate_ui_output(run: Any, stage: str, value: Any) -> Any:
     except (ValueError, TypeError, KeyError, AttributeError) as exc:
         raise dynamic_error(ErrBadRequest, "阶段产物不合法：" + str(exc)) from exc
     raise ErrBadRequest()
-
-
-def validate_ui_worker_output(run: Any, stage: str, config: Any, result: Any = None) -> dict:
-    try:
-        data = object_value(config)
-        existing = object_value(run.config_json or {})
-    except (ValueError, TypeError) as exc:
-        raise dynamic_error(ErrBadRequest, "configJson 必须是对象") from exc
-    transient = {"revisionInstruction", "resultYaml"}
-    current_field = UI_FIELDS.get(stage)
-    allowed = transient | ({current_field} if current_field else set())
-    if {k: v for k, v in data.items() if k not in allowed} != {
-        k: v for k, v in existing.items() if k not in allowed
-    }:
-        raise dynamic_error(ErrBadRequest, "Worker 不得修改已确认的上游产物或运行上下文")
-    for other, field in UI_FIELDS.items():
-        if other != stage and data.get(field) != existing.get(field):
-            raise dynamic_error(ErrBadRequest, "Worker 不得修改或丢失已确认的上游产物")
-    if stage in UI_FIELDS:
-        data[UI_FIELDS[stage]] = validate_ui_output(run, stage, data.get(UI_FIELDS[stage]))
-        if result and str(result).strip():
-            raise ErrBadRequest()
-    else:
-        validate_ui_output(run, stage, result)
-    return data

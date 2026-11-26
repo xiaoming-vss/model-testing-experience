@@ -42,7 +42,6 @@ COMPARATORS = {
 }
 
 _TYPE_PREFIX = re.compile(r"^(string|integer|number|boolean|object|array)\b", re.IGNORECASE)
-_CONSTRAINT_NUMBER = re.compile(r"\b(minimum|maximum|minLength|maxLength)\s*:\s*(-?\d+(?:\.\d+)?)")
 _BOUNDARY_CONSTRAINT = re.compile(
     r"^(minimum|maximum|minLength|maxLength|min|max)\s*:\s*(-?\d+(?:\.\d+)?)$",
     re.IGNORECASE,

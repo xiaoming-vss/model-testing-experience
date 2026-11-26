@@ -21,15 +21,13 @@ describe('formatTime', () => {
 })
 
 describe('formatCompactTime', () => {
-  it('renders a compact month/day/hour/minute timestamp', () => {
-    expect(formatCompactTime('2026-08-06T01:46:53Z')).toBe(
-      new Date('2026-08-06T01:46:53Z').toLocaleString('zh-CN', {
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    )
+  it.each([
+    ['2026-11-26T03:15:00Z', '11/26 11:15'],
+    ['2026-11-26T02:56:00', '11/26 10:56'],
+    ['2026-11-25T16:50:00Z', '11/26 00:50'],
+    ['2026-11-26T00:50:00+08:00', '11/26 00:50'],
+  ])('formats %s as %s in Shanghai time', (value, expected) => {
+    expect(formatCompactTime(value)).toBe(expected)
   })
 
   it('returns an empty string for missing or invalid values', () => {

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: F401
 import json
 from datetime import datetime
 from typing import Any

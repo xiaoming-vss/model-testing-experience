@@ -33,7 +33,7 @@ export function CaseLibrarySidebar({ page }: { page: CaseLibraryPageModel }) {
         <div className="api-case-nav-list case-library-nav-list flex flex-col gap-0.5">
           <button
             type="button"
-            className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors hover:bg-[var(--srf-hover)] ${suiteId ? 'bg-transparent' : 'bg-[var(--srf-accent-soft)]'}`}
+            className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors ${suiteId ? 'bg-transparent hover:bg-[var(--srf-hover)]' : 'bg-[var(--srf-accent-soft)]'}`}
             aria-current={!suiteId}
             onClick={() => {
               setSuiteId(null)
@@ -64,7 +64,7 @@ export function CaseLibrarySidebar({ page }: { page: CaseLibraryPageModel }) {
                 <button
                   key={id ?? suite.name}
                   type="button"
-                  className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors hover:bg-[var(--srf-hover)] ${active ? 'bg-[var(--srf-accent-soft)]' : 'bg-transparent'}`}
+                  className={`api-case-nav-item case-library-nav-item group flex w-full cursor-pointer appearance-none items-center justify-between gap-2 rounded-[var(--srf-radius-control)] border border-transparent px-2.5 py-1.5 text-left font-[inherit] text-inherit transition-colors ${active ? 'bg-[var(--srf-accent-soft)]' : 'bg-transparent hover:bg-[var(--srf-hover)]'}`}
                   aria-current={active}
                   onClick={() => {
                     setSuiteId(id ?? null)

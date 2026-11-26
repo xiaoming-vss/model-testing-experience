@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: F401
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator

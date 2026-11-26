@@ -50,6 +50,8 @@ def test_placeholders_respect_length_range_and_format():
             "type": "object",
             "properties": {
                 "requestId": {"type": "string", "minLength": 8, "maxLength": 64},
+                "tight": {"type": "string", "minLength": 8, "maxLength": 10},
+                "tightMax": {"type": "string", "minLength": 7, "maxLength": 12},
                 "code": {"type": "string", "maxLength": 3},
                 "story": {"type": "string", "minLength": 5000},
                 "remoteBugId": {"type": "integer", "exclusiveMinimum": 0},
@@ -64,6 +66,8 @@ def test_placeholders_respect_length_range_and_format():
     )
 
     assert example["requestId"] == "string-string"
+    assert 8 <= len(example["tight"]) <= 10
+    assert 7 <= len(example["tightMax"]) <= 12
     assert example["code"] == "str"
     assert MAX_STRING_LENGTH <= len(example["story"]) < 80
     assert example["remoteBugId"] == 1
@@ -108,7 +112,7 @@ def test_nests_arrays_objects_dictionaries_and_nullable_branches():
     )
 
     assert example == {
-        "items": [{"sku": "string", "tags": ["string"]}] * 3,
+        "items": [{"sku": "string", "tags": ["string"]}] * 5,
         "labels": {"key": 1},
         "meta": {},
         "flags": [],

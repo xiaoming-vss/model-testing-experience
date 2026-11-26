@@ -12,6 +12,21 @@ const root = path.dirname(fileURLToPath(import.meta.url))
 const featureBoundaryBudget = JSON.parse(
   fs.readFileSync(path.join(root, 'scripts/feature-boundary-budget.json'), 'utf8'),
 )
+const sizeBudget = JSON.parse(
+  fs.readFileSync(path.join(root, 'scripts/size-budget.json'), 'utf8'),
+)
+const sizeOptions = { skipBlankLines: true, skipComments: true }
+const sizeBudgets = Object.entries(sizeBudget.files).map(([file, budget]) => ({
+  files: [file],
+  rules: {
+    ...(budget.maxLines === undefined
+      ? {}
+      : { 'max-lines': ['error', { max: budget.maxLines, ...sizeOptions }] }),
+    ...(budget.maxLinesPerFunction === undefined
+      ? {}
+      : { 'max-lines-per-function': ['error', { max: budget.maxLinesPerFunction, ...sizeOptions }] }),
+  },
+}))
 const featureNames = fs.readdirSync(path.join(root, 'src/features'), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
@@ -51,6 +66,29 @@ export default defineConfig([
     },
   },
   {
+    // C1: new component files stay at 400 lines, other TypeScript modules at 300.
+    files: ['src/**/*.tsx'],
+    ignores: ['src/**/*.test.tsx', 'src/**/__fixtures__/**'],
+    rules: {
+      'max-lines': ['error', { max: 400, ...sizeOptions }],
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/*.test.ts', 'src/**/__fixtures__/**'],
+    rules: {
+      'max-lines': ['error', { max: 300, ...sizeOptions }],
+    },
+  },
+  {
+    // C3: one component or function stays at 150 lines.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}', 'src/**/__fixtures__/**'],
+    rules: {
+      'max-lines-per-function': ['error', { max: 150, ...sizeOptions }],
+    },
+  },
+  {
     // Web Crypto is only exposed in secure contexts (HTTPS/localhost); plain
     // HTTP deployments must go through the shared helpers instead.
     files: ['src/**/*.{ts,tsx}'],
@@ -79,4 +117,5 @@ export default defineConfig([
     files: boundaryBaselineFiles,
     rules: { 'no-restricted-imports': 'off' },
   },
+  ...sizeBudgets,
 ])

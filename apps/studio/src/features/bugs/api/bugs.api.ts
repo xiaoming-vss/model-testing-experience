@@ -90,6 +90,4 @@ export const bugsApi = {
     }),
   getBugActivities: (bugId: string) =>
     request<ListResponse<BugActivity>>(`/v1/bugs/${bugId}/activities`),
-  downloadAttachment: (fileId: string) =>
-    request<{ url: string; filename: string; size: number }>(`/v1/files/${fileId}/download`),
 }

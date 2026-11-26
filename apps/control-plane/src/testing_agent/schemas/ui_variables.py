@@ -24,7 +24,7 @@ class WriteUiRunVariableItem(BaseModel):
     name: str = Field()
     value: str = Field(default="")
     order_no: int | None = Field(default=None)
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    model_config = ConfigDict(extra="forbid", alias_generator=to_camel, populate_by_name=True)
 
 
 class WriteUiRunVariablesRequest(StrictRequest):

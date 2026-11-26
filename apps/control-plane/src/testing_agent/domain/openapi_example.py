@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from typing import Any
 
 MAX_EXAMPLE_DEPTH = 8
-MAX_EXAMPLE_ITEMS = 3
+MAX_EXAMPLE_ITEMS = 10
 MAX_STRING_LENGTH = 64
 SAMPLE_UUID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 _FORMAT_VALUES = {
@@ -112,17 +112,19 @@ def _array(node: dict[str, Any], depth: int) -> list[Any]:
 
 def _string(node: dict[str, Any]) -> str:
     formatted = _FORMAT_VALUES.get(str(node.get("format") or ""))
-    if formatted is not None:
-        return formatted
-    candidate = "string"
     min_length = _length(node.get("minLength"))
     max_length = _length(node.get("maxLength"))
+    if formatted is not None:
+        return formatted[:max_length] if max_length is not None else formatted
+    candidate = "string"
     if max_length is not None and max_length < len(candidate):
         return candidate[:max_length]
     target = min(min_length or len(candidate), MAX_STRING_LENGTH)
-    while len(candidate) < target and (max_length is None or len(candidate) < max_length):
+    if max_length is not None:
+        target = min(target, max_length)
+    while len(candidate) < target:
         candidate += "-string"
-    return candidate
+    return candidate[:max_length] if max_length is not None else candidate
 
 
 def _number(node: dict[str, Any], base: int | float) -> int | float:

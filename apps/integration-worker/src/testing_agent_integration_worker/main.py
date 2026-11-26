@@ -33,7 +33,7 @@ def main() -> None:
     try:
         asyncio.run(run_worker(settings))
     except Exception as error:
-        logging.error("Integration Worker stopped (%s)", type(error).__name__)
+        logging.exception("Integration Worker stopped (%s)", type(error).__name__)
         raise SystemExit(1) from None
 
 

@@ -3,6 +3,7 @@
 import importlib
 import inspect
 import pkgutil
+import typing
 
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -54,6 +55,28 @@ def test_request_models_forbid_undeclared_fields_except_documented_protocols():
 
 def test_request_extra_exceptions_have_reasons():
     assert all(reason.strip() for reason in REQUEST_EXTRA_EXCEPTIONS.values())
+
+
+def nested_request_models(annotation) -> set[type[BaseModel]]:
+    found: set[type[BaseModel]] = set()
+    for argument in typing.get_args(annotation):
+        if inspect.isclass(argument) and issubclass(argument, BaseModel):
+            found.add(argument)
+        else:
+            found.update(nested_request_models(argument))
+    return found
+
+
+def test_nested_request_models_forbid_undeclared_fields():
+    missing = []
+    for qualified, model in request_models():
+        for field_name, field in model.model_fields.items():
+            for nested in nested_request_models(field.annotation):
+                if nested.model_config.get("extra") != "forbid":
+                    missing.append(
+                        f"{qualified}.{field_name}: {nested.__module__}.{nested.__name__}"
+                    )
+    assert not missing, "\n".join(missing)
 
 
 def test_strict_request_rejects_unknown_field():

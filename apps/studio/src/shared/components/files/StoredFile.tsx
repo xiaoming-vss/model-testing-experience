@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Button, Image, Typography, message, type ImageProps } from 'antd'
+import { Button, Image, Typography, type ImageProps } from 'antd'
 import { downloadStoredFile } from '@/shared/api/files'
+import { message } from '@/shared/utils/feedback'
 import { liveArtifactMedia } from '@/shared/utils/liveArtifactUrls'
 
 function storedFileId(path: string) {

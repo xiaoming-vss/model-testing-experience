@@ -66,6 +66,36 @@ class ApiRepairTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("只处理登录", bot.calls[3][0])
         self.assertTrue(all(call[1]["session_key"] == "run" for call in bot.calls))
 
+    async def test_valid_rules_and_templates_are_preserved(self):
+        data = yaml.safe_load(CASES)
+        data["cases"][0].update(
+            bodyType="json",
+            bodyJson={"password": "{{password}}"},
+            extractRules=[
+                {
+                    "name": "token",
+                    "source": "body_jsonpath",
+                    "varKey": "token",
+                    "sourceExpr": "$.token",
+                }
+            ],
+            assertRules=[
+                {
+                    "name": "status",
+                    "assertSource": "status_code",
+                    "comparator": "eq",
+                    "expectedValue": "200",
+                }
+            ],
+        )
+        bot = Bot([EXTRACTED, yaml.safe_dump(data)])
+        with tempfile.TemporaryDirectory() as root:
+            result = await self.run_chain(bot, root, [], [])
+        case = yaml.safe_load(result.generator_output)["cases"][0]
+        self.assertEqual(case["bodyJson"], {"password": "{{password}}"})
+        self.assertEqual(case["extractRules"][0]["sourceExpr"], "$.token")
+        self.assertEqual(case["assertRules"][0]["expectedValue"], "200")
+
     async def test_exhaustion_in_each_stage_does_not_publish_invalid_output(self):
         for values, expected_calls, expected_extracted in [
             (["{}"] * 3, 3, []),
@@ -115,28 +145,3 @@ class ApiContractTests(unittest.TestCase):
             validate_extraction('{"meta":{},"config":{}}')
         with self.assertRaises(ValueError):
             validate_extraction(EXTRACTED.replace('"POST"', '["POST"]'))
-
-    def test_valid_rules_and_templates_are_preserved(self):
-        data = yaml.safe_load(CASES)
-        data["cases"][0].update(
-            bodyType="json",
-            bodyJson={"password": "{{password}}"},
-            extractRules=[
-                {
-                    "name": "token",
-                    "source": "body_jsonpath",
-                    "varKey": "token",
-                    "sourceExpr": "$.token",
-                }
-            ],
-            assertRules=[
-                {
-                    "name": "status",
-                    "assertSource": "status_code",
-                    "comparator": "eq",
-                    "expectedValue": "200",
-                }
-            ],
-        )
-        validate_cases(yaml.safe_dump(data))
-        validate_extraction(EXTRACTED)

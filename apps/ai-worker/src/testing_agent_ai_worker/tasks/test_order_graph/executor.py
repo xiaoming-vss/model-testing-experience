@@ -217,12 +217,12 @@ class TestOrderGraphExecutor(TaskExecutor):
                         extra_instruction=TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION,
                     )
                 )
-            except Exception as exc:  # noqa: BLE001 - 调用失败同样按轮重试
+            except Exception as exc:  # 调用失败同样按轮重试
                 errors = [f"调用失败：{exc}"]
                 continue
             try:
                 return parse_graph_text(raw, allowed_case_ids), attempt, None
-            except Exception as exc:  # noqa: BLE001 - 结构不合法时带上原因重试
+            except Exception as exc:  # 结构不合法时带上原因重试
                 errors = [f"{type(exc).__name__}: {exc}"]
         return empty_graph(), ROUND_ATTEMPTS, "图谱生成失败：" + "；".join(errors)
 

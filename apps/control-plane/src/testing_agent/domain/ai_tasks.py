@@ -31,7 +31,4 @@ def task_type_for(kind: str) -> str:
     return "api_case_generate"
 
 
-REVISION_ATTACHMENTS_FIELD = "revisionAttachments"
-
-
 DEFAULT_FUNCTION_CASE_MODULE = "未分组"

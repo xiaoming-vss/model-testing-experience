@@ -24,9 +24,7 @@ class ListResponse[DataT](BaseModel):
 
 
 class EmptyData(BaseModel):
-    model_config = ConfigDict(extra="forbid", alias_generator=to_camel)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    model_config = ConfigDict(extra="forbid", alias_generator=to_camel, populate_by_name=True)
 
 
 class MessageData(BaseModel):

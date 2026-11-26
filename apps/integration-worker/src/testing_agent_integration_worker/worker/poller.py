@@ -104,7 +104,7 @@ class Poller:
                     backoff = min(30, backoff * 2)
                 except Exception as error:
                     self.health.progress()
-                    logger.warning(
+                    logger.exception(
                         "Job stopped worker=%s error=%s", self.worker_id, type(error).__name__
                     )
                     await self.pause(backoff)
