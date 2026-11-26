@@ -428,6 +428,7 @@ it('以可选依赖虚线连接历史用例核验与完整用例', async () => {
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [analysis, functional] })
   mount()
   const edge = await screen.findByLabelText('历史用例核验到完整用例的可选输入')
+  expect(document.querySelector('[data-id="function:detailed_cases"] [data-handleid="history-input"]')).toHaveClass('react-flow__handle-left')
   expect(edge.querySelector('.gc-flow-edge-track')).toHaveStyle({ strokeDasharray: '6 4' })
   expect(edge.querySelector('.gc-flow-edge-stream')).toBeNull()
   expect(document.querySelector('[data-testid="rf__edge-function:1"]')).not.toBeNull()

@@ -77,7 +77,7 @@ function StageCard({ data }: NodeProps<StageNode>) {
     : running ? '等待本次结果' : stage.blockedReason
       || (stage.state === 'approved' ? '已有当前采用内容' : stage.state === 'draft' ? '已有候选内容' : stage.state === 'invalid' ? '当前内容需重新确认' : stage.state === 'failed' ? stage.errorMessage || '本次生成失败' : '暂无产物')
   return <div className="gc-flow-stage relative w-full">{ports}
-    {stage.stage === 'detailed_cases' ? <Handle type="target" position={Position.Bottom} id={historyInputHandle} className="gc-flow-handle" /> : null}
+    {stage.stage === 'detailed_cases' ? <Handle type="target" position={Position.Left} id={historyInputHandle} className="gc-flow-handle" style={{ top: 'calc(50% + 8px)' }} /> : null}
     <button type="button" className={`${NODE_CLASS} ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
     <span className={NODE_TOP_CLASS}><span className={NODE_INDEX_CLASS}>{String(stage.order + 1).padStart(2, '0')}</span><span className={NODE_STATE_CLASS}>{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
     <span className={NODE_MAIN_CLASS}><Icon aria-hidden /><strong className={NODE_TITLE_CLASS}>{stage.label}</strong></span><span className={NODE_META_CLASS}><span className={NODE_META_TEXT_CLASS}>{summary}</span></span>
@@ -117,7 +117,7 @@ function ProfileCard({ data }: NodeProps<ProfileNode>) {
   </div>
 }
 const nodeTypes = { chainGroup: ChainGroup, stage: StageCard, special: SpecialCard, profile: ProfileCard, relations: RelationsCard }
-type EdgeRoute = { route?: 'profile' | 'document-material'; optional?: boolean }
+type EdgeRoute = { route?: 'profile' | 'document-material' | 'history-input'; optional?: boolean }
 type GenerationFlowEdge = Edge<EdgeRoute & { running: boolean }, 'generationFlow'>
 // 320 单位/秒，每秒一束；12 段透明度渐变组成 87 单位的拖尾，沿实际曲线行进。
 const beamSegments = Array.from({ length: 12 }, (_, index) => ({
@@ -135,7 +135,14 @@ function getProfilePath({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
 function getDocumentMaterialPath({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
   return `M ${sourceX} ${sourceY} H ${sourceX + 30} C ${sourceX + 80} ${sourceY} ${sourceX + 80} ${targetY} ${targetX} ${targetY}`
 }
-const flowRoutes = { profile: getProfilePath, 'document-material': getDocumentMaterialPath }
+// 历史核验从测试点卡片下方经过，再向上弯入完整用例左侧。
+function getHistoryInputPath(props: EdgeProps) {
+  const { sourceX, sourceY, targetX, targetY } = props
+  const width = targetX - sourceX
+  if (width <= 0) return getBezierPath(props)[0]
+  return `M ${sourceX} ${sourceY} C ${sourceX + width * 0.7} ${sourceY} ${targetX - width * 0.08} ${targetY} ${targetX} ${targetY}`
+}
+const flowRoutes = { profile: getProfilePath, 'document-material': getDocumentMaterialPath, 'history-input': getHistoryInputPath }
 function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
   const route = props.data?.route
   const path = route ? flowRoutes[route](props) : getBezierPath(props)[0]
@@ -263,7 +270,7 @@ function buildCanvas({ chains, selected, special, profile, relations, canWrite, 
       edges.push({
         id: 'verification-to-detailed-cases', source: id, target: 'function:detailed_cases',
         targetHandle: historyInputHandle, ariaLabel: '历史用例核验到完整用例的可选输入',
-        data: { optional: true }, style: { strokeDasharray: '6 4', opacity: 0.8 },
+        data: { route: 'history-input', optional: true }, style: { strokeDasharray: '6 4', opacity: 0.8 },
       })
     }
   }
