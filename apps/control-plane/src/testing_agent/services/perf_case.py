@@ -20,7 +20,9 @@ from testing_agent.models.perf_case import PerfCase
 from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_suite import PerfSuiteRepository
 from testing_agent.schemas.perf_case import PerfCaseCreate, PerfCaseResponse, PerfCaseUpdate
-from testing_agent.services.case_lifecycle import set_case_invalidated
+from testing_agent.services.case_lifecycle import (
+    batch_set_invalidated,
+)
 from testing_agent.services.perf_case_spec import case_data_sources, parse_case_yaml
 from testing_agent.services.project_access import ProjectAction, require_project_id
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
@@ -175,18 +177,15 @@ class PerfCaseService:
 
     async def batch_set_invalidated(
         self, user_id: str, project_id: str, case_ids: Sequence[str], invalidated: bool
-    ) -> dict[str, Any]:
-        await self._require_project(user_id, project_id, "write")
-        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
-        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
-            raise ErrPerfCaseNotFound()
-        changed = set_case_invalidated(rows, invalidated)
-        try:
-            await self.repository.commit()
-        except Exception:
-            await self.repository.rollback()
-            raise
-        return {"caseIds": case_ids, "updatedCount": changed}
+    ) -> dict:
+        return await batch_set_invalidated(
+            self.repository,
+            self.repository.session,
+            user_id,
+            project_id,
+            case_ids,
+            invalidated,
+        )
 
     async def update(self, user_id: str, case_id: str, body: PerfCaseUpdate) -> dict[str, Any]:
         case = await self.repository.get_case(case_id, for_update=True)

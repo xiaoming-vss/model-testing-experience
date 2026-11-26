@@ -435,7 +435,7 @@ def test_zentao_bindings_keep_instance_identity_without_sharing_credentials(api,
     monkeypatch.setattr("testing_agent.services.shared_service.discover_instance", identity)
     monkeypatch.setattr("testing_agent.services.zentao_mcp.discover_instance", identity)
     monkeypatch.setattr(ZentaoMcpResources, "get_project", remote_project)
-    monkeypatch.setattr(ZentaoMcpResources, "list_project_executions", executions)
+    monkeypatch.setattr(ZentaoMcpResources, "list_all_project_executions", executions)
     _, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)

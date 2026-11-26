@@ -1,10 +1,9 @@
 """Read the current requirement-chain candidate overview."""
 
-from datetime import UTC, datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.generation_chain import (
     CHAIN_LABELS,
     stage_label,
@@ -20,10 +19,6 @@ from testing_agent.schemas.generation_chain import (
 )
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.stage_storage.module_progress import module_progress_view
-
-
-def _aware(value: datetime) -> datetime:
-    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 async def build_chain_view(
@@ -67,7 +62,7 @@ async def build_chain_view(
             and (
                 not row.confirmed_at
                 or not row.last_attempt_at
-                or _aware(row.last_attempt_at) >= _aware(row.confirmed_at)
+                or as_utc(row.last_attempt_at) >= as_utc(row.confirmed_at)
             )
         )
         if row and row.active_attempt_id:

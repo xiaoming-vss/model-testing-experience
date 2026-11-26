@@ -35,7 +35,10 @@ class IntegrationConnection(Base):
         String(512), nullable=False, default="", comment="服务或环境基础地址"
     )
     auth_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="", comment="外部服务认证方式"
+        String(50),
+        nullable=False,
+        default="",
+        comment=("外部服务认证方式：api_key/personal_access_token/mcp_header_token"),
     )
     account: Mapped[str] = mapped_column(
         String(120), nullable=False, default="", comment="外部服务登录账号"

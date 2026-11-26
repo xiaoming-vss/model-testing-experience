@@ -62,7 +62,7 @@ class PerfSuiteRun(Base):
         String(64), index=True, nullable=False, comment="本次运行发起者用户业务标识"
     )
     trigger_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="manual", comment="运行触发方式"
+        String(20), nullable=False, default="manual", comment="运行触发方式：manual"
     )
     status: Mapped[str] = mapped_column(
         String(20),

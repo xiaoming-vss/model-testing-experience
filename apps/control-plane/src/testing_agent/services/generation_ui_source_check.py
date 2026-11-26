@@ -13,7 +13,8 @@ from testing_agent.repositories.generation_candidate_storage import candidate_st
 from testing_agent.schemas.generation_candidates import CandidateUiSourceCheckRequest
 from testing_agent.services.generation_application_scope import GenerationApplicationScope
 from testing_agent.services.generation_chain import GenerationChainService
-from testing_agent.services.generation_source_errors import closure_error
+from testing_agent.services.generation_source_errors import closure_error, source_error
+from testing_agent.services.repository_profile_current import RepositoryProfileCurrent
 
 
 class UiCandidateSourceCheck:
@@ -127,3 +128,55 @@ class UiCandidateSourceCheck:
         except Exception:
             await self.session.rollback()
             raise
+
+
+class UiCurrentSourceCheck:
+    """Check the adopted current UI source for options and explicit verification."""
+
+    def __init__(self, chain: GenerationChainService) -> None:
+        self.chain = chain
+
+    def _require_sources(self):
+        sources = self.chain.ui_sources
+        if sources is None:
+            raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
+        return sources
+
+    async def options(self, requirement_id: str, actor_id: str) -> dict:
+        await self.chain.scope(requirement_id, actor_id)
+        sources = self._require_sources()
+        current = await RepositoryProfileCurrent(self.chain).read(
+            requirement_id=requirement_id, actor_id=actor_id
+        )
+        return sources.current_options(current)
+
+    async def check(self, requirement_id: str, actor_id: str, request) -> dict:
+        await self.chain.scope(requirement_id, actor_id)
+        sources = self._require_sources()
+        task = await self.chain.tasks.get_requirement(requirement_id)
+        if task is None:
+            raise ErrBadRequest()
+        sprint = await self.chain.tasks.get_sprint(task.sprint_id)
+        if sprint is None:
+            raise ErrBadRequest()
+        project_id = sprint.project_id
+        reader = RepositoryProfileCurrent(self.chain)
+        current = await reader.read(requirement_id=requirement_id, actor_id=actor_id)
+        if current is None or current.candidate_id != request.profile_candidate_id:
+            raise source_error("concurrent_change")
+        result = await sources.check_current(
+            current=current,
+            project_id=project_id,
+            user_id=actor_id,
+            repository_id=request.repository_id,
+            pinned_commit=request.pinned_commit,
+            gitlab_connection_id=request.gitlab_connection_id,
+        )
+        verified = await reader.read(requirement_id=requirement_id, actor_id=actor_id)
+        if verified is None or (
+            verified.candidate_id,
+            verified.snapshot_id,
+            verified.current_token,
+        ) != (current.candidate_id, current.snapshot_id, current.current_token):
+            raise source_error("concurrent_change")
+        return result

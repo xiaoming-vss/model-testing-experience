@@ -1,4 +1,3 @@
-from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,21 +10,18 @@ IDENTITY = "550e8400-e29b-41d4-a716-446655440000"
 
 
 def settings(**changes):
-    return replace(
-        LdapSettings(
-            enabled=True,
-            server_url="ldap://directory.test",
-            bind_dn="uid=reader,dc=test",
-            bind_password="test-secret",
-            user_search_base="cn=users,dc=test",
-            access_group_dn="cn=platform,dc=test",
-            directory_rules_verified=True,
-            # Synthetic fixture values, NOT Synology mappings.
-            active_user_filter="(testState=active)",
-            disabled_user_filter="(testState=disabled)",
-        ),
-        **changes,
-    )
+    return LdapSettings(
+        enabled=True,
+        server_url="ldap://directory.test",
+        bind_dn="uid=reader,dc=test",
+        bind_password="test-secret",
+        user_search_base="cn=users,dc=test",
+        access_group_dn="cn=platform,dc=test",
+        directory_rules_verified=True,
+        # Synthetic fixture values, NOT Synology mappings.
+        active_user_filter="(testState=active)",
+        disabled_user_filter="(testState=disabled)",
+    ).model_copy(update=changes)
 
 
 def entry(**attributes):

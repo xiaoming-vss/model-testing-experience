@@ -25,7 +25,7 @@ class Requirement(Base):
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False, comment="需求名称")
     document_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="richtext", comment="需求文档类型"
+        String(20), nullable=False, default="richtext", comment="需求文档类型：docx/richtext"
     )
     document_content: Mapped[str] = mapped_column(
         LONGTEXT, nullable=False, default="", comment="需求文档正文或提取内容"
@@ -40,7 +40,10 @@ class Requirement(Base):
         String(128), nullable=False, default="", comment="需求文档内容摘要"
     )
     document_download_url: Mapped[str] = mapped_column(
-        String(512), nullable=False, default="", comment="历史文档下载地址元数据；不用于文件交付"
+        String(512),
+        nullable=False,
+        default="",
+        comment="历史文档下载地址元数据；仍作为 AI Worker 源内容的回退值",
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")

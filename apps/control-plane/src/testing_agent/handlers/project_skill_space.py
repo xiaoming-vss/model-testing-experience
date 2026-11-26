@@ -7,7 +7,6 @@ from testing_agent.api.deps import get_current_user_id, get_project_skill_space_
 from testing_agent.core.errors import success_payload
 from testing_agent.core.object_storage import download_disposition
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
-from testing_agent.services.common import list_payload
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 
 
@@ -16,10 +15,7 @@ async def list_project_skills(
     user_id: str = Depends(get_current_user_id),
     service: ProjectSkillSpaceService = Depends(get_project_skill_space_service),
 ):
-    payload = await service.list(project_id, user_id)
-    if isinstance(payload, list):
-        payload = list_payload(payload)
-    return success_payload(payload)
+    return success_payload(await service.list(project_id, user_id))
 
 
 async def create_project_skill(

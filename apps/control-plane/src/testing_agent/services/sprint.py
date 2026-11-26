@@ -11,6 +11,7 @@ from testing_agent.core.errors import (
     ErrSprintScheduleInvalid,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import as_utc
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.schemas.sprint import CreateSprintRequest, SprintResponse, UpdateSprintRequest
@@ -19,13 +20,6 @@ from testing_agent.services.common import list_payload
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
-
-
-def as_utc(value: datetime) -> datetime:
-    """Treat timezone-less database values as UTC and normalize aware values."""
-    if value.tzinfo is None or value.utcoffset() is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 def derive_sprint_status(

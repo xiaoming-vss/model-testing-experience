@@ -4,6 +4,7 @@ import asyncio
 import time
 from collections.abc import AsyncIterator
 from contextlib import suppress
+from typing import Any
 
 from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -11,13 +12,19 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from testing_agent.core.errors import ErrForbidden
+from testing_agent.core.sid import new_id
 from testing_agent.db.session import AsyncSessionLocal
 from testing_agent.repositories.api_case import ApiCaseRepository
 from testing_agent.repositories.auth_session import AuthSessionRepository
 from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
+from testing_agent.schemas.api_run import RunApiCaseRequest
+from testing_agent.schemas.test_run import RunKind
+from testing_agent.schemas.ui_run import DebugRunUiCaseRequest
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.api_collection_run import ApiCollectionRunService
 from testing_agent.services.auth_session import SessionService
+from testing_agent.services.live_debug_stream import start_debug_stream
+from testing_agent.services.test_run_stop import stop_run
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 
 
@@ -128,3 +135,70 @@ async def reauthorize_debug_stream(
             await UiTestCaseRunService(UiTestCaseRunRepository(session)).get_accessible_case(
                 actor, case_id, action="execute"
             )
+
+
+class TestRunStreamService:
+    """Own the request session while handlers only adapt HTTP input/output."""
+
+    def __init__(
+        self,
+        session: Any,
+        api_cases: ApiCaseService,
+        api_collections: ApiCollectionRunService,
+        ui_runs: UiTestCaseRunService,
+    ) -> None:
+        self.session = session
+        self.api_cases = api_cases
+        self.api_collections = api_collections
+        self.ui_runs = ui_runs
+
+    async def stream(self, kind: RunKind, run_id: str, request: Request, user_id: str):
+        return await stream_run_events(
+            kind,
+            run_id,
+            request,
+            user_id,
+            self.session,
+            self.api_cases,
+            self.api_collections,
+            self.ui_runs,
+        )
+
+    async def stop(self, kind: RunKind, run_id: str, user_id: str):
+        return await stop_run(
+            kind,
+            run_id,
+            user_id,
+            self.session,
+            self.api_cases,
+            self.api_collections,
+            self.ui_runs,
+        )
+
+    async def start_api_debug(
+        self, request: Request, case_id: str, body: RunApiCaseRequest, user_id: str
+    ):
+        run_id = new_id()
+        return await start_debug_stream(
+            request,
+            "api",
+            run_id,
+            lambda: self.api_cases.run(user_id, case_id, body, run_id=run_id, live_debug=True),
+            self.session,
+            lambda: reauthorize_debug_stream(request, user_id, "api", case_id),
+        )
+
+    async def start_ui_debug(
+        self, request: Request, case_id: str, body: DebugRunUiCaseRequest, user_id: str
+    ):
+        run_id = new_id()
+        return await start_debug_stream(
+            request,
+            "ui",
+            run_id,
+            lambda: self.ui_runs.debug_run_case(
+                user_id, case_id, body, run_id=run_id, live_debug=True
+            ),
+            self.session,
+            lambda: reauthorize_debug_stream(request, user_id, "ui", case_id),
+        )

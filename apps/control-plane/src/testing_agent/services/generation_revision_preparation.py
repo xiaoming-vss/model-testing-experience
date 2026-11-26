@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.generation_document_preparation import (
@@ -21,7 +22,7 @@ from testing_agent.services.revision_attachments import (
     attach_revision_attachments,
     normalize_attachment_file_ids,
 )
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ def _eligible(row: StoredFile, *, actor_id: str, project_id: str) -> bool:
         and row.uploaded_by == actor_id
         and row.purpose == "attachment"
         and row.status == "ready"
-        and row.expires_at > utcnow()
+        and row.expires_at > naive_utcnow()
         and row.content_type in REVISION_IMAGE_CONTENT_TYPES
         and 0 < row.size <= MAX_REVISION_IMAGE_BYTES
     )

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound
+from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound, dynamic_error
 from testing_agent.models.requirement import Requirement
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
@@ -46,6 +46,16 @@ class RequirementDesignService:
         if requirement is None:
             raise ErrNotFound()
         return requirement
+
+    async def reject_standalone_run(
+        self, requirement_id: str, kind: DesignKind, task_id: str, user_id: str
+    ) -> None:
+        """Validate the caller's task scope, then point them at the generation chain."""
+        await self.scope(requirement_id, user_id, action="execute")
+        task = await self.access.owned_task(user_id, task_id, kind, action="read")
+        if task.requirement_id != requirement_id:
+            raise ErrNotFound()
+        raise dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段")
 
     async def overview(self, requirement_id: str, user_id: str) -> dict[str, Any]:
         await self.scope(requirement_id, user_id)

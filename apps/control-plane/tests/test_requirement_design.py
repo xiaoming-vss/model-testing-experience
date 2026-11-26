@@ -122,23 +122,18 @@ async def test_default_configuration_ignores_legacy_task_and_reuses_new_chain(da
         await service.configure("other", "function", Configuration(taskId="task"), "u")
 
 
-async def test_workspace_old_start_requires_stage_chain_and_checks_requirement():
+async def test_workspace_old_start_rejects_standalone_execution():
     from unittest.mock import AsyncMock
 
+    from testing_agent.core.errors import ErrBadRequest, dynamic_error
     from testing_agent.handlers.requirement_design import start_requirement_design
 
-    service = SimpleNamespace(
-        scope=AsyncMock(),
-        access=SimpleNamespace(
-            owned_task=AsyncMock(return_value=SimpleNamespace(requirement_id="req"))
-        ),
-    )
+    reject = AsyncMock(side_effect=dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段"))
+    service = SimpleNamespace(reject_standalone_run=reject)
     body = Start(taskId="task", requestId=uuid4(), connectionId="llm")
     with pytest.raises(AppError, match="请在需求生成链"):
         await start_requirement_design("req", "function", body, "u", service)
-    service.access.owned_task.return_value.requirement_id = "other"
-    with pytest.raises(AppError):
-        await start_requirement_design("req", "function", body, "u", service)
+    reject.assert_awaited_once_with("req", "function", "task", "u")
 
 
 async def test_first_configuration_is_durable_and_reused_on_request_retry(database):  # noqa: F811

@@ -37,7 +37,9 @@ class IntegrationJob(Base):
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     job_id: Mapped[str] = mapped_column(String(64), unique=True, comment="集成任务业务标识")
     protocol_version: Mapped[int] = mapped_column(Integer, comment="集成执行协议版本")
-    task_type: Mapped[str] = mapped_column(String(40), comment="任务类型")
+    task_type: Mapped[str] = mapped_column(
+        String(40), comment=("任务类型：zentao_bug_sync/zentao_bug_fields_update")
+    )
     project_id: Mapped[str] = mapped_column(String(64), comment="项目业务标识")
     bug_id: Mapped[str] = mapped_column(String(64), comment="平台 Bug 业务标识")
     actor_user_id: Mapped[str] = mapped_column(
@@ -67,7 +69,10 @@ class IntegrationJob(Base):
     status: Mapped[str] = mapped_column(
         String(20),
         default="queued",
-        comment="集成任务状态：queued/claimed/running/succeeded/partial/failed/unknown/canceled/quarantined",
+        comment=(
+            "集成任务状态：queued/claimed/running/succeeded/partial/failed/unkno"
+            "wn/canceled/quarantined"
+        ),
     )
     active_scope: Mapped[str | None] = mapped_column(
         String(64), nullable=True, comment="当前活跃 Bug 执行范围唯一键；空值表示已释放"

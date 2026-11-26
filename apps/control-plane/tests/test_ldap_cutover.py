@@ -52,7 +52,7 @@ async def test_config_change_fences_old_instance_without_repeated_revocation(ses
     runtime = AuthRuntimeRepository(session)
     old = ldap_settings()
     await AuthModeService(runtime, old).switch()
-    new = replace(old, ldap=replace(old.ldap, auto_link_by_username=True))
+    new = replace(old, ldap=old.ldap.model_copy(update={"auto_link_by_username": True}))
     service = AuthModeService(runtime, new)
     with pytest.raises(AppError):
         await service.require_current()

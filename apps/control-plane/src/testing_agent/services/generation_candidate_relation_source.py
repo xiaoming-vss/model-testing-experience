@@ -4,7 +4,6 @@
 
 import json
 from dataclasses import dataclass
-from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +55,7 @@ async def lock_candidate_relation_source(
         expected_current_token=expected_current_token,
         current_root_hashes=current_root_hashes,
     )
-    cases = generated_function_cases(SimpleNamespace(result_yaml=current.content))
+    cases = generated_function_cases(current.content)
     ids = [str(item.get("case_id") or item.get("caseId") or "").strip() for item in cases]
     if not ids or any(not value for value in ids) or len(ids) != len(set(ids)):
         raise dynamic_error(ErrBadRequest, "用例缺少唯一的 case_id，请重新生成并采用用例")

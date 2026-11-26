@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from testing_agent.core.config import load_settings
+from testing_agent.db.session import create_engine, create_sessions
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.integration_job import IntegrationJob, IntegrationJobStep
@@ -18,9 +18,9 @@ from testing_agent.services.integration_runtime import restored_runtime
 
 async def run(args):
     settings = load_settings(args.config)
-    engine = create_async_engine(settings.database_url)
+    engine = create_engine(settings)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with create_sessions(engine)() as session:
             if args.command == "observe":
                 from testing_agent.services.integration_observation import IntegrationObservation
 
@@ -28,14 +28,12 @@ async def run(args):
                     project_id=args.project_id, hours=args.window_hours, limit=args.limit
                 )
             if args.command in {"restore-audit", "restore-isolate", "restore-release"}:
-                from testing_agent.api.deps import build_integration_bug_service
                 from testing_agent.schemas.integration_restore import IntegrationRestoreAudit
-                from testing_agent.services.integration_restore import IntegrationRestoreService
-
-                bugs = build_integration_bug_service(session, settings)
-                review = IntegrationRestoreService(
-                    session, bugs.pushes, bugs.authorization, settings
+                from testing_agent.services.integration_restore import (
+                    build_integration_restore_service,
                 )
+
+                review = build_integration_restore_service(session, settings)
                 if args.command == "restore-audit":
                     files = json.loads(args.file_map.read_text()) if args.file_map else {}
                     return await review.audit(

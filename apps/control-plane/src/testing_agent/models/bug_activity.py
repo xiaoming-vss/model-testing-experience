@@ -40,13 +40,23 @@ class BugActivity(Base):
         comment="执行 Bug 动作的用户业务标识",
     )
     action: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="", comment="Bug 处理动作"
+        String(30),
+        nullable=False,
+        default="",
+        comment=(
+            "Bug 处理动作：confirm/resolve/close/activate/create/edit/transfer"
+            "/attachment/comment；旧版兼容动作 reject/submit_fix/regression_pass"
+            "/regression_fail/reopen"
+        ),
     )
     from_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="", comment="动作前 Bug 状态"
+        String(20),
+        nullable=False,
+        default="",
+        comment="动作前 Bug 状态：active/resolved/closed；创建时为空",
     )
     to_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="", comment="动作后 Bug 状态"
+        String(20), nullable=False, default="", comment="动作后 Bug 状态：active/resolved/closed"
     )
     # 修复说明、回归结果、拒绝/重开原因、评论等文本内容。
     content: Mapped[str] = mapped_column(Text, nullable=False, default="", comment="Bug 动态正文")

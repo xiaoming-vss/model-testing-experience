@@ -41,7 +41,7 @@ class TestOrderEntry(Base):
         String(20),
         nullable=False,
         default="function",
-        comment="引用用例类型；当前手工执行使用 function",
+        comment="引用用例类型：function；当前仅支持功能用例",
     )
     case_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="测试用例业务标识"

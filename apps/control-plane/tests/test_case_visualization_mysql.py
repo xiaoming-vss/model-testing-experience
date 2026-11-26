@@ -96,7 +96,7 @@ async def test_concurrent_dispatch_and_completion_delete(mysql, monkeypatch, rac
     async def dispatch(req):
         async with sessions() as session:
             return await service(session).dispatch(
-                actor, order, entry, {"request_id": req, "connection_id": "llm", "mode": "generate"}
+                actor, order, entry, {"requestId": req, "connectionId": "llm", "mode": "generate"}
             )
 
     try:

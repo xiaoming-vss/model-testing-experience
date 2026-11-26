@@ -22,6 +22,7 @@ from testing_agent.core.errors import (
     ErrUnauthorized,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.ldap_identity import DirectoryIdentity
 from testing_agent.models.user import User
 from testing_agent.repositories.user import UserRepository
@@ -43,7 +44,7 @@ def check_ldap_account(user: User, *, allow_link: bool) -> None:
         raise ErrAccountDisabled()
     until = user.locked_until
     if until is not None:
-        until = until if until.tzinfo else until.replace(tzinfo=UTC)
+        until = as_utc(until)
         if until > datetime.now(UTC):
             raise ErrAccountLocked()
     if user.auth_source == AuthSource.LOCAL:

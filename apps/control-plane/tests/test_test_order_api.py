@@ -451,6 +451,13 @@ def test_judging_a_case_sets_its_status_and_records_results(api):
 
     # 不接受未知状态
     assert api.patch(url, headers=owner, json={"status": "nope"}).status_code == 400
+    # 显式 null 不是“保持原值”：未登记可清空的字段返回 400
+    assert api.patch(url, headers=owner, json={"failureReason": None}).status_code == 400
+    assert api.patch(url, headers=owner, json={"status": None}).status_code == 400
+    # 空串表示清空
+    cleared = api.patch(url, headers=owner, json={"failureReason": ""})
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["data"]["failureReason"] == ""
 
     # 测试单进度随判定变化（阻塞也计入已执行）
     refreshed = api.get(f"/v1/test-orders/{order['orderId']}", headers=owner).json()["data"]

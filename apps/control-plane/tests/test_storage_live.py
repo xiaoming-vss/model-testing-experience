@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testing_agent.core.config import IntegrationExecutionSettings, load_settings
 from testing_agent.core.errors import AppError
 from testing_agent.core.object_storage import ObjectStorage
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models import Base
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
@@ -33,7 +34,7 @@ from testing_agent.models.user import User
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.database_snapshot import connect, identifier
 from testing_agent.services.storage_backup import create_backup, restore_backup, verify_bundle
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 pytestmark = pytest.mark.skipif(
     os.getenv("CONTROL_PLANE_STORAGE_LIVE") != "1", reason="Requires explicit local storage opt-in"
@@ -185,8 +186,8 @@ async def test_live_deleted_business_denies_fresh_file_authorization(live, kind)
                     sprint_id="audit-sprint",
                     project_id="p",
                     name="audit",
-                    start_time=utcnow(),
-                    end_time=utcnow() + timedelta(days=1),
+                    start_time=naive_utcnow(),
+                    end_time=naive_utcnow() + timedelta(days=1),
                 )
             )
             await session.flush()
@@ -284,7 +285,7 @@ async def test_live_cleanup_competing_instances_and_failure_recovery(live, monke
         files = StoredFileService(session, settings[0].s3)
         file_id = await upload(files)
         row = await files.get(file_id)
-        row.expires_at = utcnow() - timedelta(hours=1)
+        row.expires_at = naive_utcnow() - timedelta(hours=1)
         await session.commit()
         original_delete = files.storage.delete
         failed_once = False
@@ -322,14 +323,14 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
         await files.attach("owner", file_id, "p", "bug", "audit-bug", purpose="attachment")
         row = await files.get(file_id)
         row.status = "archived"
-        row.expires_at = utcnow() - timedelta(hours=1)
+        row.expires_at = naive_utcnow() - timedelta(hours=1)
         session.add(
             Sprint(
                 sprint_id="audit-sprint",
                 project_id="p",
                 name="audit",
-                start_time=utcnow(),
-                end_time=utcnow() + timedelta(days=1),
+                start_time=naive_utcnow(),
+                end_time=naive_utcnow() + timedelta(days=1),
             )
         )
         session.add(
@@ -377,7 +378,7 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
         await session.commit()
         leased = await files.get(file_id)
         leased.cleanup_id = "source-cleaner"
-        leased.cleanup_until = utcnow() + timedelta(minutes=5)
+        leased.cleanup_until = naive_utcnow() + timedelta(minutes=5)
         session.add(
             FileVerification(
                 operation_id="interrupted-verify",
@@ -385,8 +386,8 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
                 bucket=settings[0].s3.bucket,
                 object_key="p1-audit/interrupted-object",
                 state="running",
-                deadline=utcnow() + timedelta(minutes=10),
-                gc_after=utcnow() + timedelta(minutes=10),
+                deadline=naive_utcnow() + timedelta(minutes=10),
+                gc_after=naive_utcnow() + timedelta(minutes=10),
             )
         )
         await session.commit()
@@ -560,9 +561,9 @@ async def test_live_cleanup_skips_active_verification(live, monkeypatch):
         monkeypatch.setattr(files.storage, "seal", blocked_seal)
         completing = asyncio.create_task(files.complete("owner", file_id))
         assert await asyncio.to_thread(entered.wait, 10)
-        real_now = utcnow
+        real_now = naive_utcnow
         monkeypatch.setattr(
-            "testing_agent.services.stored_file_cleanup.utcnow",
+            "testing_agent.services.stored_file_cleanup.naive_utcnow",
             lambda: real_now() + timedelta(days=3),
         )
         try:
@@ -570,7 +571,7 @@ async def test_live_cleanup_skips_active_verification(live, monkeypatch):
                 result = await StoredFileService(other, settings[0].s3).cleanup()
                 assert result == {"deleted": 0, "failed": 0}
         finally:
-            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.utcnow", real_now)
+            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.naive_utcnow", real_now)
             release.set()
             await completing
         await files.attach("owner", file_id, "p", "bug", "audit-bug", purpose="attachment")
@@ -592,9 +593,9 @@ async def test_live_failed_save_and_attachment_lock_survive_cleanup(live, monkey
         with pytest.raises(AppError):
             await files.download("viewer", file_id)
         await files.attach("owner", file_id, "p", "bug", "audit-bug", purpose="attachment")
-        real_now = utcnow
+        real_now = naive_utcnow
         monkeypatch.setattr(
-            "testing_agent.services.stored_file_cleanup.utcnow",
+            "testing_agent.services.stored_file_cleanup.naive_utcnow",
             lambda: real_now() + timedelta(days=3),
         )
         try:
@@ -604,7 +605,7 @@ async def test_live_failed_save_and_attachment_lock_survive_cleanup(live, monkey
                     "failed": 0,
                 }
         finally:
-            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.utcnow", real_now)
+            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.naive_utcnow", real_now)
         await session.commit()
         assert await downloaded(files, "viewer", file_id) == b"Live S3 P1 evidence"
 
@@ -625,8 +626,8 @@ async def test_live_queue_claims_are_unique_and_expired_leases_fail_closed(live)
                 sprint_id="s",
                 project_id="p",
                 name="s",
-                start_time=utcnow(),
-                end_time=utcnow() + timedelta(days=1),
+                start_time=naive_utcnow(),
+                end_time=naive_utcnow() + timedelta(days=1),
             )
         )
         await session.flush()
@@ -667,7 +668,7 @@ async def test_live_queue_claims_are_unique_and_expired_leases_fail_closed(live)
     assert await claim("worker-3") is None
     async with sessions() as session:
         for task in await session.scalars(select(WorkerTask)):
-            task.lease_expires_at = utcnow() - timedelta(seconds=1)
+            task.lease_expires_at = naive_utcnow() - timedelta(seconds=1)
         await session.commit()
         await WorkerTaskService(WorkerTaskRepository(session)).expire_leases("ui")
         assert {task.status for task in await session.scalars(select(WorkerTask))} == {"error"}
@@ -711,7 +712,7 @@ async def test_live_skill_batches_keep_previous_signed_content_and_cleanup_safel
             assert (await client.get(old_ticket["url"])).content == b"old default"
             assert (await client.get(new_ticket["url"])).content == b"new default"
         old = await files.get(old_id)
-        old.expires_at = utcnow() - timedelta(seconds=1)
+        old.expires_at = naive_utcnow() - timedelta(seconds=1)
         await session.commit()
         assert (await files.cleanup())["deleted"] == 1
         async with httpx.AsyncClient() as client:

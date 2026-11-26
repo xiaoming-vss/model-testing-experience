@@ -7,18 +7,6 @@
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/api_collection.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
-    "services/api_interface.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
-    "services/api_interface_import.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
     "services/auth_mode.py": {
       "classification": "write",
       "reason": "Explicit authentication cutover; startup never resets existing sessions；写路径由 service 持有事务边界，保留直接 SQL。"
@@ -32,8 +20,8 @@
       "reason": "Delete one completed auxiliary execution without deleting business assets；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/auxiliary_execution_view.py": {
-      "classification": "write",
-      "reason": "Existing run response shapes projected from unified auxiliary executions；写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "Auxiliary run response projection; delegates SQL to repositories and imports only the AsyncSession type."
     },
     "services/auxiliary_request.py": {
       "classification": "locking-read",
@@ -44,8 +32,8 @@
       "reason": "Load display-only bindings for an already authorized resource list；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
     },
     "services/binding_support.py": {
-      "classification": "write",
-      "reason": "Binding serialization, access contract, and explicit commit error translation；写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "Binding serialization and commit-error translation; imports only IntegrityError."
     },
     "services/bug.py": {
       "classification": "read-write",
@@ -89,8 +77,8 @@
       "reason": "GitLab 凭据下发查询已迁入 IntegrationConnectionRepository.get_active_for_user；文件仅保留 AsyncSession 类型导入、解密和响应组装。"
     },
     "services/database_snapshot.py": {
-      "classification": "types-only",
-      "reason": "Portable MySQL table snapshots; no credentials are written into the bundle；仅使用 SQLAlchemy 类型或辅助函数，没有直接语句。"
+      "classification": "read-write",
+      "reason": "Portable MySQL snapshot tool issues raw cursor DDL/DML; credentials are never written into the bundle."
     },
     "services/environment_access.py": {
       "classification": "types-only",
@@ -110,8 +98,8 @@
       "reason": "Local permission/intent transaction, one remote write, then durable receipt；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/function_generate_import.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "Function import orchestration; repository calls own SQL and this module imports only IntegrityError."
     },
     "services/integration_authorization.py": {
       "classification": "locking-read",
@@ -158,40 +146,29 @@
       "reason": "Maintenance-only restore decisions. Remote reads precede local CAS transactions；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/integration_transaction.py": {
-      "classification": "write",
-      "reason": "Retry only known-aborted local MySQL transactions, never remote execution；写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "Retry helper for known-aborted MySQL transactions; imports only OperationalError."
     },
     "services/ldap_accounts.py": {
-      "classification": "write",
-      "reason": "Atomic LDAP JIT/link/profile persistence after external authentication；写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "LDAP account provisioning delegates SQL to repositories; imports only IntegrityError."
     },
     "services/ldap_reconcile.py": {
-      "classification": "write",
-      "reason": "Complete-round LDAP eligibility reconciliation, coordinated by a database lease；写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "LDAP reconciliation orchestration; repository calls own SQL and this module imports only session types."
     },
     "services/live_debug_cleanup.py": {
       "classification": "read-write",
       "reason": "Deliver and retire ephemeral single-API debug runs；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/monitoring_connection.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
-    "services/perf_case.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
     "services/perf_run_halt.py": {
       "classification": "read-write",
       "reason": "停止原语在同一事务内锁定并改写运行与队列任务，供单用例和测试集服务共用。"
     },
-    "services/perf_suite.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
     "services/perf_worker.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "Perf Worker claim/start/heartbeat adapters own no SQL; only the AsyncSession type is imported."
     },
     "services/personal_authorization.py": {
       "classification": "types-only",
@@ -218,8 +195,8 @@
       "reason": "Default generation tasks created atomically with a new requirement；写路径由 service 持有事务边界，保留直接 SQL。"
     },
     "services/requirement_software_repository.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "软件仓库关联编排委托 repository 增删；仅导入 IntegrityError 转换唯一约束冲突。"
     },
     "services/resource_deletion.py": {
       "classification": "locking-read",
@@ -238,8 +215,8 @@
       "reason": "Publish immutable skill batches with durable copy permits and short transactions；写路径由 service 持有事务边界，保留直接 SQL。"
     },
     "services/software_repository.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
+      "classification": "types-only",
+      "reason": "软件仓库关联编排委托 repository 增删；仅导入 IntegrityError 转换唯一约束冲突。"
     },
     "services/sprint_metrics_scheduler.py": {
       "classification": "types-only",
@@ -250,13 +227,13 @@
       "reason": "direct stage persistence；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
     "services/stage_storage/authorization.py": {
-      "classification": "read-write",
-      "reason": "authority resolution for a stage-owned Worker task；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+      "classification": "read-only",
+      "reason": "Resolve stage-authority rows with SELECTs only; no lock or write in this module."
     },
     "services/stage_storage/chain_view.py": {
-      "classification": "read-only",
-      "migration": "long-term-exception",
-      "reason": "生成链全景需跨 stage/attempt/version/import 多表组装，属于读模型投影；拆到单一 repository 会把视图规则分散到多个方法，保留到生成链读模型整体改造。"
+      "classification": "types-only",
+      "migration": "migrated",
+      "reason": "Generation-chain panorama projection assembled by repositories; only the AsyncSession type is imported."
     },
     "services/stage_storage/dispatch.py": {
       "classification": "read-write",
@@ -303,14 +280,6 @@
       "classification": "read-write",
       "reason": "Create the single system super administrator during process startup；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
     },
-    "services/test_order.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
-    "services/test_order_entry.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
-    },
     "services/test_run_stop.py": {
       "classification": "read-write",
       "reason": "Stop API/UI executions without replaying external operations；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
@@ -327,10 +296,6 @@
     "services/ui_test_case_run.py": {
       "classification": "read-write",
       "reason": "读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
-    },
-    "services/ui_test_suite.py": {
-      "classification": "write",
-      "reason": "写路径由 service 持有事务边界，保留直接 SQL。"
     },
     "services/user_admin.py": {
       "classification": "read-write",
@@ -374,6 +339,42 @@
     "services/zentao_mcp_reset.py": {
       "classification": "read-write",
       "reason": "Detach project remote IDs atomically; retain Bug sync history in its activity feed；读写在 service 的同一事务/锁定路径内，保留直接 SQL。"
+    },
+    "services/api_collection.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/api_interface.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/api_interface_import.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/monitoring_connection.py": {
+      "classification": "write",
+      "reason": "删除连接时通过 repository.session 删除行并提交；写路径由 service 持有。"
+    },
+    "services/perf_case.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/perf_suite.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/test_order.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/test_order_entry.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
+    },
+    "services/ui_test_suite.py": {
+      "classification": "types-only",
+      "reason": "导入 IntegrityError 仅用于把唯一约束冲突转成语义错误；SQL 由 repository 持有。"
     }
   }
 }

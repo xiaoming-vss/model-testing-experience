@@ -25,7 +25,15 @@ class WorkerTask(Base):
         String(64), nullable=False, comment="所属任务业务标识；与任务域组成唯一键"
     )
     task_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="Worker 执行任务类型"
+        String(50),
+        nullable=False,
+        comment=(
+            "Worker 执行任务类型：AI 域 requirement_analysis/functional_case_gene"
+            "rate/api_case_generate/ui_case_generate/repository_profile/t"
+            "est_report_generate/code_risk_analysis/test_order_graph/test"
+            "_order_case_visualization；API 域 api_collection_run/api_case_"
+            "debug；UI 域 suite_run/case_debug；性能域 perf_run"
+        ),
     )
     run_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="运行业务标识"
@@ -35,8 +43,8 @@ class WorkerTask(Base):
         nullable=False,
         default="pending",
         comment=(
-            "AI Worker 任务状态：pending/queued/claimed/running/success/"
-            "failed/error/canceled/skipped"
+            "AI Worker 任务状态：pending/queued/claimed/running/success/failed"
+            "/error/canceled/skipped"
         ),
     )
     worker_id: Mapped[str] = mapped_column(

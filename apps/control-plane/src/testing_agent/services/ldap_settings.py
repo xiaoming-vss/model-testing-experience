@@ -1,7 +1,7 @@
 """Database-managed LDAP configuration, safe serialization and atomic activation."""
 
 import ssl
-from dataclasses import asdict, replace
+from dataclasses import replace
 from typing import Any
 
 from testing_agent.core.config import Settings
@@ -55,7 +55,9 @@ class LdapSettingsService:
         row = await self.runtime.get()
         if row is None:
             raise ErrLdapUnavailable()
-        values = dict(row.ldap_config) if row.ldap_config is not None else asdict(LdapSettings())
+        values = (
+            dict(row.ldap_config) if row.ldap_config is not None else LdapSettings().model_dump()
+        )
         password = values.pop("bind_password", "")
         encrypted = values.pop("bind_password_encrypted", "")
         return {
@@ -68,7 +70,9 @@ class LdapSettingsService:
     async def _candidate(self, values: dict[str, Any], clear_password: bool) -> LdapSettings:
         row = await self.runtime.get()
         data = (
-            dict(row.ldap_config) if row and row.ldap_config is not None else asdict(LdapSettings())
+            dict(row.ldap_config)
+            if row and row.ldap_config is not None
+            else LdapSettings().model_dump()
         )
         encrypted = data.pop("bind_password_encrypted", "")
         incoming = dict(values)
@@ -114,7 +118,7 @@ class LdapSettingsService:
             if row is None or row.generation != generation:
                 raise AppError(1031, "LDAP 配置已被更新，请刷新后重试", 409)
             candidate = await self._candidate(values, clear_password)
-            encoded = asdict(candidate)
+            encoded = candidate.model_dump()
             secret = encoded.pop("bind_password")
             encoded["bind_password_encrypted"] = (
                 IntegrationCredentialCipher(self.bootstrap.integration_key).encrypt(secret)
@@ -143,7 +147,7 @@ class LdapSettingsService:
         await self._authorize(actor_id)
         config = await self._candidate({**values, "enabled": False}, clear_password)
         try:
-            config = replace(config, enabled=True)
+            config = config.model_copy(update={"enabled": True})
         except ValueError:
             raise AppError(1030, "连接检查需要地址、查询账号密码、搜索范围和访问组", 400) from None
         await self.runtime.rollback()  # No DB locks/transactions during external IO.

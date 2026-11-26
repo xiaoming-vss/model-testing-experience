@@ -8,13 +8,14 @@ import pytest
 from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db  # noqa: F401
 
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.generation_revision_preparation import (
     attach_prepared_revision_uploads,
     prepare_revision_uploads,
 )
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 class Storage:
@@ -48,7 +49,7 @@ async def test_revision_uploads_verify_bytes_and_recheck_before_attach(db):  # n
         purpose="attachment",
         resource_type="",
         resource_id="",
-        expires_at=utcnow() + timedelta(hours=1),
+        expires_at=naive_utcnow() + timedelta(hours=1),
     )
     db.add(row)
     db.commit()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.project_access import ProjectAction, require_project_id
@@ -50,10 +51,6 @@ PURPOSE_FOLDERS = {
 }
 
 PERF_CASE_DATA_MAX_BYTES = 50 * 1024 * 1024
-
-
-def utcnow():
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StoredFileService:
@@ -141,7 +138,7 @@ class StoredFileService:
             status="pending",
             resource_type=resource_type,
             resource_id=resource_id,
-            expires_at=utcnow() + timedelta(hours=self.settings.temporary_hours),
+            expires_at=naive_utcnow() + timedelta(hours=self.settings.temporary_hours),
         )
         ticket = await asyncio.to_thread(self.storage.upload_ticket, row.staging_key, row.size)
         self.session.add(row)
@@ -196,7 +193,7 @@ class StoredFileService:
             status="pending",
             resource_type="bug",
             resource_id=bug_id,
-            expires_at=utcnow() + timedelta(hours=self.settings.temporary_hours),
+            expires_at=naive_utcnow() + timedelta(hours=self.settings.temporary_hours),
         )
         ticket = await asyncio.to_thread(self.storage.upload_put_ticket, row.staging_key)
         self.session.add(row)
@@ -234,7 +231,7 @@ class StoredFileService:
             return row
         if row.uploaded_by != user_id:
             raise ErrForbidden()
-        if row.status != "ready" or row.purpose != purpose or row.expires_at <= utcnow():
+        if row.status != "ready" or row.purpose != purpose or row.expires_at <= naive_utcnow():
             raise AppError(409, "文件未完成上传或不可关联", 409)
         row.status, row.resource_type, row.resource_id = "attached", resource_type, resource_id
         return row
@@ -242,7 +239,7 @@ class StoredFileService:
     async def ticket(self, row: StoredFile):
         if row.status not in {"ready", "attached", "archived"}:
             raise ErrNotFound()
-        if row.status == "ready" and row.expires_at <= utcnow():
+        if row.status == "ready" and row.expires_at <= naive_utcnow():
             raise ErrNotFound()
         await require_file_resource(self.session, row)
         url = await asyncio.to_thread(self.storage.download_ticket, row.object_key, row.filename)

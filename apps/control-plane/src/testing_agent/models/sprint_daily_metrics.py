@@ -78,8 +78,8 @@ class SprintDailyMetrics(Base):
         JSON,
         nullable=True,
         comment=(
-            "缺陷摘要快照 JSON；平台条目含 bugId/bugNo/title/status/severity/resolution，"
-            "历史格式保留"
+            "缺陷摘要快照 JSON；平台条目含 bugId/bugNo/title/status/severity/resoluti"
+            "on，历史格式保留"
         ),
     )
     bug_total: Mapped[int] = mapped_column(

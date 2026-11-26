@@ -15,6 +15,7 @@ from testing_agent.api.deps import (
 )
 from testing_agent.app import create_app
 from testing_agent.core.errors import AppError
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.bug import Bug
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -31,7 +32,6 @@ from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.services.project import ProjectService
 from testing_agent.services.requirement import RequirementService
 from testing_agent.services.sprint import SprintService
-from testing_agent.services.stored_file import utcnow
 
 
 async def linked_file(files, kind, *, suite_run=False):
@@ -41,8 +41,8 @@ async def linked_file(files, kind, *, suite_run=False):
             sprint_id="access-s",
             project_id="p",
             name="access",
-            start_time=utcnow(),
-            end_time=utcnow() + timedelta(days=1),
+            start_time=naive_utcnow(),
+            end_time=naive_utcnow() + timedelta(days=1),
         )
         entities["requirement"] = Requirement(
             requirement_id="access-r",
@@ -220,7 +220,7 @@ async def test_retained_history_remains_readable(files, kind):
     elif kind == "bug":
         row.status = "archived"
         entities[kind].description_html = "<p>removed image</p>"
-    row.expires_at = utcnow() - timedelta(days=1)
+    row.expires_at = naive_utcnow() - timedelta(days=1)
     await files.session.commit()
     assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
 

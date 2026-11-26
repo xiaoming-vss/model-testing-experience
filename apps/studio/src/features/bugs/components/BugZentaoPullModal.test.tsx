@@ -18,6 +18,7 @@ function previewData(overrides: Partial<ZentaoRemotePreview> = {}): ZentaoRemote
   return {
     remoteBugId: 50,
     remoteDigest: 'digest-abcdef',
+    localDigest: 'local-abcdef',
     linkedSource: 'push',
     groups: [
       group({ group: 'profile', state: 'conflict', local: { title: '本地标题', severity: 'serious', priority: 'medium' }, remote: { title: '远端标题', severity: 'serious', priority: 'low' }, reason: '两端都已修改且内容不同，请选择保留哪一侧' }),
@@ -86,6 +87,7 @@ it('rejects applying assignee without choosing a platform member (Q05)', async (
   await userEvent.click(screen.getByRole('button', { name: '确认同步' }))
   await waitFor(() => expect(pull).toHaveBeenCalledWith('b1', {
     remoteDigest: 'digest-abcdef',
+    localDigest: 'local-abcdef',
     groups: [
       { group: 'profile', action: 'apply_remote' },
       { group: 'status', action: 'keep_local' },

@@ -14,13 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.repositories.skill_publication import SkillPublicationRepository
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
 from testing_agent.services.file_verification import VERIFY_WINDOW, FileVerificationWorkflow
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 @dataclass(frozen=True)
@@ -75,7 +76,7 @@ def retire_copy(files: StoredFileService, row: StoredFile, key: str) -> None:
             purpose="project_skill",
             resource_type="project_skill",
             resource_id=row.resource_id,
-            expires_at=utcnow() + timedelta(seconds=files.settings.signature_seconds),
+            expires_at=naive_utcnow() + timedelta(seconds=files.settings.signature_seconds),
         )
     )
 
@@ -93,11 +94,11 @@ async def replace_manifest(
     for row in rows.values():
         if row.resource_type == "project_skill" and row.resource_id == skill.skill_space_id:
             row.status = "deleting"
-            row.expires_at = utcnow() + timedelta(seconds=signature_seconds)
+            row.expires_at = naive_utcnow() + timedelta(seconds=signature_seconds)
     skill.manifest = sorted(manifest, key=lambda entry: entry["path"])
     skill.hash = hashlib.sha256(json.dumps(skill.manifest, sort_keys=True).encode()).hexdigest()
     skill.size_bytes = sum(entry["size"] for entry in manifest)
-    skill.updated_at = utcnow()
+    skill.updated_at = naive_utcnow()
 
 
 class SkillPublisher:
@@ -144,7 +145,7 @@ class SkillPublisher:
             return
         if actor is None or row.uploaded_by != actor:
             raise ErrForbidden()
-        if row.status != "ready" or row.expires_at <= utcnow():
+        if row.status != "ready" or row.expires_at <= naive_utcnow():
             raise AppError(409, "文件未完成上传或不可关联", 409)
 
     def reserve(
@@ -158,7 +159,7 @@ class SkillPublisher:
     ) -> SkillCopy:
         operation_id = new_id()
         key = skill_key(self.files.settings.prefix, target, batch, path)
-        now = utcnow()
+        now = naive_utcnow()
         self.session.add(
             FileVerification(
                 operation_id=operation_id,
@@ -228,7 +229,8 @@ class SkillPublisher:
                     purpose="project_skill",
                     resource_type="project_skill",
                     resource_id=target.skill_id,
-                    expires_at=utcnow() + timedelta(hours=self.files.settings.temporary_hours),
+                    expires_at=naive_utcnow()
+                    + timedelta(hours=self.files.settings.temporary_hours),
                 )
                 self.session.add(row)
                 copies.append(self.reserve(target, row, path, batch, data=data))
@@ -265,8 +267,8 @@ class SkillPublisher:
             if row.state != "published":
                 unknown = row.operation_id in (uncertain or set())
                 row.state = "abandoned" if unknown else "discarded"
-                row.settled_at = None if unknown else utcnow()
-                row.gc_after = utcnow()
+                row.settled_at = None if unknown else naive_utcnow()
+                row.gc_after = naive_utcnow()
         await self.session.commit()
 
     async def finish(
@@ -314,7 +316,7 @@ class SkillPublisher:
                     row is None
                     or operation is None
                     or operation.state != "running"
-                    or operation.deadline <= utcnow()
+                    or operation.deadline <= naive_utcnow()
                     or row.object_key != copy.source_key
                     or row.size != copy.size
                     or row.sha256 != copy.sha256
@@ -327,15 +329,15 @@ class SkillPublisher:
                 elif (
                     row.status != "pending"
                     or row.verification_id != copy.operation_id
-                    or row.expires_at <= utcnow()
+                    or row.expires_at <= naive_utcnow()
                 ):
                     raise AppError(409, "技能上传已失效，请重试", 409)
                 if row.object_key != copy.target_key:
                     retire_copy(self.files, row, row.object_key)
                 row.object_key, row.status = copy.target_key, "attached"
                 row.resource_type, row.resource_id = "project_skill", target.skill_id
-                row.completed_at = row.completed_at or utcnow()
-                operation.state, operation.settled_at = "published", utcnow()
+                row.completed_at = row.completed_at or naive_utcnow()
+                operation.state, operation.settled_at = "published", naive_utcnow()
             await replace_manifest(
                 self.session,
                 skill,

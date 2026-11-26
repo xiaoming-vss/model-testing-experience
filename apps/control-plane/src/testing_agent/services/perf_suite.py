@@ -143,11 +143,17 @@ class PerfSuiteService:
     async def list(self, user_id: str, project_id: str) -> dict[str, Any]:
         await require_project_id(self.repository.session, user_id, project_id, action="read")
         suites = await self.repository.list_by_project(project_id)
-        items = []
-        for suite in suites:
-            cases = await self.cases.list_by_suite(suite.suite_id)
-            last_run = await self.runs.latest_by_suite(suite.suite_id)
-            items.append(self._summary(suite, cases, last_run))
+        suite_ids = [suite.suite_id for suite in suites]
+        cases_by_suite = await self.cases.list_by_suites(suite_ids)
+        latest_by_suite = await self.runs.latest_by_suites(suite_ids)
+        items = [
+            self._summary(
+                suite,
+                cases_by_suite.get(suite.suite_id, []),
+                latest_by_suite.get(suite.suite_id),
+            )
+            for suite in suites
+        ]
         return {"total": len(items), "items": items}
 
     async def get(self, user_id: str, suite_id: str) -> dict[str, Any]:

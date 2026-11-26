@@ -66,14 +66,14 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
         return_value=SimpleNamespace(connection_id="conn-1")
     )
     client = SimpleNamespace(
-        list_project_executions=AsyncMock(return_value={"items": [{"id": 201}], "total": 1}),
+        list_all_project_executions=AsyncMock(return_value={"items": [{"id": 201}], "total": 1}),
         list_execution_stories=AsyncMock(return_value={"items": [{"id": 201}], "total": 1}),
     )
     if scenario == "later_page":
-        client.list_project_executions.side_effect = [
-            {"items": [{"id": value} for value in range(1, 101)], "total": 101},
-            {"items": [{"id": 201}], "total": 101},
-        ]
+        client.list_all_project_executions.return_value = {
+            "items": [{"id": value} for value in range(1, 202)],
+            "total": 201,
+        }
         client.list_execution_stories.return_value = {
             "items": [{"id": value} for value in range(1, 202)],
             "total": 201,
@@ -83,7 +83,7 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
             "items": [{"id": 201, "deleted": True}] if scenario == "deleted_resource" else [],
             "total": 0,
         }
-        client.list_project_executions.return_value = response
+        client.list_all_project_executions.return_value = response
         client.list_execution_stories.return_value = response
     service = ResourceBindingService(repository, connections, client, zentao_access=FakeMcpAccess())
     if scenario not in {"empty_parent", "valid_parent", "later_page"}:
@@ -94,7 +94,7 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
         assert error.value.code == ErrResourceBindingInvalid.code
         repository.commit.assert_not_awaited()
         if scenario not in {"unavailable_resource", "deleted_resource"}:
-            client.list_project_executions.assert_not_awaited()
+            client.list_all_project_executions.assert_not_awaited()
             client.list_execution_stories.assert_not_awaited()
         return
 
@@ -105,14 +105,10 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
     assert result["remoteParentId"] == "1"
     assert result["remoteResourceId"] == "201"
     fetch = (
-        client.list_project_executions
+        client.list_all_project_executions
         if resource_type == "sprint"
         else client.list_execution_stories
     )
-    assert fetch.await_count == (2 if scenario == "later_page" and resource_type == "sprint" else 1)
+    assert fetch.await_count == 1
     assert fetch.call_args.args[1] == "1"
-    assert fetch.call_args.kwargs == (
-        {"page": 2 if scenario == "later_page" else 1, "page_size": 100}
-        if resource_type == "sprint"
-        else {}
-    )
+    assert fetch.call_args.kwargs == {}

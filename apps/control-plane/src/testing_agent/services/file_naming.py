@@ -6,11 +6,12 @@ from sqlalchemy import select
 
 from testing_agent.core.errors import AppError
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.file_verification import VERIFY_WINDOW, FileVerificationWorkflow
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 async def repair_file_names(files: StoredFileService, *, apply: bool = False):
@@ -51,7 +52,7 @@ async def repair_file_names(files: StoredFileService, *, apply: bool = False):
             new_key = source.rsplit("/", 1)[0] + "/named/" + operation_id + "/" + filename
             if len(new_key) > 512 or len(new_key.encode()) > 1024:
                 raise AppError(400, "文件存储路径过长", 400)
-            now = utcnow()
+            now = naive_utcnow()
             files.session.add(
                 FileVerification(
                     operation_id=operation_id,
@@ -78,13 +79,13 @@ async def repair_file_names(files: StoredFileService, *, apply: bool = False):
             if (
                 operation is None
                 or operation.state != "running"
-                or operation.deadline <= utcnow()
+                or operation.deadline <= naive_utcnow()
                 or current.status not in {"ready", "attached"}
                 or (current.object_key, current.size, current.sha256) != (source, size, sha256)
             ):
                 raise AppError(409, "文件已变化，请重试文件名修复", 409)
             current.object_key = new_key
-            operation.state, operation.settled_at = "published", utcnow()
+            operation.state, operation.settled_at = "published", naive_utcnow()
             await files.session.commit()
             results.append({"fileId": file_id, "status": "repaired"})
         except asyncio.CancelledError:

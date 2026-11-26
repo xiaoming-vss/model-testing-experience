@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from testing_agent.core.errors import AppError, ErrNotFound
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.integration_execution import (
     ACTIVE_JOB_STATUSES,
     SUCCESS_STEP_STATUSES,
@@ -23,7 +24,6 @@ from testing_agent.domain.integration_execution import (
     digest,
     require_safe_snapshot,
     same_result,
-    utc,
 )
 from testing_agent.models.integration_job import (
     IntegrationClaimReceipt,
@@ -233,7 +233,7 @@ class IntegrationJobService:
                     job.heartbeat_at = now
                     if job.first_claimed_at is None:
                         job.first_claimed_at = now
-                        waited = (now - utc(job.created_at)).total_seconds()
+                        waited = (now - as_utc(job.created_at)).total_seconds()
                         job.queue_wait_ms = round(waited * 1000) if waited >= 0 else None
                     job.lease_expires_at = now + timedelta(seconds=self.lease_seconds)
                     await self.repository.flush()
@@ -267,7 +267,7 @@ class IntegrationJobService:
         if (
             job.status not in (JobStatus.CLAIMED, JobStatus.RUNNING)
             or job.lease_expires_at is None
-            or utc(job.lease_expires_at) <= self.clock()
+            or as_utc(job.lease_expires_at) <= self.clock()
         ):
             raise conflict("任务租约已失效")
         await self.authorize(job)
@@ -372,7 +372,9 @@ class IntegrationJobService:
             "operationId": step.operation_id,
             "status": step.status,
             "writeAllowed": True,
-            "permitSeconds": max(0, (utc(step.permit_expires_at) - self.clock()).total_seconds()),
+            "permitSeconds": max(
+                0, (as_utc(step.permit_expires_at) - self.clock()).total_seconds()
+            ),
         }
 
     async def result(
@@ -554,7 +556,7 @@ class IntegrationJobService:
             if (
                 job.status not in {JobStatus.CLAIMED, JobStatus.RUNNING}
                 or job.lease_expires_at is None
-                or utc(job.lease_expires_at) > self.clock()
+                or as_utc(job.lease_expires_at) > self.clock()
             ):
                 continue
             expired += 1

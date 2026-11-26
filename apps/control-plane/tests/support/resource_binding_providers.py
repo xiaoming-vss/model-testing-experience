@@ -25,7 +25,7 @@ class RecordingZentaoClient:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
 
-    async def list_project_executions(self, connection, remote_id, **kwargs):
+    async def list_all_project_executions(self, connection, remote_id):
         return {"items": [{"id": 201}], "total": 1}
 
     async def get_project(self, connection, remote_resource_id):

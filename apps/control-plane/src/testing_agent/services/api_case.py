@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from pydantic import BaseModel
@@ -29,7 +30,9 @@ from testing_agent.schemas.api_case import ApiCaseRequest, ApiCaseResponse
 from testing_agent.schemas.api_run import ApiCaseRunResponse, RunApiCaseRequest
 from testing_agent.services.api_import_payload import normalize_json_value as normalize_json_value
 from testing_agent.services.api_request_render import render_api_case_request
-from testing_agent.services.case_lifecycle import set_case_invalidated
+from testing_agent.services.case_lifecycle import (
+    batch_set_invalidated,
+)
 from testing_agent.services.common import list_payload
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import protect_run
@@ -164,19 +167,16 @@ class ApiCaseService:
         return list_payload([dump(ApiCaseResponse, row) for row in rows])
 
     async def batch_set_invalidated(
-        self, user_id: str, project_id: str, case_ids: list[str], invalidated: bool
+        self, user_id: str, project_id: str, case_ids: Sequence[str], invalidated: bool
     ) -> dict:
-        await require_project_id(self.repository.session, user_id, project_id, action="write")
-        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
-        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
-            raise ErrNotFound()
-        changed = set_case_invalidated(rows, invalidated)
-        try:
-            await self.repository.commit()
-        except Exception:
-            await self.repository.rollback()
-            raise
-        return {"caseIds": case_ids, "updatedCount": changed}
+        return await batch_set_invalidated(
+            self.repository,
+            self.repository.session,
+            user_id,
+            project_id,
+            case_ids,
+            invalidated,
+        )
 
     async def get(self, user_id: str, case_id: str) -> dict:
         context = await self.get_accessible_context(user_id, case_id, action="read")

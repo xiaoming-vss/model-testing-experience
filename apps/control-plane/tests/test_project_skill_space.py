@@ -226,16 +226,16 @@ async def test_worker_skill_files_require_active_owner_and_default_membership(fi
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
+    from testing_agent.core.utc import naive_utcnow
     from testing_agent.handlers.worker_skills import skill_file, skill_manifest
     from testing_agent.repositories.worker_task import WorkerTaskRepository
-    from testing_agent.services.stored_file import utcnow
 
     source = tmp_path / "builtin"
     source.mkdir()
     (source / "SKILL.md").write_text("system")
     await sync_builtin_skills(files, tmp_path)
     task = SimpleNamespace(
-        worker_id="worker", status="running", lease_expires_at=utcnow() + timedelta(minutes=2)
+        worker_id="worker", status="running", lease_expires_at=naive_utcnow() + timedelta(minutes=2)
     )
     worker = SimpleNamespace(
         ai_worker_task=AsyncMock(return_value=task),
@@ -253,7 +253,7 @@ async def test_worker_skill_files_require_active_owner_and_default_membership(fi
             await skill_manifest("task", name, who, worker)
     with pytest.raises(AppError):
         await skill_file("task", "builtin", "foreign-file", "worker", worker, files)
-    task.lease_expires_at = utcnow() - timedelta(seconds=1)
+    task.lease_expires_at = naive_utcnow() - timedelta(seconds=1)
     with pytest.raises(AppError):
         await skill_manifest("task", "builtin", "worker", worker)
 
@@ -264,8 +264,8 @@ async def test_readable_paths_survive_replacement_cleanup(files):
 
     from sqlalchemy import select
 
+    from testing_agent.core.utc import naive_utcnow
     from testing_agent.models.stored_file import StoredFile
-    from testing_agent.services.stored_file import utcnow
 
     svc = service(files)
     first = await svc.upload("p", await folder(files), "owner")
@@ -275,7 +275,7 @@ async def test_readable_paths_survive_replacement_cleanup(files):
         assert_skill_path(row.object_key, "mtx/skills/projects/p/custom/", entry["path"])
     await svc.upload("p", await folder(files, entries={"SKILL.md": b"replacement"}), "owner")
     for row in await files.session.scalars(select(StoredFile)):
-        row.expires_at = utcnow() - timedelta(seconds=1)
+        row.expires_at = naive_utcnow() - timedelta(seconds=1)
     await files.session.commit()
     assert (await files.cleanup())["failed"] == 0
     objects = files.storage.client.list_objects_v2(Bucket=files.settings.bucket)["Contents"]

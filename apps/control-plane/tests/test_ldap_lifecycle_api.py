@@ -28,7 +28,9 @@ def test_cutover_link_and_explicit_local_recovery_preserve_resources_and_revoke_
     )
     assert response.status_code == 200
     settings = ldap_settings()
-    settings = replace(settings, ldap=replace(settings.ldap, auto_link_by_username=True))
+    settings = replace(
+        settings, ldap=settings.ldap.model_copy(update={"auto_link_by_username": True})
+    )
 
     async def enable_and_link():
         async with api.app.state.test_sessions() as session:

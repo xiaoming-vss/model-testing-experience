@@ -26,7 +26,7 @@ class ProjectSkillSpace(Base):
         comment="所属项目业务标识；空值表示全局技能包",
     )
     scope_key: Mapped[str] = mapped_column(
-        String(64), nullable=False, comment="技能文件作用域键，用于区分全局与项目"
+        String(64), nullable=False, comment="技能文件作用域键：项目业务标识或 system（全局）"
     )
     filename: Mapped[str] = mapped_column(
         String(255), nullable=False, comment="技能名称（兼容历史压缩包文件名）"

@@ -45,3 +45,4 @@
 - [0032 重放只对原身份幂等](adr/0032-replays-are-idempotent-for-the-original-identity.md)
 - [0033 退役独立多阶段执行](adr/0033-retire-independent-multistage-execution.md)
 - [0034 退役旧连接管理路由与禅道 REST 通道](adr/0034-retire-legacy-connection-routes-and-zentao-rest-channel.md)
+- [0035 禅道反向拉取应用同时校验两端摘要](adr/0035-zentao-pull-apply-checks-both-digests.md)

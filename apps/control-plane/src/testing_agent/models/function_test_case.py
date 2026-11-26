@@ -38,9 +38,14 @@ class FunctionTestCase(Base):
         String(120), nullable=False, default="", comment="功能用例所属业务模块"
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False, comment="功能测试用例标题")
-    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="", comment="优先级")
+    priority: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="", comment=("优先级：P0/P1/P2/P3")
+    )
     case_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="", comment="用例类型"
+        String(30),
+        nullable=False,
+        default="",
+        comment="用例类型：功能测试/异常测试/边界测试/流程测试/兼容测试/安全测试；允许自由文本",
     )
     order_no: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="执行或展示顺序"

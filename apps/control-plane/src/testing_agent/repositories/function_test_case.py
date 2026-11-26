@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import defer
 
 from testing_agent.domain.function_case_export import FunctionCaseExportReference
 from testing_agent.domain.function_case_query import FunctionCaseQuery
@@ -161,6 +162,7 @@ class FunctionTestCaseRepository(ResourceRepository):
             .join(FunctionTestSuite, FunctionTestSuite.suite_id == FunctionTestCase.suite_id)
             .join(Requirement, Requirement.requirement_id == FunctionTestSuite.requirement_id)
             .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+            .options(defer(Requirement.document_content, raiseload=True))
             .where(*conditions)
         )
         total = await self.session.scalar(select(func.count()).select_from(statement.subquery()))

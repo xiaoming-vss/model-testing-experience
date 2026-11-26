@@ -15,6 +15,7 @@ from testing_agent.repositories.shared_service_catalog import SharedServiceCatal
 from testing_agent.schemas.shared_service import McpTemplate
 from testing_agent.services.connection_security import require_secure_scheme
 from testing_agent.services.integration_connection import IntegrationConnectionService
+from testing_agent.services.personal_credentials import has_mcp_token
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
@@ -190,7 +191,7 @@ class SharedServiceService:
         if confirm_instance_switch:
             original_endpoint = resource.base_url
             own = await self.own_connection(resource, user_id)
-            if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
+            if not has_mcp_token(own):
                 raise AppError(400, "请先保存本人的 MCP Token，以核对新禅道目标", 400)
             token = self.connections.credentials.mcp_token(
                 own, user_id=user_id, project_id=resource.project_id
@@ -201,9 +202,7 @@ class SharedServiceService:
             own = await self.own_connection(resource, user_id)
             if (
                 resource.base_url != original_endpoint
-                or own is None
-                or own.status != "active"
-                or not (own.secret_json or {}).get("token")
+                or not has_mcp_token(own)
                 or self.connections.credentials.mcp_token(
                     own, user_id=user_id, project_id=resource.project_id
                 )

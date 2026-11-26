@@ -27,7 +27,9 @@ async def dispatch_visualization(
     user_id: str = Depends(get_current_user_id),
     service: TestOrderCaseVisualizationService = Depends(get_case_visualization_service),
 ):
-    return success_payload(await service.dispatch(user_id, order_id, entry_id, body.model_dump()))
+    return success_payload(
+        await service.dispatch(user_id, order_id, entry_id, body.model_dump(by_alias=True))
+    )
 
 
 async def dispatch_visualization_batch(
@@ -36,7 +38,9 @@ async def dispatch_visualization_batch(
     user_id: str = Depends(get_current_user_id),
     service: TestOrderCaseVisualizationService = Depends(get_case_visualization_service),
 ):
-    return success_payload(await service.batch_dispatch(user_id, order_id, body.model_dump()))
+    return success_payload(
+        await service.batch_dispatch(user_id, order_id, body.model_dump(by_alias=True))
+    )
 
 
 async def get_visualization_batch(

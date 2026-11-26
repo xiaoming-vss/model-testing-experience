@@ -19,9 +19,21 @@ class AiGenerationStage(Base):
         nullable=False,
         comment="所属生成链任务业务标识",
     )
-    stage: Mapped[str] = mapped_column(String(40), nullable=False, comment="生成链阶段标识")
+    stage: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        comment=(
+            "生成链阶段标识：requirement_review/extracting_text/historical_requir"
+            "ement_relations/historical_test_case_verification/requiremen"
+            "t_analysis/case_names/detailed_cases/interface_extract/api_d"
+            "esign/generate/ui_surface/ui_design/ui_yaml"
+        ),
+    )
     review_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pending", comment="稳定阶段当前候选审核状态"
+        String(20),
+        nullable=False,
+        server_default="pending",
+        comment=("稳定阶段当前候选审核状态：pending/not_required"),
     )
     current_attempt_id: Mapped[str | None] = mapped_column(
         String(64), comment="当前阶段候选尝试业务标识"

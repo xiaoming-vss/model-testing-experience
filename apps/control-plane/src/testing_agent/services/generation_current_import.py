@@ -4,7 +4,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -118,49 +117,29 @@ class CurrentImportCoordinator:
         confirm_overwrite: bool,
         preview_only: bool,
     ) -> dict[str, Any]:
-        source_run = SimpleNamespace(
-            run_id=source.source_attempt_id or source.candidate_id,
-            requirement_id=source.requirement_id,
-            snapshot_json=deepcopy(source.source_snapshot.get("source") or {}),
-            result_yaml=source.content,
-            import_status="",
-            imported_targets=[],
-            imported_at=None,
-        )
         if source.kind == "function":
             return await import_function_run(
                 self.context,
-                source_run.run_id,
+                source,
                 confirm_overwrite,
                 actor_id,
-                artifact_content=source.content,
-                allow_reimport=True,
-                approved_source=source_run,
                 preview_only=preview_only,
-                locking_reads=True,
             )
         if source.kind == "api":
             return await self.api_importer.import_api_run(
-                source_run.run_id,
+                source,
                 target_id,
                 confirm_overwrite,
                 actor_id,
-                artifact_content=source.content,
-                allow_reimport=True,
-                approved_source=source_run,
                 preview_only=preview_only,
-                locking_reads=True,
             )
         if source.kind == "ui":
             return await import_ui_run(
                 self.context,
-                source_run.run_id,
+                source,
                 target_id,
                 confirm_overwrite,
                 actor_id,
-                artifact_content=source.content,
-                allow_reimport=True,
-                approved_source=source_run,
                 preview_only=preview_only,
             )
         raise ErrBadRequest()

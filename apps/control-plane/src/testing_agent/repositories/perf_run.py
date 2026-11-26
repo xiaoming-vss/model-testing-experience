@@ -1,9 +1,37 @@
 from __future__ import annotations
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import load_only
 
 from testing_agent.models.perf_run import PerfRun
 from testing_agent.repositories.base import ResourceRepository
+
+SUMMARY_COLUMNS = (
+    PerfRun.run_id,
+    PerfRun.case_id,
+    PerfRun.project_id,
+    PerfRun.sprint_id,
+    PerfRun.sprint_name,
+    PerfRun.case_version,
+    PerfRun.case_name,
+    PerfRun.environment_id,
+    PerfRun.environment_name,
+    PerfRun.monitoring_connection_id,
+    PerfRun.monitoring_connection_name,
+    PerfRun.trigger_user_id,
+    PerfRun.trigger_type,
+    PerfRun.status,
+    PerfRun.outcome,
+    PerfRun.flags_json,
+    PerfRun.error_message,
+    PerfRun.k6_version,
+    PerfRun.template_version,
+    PerfRun.script_sha256,
+    PerfRun.started_at,
+    PerfRun.finished_at,
+    PerfRun.duration_ms,
+    PerfRun.created_at,
+)
 
 
 class PerfRunRepository(ResourceRepository):
@@ -40,6 +68,7 @@ class PerfRunRepository(ResourceRepository):
             (
                 await self.session.scalars(
                     select(PerfRun)
+                    .options(load_only(*SUMMARY_COLUMNS))
                     .where(*conditions)
                     .order_by(PerfRun.created_at.desc(), PerfRun.id.desc())
                     .offset((page - 1) * page_size)

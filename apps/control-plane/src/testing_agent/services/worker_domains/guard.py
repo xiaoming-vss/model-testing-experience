@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from testing_agent.core.enums import RUN_TERMINAL_STATUSES
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrWorkerLeaseLost
+from testing_agent.core.utc import as_utc
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 
 
@@ -17,8 +18,7 @@ def ensure_worker_match(task, worker_id: str | None) -> None:
         raise ErrWorkerLeaseLost()
     lease = getattr(task, "lease_expires_at", None)
     if lease is not None:
-        if lease.tzinfo is None:
-            lease = lease.replace(tzinfo=UTC)
+        lease = as_utc(lease)
         if lease <= datetime.now(UTC):
             raise ErrWorkerLeaseLost()
 

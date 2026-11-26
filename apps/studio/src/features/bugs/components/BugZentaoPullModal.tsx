@@ -79,6 +79,7 @@ export function BugZentaoPullModal({ open, bugId, projectId, onClose }: Props) {
   const pull = useMutation({
     mutationFn: (data: ZentaoRemotePreview) => bugsApi.pullBugZentao(bugId, {
       remoteDigest: data.remoteDigest,
+      localDigest: data.localDigest,
       groups: data.groups.map((group) => ({
         group: group.group,
         action: choices[group.group] ?? 'keep_local',

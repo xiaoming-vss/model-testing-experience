@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from testing_agent.core.errors import AppError, ErrForbidden
+from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 
 
 async def authorized_skill(task_id, name, worker_id, service):
@@ -19,3 +19,12 @@ async def authorized_skill(task_id, name, worker_id, service):
     if skill is None:
         raise AppError(409, f"缺少系统默认 Skill: {name}", 409)
     return skill
+
+
+async def authorized_skill_ticket(task_id, name, file_id, worker_id, service, files):
+    """Authorize the task lease and skill manifest before issuing a file ticket."""
+    skill = await authorized_skill(task_id, name, worker_id, service)
+    if not any(entry["fileId"] == file_id for entry in skill.manifest):
+        raise ErrNotFound()
+    row = await files.get(file_id)
+    return await files.ticket(row)

@@ -28,7 +28,11 @@ class ApiExtractRule(Base):
     order_no: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="执行或展示顺序"
     )
-    source: Mapped[str] = mapped_column(String(30), nullable=False, comment="变量提取的数据来源")
+    source: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        comment=("变量提取的数据来源：header/body_jsonpath/body_text/status_code"),
+    )
     source_expr: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="变量提取表达式"
     )

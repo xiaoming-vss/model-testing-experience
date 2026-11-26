@@ -45,7 +45,7 @@ class ApiCase(Base):
         JSON, nullable=True, comment="URL 查询参数模板 JSON"
     )
     body_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="json", comment="请求体类型"
+        String(20), nullable=False, default="json", comment="请求体类型：none/json/form/raw"
     )
     body_json: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(
         JSON, nullable=True, comment="结构化请求体模板 JSON"

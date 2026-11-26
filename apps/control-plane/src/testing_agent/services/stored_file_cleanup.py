@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from testing_agent.core.http_diagnostics import safe_exception_trace
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.repositories.file_cleanup import FileCleanupRepository
 from testing_agent.services.file_verification import FileVerificationWorkflow
-from testing_agent.services.file_verification import now_utc as utcnow
 
 logger = logging.getLogger(__name__)
 CLEANUP_LEASE = timedelta(minutes=5)
@@ -39,7 +39,7 @@ class StoredFileCleanup:
         self.repository = FileCleanupRepository(self.session)
 
     async def claim(self, *, staging: bool, limit: int = 100) -> list[CleanupClaim]:
-        now = utcnow()
+        now = naive_utcnow()
         rows = await self.repository.candidates(
             self.settings.bucket, now, staging=staging, limit=limit
         )
@@ -99,7 +99,7 @@ class StoredFileCleanup:
         ):
             await self.session.rollback()
             return False
-        row.cleanup_until = utcnow() + CLEANUP_LEASE
+        row.cleanup_until = naive_utcnow() + CLEANUP_LEASE
         await self.session.commit()
         return True
 

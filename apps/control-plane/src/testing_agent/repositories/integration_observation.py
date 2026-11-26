@@ -9,7 +9,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.sql.elements import ColumnElement
 
-from testing_agent.domain.integration_execution import utc
+from testing_agent.core.utc import as_utc
 from testing_agent.models.integration_job import (
     IntegrationJob,
     IntegrationJobStep,
@@ -129,7 +129,7 @@ class IntegrationObservationRepository(BaseRepository):
                 .with_for_update(skip_locked=True)
                 .execution_options(populate_existing=True)
             )
-            if row is not None and utc(row.last_seen_at) < cutoff:
+            if row is not None and as_utc(row.last_seen_at) < cutoff:
                 await self.session.delete(row)
                 removed += 1
         await self.session.flush()

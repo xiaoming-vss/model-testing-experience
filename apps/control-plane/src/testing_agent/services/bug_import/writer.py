@@ -8,7 +8,7 @@ from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
-from testing_agent.repositories.bug import BugRepository
+from testing_agent.repositories.bug import BugRepository, bug_no_conflict
 from testing_agent.repositories.zentao_bug_import import import_by_operation, remote_link
 from testing_agent.services.bug_import.contracts import (
     BugImportResult,
@@ -23,13 +23,6 @@ def _identity_conflict(exc: IntegrityError) -> bool:
     detail = str(exc.orig)
     return "uk_bug_zentao_remote_identity" in detail or (
         "bug_zentao_pushes.instance_key" in detail and "remote_bug_id" in detail
-    )
-
-
-def _bug_no_conflict(exc: IntegrityError) -> bool:
-    detail = str(exc.orig)
-    return "uk_bugs_project_bug_no" in detail or (
-        "UNIQUE constraint failed: bugs.project_id, bugs.bug_no" in detail
     )
 
 
@@ -200,7 +193,7 @@ class BugImportWriter:
                 await self.repository.commit()
             except IntegrityError as exc:
                 await self.repository.rollback()
-                if _bug_no_conflict(exc):
+                if bug_no_conflict(exc):
                     continue
                 if _identity_conflict(exc):
                     return await self._conflict_result(

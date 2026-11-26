@@ -207,7 +207,7 @@ async def validate_generation_artifact(
                 raise dynamic_error(ErrBadRequest, str(exc)) from exc
         return json.dumps(value, ensure_ascii=False), "json"
     if kind == "function" and stage == "detailed_cases":
-        cases = generated_function_cases(SimpleNamespace(result_yaml=content))
+        cases = generated_function_cases(content)
         if not cases:
             raise ErrBadRequest()
         validate_function_candidate_cases(cases)

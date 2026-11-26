@@ -59,13 +59,15 @@ class ResourceBinding(Base):
         comment="建立或维护绑定时的个人连接标识；调用时重新解析操作者本人授权",
     )
     local_resource_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, comment="本地资源类型"
+        String(30), nullable=False, comment="本地资源类型：project/sprint/requirement"
     )
     local_resource_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="本地资源业务标识"
     )
     remote_resource_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, comment="外部资源类型"
+        String(30),
+        nullable=False,
+        comment=("外部资源类型：zentao 为 project/execution/story，gitlab 为 repository"),
     )
     remote_resource_id: Mapped[str] = mapped_column(
         String(120), nullable=False, comment="外部资源标识"

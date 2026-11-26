@@ -122,7 +122,7 @@ class TestOrderCaseVisualizationService:
         entry_id: str,
         body: dict[str, Any],
     ) -> dict[str, Any]:
-        order = await self._locked_order(actor, order_id, body["connection_id"])
+        order = await self._locked_order(actor, order_id, body["connectionId"])
         receipt = await self._dispatch(actor, order, entry_id, body)
         await self.session.commit()
         return receipt
@@ -141,7 +141,7 @@ class TestOrderCaseVisualizationService:
             frozen = freeze_input(entry_id, entry.snapshot_json)
         except ValueError as exc:
             raise dynamic_error(ErrBadRequest, str(exc)) from exc
-        connection = body["connection_id"]
+        connection = body["connectionId"]
         mode = body.get("mode", "generate")
         signature = request_signature(
             TASK_TYPE,
@@ -153,7 +153,7 @@ class TestOrderCaseVisualizationService:
             },
         )
         request_id = hashlib.sha256(
-            f"visualization:{actor}:{body['request_id']}".encode()
+            f"visualization:{actor}:{body['requestId']}".encode()
         ).hexdigest()
         binding = await self.repository.binding(entry_id)
         task = await self.repository.task(binding.task_id) if binding else None
@@ -227,15 +227,15 @@ class TestOrderCaseVisualizationService:
         order_id: str,
         body: dict[str, Any],
     ) -> dict[str, Any]:
-        order = await self._locked_order(actor, order_id, body["connection_id"])
+        order = await self._locked_order(actor, order_id, body["connectionId"])
         signature = hashlib.sha256(canonical(body).encode()).hexdigest()
-        batch = await self.repository.batch_replay(actor, body["request_id"])
+        batch = await self.repository.batch_replay(actor, body["requestId"])
         if batch:
             if batch.order_id != order_id or batch.signature != signature:
                 raise dynamic_error(ErrBadRequest, "请求标识已用于其他输入")
         else:
             items = []
-            for entry_id in body["entry_ids"]:
+            for entry_id in body["entryIds"]:
                 try:
                     async with self.session.begin_nested():
                         receipt = await self._dispatch(
@@ -243,10 +243,10 @@ class TestOrderCaseVisualizationService:
                             order,
                             entry_id,
                             {
-                                "request_id": hashlib.sha256(
-                                    f"batch:{body['request_id']}:{entry_id}".encode()
+                                "requestId": hashlib.sha256(
+                                    f"batch:{body['requestId']}:{entry_id}".encode()
                                 ).hexdigest(),
-                                "connection_id": body["connection_id"],
+                                "connectionId": body["connectionId"],
                                 "mode": "generate",
                             },
                         )
@@ -263,7 +263,7 @@ class TestOrderCaseVisualizationService:
                 batch_id=new_id(),
                 order_id=order_id,
                 actor_id=actor,
-                request_id=body["request_id"],
+                request_id=body["requestId"],
                 signature=signature,
                 items=items,
             )

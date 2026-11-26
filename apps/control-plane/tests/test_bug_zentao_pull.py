@@ -228,6 +228,7 @@ def test_apply_remote_updates_bug_and_writes_baseline(api, setup):
         headers=field["owner"],
         json={
             "remoteDigest": data["remoteDigest"],
+            "localDigest": data["localDigest"],
             "groups": [
                 {"group": "profile", "action": "apply_remote"},
                 {"group": "status", "action": "apply_remote"},
@@ -289,6 +290,42 @@ def test_apply_remote_updates_bug_and_writes_baseline(api, setup):
     assert group(again, "description")["state"] == "synced"
 
 
+def test_local_change_after_preview_requires_repreview(api, setup):
+    field = setup
+    first = preview(api, field)
+    patched = api.patch(
+        f"/v1/bugs/{field['bug']['bugId']}",
+        headers=field["owner"],
+        json={"title": "预览后修改"},
+    )
+    assert patched.status_code == 200, patched.text
+    stale = api.post(
+        field["pull_url"],
+        headers=field["owner"],
+        json={
+            "remoteDigest": first["remoteDigest"],
+            "localDigest": first["localDigest"],
+            "groups": [{"group": "profile", "action": "apply_remote"}],
+        },
+    )
+    assert stale.status_code == 409
+    assert "本地内容已变化" in stale.json()["message"]
+
+    second = preview(api, field)
+    applied = api.post(
+        field["pull_url"],
+        headers=field["owner"],
+        json={
+            "remoteDigest": second["remoteDigest"],
+            "localDigest": second["localDigest"],
+            "groups": [{"group": "profile", "action": "keep_local"}],
+        },
+    )
+    assert applied.status_code == 200, applied.text
+    detail = api.get(f"/v1/bugs/{field['bug']['bugId']}", headers=field["owner"]).json()["data"]
+    assert detail["title"] == "预览后修改"
+
+
 def test_conflict_requires_explicit_choice_and_stale_digest_rejected(api, setup):
     field = setup
     first = preview(api, field)
@@ -298,6 +335,7 @@ def test_conflict_requires_explicit_choice_and_stale_digest_rejected(api, setup)
         headers=field["owner"],
         json={
             "remoteDigest": first["remoteDigest"],
+            "localDigest": first["localDigest"],
             "groups": [{"group": "profile", "action": "keep_local"}],
         },
     )
@@ -320,6 +358,7 @@ def test_conflict_requires_explicit_choice_and_stale_digest_rejected(api, setup)
         headers=field["owner"],
         json={
             "remoteDigest": first["remoteDigest"],
+            "localDigest": first["localDigest"],
             "groups": [{"group": "profile", "action": "apply_remote"}],
         },
     )
@@ -331,6 +370,7 @@ def test_conflict_requires_explicit_choice_and_stale_digest_rejected(api, setup)
         headers=field["owner"],
         json={
             "remoteDigest": changed["remoteDigest"],
+            "localDigest": changed["localDigest"],
             "groups": [{"group": "profile", "action": "keep_local"}],
         },
     )

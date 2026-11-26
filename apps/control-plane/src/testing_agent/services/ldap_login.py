@@ -1,7 +1,7 @@
 """LDAP login orchestration, with no database locks held during directory IO."""
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Protocol
 
 from testing_agent.core.config import Settings
@@ -10,7 +10,6 @@ from testing_agent.core.errors import (
     ErrBadRequest,
     ErrForbidden,
     ErrLdapUnavailable,
-    ErrTooManyLoginAttempts,
     ErrUnauthorized,
 )
 from testing_agent.domain.ldap_identity import (
@@ -29,15 +28,12 @@ from testing_agent.services.ldap_accounts import (
     LdapAccountService,
     check_ldap_account,
 )
+from testing_agent.services.login_throttle import LoginThrottle
 
 
 class LoginDirectory(Protocol):
     async def lookup(self, username: str) -> DirectoryIdentity | None: ...
     async def verify_password(self, identity: DirectoryIdentity, password: str) -> None: ...
-
-
-def aware(value: datetime) -> datetime:
-    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 class LdapLoginService:
@@ -53,6 +49,7 @@ class LdapLoginService:
         self.limits = limits
         self.mode = mode
         self.settings = settings
+        self.throttle = LoginThrottle(limits, settings.login_security)
         self.directory = directory
         self.accounts = LdapAccountService(users, auto_link=settings.ldap.auto_link_by_username)
 
@@ -99,25 +96,14 @@ class LdapLoginService:
                 raise ErrLdapUnavailable()
             await self._limit(identity.username, ip)
             limit = await self.limits.get_for_update(identity.username, ip, "ldap")
-            if limit is not None:
-                await self.limits.delete(limit)
+            await self.throttle.clear(limit)
 
         user = await self.accounts.persist(identity, snapshot, before_apply=prepare_commit)
         return issue_session(user, self.settings, ldap=True).model_dump(by_alias=True)
 
     async def _limit(self, name: str, ip: str) -> LoginRateLimit | None:
         row = await self.limits.get(name, ip, "ldap")
-        now = datetime.now(UTC)
-        if row is not None:
-            if row.blocked_until and aware(row.blocked_until) > now:
-                raise ErrTooManyLoginAttempts()
-            if (
-                aware(row.window_started_at)
-                + timedelta(minutes=self.settings.login_security.rate_limit_window_minutes)
-                <= now
-            ):
-                return None
-        return row
+        return self.throttle.active(row, datetime.now(UTC))
 
     async def _failure(
         self, name: str, ip: str, snapshot: AccountSnapshot | None, generation: int
@@ -137,34 +123,16 @@ class LdapLoginService:
                 user.locked_until = None
             user.failed_login_count += 1
             if user.failed_login_count >= self.settings.login_security.max_failures:
-                user.locked_until = now + timedelta(
-                    minutes=self.settings.login_security.lock_minutes
-                )
+                user.locked_until = now + self.throttle.lock_duration
         row = await self.limits.get_for_update(name, ip, "ldap")
-        if row is None:
-            row = LoginRateLimit(
-                auth_method="ldap",
-                username=name,
-                client_ip=ip,
-                attempt_count=0,
-                window_started_at=now,
-            )
-            self.limits.add(row)
-        elif row.blocked_until and aware(row.blocked_until) > now:
-            raise ErrTooManyLoginAttempts()
-        elif (
-            aware(row.window_started_at)
-            + timedelta(minutes=self.settings.login_security.rate_limit_window_minutes)
-            <= now
-        ):
-            row.attempt_count = 0
-            row.window_started_at = now
-            row.blocked_until = None
-        row.attempt_count += 1
-        if row.attempt_count >= self.settings.login_security.max_failures:
-            row.blocked_until = now + timedelta(
-                minutes=self.settings.login_security.rate_limit_window_minutes
-            )
+        self.throttle.active(row, now)
+        self.throttle.record_failure(
+            row,
+            username=name,
+            client_ip=ip,
+            auth_method="ldap",
+            now=now,
+        )
         locked = user is not None and user.locked_until is not None
         await self.users.commit()
         if locked:

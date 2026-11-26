@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,21 @@ SERVICE_SQL_CLASSIFICATIONS = {
     "types-only",
 }
 SERVICE_SQL_MIGRATIONS = {"migrated", "long-term-exception"}
+SQL_STATEMENT = re.compile(
+    r"(?<!\.)(?<!def )\b(?:select|insert|delete)\s*\("
+    r"|(?<!\.)(?<!def )\bupdate\s*\("
+    r"|\.with_for_update\("
+    r"|\.executemany?\("
+    r"|\bsession\.(?:add|delete)\("
+)
+RAW_SQL = re.compile(r"\b(?:SELECT|INSERT|UPDATE|DELETE)\b")
+SQL_WRITE = re.compile(
+    r"(?<!\.)(?<!def )\b(?:insert|delete)\s*\("
+    r"|(?<!\.)(?<!def )\bupdate\s*\("
+    r"|\.with_for_update\("
+    r"|\bsession\.(?:add|delete)\("
+    r"|\b(?:SELECT|INSERT|UPDATE|DELETE)\b"
+)
 
 
 def test_fastapi_dependencies_are_split_by_domain():
@@ -583,6 +599,7 @@ def test_routers_do_not_import_persistence_details():
         "import sqlalchemy",
         "from testing_agent.models",
         "from testing_agent.db.session",
+        "get_session",
     )
 
     for path in (PROJECT_ROOT / "src" / "testing_agent" / "routers").glob("*.py"):
@@ -701,12 +718,30 @@ def test_service_sql_is_allowlisted_or_marked():
     assert not violations, "\n".join(violations)
 
 
+def test_allowlisted_service_sql_matches_its_classification():
+    violations = []
+    for relative, entry in _load_service_sql_allowlist().items():
+        source = (PROJECT_ROOT / "src" / "testing_agent" / relative).read_text(encoding="utf-8")
+        has_statement = bool(SQL_STATEMENT.search(source) or RAW_SQL.search(source))
+        classification = entry["classification"]
+        if classification == "types-only" and has_statement:
+            violations.append(f"{relative}: types-only entry contains SQL statements")
+        if classification != "types-only" and not has_statement:
+            violations.append(f"{relative}: allowlist entry has no SQL statements")
+        if classification == "read-only" and SQL_WRITE.search(source):
+            violations.append(f"{relative}: read-only entry contains a write or lock")
+        if classification == "locking-read" and ".with_for_update(" not in source:
+            violations.append(f"{relative}: locking-read entry has no row lock")
+    assert not violations, "\n".join(violations)
+
+
 def test_pure_read_migration_backlog_is_classified():
     entries = _load_service_sql_allowlist()
     classified = {relative for relative, entry in entries.items() if entry.get("migration")}
     assert classified == {
         "services/code_risk_analysis.py",
         "services/environment_access.py",
+        "services/perf_worker.py",
         "services/stage_storage/chain_view.py",
         "services/stored_file_access.py",
         "services/ui_generation_source.py",

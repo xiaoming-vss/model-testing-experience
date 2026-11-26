@@ -42,34 +42,42 @@ def read_worker_context(session: Session, task: WorkerTask) -> WorkerExecutionCo
         return AiWorkerContext(row.task_id, (row.input_snapshot_json or {}).get("llmConnectionId"))
     if task.domain == "api":
         if task.task_type == "api_collection_run":
-            collection_run = session.scalar(
-                select(ApiCollectionRun).where(ApiCollectionRun.collection_run_id == task.run_id)
-            )
+            row = session.execute(
+                select(ApiCollectionRun.collection_id, ApiCollectionRun.collection_run_id).where(
+                    ApiCollectionRun.collection_run_id == task.run_id
+                )
+            ).one_or_none()
             return ApiWorkerContext(
                 None,
-                collection_run.collection_id if collection_run else None,
-                collection_run.collection_run_id if collection_run else None,
+                row.collection_id if row else None,
+                row.collection_run_id if row else None,
             )
-        case_run = session.scalar(select(ApiCaseRun).where(ApiCaseRun.run_id == task.run_id))
+        row = session.execute(
+            select(
+                ApiCaseRun.case_id, ApiCaseRun.collection_id, ApiCaseRun.collection_run_id
+            ).where(ApiCaseRun.run_id == task.run_id)
+        ).one_or_none()
         return ApiWorkerContext(
-            case_run.case_id if case_run else None,
-            case_run.collection_id if case_run else None,
-            case_run.collection_run_id if case_run else None,
+            row.case_id if row else None,
+            row.collection_id if row else None,
+            row.collection_run_id if row else None,
         )
     if task.domain == "perf":
-        run = session.scalar(select(PerfRun).where(PerfRun.run_id == task.run_id))
-        return PerfWorkerContext(run.case_id if run else None)
+        case_id = session.scalar(select(PerfRun.case_id).where(PerfRun.run_id == task.run_id))
+        return PerfWorkerContext(case_id)
     if task.domain == "ui":
         if task.task_type == "suite_run":
-            suite_run = session.scalar(
-                select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == task.run_id)
+            suite_id = session.scalar(
+                select(UiTestSuiteRun.suite_id).where(UiTestSuiteRun.suite_run_id == task.run_id)
             )
-            return UiWorkerContext(None, suite_run.suite_id if suite_run else None)
-        ui_case_run = session.scalar(
-            select(UiTestCaseRun).where(UiTestCaseRun.run_id == task.run_id)
-        )
+            return UiWorkerContext(None, suite_id)
+        row = session.execute(
+            select(UiTestCaseRun.case_id, UiTestCaseRun.suite_id).where(
+                UiTestCaseRun.run_id == task.run_id
+            )
+        ).one_or_none()
         return UiWorkerContext(
-            ui_case_run.case_id if ui_case_run else None,
-            ui_case_run.suite_id if ui_case_run else None,
+            row.case_id if row else None,
+            row.suite_id if row else None,
         )
     raise ErrBadRequest()

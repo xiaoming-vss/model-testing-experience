@@ -47,6 +47,8 @@ from testing_agent.services.test_order_case_visualization import (
 )
 from testing_agent.services.test_order_entry import TestOrderEntryService
 from testing_agent.services.test_order_graph import TestOrderGraphService
+from testing_agent.services.test_run_availability import TestRunAvailabilityService
+from testing_agent.services.test_run_stream import TestRunStreamService
 from testing_agent.services.ui_run_variables import UiRunVariablesService
 from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
@@ -232,3 +234,18 @@ def get_case_visualization_service(
         CaseVisualizationRepository(session),
         build_test_order_service(session),
     )
+
+
+def get_test_run_stream_service(
+    session: AsyncSession = Depends(get_session),
+    api_cases: ApiCaseService = Depends(get_api_case_service),
+    api_collections: ApiCollectionRunService = Depends(get_api_collection_run_service),
+    ui_runs: UiTestCaseRunService = Depends(get_ui_test_case_run_service),
+) -> TestRunStreamService:
+    return TestRunStreamService(session, api_cases, api_collections, ui_runs)
+
+
+def get_test_run_availability_service(
+    settings: Settings = Depends(get_settings),
+) -> TestRunAvailabilityService:
+    return TestRunAvailabilityService(settings.test_run_redis_url)

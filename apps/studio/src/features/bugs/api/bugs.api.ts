@@ -66,7 +66,10 @@ export const bugsApi = {
       body: JSON.stringify(body),
     }),
   getBugZentaoRemote: (bugId: string) => request<ZentaoRemotePreview>(`/v1/bugs/${bugId}/zentao-remote`),
-  pullBugZentao: (bugId: string, body: { remoteDigest: string; groups: ZentaoPullGroupPayload[] }) =>
+  pullBugZentao: (
+    bugId: string,
+    body: { remoteDigest: string; localDigest: string; groups: ZentaoPullGroupPayload[] },
+  ) =>
     request<ZentaoPullResult>(`/v1/bugs/${bugId}/zentao-pull`, {
       method: 'POST',
       body: JSON.stringify(body),

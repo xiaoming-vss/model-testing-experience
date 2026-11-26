@@ -43,12 +43,12 @@ async def test_concurrent_first_graph_dispatch_creates_one_run(mysql, monkeypatc
     )
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     body = {
-        "graph_input": {
+        "graphInput": {
             "requirements": [],
             "cases": [{"case_id": "case"}],
             "case_requirement_links": [],
         },
-        "connection_id": "llm",
+        "connectionId": "llm",
     }
 
     async def dispatch():

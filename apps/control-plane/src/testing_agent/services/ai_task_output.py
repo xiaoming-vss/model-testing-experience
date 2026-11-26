@@ -2,23 +2,18 @@ from __future__ import annotations
 
 import builtins
 import json
-from types import SimpleNamespace
 from typing import Any
 
 import yaml
 
-from testing_agent.core.errors import (
-    AppError,
-    ErrBadRequest,
-)
+from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.services.import_payload import import_items, parse_import_payload
-from testing_agent.services.ui_test_case import ui_import_cases
 
 
-def dump_task(task: AiGenerateTask) -> dict[str, Any]:
-    return {
+def _task_payload(task: AiGenerateTask, *, include_source: bool) -> dict[str, Any]:
+    payload = {
         "taskId": task.task_id,
         "taskType": task.task_type,
         "name": task.name,
@@ -27,36 +22,40 @@ def dump_task(task: AiGenerateTask) -> dict[str, Any]:
         "requirementId": task.requirement_id,
         "creatorUserId": task.creator_user_id,
         "sourceType": task.source_type,
-        "sourceContent": task.source_content,
         "interfaceIds": list(getattr(task, "interface_ids_json", None) or []),
         "instruction": task.instruction,
         "createdAt": task.created_at,
         "updatedAt": task.updated_at,
     }
+    if include_source:
+        payload["sourceContent"] = task.source_content
+    return payload
+
+
+def dump_task(task: AiGenerateTask) -> dict[str, Any]:
+    return _task_payload(task, include_source=True)
 
 
 def dump_task_summary(task: AiGenerateTask, latest_run_status: str = "") -> dict[str, Any]:
     """List payload without the potentially large source body."""
-    payload = dump_task(task)
-    payload.pop("sourceContent", None)
+    payload = _task_payload(task, include_source=False)
     payload["interfaceCount"] = len(getattr(task, "interface_ids_json", None) or [])
     payload["latestRunStatus"] = latest_run_status
     return payload
 
 
-def generated_payload(run: Any, content: str | None = None) -> dict[str, Any]:
-    raw = (run.result_yaml or "") if content is None else content
-    if not raw.strip():
+def generated_payload(content: str) -> dict[str, Any]:
+    if not content.strip():
         raise ErrBadRequest()
     try:
-        data = yaml.safe_load(raw)
+        data = yaml.safe_load(content)
     except yaml.YAMLError as exc:
         raise ErrBadRequest() from exc
     return parse_import_payload(data)
 
 
-def generated_function_cases(run: Any, content: str | None = None) -> builtins.list[dict[str, Any]]:
-    payload = generated_payload(run, content)
+def generated_function_cases(content: str) -> builtins.list[dict[str, Any]]:
+    payload = generated_payload(content)
     cases = [
         item
         for item in import_items(payload, "cases", "functionCases", "testcases")
@@ -165,32 +164,3 @@ def normalize_config_json(value: Any) -> dict[str, Any]:
         if isinstance(parsed, dict):
             return parsed
     raise ErrBadRequest()
-
-
-def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any]]:
-    payload = generated_payload(SimpleNamespace(result_yaml=result_yaml))
-    try:
-        cases = ui_import_cases(payload)
-    except AppError as exc:
-        raise ErrBadRequest() from exc
-    if not cases:
-        raise ErrBadRequest()
-    for case in cases:
-        if (
-            not isinstance(case, dict)
-            or not isinstance(case.get("name"), str)
-            or not case["name"].strip()
-            or not isinstance(case.get("enabled"), bool)
-            or not isinstance(case.get("orderNo"), int)
-            or isinstance(case.get("orderNo"), bool)
-            or not isinstance(case.get("stepsJson"), list)
-        ):
-            raise ErrBadRequest()
-        for step in case["stepsJson"]:
-            if (
-                not isinstance(step, dict)
-                or not isinstance(step.get("keyword"), str)
-                or not step["keyword"].strip()
-            ):
-                raise ErrBadRequest()
-    return cases

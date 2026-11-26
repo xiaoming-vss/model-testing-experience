@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：control-plane maintainer
-- 最近复核：2026-11-19
+- 最近复核：2026-11-27
 - 复核周期：每季度
 - 适用范围：`apps/control-plane/src/testing_agent/schemas/` 与 HTTP 更新入口
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响 Studio/Worker 请求体时先通知消费方。

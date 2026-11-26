@@ -15,10 +15,10 @@ import sys
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from testing_agent.core.config import load_settings
 from testing_agent.core.security import hash_password
+from testing_agent.db.session import create_engine, create_sessions
 from testing_agent.domain.account_policy import validate_password
 from testing_agent.models.login_rate_limit import LoginRateLimit
 from testing_agent.models.user import User
@@ -42,10 +42,9 @@ async def _reset(config_path: str, password: str) -> None:
     settings = load_settings(config_path)
     if not settings.database_url:
         raise SystemExit("A database DSN is required")
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine = create_engine(settings)
     try:
-        async with sessions() as session:
+        async with create_sessions(engine)() as session:
             user = await session.scalar(
                 select(User).where(User.is_super_admin.is_(True)).with_for_update()
             )

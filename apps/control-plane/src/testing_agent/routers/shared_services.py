@@ -1,108 +1,27 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from testing_agent.api.deps import get_current_user_id, get_shared_service
-from testing_agent.core.errors import success_payload
-from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
-from testing_agent.schemas.shared_service import (
-    McpTemplate,
-    PersonalAuthorizationRequest,
-    Provider,
-    ServiceCreate,
-    ServiceRename,
-    SharedServiceResponse,
+from testing_agent.handlers.shared_service import (
+    authorize_service,
+    create_service,
+    delete_service,
+    list_services,
+    list_templates,
+    rename_service,
+    revoke_authorization,
 )
-from testing_agent.services.shared_service import SharedServiceService
+from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.shared_service import McpTemplate, SharedServiceResponse
 
 router = APIRouter(prefix="/projects/{project_id}/services/{provider}")
 
-
-@router.get("", response_model=ApiResponse[ListResponse[SharedServiceResponse]])
-async def list_services(
-    project_id: str,
-    provider: Provider,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(await services.list(user_id, project_id, provider))
-
-
-@router.get("/templates", response_model=ApiResponse[ListResponse[McpTemplate]])
-async def list_templates(
-    project_id: str,
-    provider: Provider,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(await services.templates(user_id, project_id, provider))
-
-
-@router.post("", response_model=ApiResponse[SharedServiceResponse])
-async def create_service(
-    project_id: str,
-    provider: Provider,
-    body: ServiceCreate,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(await services.create(user_id, project_id, provider, body))
-
-
-@router.patch("/{service_id}", response_model=ApiResponse[SharedServiceResponse])
-async def rename_service(
-    project_id: str,
-    provider: Provider,
-    service_id: str,
-    body: ServiceRename,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(
-        await services.rename(
-            user_id,
-            project_id,
-            provider,
-            service_id,
-            body.name,
-            body.zentao_instance_url,
-            body.base_url,
-            body.confirm_instance_switch,
-            body.allow_http,
-            body.insecure_skip_verify,
-        )
-    )
-
-
-@router.delete("/{service_id}", response_model=ApiResponse[EmptyData])
-async def delete_service(
-    project_id: str,
-    provider: Provider,
-    service_id: str,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(await services.delete(user_id, project_id, provider, service_id))
-
-
-@router.put("/{service_id}/authorization", response_model=ApiResponse[SharedServiceResponse])
-async def authorize_service(
-    project_id: str,
-    provider: Provider,
-    service_id: str,
-    body: PersonalAuthorizationRequest,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(
-        await services.authorize(user_id, project_id, provider, service_id, body)
-    )
-
-
-@router.delete("/{service_id}/authorization", response_model=ApiResponse[SharedServiceResponse])
-async def revoke_authorization(
-    project_id: str,
-    provider: Provider,
-    service_id: str,
-    user_id: str = Depends(get_current_user_id),
-    services: SharedServiceService = Depends(get_shared_service),
-):
-    return success_payload(await services.revoke(user_id, project_id, provider, service_id))
+router.get("", response_model=ApiResponse[ListResponse[SharedServiceResponse]])(list_services)
+router.get("/templates", response_model=ApiResponse[ListResponse[McpTemplate]])(list_templates)
+router.post("", response_model=ApiResponse[SharedServiceResponse])(create_service)
+router.patch("/{service_id}", response_model=ApiResponse[SharedServiceResponse])(rename_service)
+router.delete("/{service_id}", response_model=ApiResponse[EmptyData])(delete_service)
+router.put("/{service_id}/authorization", response_model=ApiResponse[SharedServiceResponse])(
+    authorize_service
+)
+router.delete("/{service_id}/authorization", response_model=ApiResponse[SharedServiceResponse])(
+    revoke_authorization
+)

@@ -210,6 +210,12 @@ class RequirementService:
             raise ErrRequirementFileMissing()
         return requirement
 
+    async def download_document(self, user_id: str, requirement_id: str) -> dict:
+        requirement = await self.get_download(user_id, requirement_id)
+        if self.files is None:
+            raise ErrBadRequest()
+        return await self.files.download(user_id, requirement.document_file_id)
+
     async def _attach_file(self, user_id: str, requirement: Requirement, file_id: str):
         from testing_agent.core.errors import ErrBadRequest
 

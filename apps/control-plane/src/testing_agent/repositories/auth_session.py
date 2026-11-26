@@ -9,6 +9,7 @@ from testing_agent.core.enums import AccountStatus
 from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.user import User
 from testing_agent.repositories.base import BaseRepository
+from testing_agent.repositories.user import UserRepository
 
 
 @dataclass(frozen=True)
@@ -40,9 +41,8 @@ class AuthSessionRepository(BaseRepository):
         )
 
     async def lock_user(self, user_id: str) -> User | None:
-        return await self.session.scalar(
-            select(User).where(User.user_id == user_id).with_for_update()
-        )
+        # Keep one current-read implementation; UserRepository owns the row query.
+        return await UserRepository(self.session).get_by_user_id_for_update(user_id)
 
     async def revoke_token(
         self, user_id: str, token_hash: str, expires_at: datetime, now: datetime

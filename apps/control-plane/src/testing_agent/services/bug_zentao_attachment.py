@@ -9,6 +9,7 @@ from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.integration_transaction import local_transaction
 from testing_agent.services.mcp_client import McpCallError
+from testing_agent.services.personal_credentials import has_mcp_token
 from testing_agent.services.service_instance import instance_key
 from testing_agent.services.zentao_mcp_identity import validate_identity
 from testing_agent.services.zentao_mcp_instance import discover_instance
@@ -103,7 +104,7 @@ class BugZentaoAttachmentService:
             self.session, bug.project_id, push.service_id, push.instance_url
         )
         own = await self.pushes.catalog.own_connection(service, user_id)
-        if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
+        if not has_mcp_token(own):
             raise AppError(400, "请先配置本人的禅道 MCP Token", 400)
         token = self.pushes.catalog.connections.credentials.mcp_token(
             own, user_id=user_id, project_id=bug.project_id

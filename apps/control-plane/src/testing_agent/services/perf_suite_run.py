@@ -6,6 +6,7 @@ from typing import Any, Protocol, cast
 from testing_agent.core.enums import PERF_RUN_TERMINAL_STATUSES, PerfRunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import as_utc
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.perf_suite import PerfSuite
@@ -209,9 +210,7 @@ class PerfSuiteRunService:
         run.outcome = outcome
         run.finished_at = now
         if run.started_at is not None:
-            started_at = run.started_at
-            if started_at.tzinfo is None:
-                started_at = started_at.replace(tzinfo=UTC)
+            started_at = as_utc(run.started_at)
             run.duration_ms = max(0, int((now - started_at).total_seconds() * 1000))
         self._refresh_counts(run, items)
 
