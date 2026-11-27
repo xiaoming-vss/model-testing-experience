@@ -24,7 +24,7 @@
 | `control_plane/client.py`、`control_plane/artifacts.py` | 控制面客户端及 S3 产物上传 |
 | `poller/task_poller.py` | 任务轮询 |
 | `contracts/types.py` | 任务、快照与结果类型 |
-| `contracts/parsing.py` | 控制面任务/快照的单一解析入口；只读取声明字段，未知字段忽略 |
+| `contracts/parsing.py` | UI 任务与快照的单一解析入口；只读取声明字段，未知字段忽略 |
 | `core/` | `config.py`、`logger.py` |
 
 `src/` 下残留 `mtx_api_ui_worker.egg-info/` 历史打包目录。
@@ -42,7 +42,7 @@ mode = "poll"                 # poll 或 once
 [once]                        # snapshot_file，once 模式读取本地快照调试用
 ```
 
-未配置 `worker.id` 时自动生成 `api-ui-worker-<hostname>-<pid>`。`once` 模式使用本地快照文件，便于不依赖控制面调试单个任务。
+未配置 `worker.id` 时自动生成 `api-ui-worker-<hostname>-<pid>`。`worker.poll_interval_ms` 默认 3000 毫秒；Compose 从统一配置的 `[api_ui_worker.worker]` 取值，Helm chart 的默认值与之保持一致，未设置时使用应用默认值。`once` 模式使用本地快照文件，便于不依赖控制面调试单个任务。
 
 ## 命令
 
@@ -69,17 +69,19 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 
 领取后按控制面返回的 `leaseSeconds` 建立本地 `time.monotonic` 租约窗口。心跳成功续租；心跳被拒绝或窗口到期时取消在途执行，不再产生新的 API/UI 外部副作用，也不合成执行结果，由控制面租约机制结束尝试。收到 SIGTERM/SIGINT 时回传 `canceled`；控制面没有 `stopped` 完成状态，关闭不会被报成 `error`。
 
+控制面用 `401/403/404/409/410` 表示执行已不属于本 Worker（见 [ADR 0032](../control-plane/adr/0032-replays-are-idempotent-for-the-original-identity.md)）。上报开始、读取快照、读写环境变量、上报步骤进度、心跳和停止检查遇到这些状态都按租约失效处理；`400`/`422` 只说明请求本身有问题。
+
 领取、快照、心跳、完成回传及集合/套件条目回传均在线程中执行同步控制面请求，避免阻塞异步浏览器与 HTTP 执行。日志仅记录任务标识、状态与必要的运行选项；不输出完整快照、步骤输入、运行变量或浏览器上下文配置中的凭据。控制面请求失败时只记录方法、路由、状态码和安全错误码，不记录响应正文。
 
-控制面响应采用“允许扩展”策略：任务和快照统一经 `contracts/parsing.py` 解析，只读取协议声明的字段，新增未知字段被忽略，不阻断滚动升级；声明字段的缺省值也由该模块集中处理。请求体和 Worker 回传仍按固定字段构造，未知字段策略不向请求方向扩散。`tests/test_control_plane_client.py` 覆盖任务、快照和嵌套步骤中的未知字段。
+控制面响应采用“允许扩展”策略：UI 任务和快照统一经 `contracts/parsing.py` 解析，只读取协议声明的字段，新增未知字段被忽略，不阻断滚动升级；声明字段的缺省值也由该模块集中处理。API 任务和快照原样交给 API 执行器，由执行器读取自己声明的键。请求体和 Worker 回传一律使用 camelCase 键并按固定字段构造，未知字段策略不向请求方向扩散。`tests/test_control_plane_client.py` 覆盖任务、快照和嵌套步骤中的未知字段。
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 
-- 统一领取：`/internal/api-worker/tasks/claim-next` 按 API/UI 队列优先级返回下一个任务；控制面不支持时回退到下面的分域领取接口
+- 统一领取：`/internal/api-worker/tasks/claim-next` 按 API/UI 队列优先级返回下一个任务；控制面不支持时回退到下面的分域领取接口（滚动升级垫片，移除条件见[实时执行](../control-plane/realtime-test-execution.md)）
 - UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`，文件授权与完成为 `/{task_id}/files/uploads`、`/{task_id}/files/{file_id}/complete`；控制面校验 Worker、租约、执行人和项目归属
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 
-设置 `TEST_WORKER_HEALTH_PORT` 时启动 `GET /healthz`（默认端口 8080，未设置时不监听，便于本地开发）；Kubernetes chart 用它提供存活/就绪探针。Dockerfile 仍不声明 `HEALTHCHECK`，Compose 不设置健康检查条件。
+设置 `TEST_WORKER_HEALTH_PORT` 时启动 `GET /healthz`（默认端口 8080，未设置时不监听，便于本地开发）；Kubernetes chart 用它提供存活/就绪探针，Compose 也会注入该变量并配置 HTTP 健康检查。Dockerfile 不声明 `HEALTHCHECK`。
 
 ## API 断言比较符
 

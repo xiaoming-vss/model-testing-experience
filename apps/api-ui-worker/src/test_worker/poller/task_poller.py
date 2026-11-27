@@ -9,11 +9,12 @@ import asyncio
 import random
 import time
 from datetime import datetime, timezone
-from typing import Callable, Literal
+from typing import Any, Callable, Literal
 from contextlib import suppress
 
 from ..api.case_runner import ApiCaseRunner
 from ..api.collection_runner import ApiCollectionRunner
+from ..contracts.parsing import parse_ui_task
 from ..contracts.types import (
     UiCaseRunResult,
     UiSuiteRunResult,
@@ -26,9 +27,11 @@ from ..control_plane.client import (
     ControlPlaneClient,
     ControlPlaneRequestError,
     ExecutionLeaseLost,
-    is_execution_rejected,
+    lease_rejection_status,
+    raise_if_lease_lost,
 )
 from ..core import logger
+from ..core.reporting import ReportDeliveryError, deliver
 from ..ui.case_runner import UiCaseRunner
 from ..ui.suite_runner import UiSuiteRunner
 from .task_notifications import listen_for_tasks, publish_worker_presence, wait_for_task
@@ -42,6 +45,34 @@ def _now_iso() -> str:
 def _fallback_wait_seconds(interval_ms: int) -> float:
     """Spread idle checks without delaying event-driven wakeups."""
     return interval_ms / 1000 * random.uniform(0.9, 1.1)
+
+
+def _error_fields(error: Exception) -> dict[str, Any]:
+    """Log fields that cannot carry request or page content.
+
+    A control-plane error has a fixed, body-free message. Anything else is
+    recorded by its type only.
+    """
+    if isinstance(error, ControlPlaneRequestError):
+        return {
+            "errorType": "ControlPlaneRequestError",
+            "statusCode": error.status_code,
+            "error": str(error),
+        }
+    return {"errorType": type(error).__name__}
+
+
+async def _through_lease(call: Callable[..., Any], *args: Any) -> Any:
+    """Run one blocking control-plane call before or around the execution.
+
+    A refusal that ends the lease is reported as ``ExecutionLeaseLost``, so the
+    caller drops the task instead of reporting it as an execution error.
+    """
+    try:
+        return await asyncio.to_thread(call, *args)
+    except ControlPlaneRequestError as error:
+        raise_if_lease_lost(error)
+        raise
 
 
 DEFAULT_LEASE_SECONDS = 30.0
@@ -78,21 +109,6 @@ class TaskLease:
 
 class UserStopped(Exception):
     """A user requested cancellation of the current task."""
-
-
-class ReportDeliveryError(Exception):
-    """Execution finished but its result or artifacts could not be delivered."""
-
-    def __init__(self, task_id: str, error: BaseException) -> None:
-        self.task_id = task_id
-        self.error_type = type(error).__name__
-        self.status_code = getattr(error, "status_code", None)
-        message = (
-            f"result delivery failed: task_id={task_id} error_type={self.error_type}"
-        )
-        if isinstance(self.status_code, int):
-            message += f" status_code={self.status_code}"
-        super().__init__(message)
 
 
 class TaskPoller:
@@ -184,30 +200,21 @@ class TaskPoller:
                 wake.clear()
                 queues: tuple[str, ...] = ("api", "ui") if api_first else ("ui", "api")
                 claimed = False
-                if hasattr(self._control_plane_client, "claim_next_task"):
-                    task = await asyncio.to_thread(
-                        self._control_plane_client.claim_next_task
-                    )
-                    if task is not NotImplemented:
-                        if task:
-                            claimed = True
-                            if task.get("domain") == "api":
-                                await self._run_claimed(self._handle_api_task, task)
-                            elif task.get("domain") == "ui":
-                                await self._run_claimed(
-                                    self._handle_task,
-                                    UiWorkerTask(
-                                        task_id=task.get("taskId", ""),
-                                        task_type=task.get("taskType", "case_debug"),
-                                        run_id=task.get("runId", ""),
-                                        suite_id=task.get("suiteId", "") or "",
-                                        case_id=task.get("caseId", "") or "",
-                                        lease_seconds=task.get("leaseSeconds", 0),
-                                    ),
-                                )
-                            else:
-                                raise ValueError("invalid claimed task domain")
-                        queues = ()
+                task = await asyncio.to_thread(
+                    self._control_plane_client.claim_next_task
+                )
+                if task is not NotImplemented:
+                    if task:
+                        claimed = True
+                        if task.get("domain") == "api":
+                            await self._run_claimed(self._handle_api_task, task)
+                        elif task.get("domain") == "ui":
+                            await self._run_claimed(
+                                self._handle_task, parse_ui_task(task)
+                            )
+                        else:
+                            raise ValueError("invalid claimed task domain")
+                    queues = ()
                 for queue in queues:
                     if queue == "api":
                         api_task = await asyncio.to_thread(
@@ -235,7 +242,7 @@ class TaskPoller:
                         timeout=_fallback_wait_seconds(self._config.poll_interval_ms),
                     )
             except Exception as e:
-                logger.error("poll loop error", {"error": str(e)})
+                logger.error("poll loop error", _error_fields(e))
                 await asyncio.sleep(
                     _fallback_wait_seconds(self._config.poll_interval_ms)
                 )
@@ -259,8 +266,9 @@ class TaskPoller:
                     ):
                         return
                 except Exception as error:
-                    if is_execution_rejected(error):
-                        raise ExecutionLeaseLost("执行租约已失效") from None
+                    # A refused check means the lease is gone: stop asking, the
+                    # execution is canceled through the local lease.
+                    raise_if_lease_lost(error)
                     logger.warn("task stop check unavailable", {"taskId": task_id})
                 try:
                     await asyncio.wait_for(wake.wait(), timeout=10)
@@ -275,32 +283,21 @@ class TaskPoller:
     async def _run_until_stopped(
         self, domain: str, task_id: str, operation, lease: TaskLease | None = None
     ):
-        if (
-            not hasattr(self._control_plane_client, "task_stop_requested")
-            and lease is None
-        ):
-            return await operation
         running = asyncio.create_task(operation)
-        stopping = (
-            asyncio.create_task(self._wait_for_stop(domain, task_id))
-            if hasattr(self._control_plane_client, "task_stop_requested")
-            else None
-        )
+        stopping = asyncio.create_task(self._wait_for_stop(domain, task_id))
         lease_loss = (
             asyncio.create_task(self._wait_for_lease_loss(lease, task_id))
             if lease is not None
             else None
         )
-        tasks = {running}
-        if stopping is not None:
-            tasks.add(stopping)
+        tasks = {running, stopping}
         if lease_loss is not None:
             tasks.add(lease_loss)
         try:
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             if lease_loss is not None and lease_loss in done:
                 await lease_loss
-            if stopping is not None and stopping in done:
+            if stopping in done:
                 await stopping
                 running.cancel()
                 with suppress(asyncio.CancelledError):
@@ -334,23 +331,28 @@ class TaskPoller:
         if not lease.lost:
             logger.warn("task lease window expired", {"taskId": task_id})
         lease.expire()
-        raise ExecutionLeaseLost("执行租约已失效")
+        raise ExecutionLeaseLost()
 
     async def _report_completion(self, domain: str, task_id: str, result) -> None:
         self._finishing_tasks.add(task_id)
         try:
+            # The execution already finished. A failed report is not an execution
+            # failure and must not synthesize a second error result.
             callback = (
                 self._control_plane_client.report_task_completed
                 if domain == "ui"
                 else self._control_plane_client.report_api_task_completed
             )
-            await asyncio.to_thread(callback, task_id, result)
-        except Exception as error:
-            # The execution already finished. Reporting failure is not an
-            # execution failure and must not synthesize a second error result.
-            raise ReportDeliveryError(task_id, error) from error
+            await deliver(task_id, callback, task_id, result)
         finally:
             self._finishing_tasks.discard(task_id)
+
+    @staticmethod
+    def _log_lease_lost(domain: str, task_id: str, error: ExecutionLeaseLost) -> None:
+        logger.warn(
+            f"{domain} execution lease lost",
+            {"taskId": task_id, "statusCode": error.status_code},
+        )
 
     @staticmethod
     def _log_report_delivery_failure(
@@ -388,15 +390,20 @@ class TaskPoller:
         lease = TaskLease(
             task.lease_seconds if task.lease_seconds > 0 else DEFAULT_LEASE_SECONDS
         )
-        # 上报任务开始
-        await asyncio.to_thread(
-            self._control_plane_client.report_task_started,
-            task.task_id,
-            UiTaskStartedPayload(
-                worker_id=self._config.worker_id,
-                started_at=_now_iso(),
-            ),
-        )
+        try:
+            # 上报任务开始
+            await _through_lease(
+                self._control_plane_client.report_task_started,
+                task.task_id,
+                UiTaskStartedPayload(
+                    worker_id=self._config.worker_id,
+                    started_at=_now_iso(),
+                ),
+            )
+        except ExecutionLeaseLost as error:
+            # Stopped or reclaimed between claim and start: nothing has run.
+            self._log_lease_lost("ui", task.task_id, error)
+            return
         lease.renew()
 
         # 启动心跳定时器
@@ -404,7 +411,7 @@ class TaskPoller:
 
         try:
             # 获取任务快照
-            snapshot = await asyncio.to_thread(
+            snapshot = await _through_lease(
                 self._control_plane_client.get_task_snapshot, task.task_id
             )
             logger.info(
@@ -455,10 +462,14 @@ class TaskPoller:
                 },
             )
 
+        except ReportDeliveryError as error:
+            # An item result or the final result could not be delivered.
+            self._log_report_delivery_failure("ui", task.task_id, task.task_type, error)
+            return
         except UserStopped:
             await self._report_task_error(task, "用户已停止运行", status="canceled")
-        except ExecutionLeaseLost:
-            logger.warn("ui execution lease lost", {"taskId": task.task_id})
+        except ExecutionLeaseLost as error:
+            self._log_lease_lost("ui", task.task_id, error)
         except asyncio.CancelledError:
             logger.warn(
                 "task canceled during worker shutdown",
@@ -479,7 +490,7 @@ class TaskPoller:
                     {
                         "taskId": task.task_id,
                         "taskType": task.task_type,
-                        "error": str(e),
+                        **_error_fields(e),
                     },
                 )
                 await self._report_task_error(
@@ -491,7 +502,7 @@ class TaskPoller:
                 {
                     "taskId": task.task_id,
                     "taskType": task.task_type,
-                    "error": str(e),
+                    **_error_fields(e),
                 },
             )
 
@@ -531,28 +542,21 @@ class TaskPoller:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                if task_id in self._finishing_tasks and getattr(
-                    e, "status_code", None
-                ) in {400, 404}:
+                rejected = lease_rejection_status(e)
+                if rejected is None:
+                    logger.warn(
+                        "heartbeat error", {"taskId": task_id, **_error_fields(e)}
+                    )
+                elif task_id in self._finishing_tasks:
+                    # The result is being delivered; a heartbeat refused now is expected.
                     break
-                if isinstance(e, ControlPlaneRequestError) and is_execution_rejected(e):
+                else:
                     lease.expire()
                     logger.warn(
                         "task lease rejected",
-                        {
-                            "taskId": task_id,
-                            "statusCode": e.status_code,
-                        },
+                        {"taskId": task_id, "statusCode": rejected},
                     )
                     break
-                logger.warn(
-                    "heartbeat error",
-                    {
-                        "taskId": task_id,
-                        "errorType": type(e).__name__,
-                        "statusCode": getattr(e, "status_code", None),
-                    },
-                )
 
     async def _report_task_error(
         self,
@@ -599,10 +603,7 @@ class TaskPoller:
         except Exception as e:
             logger.error(
                 "report task error failed",
-                {
-                    "taskId": task.task_id,
-                    "error": str(e),
-                },
+                {"taskId": task.task_id, **_error_fields(e)},
             )
 
     async def _handle_api_task(self, task: dict) -> None:
@@ -620,14 +621,19 @@ class TaskPoller:
 
         started_at = _now_iso()
         lease = TaskLease(task.get("leaseSeconds", 0) or DEFAULT_LEASE_SECONDS)
-        await asyncio.to_thread(
-            self._control_plane_client.report_api_task_started, task_id, started_at
-        )
+        try:
+            await _through_lease(
+                self._control_plane_client.report_api_task_started, task_id, started_at
+            )
+        except ExecutionLeaseLost as error:
+            # Stopped or reclaimed between claim and start: nothing has run.
+            self._log_lease_lost("api", task_id, error)
+            return
         lease.renew()
         heartbeat_task = asyncio.create_task(self._api_heartbeat_loop(task_id, lease))
 
         try:
-            snapshot = await asyncio.to_thread(
+            snapshot = await _through_lease(
                 self._control_plane_client.get_api_task_snapshot, task_id
             )
             logger.info(
@@ -674,12 +680,16 @@ class TaskPoller:
                     "success": result.get("success"),
                 },
             )
+        except ReportDeliveryError as error:
+            # An item result or the final result could not be delivered.
+            self._log_report_delivery_failure("api", task_id, task_type, error)
+            return
         except UserStopped:
             await self._report_api_task_error(
                 task, "用户已停止运行", started_at, status="canceled"
             )
-        except ExecutionLeaseLost:
-            logger.warn("api execution lease lost", {"taskId": task_id})
+        except ExecutionLeaseLost as error:
+            self._log_lease_lost("api", task_id, error)
         except asyncio.CancelledError:
             logger.warn(
                 "api task canceled during worker shutdown",
@@ -697,11 +707,7 @@ class TaskPoller:
             if current is not None and current.cancelling():
                 logger.warn(
                     "api task canceled during worker shutdown",
-                    {
-                        "taskId": task_id,
-                        "taskType": task_type,
-                        "error": str(e),
-                    },
+                    {"taskId": task_id, "taskType": task_type, **_error_fields(e)},
                 )
                 await self._report_api_task_error(
                     task, "worker shutting down", started_at, status="canceled"
@@ -709,11 +715,7 @@ class TaskPoller:
                 raise asyncio.CancelledError() from e
             logger.error(
                 "api task execution error",
-                {
-                    "taskId": task_id,
-                    "taskType": task_type,
-                    "error": str(e),
-                },
+                {"taskId": task_id, "taskType": task_type, **_error_fields(e)},
             )
             await self._report_api_task_error(task, str(e), started_at)
         finally:
@@ -739,28 +741,21 @@ class TaskPoller:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                if task_id in self._finishing_tasks and getattr(
-                    e, "status_code", None
-                ) in {400, 404}:
+                rejected = lease_rejection_status(e)
+                if rejected is None:
+                    logger.warn(
+                        "api heartbeat error", {"taskId": task_id, **_error_fields(e)}
+                    )
+                elif task_id in self._finishing_tasks:
+                    # The result is being delivered; a heartbeat refused now is expected.
                     break
-                if isinstance(e, ControlPlaneRequestError) and is_execution_rejected(e):
+                else:
                     lease.expire()
                     logger.warn(
                         "api task lease rejected",
-                        {
-                            "taskId": task_id,
-                            "statusCode": e.status_code,
-                        },
+                        {"taskId": task_id, "statusCode": rejected},
                     )
                     break
-                logger.warn(
-                    "api heartbeat error",
-                    {
-                        "taskId": task_id,
-                        "errorType": type(e).__name__,
-                        "statusCode": getattr(e, "status_code", None),
-                    },
-                )
 
     async def _report_api_task_error(
         self, task: dict, error_message: str, started_at: str, *, status: str = "error"
@@ -793,8 +788,5 @@ class TaskPoller:
         except Exception as e:
             logger.error(
                 "report api task error failed",
-                {
-                    "taskId": task.get("taskId", ""),
-                    "error": str(e),
-                },
+                {"taskId": task.get("taskId", ""), **_error_fields(e)},
             )

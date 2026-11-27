@@ -18,7 +18,6 @@ wheels/
 
 # Local configuration with secrets/credentials
 config/local.toml
-config/container.toml
 
 # Runtime uploaded/generated data
 storage/requirements/

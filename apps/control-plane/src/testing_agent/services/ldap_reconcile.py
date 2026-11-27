@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from testing_agent.core.config import Settings, get_settings
 from testing_agent.core.ldap_directory import LdapDirectory
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.ldap_identity import DirectoryIdentity, DirectoryUnavailable
 from testing_agent.repositories.auth_runtime import AuthRuntimeRepository
 from testing_agent.repositories.user import UserRepository
@@ -33,10 +34,6 @@ class ReconcileAccount:
     external_id: str
     status: str
     token_version: int
-
-
-def utc(value: datetime) -> datetime:
-    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 class LdapReconciler:
@@ -66,7 +63,7 @@ class LdapReconciler:
                 row = await runtime.get(for_update=True)
                 assert row is not None  # require_current verified the singleton.
                 now = datetime.now(UTC)
-                if row.reconcile_until and utc(row.reconcile_until) > now:
+                if row.reconcile_until and as_utc(row.reconcile_until) > now:
                     return None
                 row.reconcile_owner = owner
                 row.reconcile_until = now + timedelta(
@@ -109,7 +106,7 @@ class LdapReconciler:
                     current != generation
                     or row.reconcile_owner != owner
                     or row.reconcile_until is None
-                    or utc(row.reconcile_until) <= now
+                    or as_utc(row.reconcile_until) <= now
                 ):
                     raise DirectoryUnavailable("stale_round")
                 disabled = 0

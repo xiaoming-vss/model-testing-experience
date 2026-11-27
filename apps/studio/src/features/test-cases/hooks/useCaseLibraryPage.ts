@@ -59,11 +59,11 @@ export type FunctionCaseEditorTarget =
   | { mode: 'create'; suiteId: string; suiteName: string; nextOrderNo: number }
 
 export function suiteRequirementId(suite: FunctionTestSuite) {
-  return suite.requirementId ?? suite.requirement_id ?? ''
+  return suite.requirementId ?? ''
 }
 
 export function suiteCaseCount(suite: FunctionTestSuite) {
-  return suite.caseCount ?? suite.case_count ?? 0
+  return suite.caseCount ?? 0
 }
 
 function getFunctionCaseErrorMessage(error: unknown) {
@@ -368,9 +368,7 @@ export function useCaseLibraryPage() {
     mutationFn: ({ file, filename }: { file: Blob; filename: string }) =>
       api.importFunctionTestCases(suiteId!, file, filename),
     onSuccess: (result) => {
-      const importedCount =
-        result.importedCaseCount ?? result.imported_case_count ?? result.importedCount ?? result.imported_count ?? 0
-      message.success(`导入成功：${importedCount} 条用例`)
+      message.success(`导入成功：${result.imported} 条用例`)
       queryClient.invalidateQueries({ queryKey: ['caseLibraryCases'] })
       queryClient.invalidateQueries({ queryKey: ['caseLibrarySuites'] })
       closeCaseImportModal()

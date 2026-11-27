@@ -4,9 +4,12 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.platform.revision_attachments import (
-    parse_revision_attachments,
+    load_revision_images,
+    revision_attachment_refs,
+    revision_image_paths,
 )
 from testing_agent_ai_worker.requirement_artifacts import validate_artifact
 from testing_agent_ai_worker.tasks.requirement_analysis.confirmation_coverage import (
@@ -39,13 +42,13 @@ def execute_material_stage(
     attachment_downloader=None,
 ):
     if task.payload.metadata.get("workflowVersion", 2) != 2:
-        raise ValueError("不支持的需求分析工作流版本")
+        raise UserFacingError("不支持的需求分析工作流版本")
     if not task.checkpoint_enabled:
-        raise ValueError("需求分析必须启用材料人工审核")
+        raise UserFacingError("需求分析必须启用材料人工审核")
     stage = task.current_stage or "extracting_text"
     config = json.loads(task.config_json or "{}")
     if not isinstance(config, dict):
-        raise ValueError("configJson 必须是对象")
+        raise UserFacingError("configJson 必须是对象")
     revision = str(config.get("revisionInstruction") or "").strip()
     body = {"workflowVersion": 2, "outputProfile": "json"}
     media = []
@@ -83,20 +86,16 @@ def execute_material_stage(
         body["confirmationReferences"] = confirmation_references
         name, kind = first_skill_name, "document_extraction"
     else:
-        raise ValueError(f"需求分析不支持阶段: {stage}")
+        raise UserFacingError(f"需求分析不支持阶段: {stage}")
     if revision:
-        attachments = parse_revision_attachments(config)
-        if attachments:
-            if attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
-            revision_images = attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
-            )
-            media.extend(entry["sourcePath"] for entry in revision_images)
-            body["revisionAttachments"] = [
-                {"fileId": entry["fileId"], "filename": entry["filename"]}
-                for entry in revision_images
-            ]
+        images = load_revision_images(
+            task_id=task.task_id,
+            workspace=workspace,
+            config=config,
+            downloader=attachment_downloader,
+        )
+        media.extend(revision_image_paths(images))
+        body["revisionAttachments"] = revision_attachment_refs(images)
         body["revisionInstruction"] = revision
     artifact = generate_validated(
         kind=kind,

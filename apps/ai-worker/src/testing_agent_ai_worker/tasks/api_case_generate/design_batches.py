@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.tasks.api_case_generate.design_contract import (
     DESIGN_SCHEMA_VERSION,
     validate_design_json,
@@ -114,7 +115,7 @@ async def generate_design_batches(
                 ),
             )
         except ValueError as exc:
-            raise ValueError(
+            raise UserFacingError(
                 f"接口用例设计第 {index}/{len(batches)} 批（接口 {', '.join(batch)}）失败：{exc}"
             ) from exc
         parsed = validate_design_json(raw, {name: extraction[name] for name in batch})

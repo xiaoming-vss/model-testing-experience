@@ -1,17 +1,9 @@
-import sys
 import unittest
-from pathlib import Path
 from typing import Any
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
-from testing_agent_ai_worker.services.task_service import TaskService
 from testing_agent_ai_worker.worker.poller import TaskPoller
 
 
@@ -28,7 +20,6 @@ class FakePlatformHttpClient:
         self.last_claim_path = path
         self.last_claim_body = json_body
         return {
-            "id": "claim-lease-1",
             "taskId": "worker-task-1",
             "attemptId": "run-1",
             "generateTaskId": "generate-task-1",
@@ -44,6 +35,7 @@ class FakePlatformHttpClient:
         self.snapshot_called = True
         self.last_snapshot_path = path
         return {
+            "taskType": "api_case_generate",
             "run": {
                 "taskId": "worker-task-1",
                 "attemptId": "run-1",
@@ -57,10 +49,13 @@ class FakePlatformHttpClient:
                 "sourceContent": '{"openapi":"3.0.0"}',
                 "targetScope": "只处理登录与鉴权接口",
                 "instruction": "只提取登录接口",
-                "checkpointEnabled": True,
-                "currentStage": "case_names",
-                "configJson": '{"enhancedText":"审核后文本"}',
-            }
+                "checkpointEnabled": False,
+                "currentStage": "ignored_stage",
+                "configJson": '{"ignored":true}',
+            },
+            "checkpointEnabled": True,
+            "currentStage": "case_names",
+            "configJson": '{"enhancedText":"审核后文本"}',
         }
 
     def get_with_retry(
@@ -131,7 +126,10 @@ class TaskSourceTests(unittest.TestCase):
 
         self.assertEqual(
             Task(
-                claim_id="claim-1", task_id="task-1", attempt_id="run-1", payload=payload
+                task_id="task-1",
+                attempt_id="run-1",
+                task_type="api_case_generate",
+                payload=payload,
             ).session_key,
             "run-1",
         )
@@ -193,7 +191,6 @@ class TaskSourceTests(unittest.TestCase):
         self.assertTrue(client.credentials_called)
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("claim-lease-1", task.claim_id)
         self.assertEqual("worker-task-1", task.task_id)
         self.assertEqual("run-1", task.attempt_id)
         self.assertEqual("generate-task-1", task.generate_task_id)
@@ -216,8 +213,8 @@ class TaskSourceTests(unittest.TestCase):
         self.assertEqual("https://test-llm.example.com/v1", task.payload.llm_credentials.base_url)
         self.assertIsNone(task.credential_error)
 
-    def test_poll_task_uses_task_type_fallback_order(self) -> None:
-        class FallbackTaskTypeClient(FakePlatformHttpClient):
+    def test_poll_task_reads_task_type_from_snapshot_top_level(self) -> None:
+        class SnapshotTaskTypeClient(FakePlatformHttpClient):
             def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
                 payload = super().post(path, json_body)
                 assert payload is not None
@@ -227,12 +224,12 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
-                payload["taskType"] = ""
+                payload["taskType"] = "snapshot-task-type"
                 payload["run"]["taskType"] = "snapshot-run-task-type"
                 return payload
 
         task_source = HttpClaimTaskSource(
-            client=FallbackTaskTypeClient(),
+            client=SnapshotTaskTypeClient(),
             claim_path="/internal/ai-worker/tasks/claim",
             snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
             llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
@@ -243,36 +240,7 @@ class TaskSourceTests(unittest.TestCase):
 
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("snapshot-run-task-type", task.task_type)
-
-    def test_poll_task_accepts_checkpoint_fields_on_snapshot_top_level(self) -> None:
-        class TopLevelCheckpointClient(FakePlatformHttpClient):
-            def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
-                payload = super().get(path, params)
-                assert payload is not None
-                payload["checkpointEnabled"] = True
-                payload["currentStage"] = "requirement_analysis"
-                payload["configJson"] = '{"enhancedText":"顶层审核文本"}'
-                payload["run"].pop("checkpointEnabled")
-                payload["run"].pop("currentStage")
-                payload["run"].pop("configJson")
-                return payload
-
-        task_source = HttpClaimTaskSource(
-            client=TopLevelCheckpointClient(),
-            claim_path="/internal/ai-worker/tasks/claim",
-            snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
-            llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
-            worker_id="worker-local",
-        )
-
-        task = task_source.poll_task()
-
-        self.assertIsNotNone(task)
-        assert task is not None
-        self.assertTrue(task.checkpoint_enabled)
-        self.assertEqual("requirement_analysis", task.current_stage)
-        self.assertEqual('{"enhancedText":"顶层审核文本"}', task.config_json)
+        self.assertEqual("snapshot-task-type", task.task_type)
 
     def test_poll_task_uses_claim_checkpoint_fields_when_snapshot_omits_them(self) -> None:
         class ClaimCheckpointClient(FakePlatformHttpClient):
@@ -287,9 +255,9 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
-                payload["run"].pop("checkpointEnabled")
-                payload["run"].pop("currentStage")
-                payload["run"].pop("configJson")
+                payload.pop("checkpointEnabled")
+                payload.pop("currentStage")
+                payload.pop("configJson")
                 return payload
 
         task_source = HttpClaimTaskSource(
@@ -320,7 +288,6 @@ class TaskSourceTests(unittest.TestCase):
                 payload = super().get(path, params)
                 assert payload is not None
                 payload["checkpointEnabled"] = False
-                payload["run"].pop("checkpointEnabled", None)
                 return payload
 
         task_source = HttpClaimTaskSource(
@@ -405,6 +372,7 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
+                payload["taskType"] = "functional_case_generate"
                 payload["run"]["taskType"] = "functional_case_generate"
                 payload["run"]["sourceType"] = "requirement"
                 payload["run"]["sourceFormat"] = "requirement_understanding_json"
@@ -444,6 +412,7 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
+                payload["taskType"] = "ui_case_generate"
                 payload["run"].update(
                     {
                         "taskType": "ui_case_generate",
@@ -486,7 +455,6 @@ class TaskSourceTests(unittest.TestCase):
 
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("repository", task.payload.metadata["sourceKind"])
         self.assertEqual("repo-1", task.payload.metadata["sourceRepository"]["repositoryId"])
         self.assertEqual("a1b2c3d", task.payload.metadata["sourceCommit"])
         self.assertEqual(
@@ -507,6 +475,7 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
+                payload["taskType"] = "functional_case_generate"
                 payload["run"]["taskType"] = "functional_case_generate"
                 payload["run"]["sourceType"] = "requirement"
                 payload["run"]["sourceFormat"] = "requirement_understanding_json"
@@ -543,6 +512,7 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
+                payload["taskType"] = "functional_case_generate"
                 payload["run"]["taskType"] = "functional_case_generate"
                 payload["run"].pop("sourceType", None)
                 payload["run"]["documentType"] = "text"
@@ -628,7 +598,6 @@ class TaskSourceTests(unittest.TestCase):
         )
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("claim-lease-req-1", task.claim_id)
         self.assertEqual("worker-task-1", task.task_id)
         self.assertEqual("run-1", task.attempt_id)
         self.assertEqual("task-1", task.generate_task_id)
@@ -687,7 +656,6 @@ class TaskSourceTests(unittest.TestCase):
         assert task is not None
         self.assertEqual("word", task.payload.source_type)
         self.assertEqual("word", task.payload.document_type)
-        self.assertEqual("word", task.payload.metadata["documentType"])
 
     def test_poll_document_task_prefers_document_type_over_openapi_source_type(self) -> None:
         class ConflictingDocumentTypeClient(FakePlatformHttpClient):
@@ -700,6 +668,7 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
+                payload["taskType"] = "requirement_analysis"
                 payload["run"]["taskType"] = "requirement_analysis"
                 payload["run"]["sourceType"] = "openapi"
                 payload["run"]["documentType"] = "docx"
@@ -762,9 +731,8 @@ class TaskSourceTests(unittest.TestCase):
         self.assertIsNotNone(task)
         assert task is not None
         self.assertEqual("word", task.payload.document_type)
-        self.assertEqual("word", task.payload.metadata["documentType"])
 
-    def test_task_service_and_poller_return_polled_task(self) -> None:
+    def test_poller_returns_polled_task(self) -> None:
         client = FakePlatformHttpClient()
         task_source = HttpClaimTaskSource(
             client=client,
@@ -774,7 +742,7 @@ class TaskSourceTests(unittest.TestCase):
             worker_id="worker-local",
         )
 
-        poller = TaskPoller(TaskService(task_source))
+        poller = TaskPoller(task_source)
         task = poller.poll()
 
         self.assertIsNotNone(task)

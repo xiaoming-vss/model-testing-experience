@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, Descriptions, Empty, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
+import { PERF_RUN_POLL_INTERVAL } from '@/domain/runs/polling'
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import {
@@ -38,7 +39,7 @@ export function PerformanceCaseRunDetailPage() {
     queryKey: ['perfRun', runId],
     queryFn: () => api.getPerfRun(runId),
     enabled: Boolean(runId),
-    refetchInterval: (query) => isPerfRunActive(query.state.data?.status) ? 3000 : false,
+    refetchInterval: (query) => isPerfRunActive(query.state.data?.status) ? PERF_RUN_POLL_INTERVAL : false,
   })
   const run = runQuery.data
   const active = isPerfRunActive(run?.status)

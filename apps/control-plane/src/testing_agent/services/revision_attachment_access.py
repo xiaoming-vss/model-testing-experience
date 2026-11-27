@@ -36,32 +36,8 @@ async def revision_attachment_ticket(
         raise ErrForbidden()
     from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
 
-    session = getattr(service.repository, "session", None)
-    from testing_agent.services.standalone_worker_service import StandaloneWorkerService
-
-    standalone = StandaloneWorkerService(session) if session is not None else None
-    if standalone is not None and await standalone.is_standalone(task):
-        authority = await standalone.authorize(task)
-        snapshot = authority.dispatched_attempt.input_snapshot_json or {}
-        config = snapshot.get("config") or {}
-        attachments = config.get("revisionAttachments") if isinstance(config, dict) else None
-        if not isinstance(attachments, list) or not any(
-            isinstance(item, dict) and item.get("fileId") == file_id for item in attachments
-        ):
-            raise ErrNotFound()
-        image = await files.get(file_id)
-        if (
-            image.project_id != authority.task.project_id
-            or image.resource_type != REVISION_ATTACHMENT_RESOURCE_TYPE
-            or image.resource_id != authority.execution.execution_id
-            or image.purpose != "attachment"
-            or image.status != "attached"
-            or image.content_type not in REVISION_IMAGE_CONTENT_TYPES
-        ):
-            raise ErrNotFound()
-        return await files.ticket(image)
-    direct = DirectStageWorkerService(session) if session is not None else None
-    if direct is not None and await direct.is_direct(task):
+    direct = DirectStageWorkerService(service.repository.session)
+    if await direct.is_direct(task):
         authority = await direct.authorize(task)
         config = authority.input_snapshot.get("config") or {}
         attachments = config.get("revisionAttachments") if isinstance(config, dict) else None

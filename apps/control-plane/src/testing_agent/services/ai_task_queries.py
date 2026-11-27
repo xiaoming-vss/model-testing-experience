@@ -11,7 +11,6 @@ from testing_agent.domain.ai_tasks import (
 )
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_task_output import (
-    dump_run,
     dump_task,
     dump_task_summary,
 )
@@ -123,12 +122,6 @@ class GenerationQueries:
             return await direct_history(
                 self.repository.session, task_id, page, page_size, pipeline_filter
             )
-        if kind in {"function", "api", "ui"} and not task.requirement_id:
-            from testing_agent.services.standalone_history import standalone_history
-
-            return await standalone_history(
-                self.repository.session, task_id, page, page_size, pipeline_filter
-            )
         if kind in {"code_risk_analysis", "repository_profile"} and pipeline_filter == "all":
             from testing_agent.services.auxiliary_execution_view import auxiliary_history
 
@@ -191,18 +184,6 @@ class GenerationQueries:
             if task_id is not None:
                 await self.access.owned_task(user_id, task_id, kind, action="read")
                 return await direct_attempt_view(session, task_id, run_id)
-        if kind in {"function", "api", "ui"}:
-            from testing_agent.repositories.standalone_execution import workflow_task_id
-            from testing_agent.services.standalone_execution_view import (
-                project_standalone_execution,
-            )
-
-            session = self.repository.session
-            task_id = await workflow_task_id(session, run_id)
-            if task_id is not None:
-                await self.access.owned_task(user_id, task_id, kind, action="read")
-                return dump_run(await project_standalone_execution(session, run_id))
-            raise ErrNotFound()
         if kind in {
             "code_risk_analysis",
             "repository_profile",

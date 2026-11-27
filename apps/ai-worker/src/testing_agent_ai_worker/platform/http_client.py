@@ -15,6 +15,19 @@ from urllib.parse import urlparse
 
 import httpx
 
+# The control plane answers with one of these only when this worker no longer holds the
+# execution: the lease expired or was taken over, the attempt is gone, or the worker token
+# is no longer accepted. A 400 or 422 means the request itself is wrong.
+LEASE_LOST_STATUSES = frozenset({401, 403, 404, 409, 410})
+
+
+def lease_rejected(error: BaseException) -> bool:
+    """Tell whether a platform call failed because the execution is no longer this worker's."""
+    return (
+        isinstance(error, httpx.HTTPStatusError)
+        and error.response.status_code in LEASE_LOST_STATUSES
+    )
+
 
 @dataclass(slots=True)
 class PlatformHttpClient:
@@ -33,12 +46,20 @@ class PlatformHttpClient:
             headers["X-Worker-Token"] = self.worker_token
         return headers
 
-    def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+    def _timeout(self, limit: float | None) -> float:
+        """A caller's ``limit`` can only shorten the configured timeout."""
+        if limit is None:
+            return self.timeout_seconds
+        return max(0.1, min(self.timeout_seconds, limit))
+
+    def post(
+        self, path: str, json_body: dict[str, Any], *, timeout_seconds: float | None = None
+    ) -> dict[str, Any] | None:
         """发送 JSON POST 请求并返回解析后的 JSON。"""
 
         with httpx.Client(
             base_url=self.base_url,
-            timeout=self.timeout_seconds,
+            timeout=self._timeout(timeout_seconds),
             headers=self._headers(),
         ) as client:
             response = client.post(path, json=json_body)
@@ -47,12 +68,18 @@ class PlatformHttpClient:
                 return None
             return response.json()
 
-    def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def get(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any] | None:
         """发送 GET 请求并返回解析后的 JSON。"""
 
         with httpx.Client(
             base_url=self.base_url,
-            timeout=self.timeout_seconds,
+            timeout=self._timeout(timeout_seconds),
             headers=self._headers(),
         ) as client:
             response = client.get(path, params=params)
@@ -121,12 +148,14 @@ class PlatformHttpClient:
                 time.sleep(attempt + 1)
         raise ValueError("File download retry limit exceeded")
 
-    def patch(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+    def patch(
+        self, path: str, json_body: dict[str, Any], *, timeout_seconds: float | None = None
+    ) -> dict[str, Any] | None:
         """发送 JSON PATCH 请求并返回解析后的 JSON。"""
 
         with httpx.Client(
             base_url=self.base_url,
-            timeout=self.timeout_seconds,
+            timeout=self._timeout(timeout_seconds),
             headers=self._headers(),
         ) as client:
             response = client.patch(path, json=json_body)

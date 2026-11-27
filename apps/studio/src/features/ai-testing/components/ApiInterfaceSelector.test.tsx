@@ -73,6 +73,63 @@ function interfaceItem(
   }
 }
 
+/** 150 条接口、每页 100 条的两页响应。 */
+function pagedInterfaces(page = 1) {
+  const start = (page - 1) * 100
+  const items = Array.from({ length: page === 1 ? 100 : 50 }, (_, index) =>
+    interfaceItem(`interface-${start + index + 1}`, 'GET', `/items/${start + index + 1}`),
+  )
+  return Object.assign(items, { items, total: 150 })
+}
+
+async function selectAllVisible(user: ReturnType<typeof userEvent.setup>) {
+  // 筛选工具条要等接口加载完才出现。
+  await user.click(await screen.findByLabelText('按软件仓库筛选'))
+  await user.click(await screen.findByTitle('订单服务'))
+  const button = screen.getByRole('button', { name: '全选筛选结果' })
+  await waitFor(() => expect(button).toBeEnabled())
+  await user.click(button)
+}
+
+it('项目接口超过一页时取完剩余页，「全选」覆盖全部结果', async () => {
+  vi.mocked(interfaceLibraryApi.getRequirementSoftwareRepositories).mockResolvedValue(listResponse([]))
+  const list = vi.mocked(interfaceLibraryApi.getProjectApiInterfaces).mockImplementation(async (_projectId, filters = {}) =>
+    pagedInterfaces(filters.page ?? 1))
+  const onChange = renderSelector()
+
+  await screen.findByText('项目全部软件仓库')
+  await selectAllVisible(userEvent.setup())
+
+  expect(onChange).toHaveBeenCalledTimes(1)
+  expect(onChange.mock.calls[0][0]).toHaveLength(150)
+  expect(list.mock.calls.map(([, filters]) => filters?.page)).toEqual([1, 2])
+})
+
+it('仓库接口超过一页时同样取完剩余页', async () => {
+  vi.mocked(interfaceLibraryApi.getRequirementSoftwareRepositories).mockResolvedValue(
+    listResponse([
+      {
+        requirementId: 'requirement-1',
+        softwareRepositoryId: 'repository-1',
+        softwareRepositoryName: '订单服务',
+        basePath: '/api',
+        repository: null,
+        branch: 'main',
+        baselineBranch: 'main',
+      },
+    ]),
+  )
+  const list = vi.mocked(interfaceLibraryApi.getSoftwareRepositoryApiInterfaces).mockImplementation(async (_id, filters = {}) =>
+    pagedInterfaces(filters.page ?? 1))
+  const onChange = renderSelector()
+
+  await screen.findByText('需求关联软件仓库（1）')
+  await selectAllVisible(userEvent.setup())
+
+  expect(onChange.mock.calls[0][0]).toHaveLength(150)
+  expect(list.mock.calls.map(([, filters]) => filters?.page)).toEqual([1, 2])
+})
+
 it('按软件仓库筛选后可全选筛选结果', async () => {
   vi.mocked(
     interfaceLibraryApi.getRequirementSoftwareRepositories,

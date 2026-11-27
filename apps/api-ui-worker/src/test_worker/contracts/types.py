@@ -64,30 +64,6 @@ class UiWorkerTask:
 
 
 @dataclass
-class UiBrowserViewport:
-    """浏览器视口"""
-
-    width: int
-    height: int
-
-
-@dataclass
-class UiBrowserOptionsSnapshot:
-    """浏览器选项快照"""
-
-    headless: bool | None = None
-    slow_mo_ms: int | None = None
-    viewport: UiBrowserViewport | None = None
-
-
-@dataclass
-class UiRunOptionsSnapshot:
-    """运行选项快照"""
-
-    default_step_timeout_ms: int | None = None
-
-
-@dataclass
 class UiSuiteSnapshot:
     """测试套件快照"""
 
@@ -143,8 +119,6 @@ class UiCaseRunSnapshot:
     run_id: str
     case: UiCaseSnapshot
     suite: UiSuiteSnapshot | None = None
-    browser: UiBrowserOptionsSnapshot | None = None
-    options: UiRunOptionsSnapshot | None = None
 
 
 @dataclass
@@ -164,8 +138,6 @@ class UiTestSuiteRunSnapshot:
     run_id: str
     items: list[UiSuiteRunItemSnapshot]
     suite: UiSuiteSnapshot | None = None
-    browser: UiBrowserOptionsSnapshot | None = None
-    options: UiRunOptionsSnapshot | None = None
 
 
 @dataclass

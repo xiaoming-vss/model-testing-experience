@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：worker maintainers
-- 最近复核：2026-11-19
+- 最近复核：2026-11-26
 - 复核周期：每季度
 - 适用范围：`ai-worker`、`api-ui-worker`、`integration-worker`、`perf-worker`
 - 变更/废弃：按[规范变更检查清单](domain.md#规范变更检查清单)执行；影响控制面协议时先记录 ADR 并通知消费方。
@@ -32,8 +32,8 @@ HTTP 服务的启动/停止必须幂等，停止时关闭监听并回收线程�
 
 | 项目 | 续租与失败处理 |
 | --- | --- |
-| ai-worker | 默认间隔为租约一半；连续 3 次心跳失败或最后一次成功心跳/进度超过租约即失效；进度回传成功也视为续租 |
-| api-ui-worker | 按配置间隔心跳；明确拒绝立即过期，普通网络错误由本地截止窗口兜底；领取租约缺失时使用 30 秒默认值 |
+| ai-worker | 间隔取配置值与租约一半的较小者；窗口从续租请求发出时起算，心跳或进度成功都算续租；连续 3 次心跳失败、窗口到期，或控制面以 `401/403/404/409/410` 拒绝开始、心跳或进度即失效；续租类请求的超时不超过剩余租约的一半 |
+| api-ui-worker | 按配置间隔心跳；明确拒绝立即过期，普通网络错误由本地截止窗口兜底；领取租约缺失时使用 30 秒默认值。控制面拒绝执行的判定只在 `control_plane/client.py` 定义一处 |
 | integration-worker | 间隔取配置值与租约三分之一较小者；心跳响应按请求开始时间续租；控制面错误立即标记租约丢失 |
 | perf-worker | 间隔取配置值与租约三分之一较小者；心跳响应按请求开始时间续租；迟到成功不能延长已过期窗口 |
 
@@ -56,12 +56,25 @@ HTTP 服务的启动/停止必须幂等，停止时关闭监听并回收线程�
 
 | 项目 | 用户停止 | Worker 关闭 | 租约丢失 | 回传失败 |
 | --- | --- | --- | --- | --- |
-| ai-worker | 不接受停止信号，不产生 `canceled` | 停止领取新任务；不强制中断已进入的模型调用 | 丢弃迟到结果，不提交完成 | 本地 outbox，不重跑模型 |
+| ai-worker | 不接受停止信号，不产生 `canceled` | SIGINT：停止领取新任务并等待在途任务完成；SIGTERM：立即终止模型子进程并退出进程，在途尝试由控制面回收 | 丢弃迟到结果，不提交完成 | 本地 outbox，不重跑模型 |
 | api-ui-worker | 回传 `canceled` | 回传 `canceled`；控制面没有 `stopped` | 不合成结果，交由控制面回收 | `ReportDeliveryError`，不提交错误结果 |
 | integration-worker | 不开始新写入；在途写入保留显式结果或 unknown | 同左；已开始的写入不得假定未执行 | 可回传 `unknown` 与 `lease_lost`，不重写 | evidence 日志恢复，不重新写 |
 | perf-worker | `canceled` | `stopped` | `stopped`，并终止 k6 进程组 | 保留 `result.json`，租约内重试 |
 
 状态词汇按协议固定：ai-worker 使用 `success`、`failed`、`error`，`canceled` 仅为协议兼容保留且 Worker 不发布；api-ui-worker 的执行错误只使用 `error`、`canceled`；integration-worker 的步骤事件只使用 `succeeded`、`failed`、`unknown`；perf-worker 使用 `completed`、`failed`、`stopped`、`canceled`。
+
+## 失败文案
+
+回传给用户的失败原因只有两类。代码里写好的固定文案（可以带阶段、字段、平台编号和数量）原样回传；其余异常一律回传固定提示，日志只记录异常类型和安全栈帧。模型输出、第三方异常文本、请求地址和响应体不得拼进回传文案；说明校验失败时只给出位置和规则，不引用被拒绝的内容本身。
+
+api-ui-worker 是明确的例外：它的失败原因本身就是浏览器和 HTTP 的排障信息，步骤级和任务级都回传执行器异常的文本（定位器、超时、浏览器环境）。它的约束是日志：轮询层遇到未知异常只记录异常类型，控制面错误只记录 `ControlPlaneRequestError` 的固定消息。
+
+| 项目 | 已知失败的承载方式 |
+| --- | --- |
+| ai-worker | `SafeMessageError` 家族（`UserFacingError`、`AgentOutputError`），由 runner 原样回传；两个模型适配器对非正常结束一律抛 `AgentOutputError`，成功返回的结果视为完整 |
+| api-ui-worker | 步骤级和任务级回传执行器异常的文本；轮询层日志对未知异常只记类型 |
+| integration-worker | 步骤状态和 `error_code` 是固定词表；未知异常只记类型和安全栈帧 |
+| perf-worker | 结果只带 Worker 自己错误类型给出的固定文案；控制面错误只记录状态码和任务 ID |
 
 ## 快照与身份字段
 
@@ -82,7 +95,7 @@ Worker 必须把控制面快照视为只读冻结输入，不得自行补造任�
 | --- | --- | --- |
 | HTTP 探针与健康文件 | ai/api-ui 用 HTTP，integration/perf 用文件 | 前者是长期服务并暴露探针端口；后两者没有公开业务端口，文件检查由容器命令执行 |
 | 并发模型 | AI 线程加 outbox、API/UI 单任务协程、perf 单 k6 进程、integration 单任务步骤 | 由执行底座和任务协议决定，不能强行统一 |
-| 心跳间隔策略 | AI 租约一半，API/UI 配置值，integration/perf 取租约三分之一上限 | 不同执行时长和取消粒度需要不同余量 |
+| 心跳间隔策略 | AI 取配置值与租约一半的较小者，API/UI 配置值，integration/perf 取租约三分之一上限 | 不同执行时长和取消粒度需要不同余量 |
 | 状态词汇 | 四套协议各自定义 | 控制面已有不同状态机；统一词汇会破坏既有契约 |
 | 关闭映射 | API/UI 使用 `canceled`，perf 区分 `canceled`/`stopped`，AI 无停止，integration 使用 unknown | 由控制面支持的状态和外部副作用是否已发生决定 |
 | 恢复介质 | outbox、S3 产物、health/evidence 日志、`result.json` | 各项目已有经审计的恢复路径，共享介质会增加跨应用依赖 |
@@ -90,7 +103,7 @@ Worker 必须把控制面快照视为只读冻结输入，不得自行补造任�
 
 ## 工单 34/38/41/42 的最终语义
 
-- 工单 34：AI 心跳连续失败或租约到期后停止执行，迟到结果不提交；结果回传失败写入本地 outbox，只在原租约内重试，不重新调用模型；AI 队列没有停止信号，Worker 不发布 `canceled`。
+- 工单 34：AI 心跳连续失败、被控制面明确拒绝或租约到期后停止执行，迟到结果不提交；结果回传失败写入本地 outbox，只在原租约内重试，不重新调用模型；AI 队列没有停止信号，Worker 不发布 `canceled`。
 - 工单 38：API/UI 领取后建立单调时钟租约窗口；心跳被拒或窗口到期时取消在途操作，不产生新副作用；SIGTERM 回传 `canceled`，不把关闭报成 `error`；普通断连不合成结果。
 - 工单 41：perf 先把结果写入 `result.json`，再在租约内退避重试完成上报；`LeaseLostError` 立即停止；相同载荷重复上报保持幂等，不产生第二次 k6 运行。
 - 工单 42：perf 停止原因按 USER、SHUTDOWN、LEASE_LOST 分别映射为 `canceled`、`stopped`、`stopped`；once 取消终止整个 k6 进程组；数据下载只对 429/5xx 重试。

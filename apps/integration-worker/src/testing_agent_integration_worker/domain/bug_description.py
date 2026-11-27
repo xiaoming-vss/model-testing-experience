@@ -6,10 +6,18 @@ from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit, urlunsplit
 
+from testing_agent_integration_worker.core.errors import PreflightError
 
-class DescriptionError(Exception):
+# A native image has no safe read route. 409 means the remote file no longer matches
+# what was frozen; 400 means the image itself cannot be used.
+_DESCRIPTION_ERROR_CODES = {409: "baseline_changed", 400: "input_changed"}
+
+
+class DescriptionError(PreflightError):
     def __init__(self, status, message, http_status):
-        super().__init__(message)
+        super().__init__(_DESCRIPTION_ERROR_CODES[status], message)
+        self.status = status
+        self.http_status = http_status
 
 
 def source_hash(value):

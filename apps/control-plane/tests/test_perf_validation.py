@@ -1,14 +1,13 @@
 import asyncio
 import json
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
+from support.perf_api import PERF_YAML, environment, monitoring_connection, worker_settings
 from support.project_api import account, project
 from support.project_api import api as api
 
-from testing_agent.core.config import get_settings
 from testing_agent.core.errors import AppError
 from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.worker_task import WorkerTask
@@ -16,29 +15,6 @@ from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.perf_case_spec import parse_case_yaml
 from testing_agent.services.worker_task import WorkerTaskService
-
-_YAML = """
-specVersion: "1.0"
-case:
-  name: ping
-  steps:
-    - name: ping
-      method: GET
-      path: /ping
-      checks:
-        - type: status
-          op: eq
-          value: 200
-  load:
-    model: vus
-    vus: 1
-    duration: "1s"
-  acceptance:
-    source: user_confirmed
-    confirmed: true
-    criteria:
-      http_req_failed: ["rate<0.01"]
-"""
 
 _SECRET_YAML = """
 specVersion: "1.0"
@@ -68,7 +44,7 @@ case:
 
 @pytest.mark.parametrize("statuses", ["[]", "[200, 200]", "[true]", "[99]", "[600]"])
 def test_expected_statuses_reject_invalid_values(statuses):
-    source = _YAML.replace(
+    source = PERF_YAML.replace(
         "      path: /ping", f"      path: /ping\n      expectedStatuses: {statuses}"
     )
     with pytest.raises(AppError):
@@ -76,50 +52,13 @@ def test_expected_statuses_reject_invalid_values(statuses):
 
 
 def test_expected_statuses_accept_multiple_codes():
-    source = _YAML.replace(
+    source = PERF_YAML.replace(
         "      path: /ping", "      path: /ping\n      expectedStatuses: [200, 404]"
     )
     assert parse_case_yaml(source)["case"]["steps"][0]["expectedStatuses"] == [200, 404]
 
 
-def _settings(api):
-    settings = replace(
-        get_settings(),
-        integration_key="test-integration-key",
-        perf_worker_key="perf-worker-token",
-    )
-    api.app.dependency_overrides[get_settings] = lambda: settings
-    return settings
-
-
-def _env(api, headers, project_id, *, kind="perf"):
-    response = api.post(
-        f"/v1/projects/{project_id}/api-environments",
-        headers=headers,
-        json={
-            "name": f"{kind}-env",
-            "kind": kind,
-            "baseUrl": "http://127.0.0.1:18080",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["environmentId"]
-
-
-def _connection(api, headers, project_id, name="prom"):
-    response = api.post(
-        f"/v1/projects/{project_id}/monitoring-connections",
-        headers=headers,
-        json={
-            "name": name,
-            "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
-
-
-def _case(api, headers, project_id, yaml_text=_YAML):
+def _case(api, headers, project_id, yaml_text=PERF_YAML):
     return api.post(
         f"/v1/projects/{project_id}/perf-cases",
         headers=headers,
@@ -128,7 +67,7 @@ def _case(api, headers, project_id, yaml_text=_YAML):
 
 
 def test_perf_case_update_increments_version_and_name_is_unique(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "case-version-owner")
     project_id = project(api, headers, "case-version-project")
     created = _case(api, headers, project_id)
@@ -139,7 +78,7 @@ def test_perf_case_update_increments_version_and_name_is_unique(api):
     updated = api.patch(
         f"/v1/perf-cases/{case['caseId']}",
         headers=headers,
-        json={"yaml": _YAML + "\n# version bump\n"},
+        json={"yaml": PERF_YAML + "\n# version bump\n"},
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["data"]["version"] == 2
@@ -147,13 +86,13 @@ def test_perf_case_update_increments_version_and_name_is_unique(api):
     duplicate = api.post(
         f"/v1/projects/{project_id}/perf-cases",
         headers=headers,
-        json={"name": case["name"], "yaml": _YAML},
+        json={"name": case["name"], "yaml": PERF_YAML},
     )
     assert duplicate.status_code == 409, duplicate.text
 
 
 def test_monitoring_connection_write_secrets_are_masked_and_update_keeps_them(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "monitor-owner")
     project_id = project(api, headers, "monitor-project")
 
@@ -193,7 +132,7 @@ def test_monitoring_connection_write_secrets_are_masked_and_update_keeps_them(ap
 
 
 def test_monitoring_connection_url_rejects_embedded_credentials(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "monitor-url-owner")
     project_id = project(api, headers, "monitor-url-project")
 
@@ -209,7 +148,7 @@ def test_monitoring_connection_url_rejects_embedded_credentials(api):
 
 
 def test_monitoring_connection_rejects_removed_query_and_grafana_fields(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "monitor-removed-owner")
     project_id = project(api, headers, "monitor-removed-project")
 
@@ -232,7 +171,7 @@ def test_monitoring_connection_rejects_removed_query_and_grafana_fields(api):
 
 
 def test_viewer_cannot_manage_monitoring_connections(api):
-    _settings(api)
+    worker_settings(api)
     _, owner = account(api, "monitor-perm-owner")
     viewer_user, viewer = account(api, "monitor-perm-viewer")
     project_id = project(api, owner, "monitor-perm-project")
@@ -255,26 +194,26 @@ def test_viewer_cannot_manage_monitoring_connections(api):
 
 
 def test_perf_case_rejects_duplicate_yaml_keys_and_platform_fields(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "yaml-owner")
     project_id = project(api, headers, "yaml-project")
 
-    duplicate = _YAML.replace('specVersion: "1.0"', 'specVersion: "1.0"\nspecVersion: "1.0"')
+    duplicate = PERF_YAML.replace('specVersion: "1.0"', 'specVersion: "1.0"\nspecVersion: "1.0"')
     response = _case(api, headers, project_id, duplicate)
     assert response.status_code == 400, response.text
     assert "重复键" in response.text
 
-    with_platform = _YAML + "\nenvironment:\n  baseUrl: http://x\n"
+    with_platform = PERF_YAML + "\nenvironment:\n  baseUrl: http://x\n"
     response = _case(api, headers, project_id, with_platform)
     assert response.status_code == 400, response.text
     assert "environment" in response.text
 
 
 def test_perf_case_accepts_staged_vus_load(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "staged-owner")
     project_id = project(api, headers, "staged-project")
-    yaml_text = _YAML.replace(
+    yaml_text = PERF_YAML.replace(
         '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
         "  load:\n"
         "    model: staged_vus\n"
@@ -292,11 +231,11 @@ def test_perf_case_accepts_staged_vus_load(api):
 
 
 def test_perf_case_rejects_staged_vus_with_invalid_stages(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "staged-invalid-owner")
     project_id = project(api, headers, "staged-invalid-project")
 
-    empty_stages = _YAML.replace(
+    empty_stages = PERF_YAML.replace(
         '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
         "  load:\n    model: staged_vus\n    stages: []",
     )
@@ -304,7 +243,7 @@ def test_perf_case_rejects_staged_vus_with_invalid_stages(api):
     assert response.status_code == 400, response.text
     assert "stages" in response.text
 
-    invalid_profile = _YAML.replace(
+    invalid_profile = PERF_YAML.replace(
         '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
         "  load:\n"
         "    model: staged_vus\n"
@@ -318,10 +257,10 @@ def test_perf_case_rejects_staged_vus_with_invalid_stages(api):
 
 
 def test_perf_case_data_source_requires_attached_file(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "data-owner")
     project_id = project(api, headers, "data-project")
-    yaml_text = _YAML.replace(
+    yaml_text = PERF_YAML.replace(
         "  acceptance:",
         "  data:\n"
         "    - name: users\n"
@@ -335,11 +274,11 @@ def test_perf_case_data_source_requires_attached_file(api):
 
 
 def test_perf_run_rejects_non_perf_environment(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "env-kind-owner")
     project_id = project(api, headers, "env-kind-project")
-    environment_id = _env(api, headers, project_id, kind="api")
-    connection_id = _connection(api, headers, project_id)
+    environment_id = environment(api, headers, project_id, name="api-env", kind="api")
+    connection_id = monitoring_connection(api, headers, project_id)
     case = _case(api, headers, project_id)
     assert case.status_code == 200, case.text
 
@@ -356,17 +295,17 @@ def test_perf_run_rejects_non_perf_environment(api):
 
 
 def test_secret_environment_value_is_redacted_in_public_spec(api):
-    settings = _settings(api)
+    settings = worker_settings(api)
     _, headers = account(api, "secret-owner")
     project_id = project(api, headers, "secret-project")
-    environment_id = _env(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
     added = api.post(
         f"/v1/api-environments/{environment_id}/vars",
         headers=headers,
         json={"varKey": "api_token", "value": "top-secret", "isSecret": True},
     )
     assert added.status_code == 200, added.text
-    connection_id = _connection(api, headers, project_id)
+    connection_id = monitoring_connection(api, headers, project_id)
     case = _case(api, headers, project_id, _SECRET_YAML)
     assert case.status_code == 200, case.text
 
@@ -396,11 +335,11 @@ def test_secret_environment_value_is_redacted_in_public_spec(api):
 
 
 def test_lease_expiry_marks_perf_run_failed(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "lease-owner")
     project_id = project(api, headers, "lease-project")
-    environment_id = _env(api, headers, project_id)
-    connection_id = _connection(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
+    connection_id = monitoring_connection(api, headers, project_id)
     case = _case(api, headers, project_id)
     run = api.post(
         f"/v1/perf-cases/{case.json()['data']['caseId']}/runs",

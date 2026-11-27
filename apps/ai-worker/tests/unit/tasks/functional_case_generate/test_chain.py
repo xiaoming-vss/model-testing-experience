@@ -1,16 +1,8 @@
 import asyncio
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
-
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, material, traceable_points
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
@@ -21,37 +13,24 @@ from testing_agent_ai_worker.skill_names import SCOPE_SKILL, TEST_POINTS_SKILL
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     _build_functional_case_names_body,
     run_functional_chain,
-    run_skill_step,
+    run_functional_skill_step,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     _build_functional_detailed_case_body,
 )
+from tests.support.agent import FakeBot
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, material, traceable_points
 
 
-class _FakeResult:
-    def __init__(self, content: str) -> None:
-        self.content = content
-
-
-class _FakeBot:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str]] = []
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:
-        return None
-
-    async def run(self, message: str, *, session_key: str):
-        self.calls.append((message, session_key))
-        if "本次审查类型" in message:
-            return _FakeResult(json.dumps({"issues": []}))
-        if f"请先加载本地 skill：{SCOPE_SKILL}" in message:
-            return _FakeResult(json.dumps(analysis(), ensure_ascii=False))
-        if f"请先加载本地 skill：{TEST_POINTS_SKILL}" in message:
-            return _FakeResult(json.dumps(traceable_points(), ensure_ascii=False))
-        return _FakeResult(json.dumps({"cases": []}, ensure_ascii=False))
+def _reply(message: str) -> str:
+    """Answer a functional-chain prompt the way the staged skills would."""
+    if "本次审查类型" in message:
+        return json.dumps({"issues": []})
+    if f"请先加载本地 skill：{SCOPE_SKILL}" in message:
+        return json.dumps(analysis(), ensure_ascii=False)
+    if f"请先加载本地 skill：{TEST_POINTS_SKILL}" in message:
+        return json.dumps(traceable_points(), ensure_ascii=False)
+    return json.dumps({"cases": []}, ensure_ascii=False)
 
 
 class FunctionalChainPromptTests(unittest.TestCase):
@@ -69,7 +48,7 @@ class FunctionalChainPromptTests(unittest.TestCase):
         )
 
     def test_run_functional_chain_appends_stage_specific_json_only_instructions(self) -> None:
-        bot = _FakeBot()
+        bot = FakeBot(_reply)
 
         def fake_from_config(**kwargs):
             return bot
@@ -93,22 +72,22 @@ class FunctionalChainPromptTests(unittest.TestCase):
             )
         self.assertEqual(result.detailed_cases_output, '{"cases": []}')
         self.assertEqual(len(bot.calls), 6)
-        analysis_message, case_names_message = bot.calls[0][0], bot.calls[1][0]
+        analysis_message, case_names_message = bot.calls[0]["message"], bot.calls[1]["message"]
         self.assertIn(FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION, analysis_message)
         self.assertIn("请先加载本地 skill：mtx-generate-traceable-test-points", case_names_message)
         self.assertIn(FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION, case_names_message)
         self.assertIn("test_scope_impact_risk", case_names_message)
-        self.assertEqual(sum("本次审查类型" in call[0] for call in bot.calls), 3)
-        self.assertIn(FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION, bot.calls[-1][0])
+        self.assertEqual(sum("本次审查类型" in call["message"] for call in bot.calls), 3)
+        self.assertIn(FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION, bot.calls[-1]["message"])
 
     def test_run_skill_step_appends_instruction_by_functional_skill_name(self) -> None:
-        bot = _FakeBot()
+        bot = FakeBot(_reply)
 
         def fake_from_config(**kwargs):
             return bot
 
         asyncio.run(
-            run_skill_step(
+            run_functional_skill_step(
                 input_text="登录需求",
                 session_key="task:1",
                 skill_name="mtx-analyze-functional-requirements",
@@ -118,7 +97,7 @@ class FunctionalChainPromptTests(unittest.TestCase):
         )
 
         self.assertEqual(len(bot.calls), 1)
-        message = bot.calls[0][0]
+        message = bot.calls[0]["message"]
         self.assertIn("只看功能路径", message)
         self.assertIn(FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION, message)
 

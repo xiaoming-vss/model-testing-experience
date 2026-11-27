@@ -9,9 +9,13 @@ from datetime import datetime
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.platform.revision_attachments import (
+    load_revision_images,
+    revision_image_paths,
+)
 from testing_agent_ai_worker.skill_names import API_EXTRACT_SKILL, API_GENERATE_SKILL
 from testing_agent_ai_worker.tasks.api_case_generate.chain import (
     ChainRunResult,
@@ -150,10 +154,10 @@ class ApiCaseExecutor(TaskExecutor):
             "api_design",
             "generate",
         }:
-            raise ValueError("API 三阶段生成需要有效阶段及人工审核")
+            raise UserFacingError("API 三阶段生成需要有效阶段及人工审核")
         config = json.loads(task.config_json or "{}")
         if not isinstance(config, dict):
-            raise ValueError("configJson 必须是对象")
+            raise UserFacingError("configJson 必须是对象")
         stage = task.current_stage
         revision = str(config.get("revisionInstruction") or "").strip()
         instruction = self._build_api_instruction(task)
@@ -164,7 +168,7 @@ class ApiCaseExecutor(TaskExecutor):
             if revision:
                 current = config.get("apiExtraction")
                 if current is None:
-                    raise ValueError("继续优化缺少当前阶段产物")
+                    raise UserFacingError("继续优化缺少当前阶段产物")
                 current_text = (
                     current if isinstance(current, str) else json.dumps(current, ensure_ascii=False)
                 )
@@ -181,7 +185,7 @@ class ApiCaseExecutor(TaskExecutor):
             if revision:
                 current = config.get("apiDesign")
                 if current is None:
-                    raise ValueError("继续优化缺少当前阶段产物")
+                    raise UserFacingError("继续优化缺少当前阶段产物")
                 current_design = parse_design_json(
                     current if isinstance(current, str) else json.dumps(current, ensure_ascii=False)
                 )
@@ -204,14 +208,15 @@ class ApiCaseExecutor(TaskExecutor):
                 payload["revisionInstruction"] = revision
             source = json.dumps(payload, ensure_ascii=False)
         media = []
-        attachments = parse_revision_attachments(config) if revision else []
-        if attachments:
-            if self.attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
-            images = self.attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
+        if revision:
+            media = revision_image_paths(
+                load_revision_images(
+                    task_id=task.task_id,
+                    workspace=workspace,
+                    config=config,
+                    downloader=self.attachment_downloader,
+                )
             )
-            media = [image["sourcePath"] for image in images]
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             output = _resolve_runner_result(
                 self.stage_runner(
@@ -286,7 +291,7 @@ class ApiCaseExecutor(TaskExecutor):
     def _extraction(config: dict) -> dict:
         value = config.get("apiExtraction")
         if value is None:
-            raise ValueError("缺少已审核的接口配置")
+            raise UserFacingError("缺少已审核的接口配置")
         if isinstance(value, str):
             value = parse_extraction(value)
         return validate_extraction_object(value)
@@ -295,7 +300,7 @@ class ApiCaseExecutor(TaskExecutor):
     def _design(config: dict, extraction: dict) -> dict:
         value = config.get("apiDesign")
         if value is None:
-            raise ValueError("缺少已审核的接口用例设计")
+            raise UserFacingError("缺少已审核的接口用例设计")
         if isinstance(value, str):
             value = parse_design_json(value)
         return validate_design_object(value, extraction)

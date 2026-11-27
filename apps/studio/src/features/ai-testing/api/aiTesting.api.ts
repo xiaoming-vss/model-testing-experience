@@ -2,35 +2,15 @@ import { skillsApi } from './skills.api'
 import { buildQuery, request } from '@/shared/api/request'
 import type {
   AiTaskListResponse,
-  RunHistoryResponse,
-  ApiCaseGenerateTask,
   CodeRiskTask,
   CodeRiskTaskRun,
   CreateCodeRiskTaskPayload,
-  FunctionalCaseGenerateTask,
-  FunctionalCaseGenerateTaskRun,
-  RequirementAnalysisTask,
   RunCodeRiskTaskPayload,
-  UiCaseGenerateTask,
+  RunHistoryResponse,
 } from '../types'
 
 export const aiTestingApi = {
   ...skillsApi,
-  getApiCaseGenerateTask: (taskId: string) =>
-    request<ApiCaseGenerateTask>(`/v1/api-case-generate-tasks/${taskId}`),
-  getFunctionalCaseGenerateTask: (taskId: string) =>
-    request<FunctionalCaseGenerateTask>(`/v1/function-case-generate-tasks/${taskId}`),
-  getFunctionalCaseGenerateTaskRun: (runId: string) =>
-    request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}`),
-  generateFunctionalCaseRelationAnalysis: (runId: string, connectionId?: string) =>
-    request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}/relation-analysis`, {
-      method: 'POST',
-      body: JSON.stringify(connectionId ? { connectionId } : {}),
-    }),
-  getUiCaseGenerateTask: (taskId: string) =>
-    request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}`),
-  getRequirementAnalysisTask: (taskId: string) =>
-    request<RequirementAnalysisTask>(`/v1/requirement-analysis-tasks/${taskId}`),
   getCodeRiskTasks: (
     projectId: string,
     params: {

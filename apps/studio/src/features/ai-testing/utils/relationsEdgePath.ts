@@ -127,7 +127,7 @@ function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRe
   const rects = cards.map((r) => expand(r, clearance))
   const outerStart = boundary(expand(source, clearance), start), outerEnd = boundary(expand(target, clearance), end)
   if (!clear(start, outerStart, cards) || !clear(outerEnd, end, cards)) return candidate
-  // Most fishbone links can use a free horizontal/vertical corridor. Validate
+  // Most graph links can use a free horizontal/vertical corridor. Validate
   // these short detours before constructing the full corner visibility graph.
   const midX = (outerStart.x + outerEnd.x) / 2
   const midY = (outerStart.y + outerEnd.y) / 2

@@ -5,9 +5,6 @@ from support.gitlab_resource_proxy import (
     BRANCHES_URL as BRANCHES_URL,
 )
 from support.gitlab_resource_proxy import (
-    COMPARE_RESPONSE as COMPARE_RESPONSE,
-)
-from support.gitlab_resource_proxy import (
     GROUPS_URL as GROUPS_URL,
 )
 from support.gitlab_resource_proxy import (
@@ -493,80 +490,6 @@ async def test_client_raises_on_invalid_base_url_as_resource_error():
         await client.list_groups("not-a-url", "glpat-secret-token")
 
     assert exc_info.value.status_code == 0
-
-
-# ---------------------------------------------------------------------------
-# 工单 08:compare API(迭代代码概览统计)
-# ---------------------------------------------------------------------------
-
-
-def test_diff_line_stats_counts_additions_and_deletions():
-    from testing_agent.services.gitlab_resource import diff_line_stats
-
-    assert diff_line_stats("@@ -1,2 +1,3 @@\n+a\n+b\n-c\n") == (2, 1)
-    assert diff_line_stats("") == (0, 0)
-    # 文件头行(+++/---)不计入。
-    assert diff_line_stats("+++ b/src/auth.py\n--- a/src/auth.py\n+x\n-y\n") == (1, 1)
-
-
-def test_compare_payload_computes_stats_from_diffs():
-    from testing_agent.services.gitlab_resource import compare_payload
-
-    assert compare_payload(COMPARE_RESPONSE) == {
-        "commitsCount": 3,
-        "additions": 4,
-        "deletions": 2,
-    }
-    assert compare_payload({"commits": None, "diffs": None}) == {
-        "commitsCount": 0,
-        "additions": 0,
-        "deletions": 0,
-    }
-
-
-@pytest.mark.asyncio
-async def test_client_compares_repository_branches():
-    requests = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        return httpx.Response(200, json=COMPARE_RESPONSE)
-
-    client = GitLabResourceClient(transport=httpx.MockTransport(respond))
-
-    result = await client.compare_repository_branches(
-        "https://gitlab.example.com",
-        "glpat-secret-token",
-        "team/api",
-        from_ref="4b825dc642cb6eb9a060e54bf8d69288fbee4904",
-        to_ref="develop",
-    )
-
-    assert str(requests[0].url) == (
-        "https://gitlab.example.com/api/v4/projects/team%2Fapi/repository/compare"
-        "?from=4b825dc642cb6eb9a060e54bf8d69288fbee4904&to=develop"
-    )
-    assert requests[0].headers["PRIVATE-TOKEN"] == "glpat-secret-token"
-    assert result == {"commitsCount": 3, "additions": 4, "deletions": 2}
-
-
-@pytest.mark.asyncio
-async def test_client_compare_missing_ref_raises_resource_error():
-    def respond(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(404, json={"message": "404 ref not found"})
-
-    client = GitLabResourceClient(transport=httpx.MockTransport(respond))
-
-    with pytest.raises(GitLabResourceError) as exc_info:
-        await client.compare_repository_branches(
-            "https://gitlab.example.com",
-            "glpat-secret-token",
-            "team/api",
-            from_ref="main",
-            to_ref="deleted-branch",
-        )
-
-    assert exc_info.value.status_code == 404
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { api, listItems } from '@/services/api'
 import { ListPagination } from '@/shared/components/ListPagination'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { tableFooterCompactClass } from '@/shared/utils/surfaceClasses'
 import { getErrorMessage } from '@/utils/format'
 
@@ -60,7 +60,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
         onClick={() => { const ids = new Set(filtered.map(item => item.caseId)); onChange((value ?? []).filter(id => !ids.has(id))) }}>取消筛选结果</Button>
       <Button size="small" disabled={busy || !value?.length} onClick={() => onChange([])}>清空选择</Button>
     </Space>
-    <Table<SourceCase> size="small" rowKey="caseId" tableLayout="fixed" dataSource={filtered.slice((page - 1) * pageSize, page * pageSize)}
+    <Table<SourceCase> size="small" rowKey="caseId" tableLayout="fixed" dataSource={pageSlice(filtered, page, pageSize)}
       loading={query.isFetching} pagination={false} scroll={{ y: tableHeight }}
       locale={{ emptyText: query.error ? '用例读取失败' : !query.data?.length ? '暂无正式功能用例' : '没有符合筛选条件的用例' }}
       rowSelection={{ selectedRowKeys: value ?? [], preserveSelectedRowKeys: true, columnWidth: 40,

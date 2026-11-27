@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Any
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import load_only
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_assert_rule import ApiAssertRule
@@ -23,6 +24,23 @@ from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.repositories.auxiliary_execution import latest_task_status_subquery
 from testing_agent.repositories.base import ResourceRepository
+
+TASK_SUMMARY_COLUMNS = (
+    AiGenerateTask.task_id,
+    AiGenerateTask.task_type,
+    AiGenerateTask.name,
+    AiGenerateTask.project_id,
+    AiGenerateTask.sprint_id,
+    AiGenerateTask.requirement_id,
+    AiGenerateTask.order_id,
+    AiGenerateTask.execution_entry_id,
+    AiGenerateTask.creator_user_id,
+    AiGenerateTask.source_type,
+    AiGenerateTask.interface_ids_json,
+    AiGenerateTask.instruction,
+    AiGenerateTask.created_at,
+    AiGenerateTask.updated_at,
+)
 
 
 def project_ui_source_cases(rows: Iterable[tuple[FunctionTestCase, str]]) -> list[dict[str, Any]]:
@@ -303,7 +321,11 @@ class AiGenerateTaskRepository(ResourceRepository):
             keyword=keyword,
         )
         latest = latest_task_status_subquery(project_id, task_type)
-        statement = select(AiGenerateTask, latest.c.latest_run_status).select_from(AiGenerateTask)
+        statement = (
+            select(AiGenerateTask, latest.c.latest_run_status)
+            .options(load_only(*TASK_SUMMARY_COLUMNS))
+            .select_from(AiGenerateTask)
+        )
         statement = statement.outerjoin(latest, latest.c.task_id == AiGenerateTask.task_id)
         statement = self._apply_joins(statement, joins)
         statement = statement.where(*conditions)
@@ -391,6 +413,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                 FunctionTestSuite.name == name,
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_function_suite(self, suite_id: str) -> FunctionTestSuite | None:
@@ -415,6 +438,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                     )
                     .order_by(FunctionTestCase.order_no, FunctionTestCase.id)
                     .with_for_update()
+                    .execution_options(populate_existing=True)
                 )
             ).all()
         )
@@ -434,6 +458,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                 UiTestSuite.suite_id == suite_id,
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def list_ui_cases(self, suite_id: str) -> list[UiTestCase]:
@@ -446,6 +471,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                     )
                     .order_by(UiTestCase.order_no, UiTestCase.id)
                     .with_for_update()
+                    .execution_options(populate_existing=True)
                 )
             ).all()
         )

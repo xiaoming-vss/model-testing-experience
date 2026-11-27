@@ -68,10 +68,13 @@ class Bug(Base):
         Integer, default=0, server_default="0", comment="Bug 重新激活累计次数"
     )
     severity: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="normal", comment="Bug 严重程度"
+        String(20),
+        nullable=False,
+        default="normal",
+        comment="Bug 严重程度：fatal/serious/normal/minor",
     )
     priority: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="medium", comment="优先级"
+        String(20), nullable=False, default="medium", comment="优先级：urgent/high/medium/low"
     )
     # 创建人保留最初提交人，不随转派变化；责任人可独立转派。
     reporter_user_id: Mapped[str] = mapped_column(

@@ -19,7 +19,6 @@ from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_suite import PerfSuiteRepository
 from testing_agent.repositories.perf_suite_run import PerfSuiteRunRepository
 from testing_agent.schemas.perf_suite import (
-    PerfSuiteCaseOrderUpdate,
     PerfSuiteCaseResponse,
     PerfSuiteCreate,
     PerfSuiteResponse,
@@ -68,6 +67,7 @@ class PerfSuiteService:
             yaml=case.yaml,
             created_at=case.created_at,
             updated_at=case.updated_at,
+            invalidated_at=case.invalidated_at,
         ).model_dump(by_alias=True, mode="json")
 
     def _summary(
@@ -143,11 +143,17 @@ class PerfSuiteService:
     async def list(self, user_id: str, project_id: str) -> dict[str, Any]:
         await require_project_id(self.repository.session, user_id, project_id, action="read")
         suites = await self.repository.list_by_project(project_id)
-        items = []
-        for suite in suites:
-            cases = await self.cases.list_by_suite(suite.suite_id)
-            last_run = await self.runs.latest_by_suite(suite.suite_id)
-            items.append(self._summary(suite, cases, last_run))
+        suite_ids = [suite.suite_id for suite in suites]
+        cases_by_suite = await self.cases.list_by_suites(suite_ids)
+        latest_by_suite = await self.runs.latest_by_suites(suite_ids)
+        items = [
+            self._summary(
+                suite,
+                cases_by_suite.get(suite.suite_id, []),
+                latest_by_suite.get(suite.suite_id),
+            )
+            for suite in suites
+        ]
         return {"total": len(items), "items": items}
 
     async def get(self, user_id: str, suite_id: str) -> dict[str, Any]:
@@ -182,20 +188,6 @@ class PerfSuiteService:
             await self.repository.rollback()
             raise dynamic_error(ErrPerfCaseNameAlreadyUse, "该性能测试集名称已存在") from exc
         await self.repository.refresh(suite)
-        return await self._detail(suite, include_cases=True)
-
-    async def reorder(
-        self, user_id: str, suite_id: str, body: PerfSuiteCaseOrderUpdate
-    ) -> dict[str, Any]:
-        suite = await self._accessible(user_id, suite_id, action="write")
-        cases = await self.cases.list_by_suite(suite.suite_id)
-        by_id = {case.case_id: case for case in cases}
-        if len(body.case_ids) != len(set(body.case_ids)) or set(body.case_ids) != set(by_id):
-            raise ErrBadRequest()
-        for index, case_id in enumerate(body.case_ids, start=1):
-            by_id[case_id].order_no = index
-        suite.updated_at = datetime.now(UTC)
-        await self.repository.commit()
         return await self._detail(suite, include_cases=True)
 
     async def delete(self, user_id: str, suite_id: str) -> dict[str, Any]:

@@ -26,8 +26,8 @@ function getRunSortTime(run: CodeRiskTaskRun) {
 }
 
 /**
- * 需求详情「代码风险」页签的工作区数据源，与其他设计类页签同一交互形态：
- * 运行记录按需求聚合展示，首次运行自动创建绑定当前需求的任务，不提供新建任务表单。
+ * 需求详情「代码风险」弹窗的数据源：运行记录按需求聚合展示，首次运行自动创建
+ * 绑定当前需求的任务，不提供新建任务表单。弹窗未打开时不读取任务、运行和仓库关联。
  */
 export function useRequirementCodeRiskWorkspace(requirementId: string, projectId: string, active: boolean) {
   const client = useQueryClient()
@@ -53,7 +53,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
     </div>,
   }
   const personalLlm = usePersonalLlmChoice(projectId, understandingRunOptions)
-  const personalGitlab = usePersonalConnectionChoice('gitlab')
+  const personalGitlab = usePersonalConnectionChoice()
 
   const tasksQuery = useQuery({
     queryKey: ['codeRiskTasks', projectId, requirementId],
@@ -63,7 +63,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         page: 1,
         pageSize: 100,
       }),
-    enabled: Boolean(projectId),
+    enabled: active && Boolean(projectId),
   })
   // Requirement-scoped task counts are small; the server filter avoids project-wide reads.
   const requirementTasks = listItems(tasksQuery.data)
@@ -72,7 +72,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
   const bindingsQuery = useQuery({
     queryKey: ['requirementSoftwareRepositories', requirementId],
     queryFn: () => interfaceLibraryApi.getRequirementSoftwareRepositories(requirementId),
-    enabled: Boolean(requirementId),
+    enabled: active && Boolean(requirementId),
   })
   const hasRunnableBindings = bindingsQuery.data
     ? listItems(bindingsQuery.data).some(
@@ -84,7 +84,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
     queries: requirementTasks.map(task => ({
       queryKey: ['codeRiskTaskRuns', task.taskId, 1, RUNS_PAGE_SIZE],
       queryFn: () => aiTestingApi.getCodeRiskTaskRuns(task.taskId!, { page: 1, pageSize: RUNS_PAGE_SIZE }),
-      enabled: Boolean(task.taskId),
+      enabled: active && Boolean(task.taskId),
       refetchInterval: active ? RUN_HISTORY_POLL_INTERVAL : false,
     })),
   })

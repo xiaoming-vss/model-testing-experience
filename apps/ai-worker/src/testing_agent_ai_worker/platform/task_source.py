@@ -1,7 +1,7 @@
 """Platform task source and protocol adaptation.
 
 调用链路：
-- `TaskPoller.poll -> TaskService.poll_one -> HttpClaimTaskSource.poll_task`
+- `TaskPoller.poll -> HttpClaimTaskSource.poll_task`
 - `poll_task -> claim -> snapshot -> llm-credentials`
 - `poll_task -> _to_domain_task`
 
@@ -185,50 +185,14 @@ class HttpClaimTaskSource:
 
         snapshot_task = snapshot_response.run
 
-        snapshot_checkpoint_enabled = (
-            snapshot_task.checkpoint_enabled
-            if "checkpoint_enabled" in snapshot_task.model_fields_set
-            else None
-        )
-        snapshot_current_stage = snapshot_task.current_stage
-        snapshot_config_json = snapshot_task.config_json
-
-        # code_risk_analysis 快照字段可能落在顶层或 run 内:顶层显式提供时优先(与 checkpoint
-        # 字段的 model_fields_set 判定一致),否则回退 run 内,避免空对象误落层。
-        requirement_payload = (
-            snapshot_response.requirement
-            if snapshot_response.requirement is not None
-            else snapshot_task.requirement
-        )
-        bindings_payload = (
-            snapshot_response.bindings
-            if "bindings" in snapshot_response.model_fields_set
-            else snapshot_task.bindings
-        )
-        existing_tests_payload = (
-            snapshot_response.existing_tests
-            if snapshot_response.existing_tests is not None
-            else snapshot_task.existing_tests
-        )
-        source_kind = snapshot_response.source_kind or snapshot_task.source_kind
-        source_repository = snapshot_response.source_repository or snapshot_task.source_repository
-        source_commit = snapshot_response.source_commit or snapshot_task.source_commit
-
-        if snapshot_response.checkpoint_enabled is not None:
-            snapshot_checkpoint_enabled = snapshot_response.checkpoint_enabled
-        # 兼容 checkpoint 字段可能落在 snapshot 顶层，也可能仍落在 snapshot.run 内。
-        snapshot_current_stage = snapshot_response.current_stage or snapshot_current_stage
-        snapshot_config_json = snapshot_response.config_json or snapshot_config_json
-
         checkpoint_enabled = (
-            snapshot_checkpoint_enabled
-            if snapshot_checkpoint_enabled is not None
+            snapshot_response.checkpoint_enabled
+            if snapshot_response.checkpoint_enabled is not None
             else bool(claimed_task.checkpoint_enabled)
         )
-        current_stage = snapshot_current_stage or claimed_task.current_stage
-        config_json = snapshot_config_json or claimed_task.config_json
-        # 任务类型也保持和老平台一致的回退顺序，避免后端字段来源切换时取错值。
-        task_type = snapshot_response.task_type or snapshot_task.task_type or claimed_task.task_type
+        current_stage = snapshot_response.current_stage or claimed_task.current_stage
+        config_json = snapshot_response.config_json or claimed_task.config_json
+        task_type = snapshot_response.task_type
         if task_type.strip().lower() == "functional_case_generate":
             # 功能用例消费的是需求理解 JSON，不是原始需求文档；documentType 不参与格式判断。
             document_type = ""
@@ -239,10 +203,8 @@ class HttpClaimTaskSource:
             document_type = self._resolve_document_type(snapshot_task)
             source_format, source_format_version = "", ""
         source_type = self._resolve_source_type(task_type, snapshot_task, document_type)
-        daily_metrics = snapshot_response.daily_metrics or snapshot_task.daily_metrics
 
         return Task(
-            claim_id=claimed_task.claim_id or claimed_task.task_id,
             task_id=claimed_task.task_id,
             attempt_id=claimed_task.attempt_id or snapshot_task.attempt_id,
             generate_task_id=claimed_task.generate_task_id or snapshot_task.generate_task_id,
@@ -261,19 +223,17 @@ class HttpClaimTaskSource:
                 else None
             ),
             requirement_input=(
-                RequirementInput.model_validate(requirement_payload)
-                if requirement_payload
+                RequirementInput.model_validate(snapshot_task.requirement)
+                if snapshot_task.requirement
                 else None
             ),
-            bindings=[RepositoryBinding.model_validate(item) for item in bindings_payload],
+            bindings=[RepositoryBinding.model_validate(item) for item in snapshot_task.bindings],
             existing_tests=(
-                ExistingTestCases.model_validate(existing_tests_payload)
-                if existing_tests_payload
+                ExistingTestCases.model_validate(snapshot_task.existing_tests)
+                if snapshot_task.existing_tests
                 else ExistingTestCases()
             ),
-            gitlab_credentials_url=(
-                snapshot_response.gitlab_credentials_url or snapshot_task.gitlab_credentials_url
-            ),
+            gitlab_credentials_url=snapshot_task.gitlab_credentials_url,
             payload=TaskPayload(
                 openapi_content=snapshot_task.source_content,
                 source_content=snapshot_task.source_content,
@@ -286,7 +246,7 @@ class HttpClaimTaskSource:
                 source_format_version=source_format_version,
                 target_scope=snapshot_task.target_scope,
                 extra_instruction=snapshot_task.instruction,
-                daily_metrics=daily_metrics,
+                daily_metrics=snapshot_task.daily_metrics,
                 metadata={
                     "workflowVersion": snapshot_task.workflow_version,
                     "uiWorkflowVersion": (raw_snapshot.get("run") or {}).get("uiWorkflowVersion"),
@@ -294,24 +254,8 @@ class HttpClaimTaskSource:
                     "functionalCases": (raw_snapshot.get("run") or {}).get("functionalCases", []),
                     "documentFilename": (raw_snapshot.get("run") or {}).get("documentFilename", ""),
                     "documentFileId": (raw_snapshot.get("run") or {}).get("documentFileId", ""),
-                    "name": snapshot_task.name,
-                    "attemptId": claimed_task.attempt_id or snapshot_task.attempt_id,
-                    "generateTaskId": claimed_task.generate_task_id
-                    or snapshot_task.generate_task_id,
-                    "projectId": claimed_task.project_id or snapshot_task.project_id,
-                    "sprintId": claimed_task.sprint_id or snapshot_task.sprint_id,
-                    "requirementId": claimed_task.requirement_id or snapshot_task.requirement_id,
-                    "targetScope": snapshot_task.target_scope,
-                    "documentDownloadUrl": snapshot_task.document_download_url,
-                    "documentType": document_type,
-                    "sourceFormat": source_format,
-                    "sourceFormatVersion": source_format_version,
-                    "dailyMetrics": daily_metrics,
-                    "checkpointEnabled": checkpoint_enabled,
-                    "currentStage": current_stage,
-                    "sourceKind": source_kind,
-                    "sourceRepository": source_repository or {},
-                    "sourceCommit": source_commit,
+                    "sourceRepository": snapshot_task.source_repository or {},
+                    "sourceCommit": snapshot_task.source_commit,
                 },
             ),
         )

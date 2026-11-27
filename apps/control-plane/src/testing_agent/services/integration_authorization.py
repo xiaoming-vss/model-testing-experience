@@ -17,6 +17,7 @@ from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.models.user import User
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+from testing_agent.services.personal_credentials import has_mcp_token
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,7 +118,7 @@ class IntegrationAuthorization:
             .with_for_update()
             .execution_options(populate_existing=True)
         )
-        if connection is None or not (connection.secret_json or {}).get("token"):
+        if not has_mcp_token(connection):
             raise ErrForbidden()
         revision = digest(
             {

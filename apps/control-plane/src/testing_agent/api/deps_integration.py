@@ -37,17 +37,14 @@ def get_bug_service(
 
 def build_integration_bug_service(session: AsyncSession, settings: Settings):
     from testing_agent.repositories.integration_job import IntegrationJobRepository
-    from testing_agent.services.bug_zentao_push import BugZentaoPushService
-    from testing_agent.services.integration_authorization import IntegrationAuthorization
     from testing_agent.services.integration_bug import IntegrationBugService
+    from testing_agent.services.integration_restore import build_integration_restore_service
 
-    pushes = BugZentaoPushService(
-        build_bug_service(session, settings), get_integration_connection_service(session, settings)
-    )
+    review = build_integration_restore_service(session, settings)
     return IntegrationBugService(
         IntegrationJobRepository(session),
-        pushes,
-        IntegrationAuthorization(session, IntegrationCredentialCipher(settings.integration_key)),
+        review.pushes,
+        review.authorization,
         settings,
     )
 
@@ -64,3 +61,11 @@ def get_shared_service(
     from testing_agent.services.shared_service import SharedServiceService
 
     return SharedServiceService(connections)
+
+
+def get_zentao_mcp_candidate_query(
+    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
+):
+    from testing_agent.services.zentao_mcp import ZentaoMcpCandidateQuery
+
+    return ZentaoMcpCandidateQuery(connections)

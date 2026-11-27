@@ -8,7 +8,11 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from testing_agent_ai_worker.agent.base import AgentConfigPath, AgentResult
+from testing_agent_ai_worker.agent.base import (
+    AgentConfigPath,
+    AgentResult,
+    incomplete_output_error,
+)
 from testing_agent_ai_worker.agent.paths import resolve_runtime_paths
 from testing_agent_ai_worker.agent.temp_configs import tracked
 from testing_agent_ai_worker.config.models import NanobotConfig
@@ -98,12 +102,20 @@ class NanobotAgent:
         )
         if self._no_tools and self._tool_registry().tool_names:
             raise RuntimeError("Agent tools were registered during a no-tools run")
+        # The SDK only logs an error, an exhausted iteration budget or an empty reply, and
+        # returns the placeholder or partial text as if it were an answer. Fail instead.
         reason = result.stop_reason or str(result.metadata.get("finish_reason") or "")
+        if reason not in _COMPLETE_STOP_REASONS:
+            raise incomplete_output_error(reason)
         return AgentResult(
             content=result.content,
-            finish_reason=reason,
+            finish_reason="stop",
             usage=_usage_dict(result.usage),
         )
+
+
+# Agent-level outcomes of the pinned SDK; "stop" covers older result shapes.
+_COMPLETE_STOP_REASONS = {"completed", "stop"}
 
 
 def _usage_dict(usage: Any) -> dict[str, float]:

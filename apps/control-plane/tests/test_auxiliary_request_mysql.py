@@ -6,8 +6,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_execution import AiExecution
@@ -61,22 +65,16 @@ async def test_report_and_graph_replay_with_mysql(mysql, monkeypatch):  # noqa: 
         AsyncMock(return_value=SimpleNamespace(connection_id="llm")),
     )
     monkeypatch.setattr(authorization, "authorize_worker_actor", AsyncMock(return_value="actor"))
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    statements = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, s, _p, _x, _m: statements.append(s.lower()),
-    )
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             repository = AiGenerateTaskRepository(session)
             metrics = SimpleNamespace(get=AsyncMock(return_value={"total": 1}))
             reports = ReportWorkflow(
                 repository=repository,
                 sprint_daily_metrics_service=metrics,
                 ensure_project_access=AsyncMock(),
-                owned_run=AsyncMock(),
             )
             report_body = {
                 "sprintId": sprint["sprint_id"],
@@ -105,9 +103,9 @@ async def test_report_and_graph_replay_with_mysql(mysql, monkeypatch):  # noqa: 
             )
             graphs = GraphService(repository, orders, None)
             body = {
-                "request_id": "graph-request",
-                "connection_id": "llm",
-                "graph_input": {
+                "requestId": "graph-request",
+                "connectionId": "llm",
+                "graphInput": {
                     "requirements": [],
                     "cases": [{"case_id": "case"}],
                     "case_requirement_links": [],
@@ -119,7 +117,7 @@ async def test_report_and_graph_replay_with_mysql(mysql, monkeypatch):  # noqa: 
             ]
             changed = {
                 **body,
-                "graph_input": {**body["graph_input"], "cases": [{"case_id": "other"}]},
+                "graphInput": {**body["graphInput"], "cases": [{"case_id": "other"}]},
             }
             with pytest.raises(AppError):
                 await graphs.dispatch("actor", order["order_id"], changed)
@@ -177,8 +175,7 @@ async def test_new_auxiliary_tasks_for_different_objects_run_in_parallel(
         "require_personal_connection",
         AsyncMock(return_value=SimpleNamespace(connection_id="llm")),
     )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     entered = 0
     ready = asyncio.Event()
 
@@ -206,7 +203,6 @@ async def test_new_auxiliary_tasks_for_different_objects_run_in_parallel(
                     repository=repository,
                     sprint_daily_metrics_service=SimpleNamespace(get=AsyncMock(return_value={})),
                     ensure_project_access=AsyncMock(),
-                    owned_run=AsyncMock(),
                 )
                 return await service.run_test_report(
                     first["project_id"],
@@ -236,9 +232,9 @@ async def test_new_auxiliary_tasks_for_different_objects_run_in_parallel(
                 "actor",
                 obj["order_id"],
                 {
-                    "request_id": f"parallel-{kind}-{index}",
-                    "connection_id": "llm",
-                    "graph_input": {
+                    "requestId": f"parallel-{kind}-{index}",
+                    "connectionId": "llm",
+                    "graphInput": {
                         "requirements": [],
                         "cases": [{"case_id": "case"}],
                         "case_requirement_links": [],
@@ -293,8 +289,7 @@ async def test_same_auxiliary_request_is_idempotent_during_concurrent_first_laun
     )
     monkeypatch.setattr(authorization, "authorize_worker_actor", AsyncMock(return_value="actor"))
     metrics = SimpleNamespace(get=AsyncMock(return_value={}))
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     identity = f"same-{kind}-request"
 
     async def start():
@@ -305,7 +300,6 @@ async def test_same_auxiliary_request_is_idempotent_during_concurrent_first_laun
                     repository=repository,
                     sprint_daily_metrics_service=metrics,
                     ensure_project_access=AsyncMock(),
-                    owned_run=AsyncMock(),
                 )
                 return await service.run_test_report(
                     sprint["project_id"],
@@ -334,9 +328,9 @@ async def test_same_auxiliary_request_is_idempotent_during_concurrent_first_laun
                 "actor",
                 order["order_id"],
                 {
-                    "request_id": identity,
-                    "connection_id": "llm",
-                    "graph_input": {
+                    "requestId": identity,
+                    "connectionId": "llm",
+                    "graphInput": {
                         "requirements": [],
                         "cases": [{"case_id": "case"}],
                         "case_requirement_links": [],

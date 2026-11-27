@@ -10,7 +10,8 @@ from support.integration_jobs import claim, identity, prepare, result, started, 
 from support.integration_jobs import harness as harness
 
 from testing_agent.core.config import Settings
-from testing_agent.domain.integration_execution import digest, utc
+from testing_agent.core.utc import as_utc
+from testing_agent.domain.integration_execution import digest
 from testing_agent.models.integration_job import (
     IntegrationJobStep,
     IntegrationRestoreReview,
@@ -194,7 +195,7 @@ async def test_stale_presence_pruning_is_bounded_and_cannot_remove_fresh_contact
         assert await repository.prune(clock(), 100) == 1
         await session.commit()
         row = await session.scalar(select(IntegrationWorkerPresence))
-        assert row.worker_id == "fresh" and utc(row.last_seen_at) == clock()
+        assert row.worker_id == "fresh" and as_utc(row.last_seen_at) == clock()
 
 
 @pytest.mark.parametrize("value", [-1, True, 1.5, 86_400_001])

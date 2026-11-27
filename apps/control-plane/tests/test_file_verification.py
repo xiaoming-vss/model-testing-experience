@@ -11,10 +11,11 @@ from support.stored_files import files as files
 from support.stored_files import upload
 
 from testing_agent.core.errors import AppError
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.project import Project
 from testing_agent.models.user import User
-from testing_agent.services.file_verification import FileVerificationWorkflow, now_utc
+from testing_agent.services.file_verification import FileVerificationWorkflow
 from testing_agent.services.stored_file import StoredFileService
 
 
@@ -85,7 +86,7 @@ async def test_expired_writer_cannot_publish_after_new_generation(files, monkeyp
             with pytest.raises(AppError, match="正在核验"):
                 await service.complete("owner", file_id)
             operation = await other.scalar(select(FileVerification))
-            operation.deadline = now_utc() - timedelta(seconds=1)
+            operation.deadline = naive_utcnow() - timedelta(seconds=1)
             await other.commit()
             await service.complete("owner", file_id)
             newest = await service.get(file_id)
@@ -117,7 +118,7 @@ async def test_cancelled_thread_late_write_keeps_reclaimable_tombstone(files, mo
         with pytest.raises(asyncio.CancelledError):
             await work
         operation = await files.session.scalar(select(FileVerification))
-        operation.deadline = operation.gc_after = now_utc() - timedelta(seconds=1)
+        operation.deadline = operation.gc_after = naive_utcnow() - timedelta(seconds=1)
         await files.session.commit()
         original_delete = files.storage.delete
 
@@ -133,7 +134,7 @@ async def test_cancelled_thread_late_write_keeps_reclaimable_tombstone(files, mo
         assert (
             files.storage.client.head_object(Bucket=row.bucket, Key=calls[0])["ContentLength"] == 5
         )
-        operation.gc_after = now_utc() - timedelta(seconds=1)
+        operation.gc_after = naive_utcnow() - timedelta(seconds=1)
         await files.session.commit()
         assert (await collector.collect())["deleted"] == 1
         with pytest.raises(files.storage.client.exceptions.ClientError):

@@ -1,5 +1,6 @@
 import asyncio
 import json
+from contextlib import suppress
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -10,18 +11,23 @@ from test_worker.control_plane.client import (
     ControlPlaneRequestError,
     ExecutionLeaseLost,
 )
+from test_worker.core.reporting import ReportDeliveryError
 from test_worker.poller import task_poller
 from test_worker.poller.task_poller import TaskLease, TaskPoller
 from test_worker.ui.step_progress import report_steps
 
+# The same set classifies every control-plane call; a 400 or 422 is a request problem.
+LEASE_LOST_STATUSES = [401, 403, 404, 409, 410]
+
 
 @pytest.mark.parametrize("domain", ["api", "ui"])
-def test_explicitly_rejected_lease_cancels_active_execution(domain):
+@pytest.mark.parametrize("status", LEASE_LOST_STATUSES)
+def test_explicitly_rejected_lease_cancels_active_execution(domain, status):
     canceled = []
 
     class Client:
         def task_stop_requested(self, *_args):
-            raise ControlPlaneRequestError("GET", "/task", 400)
+            raise ControlPlaneRequestError("GET", "/task", status)
 
     async def run():
         async def operation():
@@ -40,13 +46,36 @@ def test_explicitly_rejected_lease_cancels_active_execution(domain):
     assert canceled == [True]
 
 
+@pytest.mark.parametrize("status", [400, 422])
+def test_stop_check_request_problem_does_not_end_the_lease(status):
+    checked = asyncio.Event()
+
+    class Client:
+        def task_stop_requested(self, *_args):
+            checked.set()
+            raise ControlPlaneRequestError("GET", "/task", status)
+
+    async def run():
+        async def operation():
+            await checked.wait()
+            # Outlive the failed check so a wrong lease loss would be observed.
+            await asyncio.sleep(0.05)
+            return "done"
+
+        poller = TaskPoller(SimpleNamespace(redis_url=""), Client(), None, None)
+        return await asyncio.wait_for(
+            poller._run_until_stopped("ui", "task", operation()), 2
+        )
+
+    # A lease wrongly declared lost would surface as ExecutionLeaseLost before this.
+    assert asyncio.run(run()) == "done"
+
+
 @pytest.mark.parametrize(
     "status, rejected",
     [
         (400, False),
-        (401, True),
-        (403, True),
-        (409, True),
+        *[(status, True) for status in LEASE_LOST_STATUSES],
         (422, False),
         (503, False),
     ],
@@ -70,6 +99,10 @@ def test_api_queue_is_not_starved_by_continuous_ui_backlog():
     counts = {"ui": 0, "api_claims": 0, "api": 0}
 
     class Client:
+        # A control plane without the shared claim endpoint.
+        def claim_next_task(self):
+            return NotImplemented
+
         def claim_task(self):
             return SimpleNamespace(task_id="fixture-ui")
 
@@ -408,3 +441,395 @@ def test_execution_failure_still_reports_error_once():
     assert completed[0].status == "error"
     assert completed[0].success is False
     assert completed[0].error_message == "assertion failed"
+
+
+def _collect_errors(events):
+    return patch.object(
+        task_poller.logger,
+        "error",
+        side_effect=lambda message, meta: events.append((message, meta)),
+    )
+
+
+def test_api_collection_item_delivery_failure_is_not_execution_error():
+    executed = []
+    completed = []
+    events = []
+
+    class Client:
+        def report_api_task_started(self, *args):
+            pass
+
+        def report_api_task_heartbeat(self, *args):
+            pass
+
+        def get_api_task_snapshot(self, task_id):
+            return {
+                "collectionRun": {
+                    "taskId": "task-1",
+                    "runId": "run-1",
+                    "items": [
+                        {"itemId": "item-1", "caseRun": {"caseId": "case-1"}},
+                        {"itemId": "item-2", "caseRun": {"caseId": "case-2"}},
+                    ],
+                }
+            }
+
+        def report_api_collection_item_started(self, task_id, item_id, payload):
+            pass
+
+        def report_api_collection_item_completed(self, task_id, item_id, payload):
+            raise ControlPlaneRequestError(
+                "POST",
+                f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/completed",
+                503,
+            )
+
+        def report_api_task_completed(self, task_id, result):
+            completed.append(result)
+
+    class CaseRunner:
+        async def run(self, case_run, runtime_vars):
+            executed.append(case_run["caseId"])
+            return {"status": "success", "success": True, "runtimeVarsJson": "{}"}
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        poller._api_collection_runner._case_runner = CaseRunner()
+        await poller._handle_api_task(
+            {"taskId": "task-1", "taskType": "api_collection_run", "runId": "run-1"}
+        )
+
+    with _collect_errors(events):
+        asyncio.run(run())
+
+    # The first case succeeded but its result could not be delivered. That is a
+    # delivery failure, not an execution error: no error result is synthesized and
+    # later items are not executed on top of an undelivered one.
+    assert executed == ["case-1"]
+    assert completed == []
+    deliveries = [
+        meta for message, meta in events if message == "api task result delivery failed"
+    ]
+    assert [meta["statusCode"] for meta in deliveries] == [503]
+    assert not any(message == "api task execution error" for message, _ in events)
+
+
+def test_ui_suite_item_delivery_failure_is_not_turned_into_an_error_result(
+    monkeypatch, tmp_path
+):
+    from test_worker.contracts.types import (
+        UiCaseSnapshot,
+        UiSuiteRunItemSnapshot,
+        UiTestSuiteRunSnapshot,
+    )
+    from test_worker.core.reporting import ReportDeliveryError
+    from test_worker.ui import suite_runner
+
+    closed = []
+
+    class Page:
+        url = "https://app.example.test/"
+
+    class Context:
+        async def new_page(self):
+            return Page()
+
+        async def close(self):
+            closed.append("context")
+
+    class Browser:
+        async def new_context(self, **_kwargs):
+            return Context()
+
+        async def close(self):
+            closed.append("browser")
+
+    async def launch(**_kwargs):
+        return Browser()
+
+    class Driver:
+        chromium = SimpleNamespace(launch=launch)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+    class Client:
+        def report_suite_item_started(self, *args):
+            pass
+
+        def report_ui_steps(self, *args):
+            pass
+
+        def report_suite_item_completed(self, task_id, item_id, payload):
+            raise ControlPlaneRequestError(
+                "POST",
+                f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/completed",
+                503,
+            )
+
+    monkeypatch.setattr(suite_runner, "async_playwright", Driver)
+    snapshot = UiTestSuiteRunSnapshot(
+        task_id="task-1",
+        run_id="run-1",
+        items=[
+            UiSuiteRunItemSnapshot(
+                item_id="item-1",
+                continue_on_failure=False,
+                case=UiCaseSnapshot(case_id="case-1", name="用例一"),
+            ),
+            UiSuiteRunItemSnapshot(
+                item_id="item-2",
+                continue_on_failure=False,
+                case=UiCaseSnapshot(case_id="case-2", name="用例二"),
+            ),
+        ],
+    )
+    config = SimpleNamespace(artifacts_root_dir=str(tmp_path), trace_enabled=False)
+    runner = suite_runner.UiSuiteRunner(config, Client())
+
+    # The item passed. A failed report used to come back as a suite `error` result.
+    with pytest.raises(ReportDeliveryError) as caught:
+        asyncio.run(runner.run(snapshot))
+
+    assert caught.value.status_code == 503
+    assert closed == ["context", "browser"]
+
+
+def test_ui_suite_delivery_failure_is_not_reported_as_execution_error():
+    completed = []
+    events = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            return SimpleNamespace(case_run=None, suite_run=SimpleNamespace())
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    class Runner:
+        async def run(self, snapshot):
+            raise ReportDeliveryError(
+                "task-1",
+                ControlPlaneRequestError(
+                    "POST",
+                    "/internal/ui-worker/tasks/task-1/suite-items/item-1/completed",
+                    503,
+                ),
+            )
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            Runner(),
+        )
+        await poller._handle_task(
+            UiWorkerTask(
+                task_id="task-1",
+                task_type="suite_run",
+                run_id="run-1",
+                case_id="case-1",
+            )
+        )
+
+    with _collect_errors(events):
+        asyncio.run(run())
+
+    assert completed == []
+    deliveries = [
+        meta for message, meta in events if message == "ui task result delivery failed"
+    ]
+    assert [meta["statusCode"] for meta in deliveries] == [503]
+    assert not any(message == "task execution error" for message, _ in events)
+
+
+@pytest.mark.parametrize("stage", ["started", "snapshot"])
+@pytest.mark.parametrize("status", [404, 409])
+def test_ui_task_refused_before_it_runs_is_dropped_not_reported(stage, status):
+    completed = []
+    warnings = []
+
+    class Client:
+        def report_task_started(self, *args):
+            if stage == "started":
+                raise ControlPlaneRequestError("POST", "/started", status)
+
+        def get_task_snapshot(self, task_id):
+            raise ControlPlaneRequestError("GET", "/snapshot", status)
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        await poller._handle_task(
+            UiWorkerTask(task_id="task-1", task_type="case_debug", run_id="run-1")
+        )
+
+    with patch.object(
+        task_poller.logger, "warn", side_effect=lambda *args: warnings.append(args)
+    ):
+        asyncio.run(run())
+
+    # The control plane already ended this execution; an error result would be a new one.
+    assert completed == []
+    assert warnings == [
+        ("ui execution lease lost", {"taskId": "task-1", "statusCode": status})
+    ]
+
+
+@pytest.mark.parametrize("stage", ["started", "snapshot"])
+def test_api_task_refused_before_it_runs_is_dropped_not_reported(stage):
+    completed = []
+    warnings = []
+
+    class Client:
+        def report_api_task_started(self, *args):
+            if stage == "started":
+                raise ControlPlaneRequestError("POST", "/started", 409)
+
+        def get_api_task_snapshot(self, task_id):
+            raise ControlPlaneRequestError("GET", "/snapshot", 403)
+
+        def report_api_task_completed(self, task_id, result):
+            completed.append(result)
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        await poller._handle_api_task(
+            {"taskId": "task-1", "taskType": "api_case_debug", "runId": "run-1"}
+        )
+
+    with patch.object(
+        task_poller.logger, "warn", side_effect=lambda *args: warnings.append(args)
+    ):
+        asyncio.run(run())
+
+    assert completed == []
+    assert warnings[0][0] == "api execution lease lost"
+
+
+def test_snapshot_server_error_is_still_reported_with_the_safe_message():
+    completed = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            raise ControlPlaneRequestError(
+                "GET", "/internal/ui-worker/tasks/task-1/snapshot", 500
+            )
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        await poller._handle_task(
+            UiWorkerTask(task_id="task-1", task_type="case_debug", run_id="run-1")
+        )
+
+    asyncio.run(run())
+
+    assert len(completed) == 1
+    assert completed[0].status == "error"
+    assert completed[0].error_message == (
+        "control plane request failed: GET /internal/ui-worker/tasks/task-1/snapshot"
+        " -> 500 server error"
+    )
+
+
+def test_unknown_execution_error_is_logged_by_type_only():
+    completed = []
+    events = []
+
+    class Client:
+        def report_task_started(self, *args):
+            pass
+
+        def get_task_snapshot(self, task_id):
+            raise RuntimeError(
+                "SECRET-MARKER https://user:pass@host/?token=SECRET-MARKER"
+            )
+
+        def report_task_completed(self, task_id, result):
+            completed.append(result)
+
+    async def run():
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=10000),
+            Client(),
+            None,
+            None,
+        )
+        await poller._handle_task(
+            UiWorkerTask(task_id="task-1", task_type="case_debug", run_id="run-1")
+        )
+
+    with _collect_errors(events):
+        asyncio.run(run())
+
+    assert [meta for message, meta in events if message == "task execution error"] == [
+        {"taskId": "task-1", "taskType": "case_debug", "errorType": "RuntimeError"}
+    ]
+    assert "SECRET-MARKER" not in json.dumps(events)
+
+
+def test_heartbeat_request_problem_does_not_end_the_lease():
+    warnings = []
+
+    class Client:
+        def report_task_heartbeat(self, *args):
+            raise ControlPlaneRequestError("POST", "/heartbeat", 400)
+
+    async def run():
+        lease = TaskLease(5)
+        poller = TaskPoller(
+            SimpleNamespace(worker_id="fixture", heartbeat_interval_ms=1),
+            Client(),
+            None,
+            None,
+        )
+        heartbeat = asyncio.create_task(poller._heartbeat_loop("task-1", lease))
+        await asyncio.sleep(0.05)
+        alive = not heartbeat.done()
+        heartbeat.cancel()
+        with suppress(asyncio.CancelledError):
+            await heartbeat
+        assert alive and not lease.lost
+
+    with patch.object(
+        task_poller.logger, "warn", side_effect=lambda *args: warnings.append(args)
+    ):
+        asyncio.run(run())
+
+    assert warnings and all(message == "heartbeat error" for message, _ in warnings)

@@ -6,6 +6,7 @@ import { message } from '@/shared/utils/feedback'
 import { bugsApi } from '../api/bugs.api'
 import type { ZentaoRemoteGroup, ZentaoRemotePreview } from '../types'
 import { BUG_PRIORITY_LABELS, BUG_RESOLUTION_LABELS, BUG_SEVERITY_LABELS, BUG_STATUS_LABELS } from '../utils/bugMeta'
+import { invalidateBug } from '../utils/invalidateBug'
 
 type Props = {
   open: boolean
@@ -78,6 +79,7 @@ export function BugZentaoPullModal({ open, bugId, projectId, onClose }: Props) {
   const pull = useMutation({
     mutationFn: (data: ZentaoRemotePreview) => bugsApi.pullBugZentao(bugId, {
       remoteDigest: data.remoteDigest,
+      localDigest: data.localDigest,
       groups: data.groups.map((group) => ({
         group: group.group,
         action: choices[group.group] ?? 'keep_local',
@@ -92,9 +94,8 @@ export function BugZentaoPullModal({ open, bugId, projectId, onClose }: Props) {
     }),
     onSuccess: (result) => {
       message.success(`已应用 ${result.applied.length} 组，保留 ${result.kept.length} 组`)
+      void invalidateBug(client, bugId)
       void client.invalidateQueries({ queryKey: ['bugZentaoPush', bugId] })
-      void client.invalidateQueries({ queryKey: ['bugDetail', bugId] })
-      void client.invalidateQueries({ queryKey: ['bugActivities', bugId] })
       onClose()
     },
     onError: (error) => message.error(getErrorMessage(error)),

@@ -65,7 +65,7 @@ class ApiCollectionRun(Base):
         String(64), index=True, nullable=False, comment="本次运行发起者用户业务标识"
     )
     trigger_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="manual", comment="运行触发方式"
+        String(20), nullable=False, default="manual", comment="运行触发方式：manual"
     )
     status: Mapped[str] = mapped_column(
         String(20),
@@ -73,8 +73,8 @@ class ApiCollectionRun(Base):
         nullable=False,
         default="pending",
         comment=(
-            "API 测试集运行状态：pending/queued/claimed/running/success/"
-            "failed/error/canceled/skipped"
+            "API 测试集运行状态：pending/queued/claimed/running/success/failed/er"
+            "ror/canceled/skipped"
         ),
     )
     total_count: Mapped[int] = mapped_column(
@@ -157,8 +157,8 @@ class ApiCollectionRunItem(Base):
         nullable=False,
         default="pending",
         comment=(
-            "API 测试集条目状态：pending/queued/claimed/running/success/"
-            "failed/error/canceled/skipped"
+            "API 测试集条目状态：pending/queued/claimed/running/success/failed/er"
+            "ror/canceled/skipped"
         ),
     )
     continue_on_failure: Mapped[bool] = mapped_column(

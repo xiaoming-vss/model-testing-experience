@@ -1,24 +1,5 @@
 export type IntegrationConnectionStatus = 'active' | 'auth_failed' | 'disabled' | (string & {})
 
-export type ZentaoConnection = {
-  connectionId: string
-  projectId?: string
-  provider: 'zentao' | string
-  name: string
-  baseUrl: string
-  allowHttp?: boolean
-  insecureSkipVerify?: boolean
-  authType: 'account_password' | string
-  account: string
-  status: IntegrationConnectionStatus
-  hasAccessToken: boolean
-  tokenExpiresAt?: string
-  lastAuthAt?: string
-  lastAuthError?: string
-  createdAt?: string
-  updatedAt?: string
-}
-
 export type GitlabConnection = {
   connectionId: string
   projectId?: string
@@ -84,9 +65,7 @@ export type ZentaoRemoteOption = {
   code?: string
   title?: string
   remoteResourceId?: string
-  remote_resource_id?: string
   remoteNameSnapshot?: string
-  remote_name_snapshot?: string
   [key: string]: unknown
 }
 

@@ -134,6 +134,31 @@ class K8sConfigCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("0 failure(s)", result.stdout)
 
+    def test_admin_password_the_control_plane_refuses_fails_the_check(self) -> None:
+        # The service does not start without it, so an empty value is not "configured elsewhere".
+        for password in ("", "short", "changeme", "test-jwt", "worker-token"):
+            for side in ("control-plane values", "platform"):
+                with self.subTest(password=password or "<empty>", side=side):
+                    if side == "platform":
+                        self.platform.write_text(
+                            PLATFORM_TOML.replace(
+                                "initial-password-000000000000", password
+                            ),
+                            encoding="utf-8",
+                        )
+                    else:
+                        self.write_values(
+                            **{
+                                "control-plane-values.yaml": CONTROL_PLANE_VALUES.replace(
+                                    "initial-password-000000000000", password
+                                )
+                            }
+                        )
+                    result = self.run_check()
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn(f"Super admin initial_password: {side}", result.stdout)
+                    self.assertNotIn("initial-password-000000000000", result.stdout)
+
     def test_template_defaults_pass(self) -> None:
         result = subprocess.run(
             [sys.executable, str(SCRIPT)],

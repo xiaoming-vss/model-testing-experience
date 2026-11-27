@@ -1,12 +1,13 @@
 """Existing run response shapes projected from unified auxiliary executions."""
 
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.repository_profile import parse_repository_profile
 from testing_agent.repositories.auxiliary_execution import (
     detail_row,
@@ -19,8 +20,8 @@ from testing_agent.services.code_risk_analysis import parse_risk_report
 def _duration(started: datetime | None, finished: datetime | None) -> int:
     if started is None or finished is None:
         return 0
-    start = started if started.tzinfo else started.replace(tzinfo=UTC)
-    end = finished if finished.tzinfo else finished.replace(tzinfo=UTC)
+    start = as_utc(started)
+    end = as_utc(finished)
     return max(0, int((end - start).total_seconds() * 1000))
 
 

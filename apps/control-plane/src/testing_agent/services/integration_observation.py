@@ -2,14 +2,14 @@
 
 from datetime import UTC, datetime
 
-from testing_agent.domain.integration_execution import utc
+from testing_agent.core.utc import as_utc
 from testing_agent.repositories.integration_job import IntegrationJobRepository
 from testing_agent.repositories.integration_observation import IntegrationObservationRepository
 from testing_agent.services.integration_runtime import isolated_scope, restored_runtime
 
 
 def stamp(value):
-    return utc(value).isoformat() if value is not None else None
+    return as_utc(value).isoformat() if value is not None else None
 
 
 class IntegrationObservation:
@@ -56,7 +56,9 @@ class IntegrationObservation:
             )
         return {
             "queueReason": reason,
-            "queueWaitSeconds": max(0, int((self.clock() - utc(job.created_at)).total_seconds())),
+            "queueWaitSeconds": max(
+                0, int((self.clock() - as_utc(job.created_at)).total_seconds())
+            ),
         }
 
     async def snapshot(self, *, project_id=None, hours=24, limit=100):
@@ -86,7 +88,7 @@ class IntegrationObservation:
             "liveJobsByStatus": data["live"],
             "submittedJobsByStatus": data["recent"],
             "queue": {
-                "oldestWaitSeconds": max(0, int((now - utc(data["oldest"])).total_seconds()))
+                "oldestWaitSeconds": max(0, int((now - as_utc(data["oldest"])).total_seconds()))
                 if data["oldest"]
                 else None,
                 "firstClaimSamples": queue[0],
@@ -122,7 +124,7 @@ class IntegrationObservation:
                     "taskTypes": row.task_types,
                     "lastSeenAt": stamp(row.last_seen_at),
                     "lastHeartbeatAt": stamp(row.last_heartbeat_at),
-                    "online": (now - utc(row.last_seen_at)).total_seconds()
+                    "online": (now - as_utc(row.last_seen_at)).total_seconds()
                     <= execution.worker_presence_ttl_seconds,
                 }
                 for row in workers[:limit]

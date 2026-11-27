@@ -6,7 +6,7 @@ from pydantic.alias_generators import to_camel
 
 ZENTAO_MCP_NAME = "ZenTao-MCP"
 
-Provider = Literal["llm", "zentao", "gitlab", "mcp"]
+Provider = Literal["llm", "gitlab", "mcp"]
 
 
 class ServiceCreate(BaseModel):
@@ -35,8 +35,6 @@ class PersonalAuthorizationRequest(BaseModel):
     token: str | None = Field(default=None, min_length=1)
     api_key: str | None = Field(default=None, min_length=1)
     access_token: str | None = Field(default=None, min_length=1)
-    account: str | None = Field(default=None, min_length=1)
-    password: str | None = Field(default=None, min_length=1)
 
 
 class MyAuthorization(BaseModel):
@@ -45,11 +43,6 @@ class MyAuthorization(BaseModel):
     connection_id: str | None = None
     account: str = ""
     last_auth_at: datetime | None = None
-
-
-class McpInstanceReset(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
-    instance_url: str = Field(min_length=1, max_length=512)
 
 
 class SharedServiceResponse(ServiceCreate):

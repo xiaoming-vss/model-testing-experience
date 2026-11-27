@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/auth.store'
 
 export function getAuthenticatedUserId() {
   const user = useAuthStore.getState().user
-  return user?.userId ?? user?.user_id ?? null
+  return user?.userId ?? null
 }
 
 export const authApi = {

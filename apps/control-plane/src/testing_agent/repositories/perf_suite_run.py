@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 
 from testing_agent.models.perf_suite_run import PerfSuiteRun, PerfSuiteRunItem
 from testing_agent.repositories.base import ResourceRepository
+from testing_agent.repositories.latest import latest_per_resource
 
 
 class PerfSuiteRunRepository(ResourceRepository):
@@ -34,6 +35,19 @@ class PerfSuiteRunRepository(ResourceRepository):
             .order_by(PerfSuiteRun.created_at.desc(), PerfSuiteRun.id.desc())
             .limit(1)
         )
+
+    async def latest_by_suites(self, suite_ids: list[str]) -> dict[str, PerfSuiteRun]:
+        """Select only the newest run per suite for list summaries."""
+        if not suite_ids:
+            return {}
+        latest = latest_per_resource(
+            select(PerfSuiteRun).where(PerfSuiteRun.suite_id.in_(suite_ids)),
+            PerfSuiteRun.suite_id,
+            PerfSuiteRun.created_at,
+            PerfSuiteRun.id,
+        )
+        rows = (await self.session.scalars(latest)).all()
+        return {row.suite_id: row for row in rows}
 
     async def list_active(self, *, limit: int = 100) -> list[PerfSuiteRun]:
         return list(

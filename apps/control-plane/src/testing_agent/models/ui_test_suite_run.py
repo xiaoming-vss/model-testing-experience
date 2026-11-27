@@ -61,7 +61,7 @@ class UiTestSuiteRun(Base):
         String(64), index=True, nullable=False, comment="本次运行发起者用户业务标识"
     )
     trigger_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="manual", comment="运行触发方式"
+        String(20), nullable=False, default="manual", comment="运行触发方式：manual"
     )
     status: Mapped[str] = mapped_column(
         String(20),
@@ -69,8 +69,8 @@ class UiTestSuiteRun(Base):
         nullable=False,
         default="pending",
         comment=(
-            "UI 测试集运行状态：pending/queued/claimed/running/success/"
-            "failed/error/canceled/skipped"
+            "UI 测试集运行状态：pending/queued/claimed/running/success/failed/err"
+            "or/canceled/skipped"
         ),
     )
     total_count: Mapped[int] = mapped_column(
@@ -163,8 +163,8 @@ class UiTestSuiteRunItem(Base):
         nullable=False,
         default="pending",
         comment=(
-            "UI 测试集条目状态：pending/queued/claimed/running/success/"
-            "failed/error/canceled/skipped"
+            "UI 测试集条目状态：pending/queued/claimed/running/success/failed/err"
+            "or/canceled/skipped"
         ),
     )
     snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(

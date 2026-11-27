@@ -1,5 +1,4 @@
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +6,9 @@ from uuid import UUID
 
 import yaml
 
+from testing_agent_ai_worker.tasks.api_case_generate.chain import run_chain
+from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_functional_chain
+from tests.support.agent import FakeFactory
 from tests.unit.tasks.functional_case_generate.fixtures import (
     analysis,
     case,
@@ -14,50 +16,12 @@ from tests.unit.tasks.functional_case_generate.fixtures import (
     traceable_points,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-from testing_agent_ai_worker.tasks.api_case_generate.chain import run_chain
-from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_functional_chain
-
-
-class _FakeResult:
-    def __init__(self, content: str) -> None:
-        self.content = content
-
-
-class _FakeBot:
-    def __init__(self, outputs: list[str]) -> None:
-        self.outputs = outputs
-        self.calls: list[dict[str, str]] = []
-
-    async def __aenter__(self) -> "_FakeBot":
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:
-        return None
-
-    async def run(self, message: str, session_key: str) -> _FakeResult:
-        self.calls.append({"message": message, "session_key": session_key})
-        return _FakeResult(self.outputs[len(self.calls) - 1])
-
-
-class _FakeFactory:
-    def __init__(self, outputs: list[str]) -> None:
-        self.last_kwargs: dict[str, str | None] | None = None
-        self.bot = _FakeBot(outputs)
-
-    def __call__(self, **kwargs):
-        self.last_kwargs = kwargs
-        return self.bot
-
 
 class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
     async def test_run_chain_uses_skill_names_and_reuses_one_session_key(self) -> None:
         workspace = self.enterContext(tempfile.TemporaryDirectory())
-        factory = _FakeFactory(
+        config_path = str(Path(workspace) / "config.json")
+        factory = FakeFactory(
             [
                 '{"login":{"path":"/login","method":"POST"}}',
                 "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
@@ -67,7 +31,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         result = await run_chain(
             source_text='{"interfaces":[{"interfaceId":"interface-1","method":"POST","path":"/login"}]}',
             session_key="demo:chain",
-            config_path="D:/tmp/config.json",
+            config_path=config_path,
             workspace=workspace,
             extractor_skill_name="mtx-extract-interface-test-config",
             generator_skill_name="mtx-generate-api-test-case",
@@ -83,7 +47,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             factory.last_kwargs,
             {
-                "config_path": "D:/tmp/config.json",
+                "config_path": config_path,
                 "workspace": workspace,
             },
         )
@@ -127,7 +91,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         (ref / "design-audit.md").write_text("审查")
         (ref / "independent-review.md").write_text("审查协议")
         value = traceable_points()
-        factory = _FakeFactory(
+        factory = FakeFactory(
             [
                 json.dumps(analysis()),
                 json.dumps(value),
@@ -214,7 +178,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
                 ),
             )
             self.assertEqual(required_skills(task), [name])
-            factory = _FakeFactory([result])
+            factory = FakeFactory([result])
             output = await run_api_stage(
                 stage=stage, input_text=source, session_key="run", from_config=factory
             )

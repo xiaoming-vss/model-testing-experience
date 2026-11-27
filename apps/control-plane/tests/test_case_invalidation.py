@@ -287,11 +287,8 @@ def test_perf_case_invalidation_filters_and_exits_new_runs(api):
 
     _invalidate(api, owner, pid, "perf-cases", [case_id])
 
-    all_cases = _items(api, owner, f"/v1/projects/{pid}/perf-cases")
-    by_id = {item["caseId"]: item for item in all_cases}
-    assert by_id[case_id]["invalidatedAt"]
-    assert len(_items(api, owner, f"/v1/projects/{pid}/perf-cases?invalidated=true")) == 1
-    assert len(_items(api, owner, f"/v1/projects/{pid}/perf-cases?invalidated=false")) == 0
+    cases = api.get(f"/v1/perf-suites/{suite_id}", headers=owner).json()["data"]["cases"]
+    assert cases[0]["invalidatedAt"]
 
     rejected = api.post(
         f"/v1/perf-cases/{case_id}/runs",

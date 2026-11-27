@@ -29,6 +29,17 @@ def validate_missing(step: dict[str, Any]) -> set[str]:
                 raise ValueError(f"{prefix}.{key} must describe the missing content")
         if entry["value"] is not None and not isinstance(entry["value"], (str, int, float, bool)):
             raise ValueError(f"{prefix}.value must be a scalar or null")
+        if "operationValue" in fields and step.get("keyword") in {
+            "assert_visible",
+            "assert_hidden",
+            "sleep",
+        }:
+            raise ValueError(
+                f"{prefix}: operationValue for {step['keyword']} is milliseconds, not a "
+                "business expected value. Supply the wait duration; implement the intended "
+                "business assertion in its own step. "
+                "Do not clear a known timeout to pass validation."
+            )
         for field in fields:
             if field not in step or step[field] is not None:
                 raise ValueError(

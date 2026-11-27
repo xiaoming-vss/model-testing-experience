@@ -6,7 +6,12 @@ from typing import Any
 
 from testing_agent.core.errors import AppError
 from testing_agent.services.mcp_client import McpCallError, McpClient
-from testing_agent.services.zentao_mcp import ZentaoMcpConnection, deleted, normalize_list
+from testing_agent.services.zentao_mcp import (
+    ZentaoMcpConnection,
+    deleted,
+    normalize_list,
+    read_all_pages,
+)
 
 
 def remote_id(value: Any) -> int:
@@ -34,10 +39,9 @@ class ZentaoCaseGateway:
     async def catalog(self, execution: int) -> dict[int, dict[str, Any]]:
         if execution in self.catalogs:
             return self.catalogs[execution]
-        result: dict[int, dict[str, Any]] = {}
-        seen: set[int] = set()
-        for page in range(1, 101):
-            data = await self.client.call(
+
+        async def fetch(page: int) -> dict[str, Any]:
+            return await self.client.call(
                 "get_executions_executionID_testcases",
                 {
                     "executionID": execution,
@@ -47,12 +51,14 @@ class ZentaoCaseGateway:
                     "recPerPage": 100,
                 },
             )
+
+        def normalize(data: dict[str, Any]) -> tuple[list[dict[str, Any]], int | None]:
             raw = data.get("testcases")
             if isinstance(raw, dict):
                 raw = list(raw.values())
             if not isinstance(raw, list) or any(not isinstance(item, dict) for item in raw):
                 raise AppError(502, "禅道用例列表格式异常", 502)
-            batch, total = normalize_list(
+            return normalize_list(
                 {
                     **data,
                     "testcases": [
@@ -67,21 +73,19 @@ class ZentaoCaseGateway:
                 },
                 "testcases",
             )
-            for item in batch:
-                identifier = remote_id(item["id"])
-                if identifier in seen:
-                    raise AppError(502, "禅道用例分页重复，未发出写入", 502)
-                seen.add(identifier)
-                if not item["deleted"]:
-                    result[identifier] = item
-            if total is not None and len(seen) >= total:
-                break
-            if total is None and len(batch) < 100:
-                break
-            if not batch:
-                raise AppError(502, "禅道用例分页不完整，未发出写入", 502)
-        else:
-            raise AppError(502, "禅道用例超过查询上限，未发出写入", 502)
+
+        pages = await read_all_pages(
+            fetch,
+            normalize,
+            duplicate_message="禅道用例分页重复，未发出写入",
+            incomplete_message="禅道用例分页不完整，未发出写入",
+            limit_message="禅道用例超过查询上限，未发出写入",
+        )
+        result: dict[int, dict[str, Any]] = {}
+        for item in pages:
+            identifier = remote_id(item["id"])
+            if not item["deleted"]:
+                result[identifier] = item
         # Most list responses already carry the title. Fetch details only when missing.
         for identifier, item in result.items():
             if not isinstance(item.get("title"), str):

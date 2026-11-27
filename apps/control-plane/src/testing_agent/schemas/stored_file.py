@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -49,14 +48,3 @@ class FileDownloadTicket(FileData):
     size: int
     sha256: str
     expires_in: int
-
-
-class FileMetadata(FileCompletion):
-    project_id: str
-    filename: str
-    content_type: str
-    size: int
-    sha256: str
-    uploaded_by: str
-    created_at: datetime
-    completed_at: datetime | None

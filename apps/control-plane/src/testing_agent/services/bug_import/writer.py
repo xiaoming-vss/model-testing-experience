@@ -8,7 +8,7 @@ from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
-from testing_agent.repositories.bug import BugRepository
+from testing_agent.repositories.bug import BugRepository, bug_no_conflict
 from testing_agent.repositories.zentao_bug_import import import_by_operation, remote_link
 from testing_agent.services.bug_import.contracts import (
     BugImportResult,
@@ -26,27 +26,39 @@ def _identity_conflict(exc: IntegrityError) -> bool:
     )
 
 
-def _bug_no_conflict(exc: IntegrityError) -> bool:
-    detail = str(exc.orig)
-    return "uk_bugs_project_bug_no" in detail or (
-        "UNIQUE constraint failed: bugs.project_id, bugs.bug_no" in detail
-    )
-
-
 class BugImportWriter:
     def __init__(self, repository: BugRepository, *, id_factory: Callable[[], str]) -> None:
         self.repository = repository
         self.session = repository.session
         self.new_id = id_factory
 
-    async def replay(self, operation_id: str) -> BugImportResult | None:
-        """同一请求编号的重复提交返回原结果，不重复创建（R11/R56）。"""
+    async def replay(
+        self, operation_id: str, *, user_id: str, project_id: str
+    ) -> BugImportResult | None:
+        """同一请求编号的重复提交返回原结果，不重复创建（R11/R56）。
+
+        请求编号由客户端提供：只有原操作者在原项目重放才拿到原结果；别的操作者或
+        项目命中同一编号时按冲突处理，不返回对方 Bug 的编号和标题（R12）。
+        """
         row = await import_by_operation(self.session, operation_id)
         if row is None or row.source != "import":
             return None
+        remote_bug_id = int(row.remote_bug_id or 0)
+        if row.actor_user_id != user_id:
+            return import_result(
+                remote_bug_id,
+                "conflict",
+                error_message="请求编号已被其他操作者的导入使用，请更换请求编号后重试",
+            )
         bug = await self.repository.get_bug(row.bug_id)
         if bug is None:
             return None
+        if bug.project_id != project_id:
+            return import_result(
+                remote_bug_id,
+                "conflict",
+                error_message="请求编号已被其他项目的导入使用，请更换请求编号后重试",
+            )
         return import_result(
             int(row.remote_bug_id or 0),
             "success",
@@ -181,7 +193,7 @@ class BugImportWriter:
                 await self.repository.commit()
             except IntegrityError as exc:
                 await self.repository.rollback()
-                if _bug_no_conflict(exc):
+                if bug_no_conflict(exc):
                     continue
                 if _identity_conflict(exc):
                     return await self._conflict_result(

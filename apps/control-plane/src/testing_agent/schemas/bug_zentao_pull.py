@@ -47,7 +47,9 @@ class ZentaoRemoteGroupPreview(BaseModel):
 class ZentaoRemotePreviewResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     remote_bug_id: int
+    # Both sides are pinned so an apply can reject a stale confirmation.
     remote_digest: str
+    local_digest: str
     linked_source: str
     groups: list[ZentaoRemoteGroupPreview]
 
@@ -78,6 +80,7 @@ class ZentaoPullGroupRequest(BaseModel):
 class ZentaoPullRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
     remote_digest: str = Field(min_length=8, max_length=64)
+    local_digest: str = Field(min_length=8, max_length=64)
     groups: list[ZentaoPullGroupRequest] = Field(min_length=1, max_length=len(FIELD_GROUPS))
 
     @field_validator("groups")

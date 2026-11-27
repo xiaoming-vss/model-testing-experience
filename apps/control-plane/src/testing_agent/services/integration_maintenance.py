@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, exists, func, or_, select
 
-from testing_agent.domain.integration_execution import utc
+from testing_agent.core.utc import as_utc
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.integration_job import (
@@ -95,7 +95,7 @@ class IntegrationHistoryMaintenance:
             or job.active_scope is not None
             or job.active_target is not None
             or job.finished_at is None
-            or utc(job.finished_at) >= cutoff
+            or as_utc(job.finished_at) >= cutoff
             or any(s.status in ("pending", "write_intent", "unknown") for s in steps)
         ):
             return True

@@ -287,7 +287,7 @@ class TestOrderGraphService:
 
         await self.orders.get_accessible_entity(user_id, order_id, action="execute")
         # 调用方可以自行组装图谱输入（模块契约），平台只校验结构并原样转发。
-        graph_input = require_graph_input(body.get("graph_input"))
+        graph_input = require_graph_input(body.get("graphInput"))
         counts = graph_input_counts(graph_input)
         # End the initial authorization snapshot before waiting on the order lock.
         await self.repository.commit()
@@ -311,12 +311,12 @@ class TestOrderGraphService:
             request_signature,
         )
 
-        dispatch_id = request_id(body.get("request_id"), new_id())
+        dispatch_id = request_id(body.get("requestId"), new_id())
         signature = request_signature(
             "test_order_graph",
-            {"graphInput": graph_input, "connectionId": str(body.get("connection_id") or "")},
+            {"graphInput": graph_input, "connectionId": str(body.get("connectionId") or "")},
         )
-        if task is not None and body.get("request_id") is not None:
+        if task is not None and body.get("requestId") is not None:
             replay = await find_replay(
                 self.repository.session,
                 task=task,
@@ -330,7 +330,7 @@ class TestOrderGraphService:
                     raise ErrNotFound()
                 return await auxiliary_detail(self.repository.session, replay.execution_id)
         latest = None
-        if not str(body.get("connection_id") or "").strip():
+        if not str(body.get("connectionId") or "").strip():
             latest = await self._latest_unified(task)
 
         connection_id = await self._resolve_connection_id(user_id, body, order.project_id, latest)
@@ -338,8 +338,8 @@ class TestOrderGraphService:
             task = build_graph_task(order, user_id)
             self.repository.add(task)
             await self.repository.session.flush()
-        stage = await lock_or_create_stage(self.repository.session, task.task_id)
-        if body.get("request_id") is not None:
+        stage, _ = await lock_or_create_stage(self.repository.session, task.task_id)
+        if body.get("requestId") is not None:
             replay = await find_replay(
                 self.repository.session,
                 task=task,
@@ -420,7 +420,7 @@ class TestOrderGraphService:
     ) -> str:
         """本次指定的连接优先，其次沿用上一次派发用过的连接。"""
 
-        connection_id = str(body.get("connection_id") or "").strip()
+        connection_id = str(body.get("connectionId") or "").strip()
         if not connection_id and latest is not None:
             connection_id = str((latest.get("snapshotJson") or {}).get("llmConnectionId") or "")
         connection = await require_personal_connection(

@@ -15,7 +15,7 @@ def services(session):
     return generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(session)))
 
 
-async def test_requirement_bound_api_rejects_direct_launch(db):  # noqa: F811
+async def test_api_direct_launch_is_rejected(db):  # noqa: F811
     from testing_agent.domain.api_interface import path_key
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.api_interface import ApiInterface
@@ -62,8 +62,9 @@ async def test_requirement_bound_api_rejects_direct_launch(db):  # noqa: F811
     )
     db.commit()
     bundle = services(db)
-    with pytest.raises(AppError, match="请在需求生成链"):
+    with pytest.raises(AppError) as error:
         await bundle.launcher.launch("api", "api-task", {"connectionId": "llm"}, "u")
+    assert error.value.http_code == 400
 
 
 async def test_api_design_shallow_validation_checks_extraction_interfaces():

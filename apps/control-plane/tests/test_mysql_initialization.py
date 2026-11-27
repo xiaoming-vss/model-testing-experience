@@ -9,18 +9,11 @@ from support.initial_schema_migration import assert_current_schema, migration_co
 from support.mysql_initialization import (
     UNIQUE_TABLES as UNIQUE_TABLES,
 )
-from support.mysql_initialization import _mysql_fixture
-from support.mysql_initialization import (
-    seed_row as seed_row,
-)
+from support.mysql_initialization import async_sessions, seed_row
+from support.mysql_initialization import mysql as mysql
 
 from alembic import command
 from testing_agent.models import Base
-
-
-@pytest.fixture(scope="module")
-def mysql():
-    yield from _mysql_fixture("head")
 
 
 def test_mysql_baseline_and_roundtrip(mysql):
@@ -84,8 +77,6 @@ def test_mysql_concurrent_binding_conflict(mysql, local_kind, remote_kind):
 async def test_mysql_competing_owner_transfers_leave_exactly_one_owner(mysql):
     import asyncio
 
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from testing_agent.core.errors import AppError
     from testing_agent.models.project import Project
     from testing_agent.models.project_member import ProjectMember
@@ -104,8 +95,7 @@ async def test_mysql_competing_owner_transfers_leave_exactly_one_owner(mysql):
             sa.insert(ProjectMember),
             [dict(project_id=pid, user_id=uid, role="member") for uid in (a, b)],
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
 
     async def transfer(target):
         async with sessions() as session:
@@ -190,8 +180,6 @@ async def test_mysql_hard_delete_waits_for_child_and_rechecks(
 ):
     import asyncio
 
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from testing_agent import models as models
     from testing_agent.core.errors import AppError
     from testing_agent.services.resource_deletion import delete_resource
@@ -199,8 +187,7 @@ async def test_mysql_hard_delete_waits_for_child_and_rechecks(
     suite_model, case_model = getattr(models, suite_name), getattr(models, case_name)
     with mysql.begin() as connection:
         parent = seed_row(connection, suite_model.__table__)
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     inserted, release = asyncio.Event(), asyncio.Event()
 
     async def create_child():

@@ -9,6 +9,7 @@ import {
 import { Alert, Button, Card, Descriptions, Empty, Segmented, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
+import { PERF_RUN_POLL_INTERVAL } from '@/domain/runs/polling'
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import {
@@ -91,7 +92,7 @@ export function PerformanceRunDetailPage() {
     queryKey: ['perfSuiteRun', runId],
     queryFn: () => api.getPerfSuiteRun(runId),
     enabled: Boolean(runId),
-    refetchInterval: (query) => isPerfRunActive(query.state.data?.status) ? 3000 : false,
+    refetchInterval: (query) => isPerfRunActive(query.state.data?.status) ? PERF_RUN_POLL_INTERVAL : false,
   })
   const run = runQuery.data
   const items = useMemo(() => run?.items ?? [], [run])

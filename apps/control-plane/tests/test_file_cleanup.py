@@ -9,8 +9,9 @@ from support.stored_files import files as files
 from support.stored_files import upload
 
 from testing_agent.core.errors import AppError
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.stored_file import StoredFile
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.stored_file_cleanup import StoredFileCleanup
 
 
@@ -21,7 +22,7 @@ async def test_cleanup_releases_transaction_and_excludes_other_cleaners_and_atta
     row, _ = await upload(files)
     await files.complete("owner", row.file_id)
     file_id = row.file_id
-    row.expires_at = utcnow() - timedelta(hours=1)
+    row.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     started, release = asyncio.Event(), threading.Event()
     loop = asyncio.get_running_loop()
@@ -57,12 +58,12 @@ async def test_cleanup_releases_transaction_and_excludes_other_cleaners_and_atta
 async def test_expired_cleanup_claim_recovery_rejects_old_receipt(files):
     row, _ = await upload(files)
     file_id = row.file_id
-    row.expires_at = utcnow() - timedelta(hours=1)
+    row.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     cleaner = StoredFileCleanup(files.session, files.settings, files.storage)
     old = (await cleaner.claim(staging=False))[0]
     row = await files.get(file_id)
-    row.cleanup_until = utcnow() - timedelta(seconds=1)
+    row.cleanup_until = naive_utcnow() - timedelta(seconds=1)
     await files.session.commit()
     current = (await cleaner.claim(staging=False))[0]
     assert old.generation != current.generation
@@ -81,7 +82,7 @@ async def test_expired_unverified_bug_upload_is_not_promoted_to_history(files):
     row, _ = await upload(files, purpose="attachment")
     file_id = row.file_id
     row.resource_type, row.resource_id = "bug", "bug-1"
-    row.expires_at = utcnow() - timedelta(hours=1)
+    row.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     assert await files.cleanup() == {"deleted": 1, "failed": 0}
     assert (

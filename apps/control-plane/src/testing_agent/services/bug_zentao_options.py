@@ -4,7 +4,7 @@ from typing import Any
 
 from testing_agent.core.errors import AppError
 from testing_agent.services.mcp_client import McpClient
-from testing_agent.services.zentao_mcp import deleted, normalize_list
+from testing_agent.services.zentao_mcp import deleted, normalize_list, read_all_pages
 
 BUILD_TOOL = "get_executions_executionID_builds"
 PAGE_SIZE = 100
@@ -23,25 +23,19 @@ async def read_pages(
         properties = definition.get("inputSchema", {}).get("properties", {})
         if not {"executionID", "pageID", "recPerPage"}.issubset(properties):
             raise AppError(502, "请升级禅道 MCP：版本查询工具缺少分页参数", 502)
-    items: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for page in range(1, 101):
-        data = await client.call(tool, {**arguments, "pageID": page, "recPerPage": PAGE_SIZE})
-        batch, total = normalize_list(data, key)
-        page_ids = {item["id"] for item in batch}
-        if seen.intersection(page_ids):
-            raise AppError(502, "禅道分页返回重复数据，无法确认完整列表", 502)
-        # Build APIs can emit two rows for a build's source and download paths.
-        unique = {item["id"]: item for item in batch}
-        seen.update(page_ids)
-        items.extend(unique.values())
-        if total is not None and len(seen) >= total:
-            return items
-        if total is None and len(unique) < PAGE_SIZE:
-            return items
-        if not batch:
-            raise AppError(502, "禅道分页数据不完整", 502)
-    raise AppError(502, "禅道候选项超过查询上限", 502)
+
+    async def fetch(page: int) -> dict[str, Any]:
+        return await client.call(tool, {**arguments, "pageID": page, "recPerPage": PAGE_SIZE})
+
+    return await read_all_pages(
+        fetch,
+        lambda data: normalize_list(data, key),
+        page_size=PAGE_SIZE,
+        deduplicate_page=True,
+        duplicate_message="禅道分页返回重复数据，无法确认完整列表",
+        incomplete_message="禅道分页数据不完整",
+        limit_message="禅道候选项超过查询上限",
+    )
 
 
 async def build_options(client, target, product_id):

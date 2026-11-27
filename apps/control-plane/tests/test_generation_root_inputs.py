@@ -21,12 +21,12 @@ from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_root_inputs import (
+    lock_api_generation_source,
     lock_api_interface_root,
     lock_requirement_document_root,
     lock_ui_repository_cases_root,
     lock_ui_repository_cases_source,
 )
-from testing_agent.services.ai_task_output import build_generate_run_snapshot
 
 
 def seed_file(sync, file_id, *, purpose, filename, digest, requirement="req"):
@@ -112,7 +112,7 @@ async def test_missing_or_mismatched_file_metadata_cannot_become_valid(database)
         )
 
 
-async def test_api_root_matches_actual_worker_snapshot_and_ignores_unselected_interfaces(database):  # noqa: F811
+async def test_api_root_ignores_unselected_interfaces(database):  # noqa: F811
     sync, _, _ = database
     repository = SoftwareRepository(
         software_repository_id="repo",
@@ -141,10 +141,17 @@ async def test_api_root_matches_actual_worker_snapshot_and_ignores_unselected_in
     task.interface_ids_json = ["two", "one"]
     sync.commit()
     session = AsyncSessionAdapter(sync)
-    source = await build_generate_run_snapshot(
-        AiGenerateTaskRepository(session), "api", task, "attempt"
+    root, repositories, interfaces = await lock_api_generation_source(session, task=task)
+    expected = fingerprint_root_input(
+        "api_interfaces",
+        {
+            "taskId": task.task_id,
+            "requirementId": task.requirement_id,
+            "interfaces": interfaces,
+            "softwareRepositories": repositories,
+        },
     )
-    expected = fingerprint_root_input("api_interfaces", source)
+    assert root == expected
     assert await lock_api_interface_root(session, task=task) == expected
     other = sync.query(ApiInterface).filter_by(interface_id="other").one()
     other.description = "unselected changed"

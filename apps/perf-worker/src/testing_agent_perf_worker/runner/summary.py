@@ -7,20 +7,26 @@ from pathlib import Path
 from typing import Any
 
 
-def read_summary(path: Path, max_summary_mb: int) -> tuple[dict[str, Any] | None, bool]:
-    """Return a compact summary and whether the summary was missing."""
+def read_summary(path: Path, max_summary_mb: int) -> tuple[dict[str, Any] | None, bool, str]:
+    """Return a compact summary, whether it is unusable, and why it could not be used.
+
+    The reason is empty when k6 simply did not write the file; it names the limit or
+    the defect otherwise, so a user can tell a missing summary from a broken one.
+    """
 
     if not path.is_file():
-        return None, True
+        return None, True, ""
     try:
         if path.stat().st_size > max_summary_mb * 1024 * 1024:
-            return None, True
+            return None, True, f"k6 摘要超过 {max_summary_mb}MB 上限，已忽略"
         raw: Any = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None, True
+    except json.JSONDecodeError:
+        return None, True, "k6 摘要不是合法 JSON，已忽略"
+    except OSError:
+        return None, True, "k6 摘要无法读取，已忽略"
     if not isinstance(raw, dict):
-        return None, True
-    return compact_summary(raw), False
+        return None, True, "k6 摘要不是 JSON 对象，已忽略"
+    return compact_summary(raw), False, ""
 
 
 def compact_summary(raw: dict[str, Any]) -> dict[str, Any]:

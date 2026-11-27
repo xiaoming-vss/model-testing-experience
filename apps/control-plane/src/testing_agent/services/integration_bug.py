@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from testing_agent.core.errors import AppError, ErrNotFound
+from testing_agent.core.errors import AppError
 from testing_agent.domain.integration_execution import StepStatus, digest
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.models.integration_job import IntegrationJob
@@ -122,13 +122,6 @@ class IntegrationBugService:
         job = await self.admit(actor, bug_id, request, task_type)
         await self.session.commit()
         return summary(job)
-
-    async def get(self, actor, bug_id, job_id):
-        await self.pushes.bugs.get_accessible_entity(actor, bug_id)
-        job = await self.repository.get(job_id)
-        if job is None or job.bug_id != bug_id:
-            raise ErrNotFound()
-        return await self.observed_summary(job)
 
     async def observed_summary(self, job):
         return {**summary(job), **await self.observation.explain(job)}

@@ -6,8 +6,7 @@ from threading import Barrier
 
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.models import AiGenerationCandidate, AiGenerationStage, Base
 from testing_agent.repositories.generation_candidate_creation import (
@@ -179,9 +178,7 @@ def test_concurrent_current_updates_reject_stale_token(mysql):  # noqa: F811
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        async_engine = create_async_engine(url)
-        session_factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async_engine, session_factory = async_sessions(mysql)
 
         async def replace(value):
             async with session_factory() as session:
@@ -246,9 +243,7 @@ def test_reference_and_edit_race_has_one_winner(mysql):  # noqa: F811
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        async_engine = create_async_engine(url)
-        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async_engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def freeze():
@@ -347,9 +342,7 @@ def test_rejection_and_adoption_race_cannot_reject_current(mysql):  # noqa: F811
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        async_engine = create_async_engine(url)
-        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async_engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def adopt():
@@ -441,9 +434,7 @@ def test_deletion_and_adoption_race_cannot_leave_current_dangling(mysql):  # noq
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        async_engine = create_async_engine(url)
-        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async_engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def adopt():
@@ -541,9 +532,7 @@ def test_adoption_refreshes_candidate_cached_before_edit(mysql):  # noqa: F811
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        async_engine = create_async_engine(url)
-        factory = async_sessionmaker(async_engine, expire_on_commit=False)
+        async_engine, factory = async_sessions(mysql)
         try:
             async with factory() as reader, factory() as editor:
                 cached = await reader.get(AiGenerationCandidate, "cached-candidate")
@@ -604,9 +593,7 @@ def test_scoped_chain_binding_and_empty_slot_under_concurrency(mysql):  # noqa: 
         task2 = seed_row(connection, tables["ai_generate_tasks"], scope)
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        engine = create_async_engine(url)
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def bind(task_id):
@@ -705,9 +692,7 @@ def test_successful_attempt_replay_creates_only_one_candidate(mysql):  # noqa: F
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        engine = create_async_engine(url)
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def create():
@@ -800,10 +785,9 @@ def test_task_storage_cleanup_keeps_formal_assets(mysql):  # noqa: F811
         )
 
     async def exercise():
-        url = mysql.url.set(drivername="mysql+asyncmy").render_as_string(hide_password=False)
-        engine = create_async_engine(url)
+        engine, sessions = async_sessions(mysql)
         try:
-            async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+            async with sessions() as session:
                 await delete_chain_storage_for_task(session, task_id=task["task_id"])
                 await session.execute(
                     tables["ai_generate_tasks"]

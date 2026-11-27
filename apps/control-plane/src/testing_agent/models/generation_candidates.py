@@ -35,7 +35,9 @@ class RequirementGenerationChain(Base):
         nullable=False,
         comment="所属需求业务标识",
     )
-    kind: Mapped[str] = mapped_column(String(40), nullable=False, comment="需求生成链类型")
+    kind: Mapped[str] = mapped_column(
+        String(40), nullable=False, comment=("需求生成链类型：requirement_analysis/function/api/ui")
+    )
     task_id: Mapped[str] = mapped_column(
         ForeignKey("ai_generate_tasks.task_id", ondelete="RESTRICT"),
         nullable=False,
@@ -80,15 +82,21 @@ class AiGenerationCandidate(Base):
         comment="派生候选的原候选业务标识",
     )
     content: Mapped[str] = mapped_column(CONTENT, nullable=False, comment="候选产物正文快照")
-    format: Mapped[str] = mapped_column(String(20), nullable=False, comment="候选产物正文格式")
+    format: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment=("候选产物正文格式：json/text/yaml")
+    )
     context_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON(none_as_null=True), comment="候选产物上下文"
     )
     candidate_token: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="候选并发修改令牌"
     )
-    disposition: Mapped[str] = mapped_column(String(20), nullable=False, comment="候选处置状态")
-    generation_mode: Mapped[str] = mapped_column(String(20), nullable=False, comment="候选生成模式")
+    disposition: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment=("候选处置状态：available/rejected/deleted")
+    )
+    generation_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment=("候选生成模式：current/trial")
+    )
     source_manifest_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON(none_as_null=True), comment="候选冻结来源清单"
     )
@@ -124,9 +132,20 @@ class AiGenerationStageContent(Base):
         nullable=False,
         comment="当前内容所属需求生成链业务标识",
     )
-    stage: Mapped[str] = mapped_column(String(40), nullable=False, comment="当前内容所属阶段类型")
+    stage: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        comment=(
+            "当前内容所属阶段类型：requirement_review/extracting_text/historical_req"
+            "uirement_relations/historical_test_case_verification/require"
+            "ment_analysis/case_names/detailed_cases/interface_extract/ap"
+            "i_design/generate/ui_surface/ui_design/ui_yaml"
+        ),
+    )
     content: Mapped[str | None] = mapped_column(CONTENT, comment="当前确认正文；空槽时为空")
-    format: Mapped[str | None] = mapped_column(String(20), comment="当前确认正文格式")
+    format: Mapped[str | None] = mapped_column(
+        String(20), comment="当前确认正文格式：json/text/yaml"
+    )
     context_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON(none_as_null=True), comment="当前确认正文上下文"
     )
@@ -189,7 +208,11 @@ class AiGenerationReviewReceipt(Base):
     )
     candidate_id: Mapped[str | None] = mapped_column(String(64), comment="审核目标候选审计标识")
     attempt_id: Mapped[str | None] = mapped_column(String(64), comment="审核来源尝试审计标识")
-    decision: Mapped[str] = mapped_column(String(20), nullable=False, comment="本次审核操作结论")
+    decision: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment=("本次审核操作结论：adopted/profile_adopted/cleared/derived/rejected/deleted"),
+    )
     result_content_token: Mapped[str | None] = mapped_column(
         String(64), comment="审核完成时当前内容令牌"
     )

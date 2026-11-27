@@ -133,7 +133,7 @@ async def test_ui_step_progress_checks_lease_redacts_and_notifies_after_commit(m
 @pytest.mark.asyncio
 async def test_stream_restricts_debug_run_to_its_initiator():
     from testing_agent.core.errors import ErrForbidden
-    from testing_agent.routers.test_run_events import test_run_events as open_events
+    from testing_agent.services.test_run_stream import authorize_run_subscription
 
     class ApiCases:
         repository = SimpleNamespace(get_run=_async_value(SimpleNamespace(trigger_user_id="owner")))
@@ -142,9 +142,7 @@ async def test_stream_restricts_debug_run_to_its_initiator():
             return {}
 
     with pytest.raises(type(ErrForbidden)):
-        await open_events(
-            "api-case", "run", SimpleNamespace(), "other", None, ApiCases(), None, None
-        )
+        await authorize_run_subscription("api-case", "run", "other", ApiCases(), None, None)
 
 
 def _async_value(value):
@@ -156,7 +154,6 @@ def _async_value(value):
 
 @pytest.mark.asyncio
 async def test_stream_subscribes_before_ready_and_forwards_notifications(monkeypatch):
-    from testing_agent.routers import test_run_events as router_module
     from testing_agent.services import test_run_stream as module
 
     calls = []
@@ -195,9 +192,8 @@ async def test_stream_subscribes_before_ready_and_forwards_notifications(monkeyp
         is_disconnected=_async_value(False),
     )
     monkeypatch.setattr(module.Redis, "from_url", lambda *args, **kwargs: Client())
-    response = await router_module.test_run_events(
-        "api-collection", "run", request, "user", Session(), None, Collections(), None
-    )
+    service = module.TestRunStreamService(Session(), None, Collections(), None)
+    response = await service.stream("api-collection", "run", request, "user")
     stream = response.body_iterator
     assert await anext(stream) == "event: ready\ndata: {}\n\n"
     assert await anext(stream) == "event: changed\ndata: {}\n\n"
@@ -302,7 +298,7 @@ async def test_final_result_is_encrypted_and_bound_to_its_run(monkeypatch):
     "states,expected", [([], "offline"), ([b"busy"], "busy"), ([b"busy", b"idle"], "available")]
 )
 async def test_availability_reports_advisory_worker_presence(monkeypatch, states, expected):
-    from testing_agent.routers import test_run_availability as module
+    from testing_agent.services import test_run_availability as module
 
     class RedisClient:
         async def scan_iter(self, **kwargs):
@@ -316,13 +312,8 @@ async def test_availability_reports_advisory_worker_presence(monkeypatch, states
             pass
 
     monkeypatch.setattr(module.Redis, "from_url", lambda *args, **kwargs: RedisClient())
-    request = SimpleNamespace(
-        app=SimpleNamespace(
-            state=SimpleNamespace(settings=SimpleNamespace(test_run_redis_url="redis://example"))
-        )
-    )
-    response = await module.availability(request, "user")
-    assert response["data"]["state"] == expected
+    response = await module.TestRunAvailabilityService("redis://example").state()
+    assert response == expected
 
 
 def test_database_pool_configuration_is_bounded():

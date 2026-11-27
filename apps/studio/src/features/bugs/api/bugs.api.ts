@@ -45,6 +45,10 @@ export const bugsApi = {
   reconcileBugZentaoPush: (bugId: string, remoteBugId: number) => request<BugZentaoPush>(`/v1/bugs/${bugId}/zentao-push/reconcile`, {
     method: 'POST', body: JSON.stringify({ remoteBugId }),
   }),
+  reconcileBugZentaoAttachment: (bugId: string, fileId: string, remoteFileId: number) =>
+    request<BugZentaoPush>(`/v1/bugs/${bugId}/zentao-push/attachments/${encodeURIComponent(fileId)}/reconcile`, {
+      method: 'POST', body: JSON.stringify({ remoteFileId }),
+    }),
   listZentaoBugCandidates: (
     projectId: string,
     params: { sprintId?: string; status?: string; keyword?: string; page?: number; pageSize?: number } = {},
@@ -66,7 +70,10 @@ export const bugsApi = {
       body: JSON.stringify(body),
     }),
   getBugZentaoRemote: (bugId: string) => request<ZentaoRemotePreview>(`/v1/bugs/${bugId}/zentao-remote`),
-  pullBugZentao: (bugId: string, body: { remoteDigest: string; groups: ZentaoPullGroupPayload[] }) =>
+  pullBugZentao: (
+    bugId: string,
+    body: { remoteDigest: string; localDigest: string; groups: ZentaoPullGroupPayload[] },
+  ) =>
     request<ZentaoPullResult>(`/v1/bugs/${bugId}/zentao-pull`, {
       method: 'POST',
       body: JSON.stringify(body),

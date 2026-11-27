@@ -1,5 +1,5 @@
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { EntityCard } from '@/shared/components/EntityCard'
 import '@/shared/styles/surface-tokens.css'
@@ -87,7 +87,7 @@ export const UiTestSuiteSection = forwardRef<
     const data = suitesQuery.data ?? []
     if (!requirementId) return data
     return data.filter(
-      (suite) => (suite.requirementId ?? suite.requirement_id) === requirementId,
+      (suite) => suite.requirementId === requirementId,
     )
   }, [requirementId, suitesQuery.data])
   const resolvedRequirementName =
@@ -113,7 +113,7 @@ export const UiTestSuiteSection = forwardRef<
   }, [orderedSuites, keyword])
 
   const pagedSuites = useMemo(
-    () => filteredSuites.slice((page - 1) * pageSize, page * pageSize),
+    () => pageSlice(filteredSuites, page, pageSize),
     [filteredSuites, page, pageSize],
   )
 
@@ -216,7 +216,7 @@ export const UiTestSuiteSection = forwardRef<
   function openEditDrawer(suite: UiTestSuite) {
     setEditingSuite(suite)
     form.setFieldsValue({
-      requirementId: suite.requirementId ?? suite.requirement_id ?? undefined,
+      requirementId: suite.requirementId ?? undefined,
       name: suite.name,
       description: suite.description,
       headless: suite.headless ?? DEFAULT_UI_TEST_SUITE_RUN_CONFIG.headless,
@@ -236,7 +236,7 @@ export const UiTestSuiteSection = forwardRef<
   function getSuiteRowContext(suite: UiTestSuite) {
     const suiteId = normalizeUiTestSuiteId(suite)
     const suiteDescription = suite.description || '暂无测试集描述'
-    const suiteRequirementId = suite.requirementId ?? suite.requirement_id
+    const suiteRequirementId = suite.requirementId
     const suiteRequirementName = requirementNameResolver?.(suite) ?? resolvedRequirementName
 
     return { suiteDescription, suiteId, suiteRequirementId, suiteRequirementName }

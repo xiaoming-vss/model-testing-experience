@@ -23,7 +23,7 @@ it('显示每次历史、失败原因，并确认后删除已完成记录', asyn
   expect(await screen.findByText('连接失败')).toBeInTheDocument()
   const rows = screen.getAllByRole('row')
   const done = rows.find(row => within(row).queryByText('成功'))!
-  const busy = rows.find(row => within(row).queryByText('生成中'))!
+  const busy = rows.find(row => within(row).queryByText('执行中'))!
   await userEvent.setup().click(within(done).getByRole('button', { name: '查看' }))
   expect(onView).toHaveBeenCalledWith(expect.objectContaining({ runId: 'done' }))
   expect(within(busy).getByRole('button', { name: '删除' })).toBeDisabled()

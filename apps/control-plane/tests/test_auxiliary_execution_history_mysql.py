@@ -1,8 +1,7 @@
 """Exercise unified auxiliary dispatch and history against MySQL."""
 
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.worker_task import WorkerTask
@@ -19,8 +18,7 @@ async def test_unified_auxiliary_history_on_mysql(mysql):  # noqa: F811
             AiGenerateTask.__table__,
             {"task_type": "test_order_graph", "sprint_id": "", "requirement_id": ""},
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as session:
             task = await session.scalar(

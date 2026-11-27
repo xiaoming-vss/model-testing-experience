@@ -13,7 +13,7 @@ export function LdapSettingsPage() {
   const [form] = Form.useForm<LdapConfig & { clearPassword: boolean }>()
   const queryClient = useQueryClient()
   const userQuery = useQuery({ queryKey: ['user'], queryFn: api.getUser })
-  const admin = Boolean(userQuery.data?.isSuperAdmin ?? userQuery.data?.is_super_admin)
+  const admin = Boolean(userQuery.data?.isSuperAdmin)
   const settings = useQuery({ queryKey: ['ldapSettings'], queryFn: ldapApi.get, enabled: admin, refetchOnWindowFocus: false })
   const [testUsername, setTestUsername] = useState('')
   const [testResult, setTestResult] = useState<LdapTest | null>(null)

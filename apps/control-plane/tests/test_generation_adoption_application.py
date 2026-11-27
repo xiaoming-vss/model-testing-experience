@@ -12,6 +12,7 @@ from support.ai_execution import db as db  # noqa: F401
 from support.database_read_paths import database  # noqa: F401
 from support.generation import generation_services
 from support.generation_source_seed import seed_graph
+from support.memory_storage import Storage
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.generation_root_fingerprints import fingerprint_root_input
@@ -25,24 +26,6 @@ from testing_agent.models.stored_file import StoredFile
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.schemas.generation_candidates import CandidateAdoptRequest, CurrentClearRequest
 from testing_agent.services.generation_adoption_application import CandidateAdoptionApplication
-
-
-class Storage:
-    def __init__(self, data):
-        self.data = data
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield self.data
-
-    def close(self):
-        pass
 
 
 def prepare(sync, monkeypatch):

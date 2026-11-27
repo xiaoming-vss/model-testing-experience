@@ -1,30 +1,20 @@
-import { Button, Dropdown, Empty, Popover, Table, Tooltip, Typography } from 'antd'
-import { MoreOutlined } from '@ant-design/icons'
-import type { MenuProps, TableProps } from 'antd'
+import { Empty, Table, Tooltip, Typography } from 'antd'
+import type { TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { tableFooterClass } from '@/shared/utils/surfaceClasses'
 import { formatTime } from '@/utils/format'
 
-export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
-
 type RunHistoryTableProps<T> = {
   className?: string
-  appearance?: 'detail' | 'list'
   pagination?: { current: number; pageSize: number; total: number; loading: boolean; onChange: (page: number, pageSize: number) => void }
   rows: T[]
   getRunId: (row: T) => string | undefined
   selectedRunId: string | undefined
-  /** 选中行的详情由单独的查询异步刷新，优先使用其最新数据。 */
-  resolveRow: (row: T) => T
   onSelect: (runId: string | undefined) => void
   renderStatus: (row: T, active: boolean) => ReactNode
   renderArtifacts?: (row: T) => ReactNode
   getCreatedAt?: (row: T) => string | null | undefined
-  getReviewedAt?: (row: T) => string | null | undefined
-  getReviewComment?: (row: T) => string | undefined
-  getImportedAt?: (row: T) => string | null | undefined
-  renderPrimary?: (row: T, index: number) => ReactNode
   renderActions?: (row: T, active: boolean) => ReactNode
 }
 
@@ -37,8 +27,6 @@ const columnMinWidths = {
   pipeline: 220,
   artifacts: 230,
   createdAt: 186,
-  reviewedAt: 186,
-  importedAt: 140,
   actions: 210,
 } as const
 
@@ -47,19 +35,13 @@ type RunColumn<T> = NonNullable<TableProps<T>['columns']>[number]
 export function RunHistoryTable<T>({
   rows,
   className,
-  appearance = 'detail',
   pagination,
   getRunId,
   selectedRunId,
-  resolveRow,
   onSelect,
   renderStatus,
   renderArtifacts,
   getCreatedAt,
-  getReviewedAt,
-  getReviewComment,
-  getImportedAt,
-  renderPrimary,
   renderActions,
 }: RunHistoryTableProps<T>) {
   const isActive = (row: T) => Boolean(getRunId(row)) && getRunId(row) === selectedRunId
@@ -68,7 +50,7 @@ export function RunHistoryTable<T>({
       title: '运行',
       key: 'runId',
       minWidth: columnMinWidths.runId,
-      render: (_, row, index) => renderPrimary?.(row, index) ?? <RunIdCell index={index + (pagination ? (pagination.current - 1) * pagination.pageSize : 0)} runId={getRunId(row)} />,
+      render: (_, row, index) => <RunIdCell index={index + (pagination ? (pagination.current - 1) * pagination.pageSize : 0)} runId={getRunId(row)} />,
     },
     ...(getCreatedAt
       ? [{
@@ -92,33 +74,6 @@ export function RunHistoryTable<T>({
           render: (_: unknown, row: T) => renderArtifacts(row),
         }]
       : []),
-    ...(getReviewedAt
-      ? [{
-          title: '审核时间',
-          key: 'reviewedAt',
-          minWidth: columnMinWidths.reviewedAt,
-          render: (_: unknown, row: T) => {
-            const data = resolveRow(row)
-            const comment = getReviewComment?.(data)
-            return (
-              <span className="ai-task-run-table-time inline-flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ai-text-secondary)]">
-                <span>{formatTime(getReviewedAt(data) ?? undefined)}</span>
-                {comment ? <RunReviewNoteButton comment={comment} /> : null}
-              </span>
-            )
-          },
-        }]
-      : []),
-    ...(getImportedAt
-      ? [{
-          title: '导入时间',
-          key: 'importedAt',
-          minWidth: columnMinWidths.importedAt,
-          render: (_: unknown, row: T) => (
-            <span className="ai-task-run-table-time inline-flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ai-text-secondary)]">{formatTime(getImportedAt(resolveRow(row)) ?? undefined)}</span>
-          ),
-        }]
-      : []),
     ...(renderActions
       ? [{
           title: <span className="tp-actions-col-title inline-block text-center" style={{ width: 92 }}>操作</span>,
@@ -138,7 +93,7 @@ export function RunHistoryTable<T>({
   return (
     <>
     <Table<T>
-      className={`${appearance === 'list' ? 'ai-task-run-list' : 'ai-task-run-table'}${className ? ` ${className}` : ''}`}
+      className={`ai-task-run-list${className ? ` ${className}` : ''}`}
       size="small"
       columns={sizedColumns}
       dataSource={rows}
@@ -146,7 +101,7 @@ export function RunHistoryTable<T>({
       pagination={false}
       tableLayout="fixed"
       scroll={{ x: minWidthTotal }}
-      sticky={appearance === 'list'}
+      sticky
       rowClassName={(row) => (isActive(row) ? 'ai-task-run-table-row-active' : '')}
       onRow={(row) => ({ onClick: () => onSelect(getRunId(row)) })}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无运行记录" /> }}
@@ -156,7 +111,7 @@ export function RunHistoryTable<T>({
   )
 }
 
-export function RunIdCell({ index, runId }: { index: number; runId?: string }) {
+function RunIdCell({ index, runId }: { index: number; runId?: string }) {
   return (
     <span className="ai-task-run-table-id inline-flex min-w-0 items-center gap-2" onClick={(event) => event.stopPropagation()}>
       <span className="ai-task-run-table-index flex-none text-[12px] font-semibold text-[var(--ai-text-muted)]">#{index + 1}</span>
@@ -172,44 +127,18 @@ export function RunIdCell({ index, runId }: { index: number; runId?: string }) {
   )
 }
 
-/** 操作列容器；少量操作直接展示，需要折叠时再提供菜单。 */
+/** 操作列容器；操作按钮由调用方直接提供。 */
 export function RunRowActions({
   inline,
   children,
-  menuItems = [],
-  onMenuAction,
 }: {
   inline?: ReactNode
   children?: ReactNode
-  menuItems?: RunMenuAction[]
-  onMenuAction?: (key: string) => void
 }) {
-  const menu: MenuProps = { items: menuItems, onClick: ({ key }) => onMenuAction?.(key) }
   return (
     <div className="ai-task-run-table-actions inline-flex flex-wrap items-center justify-end gap-1.5">
       {inline}
       {children}
-      {menuItems.length > 0 ? (
-        <Dropdown trigger={['click']} destroyPopupOnHide menu={menu}>
-          <Button
-            size="small"
-            className="ai-task-run-table-more text-[var(--ai-text-secondary)]"
-            aria-label="更多操作"
-            icon={<MoreOutlined />}
-            onClick={(event) => event.stopPropagation()}
-          />
-        </Dropdown>
-      ) : null}
     </div>
-  )
-}
-
-export function RunReviewNoteButton({ comment }: { comment: string }) {
-  return (
-    <Popover trigger="click" placement="bottomRight" content={<div className="ai-task-run-review-comment max-w-[320px] whitespace-pre-wrap break-words text-[13px] leading-5 text-[var(--ai-text)]">{comment}</div>}>
-      <button type="button" className="ai-task-run-review-note-btn cursor-pointer border-0 bg-transparent p-0 text-[12px] leading-[18px] text-[var(--ai-blue)] hover:text-[var(--app-terminal-link)]" onClick={(event) => event.stopPropagation()}>
-        审核备注
-      </button>
-    </Popover>
   )
 }

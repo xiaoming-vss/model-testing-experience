@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models import Base
 from testing_agent.models.bug import Bug
 from testing_agent.models.project import Project
@@ -18,7 +19,7 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.user import User
 from testing_agent.schemas.stored_file import FileUploadRequest
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 @compiles(LONGTEXT, "sqlite")
@@ -56,8 +57,8 @@ async def files():
                         sprint_id="s",
                         project_id="p",
                         name="s",
-                        start_time=utcnow(),
-                        end_time=utcnow() + timedelta(days=1),
+                        start_time=naive_utcnow(),
+                        end_time=naive_utcnow() + timedelta(days=1),
                     ),
                     Requirement(requirement_id="r", sprint_id="s", name="existing"),
                     Bug(bug_id="bug-1", project_id="p", bug_no=2, title="bug", found_sprint_id="s"),

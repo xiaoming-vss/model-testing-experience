@@ -18,7 +18,7 @@
 
 - `testing_agent`、`testing_agent_ai_worker`、`testing_agent_integration_worker`、`testing_agent_perf_worker`、`test_worker` 和禅道的 `app` 是 Python 内部模块名，保持不变。
 - 原 `testing-agent-control-plane`、`testing-agent-ai-worker`、`testing-agent-api-ui-worker` 及 AI 示例命令作为别名继续安装。统一脚本和 Docker 使用新命令。
-- `TESTING_AGENT_*`、`APP_CONF` 等环境变量继续有效。
+- `TESTING_AGENT_*`、`APP_CONF` 等环境变量继续有效；API/UI Worker 的 `test_worker` 模块使用 `TEST_WORKER_HEALTH_PORT`。
 - 数据库名、数据库账号、平台认证密钥和现有运行配置不因品牌改名而重置。
 - 浏览器存储键：认证兼容键 `testpilot_access_token` 仅用于认证兼容，保留它避免改名导致已登录用户退出；主题偏好使用 `mtx-theme-preference`（light / dark / system，默认 system）。旧 `testpilot_theme_mode` 不再读取，也不迁移旧主题值。
 - 历史迁移清单、历史路径、验证记录和稳定 Worker ID 中可能保留旧名称，它们不是当前页面品牌。

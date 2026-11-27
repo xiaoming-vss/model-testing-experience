@@ -3,10 +3,10 @@ import type { ReactNode } from 'react'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { getErrorMessage } from '@/utils/format'
 import type { TestReportGenerateRun } from '@/services/api'
+import { normalizeRunStatus } from '@/domain/runs/status'
 import {
   getRunId,
   getRunReportMarkdown,
-  getRunStatusMeta,
 } from '../utils/sprintReport'
 import sprintOverviewStyles from '../styles/sprint-overview.module.css'
 
@@ -195,7 +195,7 @@ export function TestReportMarkdownModal({
   onDownloadPdf: (run: TestReportGenerateRun) => void
 }) {
   const markdown = getRunReportMarkdown(run)
-  const canDownload = Boolean(run && getRunStatusMeta(run.status).value === 'success' && getRunId(run) && markdown)
+  const canDownload = Boolean(run && normalizeRunStatus(run.status) === 'success' && getRunId(run) && markdown)
 
   return (
     <Modal

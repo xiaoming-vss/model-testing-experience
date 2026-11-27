@@ -100,12 +100,7 @@ class RepairTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "3 次"):
                 self.execute(root, "extracting_text", runner, progress)
             self.assertEqual(runner.call_count, 3)
-            self.assertTrue(
-                all(
-                    json.loads(p.intermediate_json_text) == {} and not p.output_yaml
-                    for p in progress
-                )
-            )
+            self.assertTrue(all(json.loads(p.intermediate_json_text) == {} for p in progress))
             self.assertTrue(all(p.stage_status == "running" for p in progress))
 
     def test_model_errors_and_truncation_do_not_trigger_repairs(self):

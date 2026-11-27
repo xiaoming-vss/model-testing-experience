@@ -42,7 +42,7 @@ from testing_agent.domain.rich_text import (
 )
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
-from testing_agent.repositories.bug import BugRepository
+from testing_agent.repositories.bug import BugRepository, bug_no_conflict
 from testing_agent.schemas.bug import (
     BugActivityResponse,
     BugAttachmentResponse,
@@ -81,13 +81,6 @@ REJECT_REASON_LABELS = {
     BugRejectReason.NOT_REPRODUCIBLE.value: "无法复现",
     BugRejectReason.DEFERRED.value: "遗留",
 }
-
-
-def _bug_no_conflict(exc: IntegrityError) -> bool:
-    detail = str(exc.orig)
-    return "uk_bugs_project_bug_no" in detail or (
-        "UNIQUE constraint failed: bugs.project_id, bugs.bug_no" in detail
-    )
 
 
 class BugService:
@@ -255,7 +248,7 @@ class BugService:
                 break
             except IntegrityError as exc:
                 await self.repository.rollback()
-                if not _bug_no_conflict(exc):
+                if not bug_no_conflict(exc):
                     raise
         else:
             raise AppError(409, "Bug 编号分配冲突，请重试", 409)
@@ -441,27 +434,27 @@ class BugService:
             await apply("severity", "severity", self._validate_severity(body["severity"]))
         if "priority" in body:
             await apply("priority", "priority", self._validate_priority(body["priority"]))
-        if "planned_fix_sprint_id" in body:
+        if "plannedFixSprintId" in body:
             await apply(
                 "planned_fix_sprint_id",
                 "plannedFixSprintId",
-                body["planned_fix_sprint_id"],
+                body["plannedFixSprintId"],
                 resolver=lambda value: self._resolve_optional_sprint(
                     bug.project_id, str(value or "")
                 ),
             )
-        if "requirement_id" in body:
+        if "requirementId" in body:
             await apply(
                 "requirement_id",
                 "requirementId",
-                body["requirement_id"],
+                body["requirementId"],
                 resolver=lambda value: self._resolve_optional_requirement(
                     bug.project_id, str(value or "")
                 ),
             )
         description_changed = False
-        if "description_html" in body:
-            cleaned = sanitize_rich_text(str(body["description_html"] or ""))
+        if "descriptionHtml" in body:
+            cleaned = sanitize_rich_text(str(body["descriptionHtml"] or ""))
             if not has_rich_text_content(cleaned):
                 raise AppError(400, "请填写问题描述", 400)
             if cleaned != bug.description_html:
@@ -476,7 +469,7 @@ class BugService:
                 description_changed = True
         removed = []
         inline_ids = set(extract_file_ids(bug.description_html))
-        for file_id in dict.fromkeys(body.get("removed_attachment_file_ids") or []):
+        for file_id in dict.fromkeys(body.get("removedAttachmentFileIds") or []):
             if self.files is None:
                 raise ErrBadRequest()
             row = await self.files.get(file_id, lock=True)
@@ -493,7 +486,7 @@ class BugService:
             # or activity records. Keep the Bug association for authorization.
             row.status = "archived"
             removed.append({"fileId": row.file_id, "filename": row.filename})
-        file_ids = list(body.get("attachment_file_ids") or [])
+        file_ids = list(body.get("attachmentFileIds") or [])
         if description_changed:
             file_ids += extract_file_ids(bug.description_html)
         added = await self._attach_files(user_id, bug.project_id, bug.bug_id, file_ids)

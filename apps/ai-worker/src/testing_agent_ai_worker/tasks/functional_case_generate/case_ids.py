@@ -5,7 +5,9 @@ case can be referenced from anywhere without colliding with another case from an
 
 A revision returns a case set that is a transformation of the previous one. Identity has to
 survive that transformation: an edited case keeps its ID, a deleted case takes its ID with
-it. The transformation is not reported by the model, so cases are re-matched here, in the
+it. A revision declares what it removes in ``removedCases``; every other previous case must
+still be matched or the revision is rejected. Which output case continues which previous case
+is not reported by the model, so cases are re-matched here, in the
 order 「same module and title」 → 「same module and content」 → 「same module, same relative
 order」. The last step is a convention, not a proof: a revision that deletes one case and
 rewrites both the title and the content of another one is indistinguishable from creating a

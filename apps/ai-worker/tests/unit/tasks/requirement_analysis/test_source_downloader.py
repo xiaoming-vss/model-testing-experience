@@ -1,12 +1,6 @@
-import sys
 import tempfile
 import unittest
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
@@ -29,7 +23,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"docx bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker-task-1", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker-task-1",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -52,7 +49,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"text bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker task 2", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker task 2",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -72,7 +72,10 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         client = FakeClient(b"text bytes")
         downloader = PlatformRequirementSourceDownloader(client)
         task = Task(
-            task_id="worker task 2", project_id="project-1", payload=TaskPayload(openapi_content="")
+            task_type="requirement_analysis",
+            task_id="worker task 2",
+            project_id="project-1",
+            payload=TaskPayload(openapi_content=""),
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -2,12 +2,12 @@
 
 import json
 from copy import deepcopy
-from datetime import UTC
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.ai_execution_format import FIELDS
 from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON, HISTORICAL_TEST_STAGE
 from testing_agent.repositories.direct_attempt_view import direct_attempt_rows
@@ -44,8 +44,8 @@ async def direct_attempt_view(
     started, finished = attempt.started_at, attempt.finished_at
     duration = 0
     if started and finished:
-        start = started if started.tzinfo else started.replace(tzinfo=UTC)
-        end = finished if finished.tzinfo else finished.replace(tzinfo=UTC)
+        start = as_utc(started)
+        end = as_utc(finished)
         duration = max(0, int((end - start).total_seconds() * 1000))
     state = attempt.status
     stage_status = ("completed" if review else "waiting_review") if state == "success" else state

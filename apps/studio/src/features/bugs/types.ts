@@ -307,6 +307,7 @@ export type ZentaoRemoteGroup = {
 export type ZentaoRemotePreview = {
   remoteBugId: number
   remoteDigest: string
+  localDigest: string
   linkedSource: 'push' | 'import' | string
   groups: ZentaoRemoteGroup[]
 }

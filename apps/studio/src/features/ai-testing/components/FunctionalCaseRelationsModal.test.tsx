@@ -3,84 +3,66 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
-import { api } from '@/services/api'
-import { aiTestingApi } from '../api/aiTesting.api'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
-import type { FunctionalCaseGenerateTaskRun } from '../types'
+import type { CandidateRelationsView } from '../api/generationCandidates.contract'
 import { FunctionalCaseRelationsModal } from './FunctionalCaseRelationsModal'
 
-vi.mock('@/services/api', () => ({ api: { getFunctionalCaseGenerateTask: vi.fn(), getFunctionalCaseGenerateTaskRun: vi.fn() } }))
-vi.mock('../api/aiTesting.api', () => ({ aiTestingApi: { generateFunctionalCaseRelationAnalysis: vi.fn() } }))
 vi.mock('../api/generationCandidates.api', () => ({ generationCandidatesApi: { relations: vi.fn(), runRelations: vi.fn() } }))
 vi.mock('@/domain/projects/components/ProjectAccessScope', () => ({ ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children }))
 vi.mock('./FunctionalCaseRelationsGraph', () => ({ FunctionalCaseRelationsGraph: ({ content }: { content: string }) => <div data-testid="relations-content">{content}</div> }))
 
 let client: QueryClient
-const ready: FunctionalCaseGenerateTaskRun = { runId: 'run', taskId: 'task', status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, resultYaml: '[]', importStatus: 'pending', importedTargets: [], importedAt: '' }
-const queued: FunctionalCaseGenerateTaskRun = { ...ready, status: 'pending', currentStage: 'relation_analysis' }
+let inspector: HTMLDivElement
 const relations = { schema_version: '2.0', main_paths: [{ path_id: 'P01', case_ids: ['c1', 'c2'] }], edges: [] }
+const ready: CandidateRelationsView = { candidateId: 'candidate', snapshotId: 'snapshot', currentToken: 'token', sourceAttemptId: 'run', resultYaml: '[]', status: 'success', attemptId: null, errorMessage: '', caseRelations: relations }
+const queued: CandidateRelationsView = { ...ready, status: 'running', caseRelations: null }
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  vi.mocked(api.getFunctionalCaseGenerateTask).mockResolvedValue({ taskId: 'task', name: '需求', projectId: 'project', instruction: '' })
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue(ready)
-  vi.mocked(aiTestingApi.generateFunctionalCaseRelationAnalysis).mockResolvedValue(queued)
+  inspector = document.createElement('div')
+  document.body.append(inspector)
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue(ready)
+  vi.mocked(generationCandidatesApi.runRelations).mockResolvedValue({ attemptId: 'graph', replayed: false })
 })
-afterEach(() => { cleanup(); client.clear(); vi.clearAllMocks() })
+afterEach(() => { cleanup(); inspector.remove(); client.clear(); vi.clearAllMocks() })
 function mount() {
   render(<TestThemeProvider><QueryClientProvider client={client}>
-    <FunctionalCaseRelationsModal embedded open taskId="task" runId="run" onClose={() => {}} chooseConnection={async () => 'llm'} />
+    <FunctionalCaseRelationsModal open projectId="project" candidate={{ requirementId: 'req', currentToken: 'token' }} inspectorContainer={inspector} inspectorActionContainer={inspector} onClose={() => {}} chooseConnection={async () => 'llm'} />
   </QueryClientProvider></TestThemeProvider>)
 }
 
 it('入队后持续刷新，等待真实产物出现再显示图谱', async () => {
   let submitted = false
-  let reads = 0
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockImplementation(async () => {
-    if (!submitted) return ready
-    return ++reads < 2 ? queued : { ...ready, configJson: { caseRelations: relations } }
+  vi.mocked(generationCandidatesApi.relations).mockImplementation(async () => {
+    if (!submitted) return { ...ready, caseRelations: null }
+    return { ...ready, caseRelations: relations }
   })
-  vi.mocked(aiTestingApi.generateFunctionalCaseRelationAnalysis).mockImplementation(async () => { submitted = true; return queued })
+  vi.mocked(generationCandidatesApi.runRelations).mockImplementation(async () => { submitted = true; return { attemptId: 'graph', replayed: false } })
   mount()
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: '生成图谱' }))
   expect(await screen.findByText('已提交图谱生成')).toBeInTheDocument()
-  expect(await screen.findByRole('button', { name: /图谱生成中/ })).toBeDisabled()
-  await waitFor(() => expect(screen.getByTestId('relations-content')).toHaveTextContent('P01'), { timeout: 6000 })
+  await waitFor(() => expect(generationCandidatesApi.relations).toHaveBeenCalledTimes(2))
+  expect(await screen.findByTestId('relations-content')).toHaveTextContent('P01')
 })
 
 it('图谱任务失败时展示失败原因并允许重试', async () => {
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue({ ...queued, status: 'failed', errorMessage: '缺少需求分析输入' })
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue({ ...queued, status: 'failed', errorMessage: '缺少需求分析输入' })
   mount()
   expect(await screen.findByText('图谱生成失败')).toBeInTheDocument()
   expect(screen.getByText('缺少需求分析输入')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '重新生成图谱' })).toBeEnabled()
 })
 
-it('完整用例尚未采用时禁止生成图谱', async () => {
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue({ ...ready, reviewStatus: 'pending' })
+it('图谱仍在生成时禁用重复提交', async () => {
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue(queued)
   mount()
-  expect(await screen.findByText('当前运行尚未生成用例图谱')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '生成图谱' })).toBeDisabled()
+  expect(await screen.findByRole('button', { name: /图谱生成中/ })).toBeDisabled()
 })
 
-it('候选模式以当前完整用例令牌生成和读取图谱', async () => {
-  let submitted = false
-  vi.mocked(generationCandidatesApi.relations).mockImplementation(async () => ({
-    candidateId: 'candidate', snapshotId: 'snapshot', currentToken: 'current-token', sourceAttemptId: 'run',
-    resultYaml: '[]', status: submitted ? 'success' : 'not_started', attemptId: submitted ? 'graph' : null,
-    errorMessage: '', caseRelations: submitted ? relations : null,
-  }))
-  vi.mocked(generationCandidatesApi.runRelations).mockImplementation(async () => {
-    submitted = true
-    return { attemptId: 'graph', replayed: false }
-  })
-  render(<TestThemeProvider><QueryClientProvider client={client}>
-    <FunctionalCaseRelationsModal embedded open taskId="task" runId="run" onClose={() => {}} chooseConnection={async () => 'llm'} candidate={{ requirementId: 'req', currentToken: 'current-token' }} />
-  </QueryClientProvider></TestThemeProvider>)
+it('以当前完整用例令牌提交生成请求', async () => {
+  mount()
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: '生成图谱' }))
-  await waitFor(() => expect(generationCandidatesApi.runRelations).toHaveBeenCalledWith('req', expect.objectContaining({ currentToken: 'current-token', connectionId: 'llm', requestId: expect.any(String) })))
+  await waitFor(() => expect(generationCandidatesApi.runRelations).toHaveBeenCalledWith('req', expect.objectContaining({ currentToken: 'token', connectionId: 'llm', requestId: expect.any(String) })))
   expect(await screen.findByTestId('relations-content')).toHaveTextContent('P01')
-  expect(api.getFunctionalCaseGenerateTaskRun).not.toHaveBeenCalled()
-  expect(aiTestingApi.generateFunctionalCaseRelationAnalysis).not.toHaveBeenCalled()
 })

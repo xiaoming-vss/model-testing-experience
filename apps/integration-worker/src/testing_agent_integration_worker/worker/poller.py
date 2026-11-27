@@ -6,7 +6,7 @@ import time
 from contextlib import suppress
 from uuid import uuid4
 
-from testing_agent_integration_worker.core.errors import ControlPlaneError
+from testing_agent_integration_worker.core.errors import ControlPlaneError, LeaseLost
 from testing_agent_integration_worker.domain.execution import Execution, ExecutionWindow
 from testing_agent_integration_worker.worker.lease import maintain_lease
 
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class Poller:
-    def __init__(self, control_plane, handler, step_execution, settings, health):
-        self.control_plane, self.handler, self.steps = control_plane, handler, step_execution
+    def __init__(self, control_plane, workflow, step_execution, settings, health):
+        self.control_plane, self.workflow, self.steps = control_plane, workflow, step_execution
         self.settings, self.health = settings, health
         self.worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:12]}"
         self.stop_event = asyncio.Event()
@@ -47,7 +47,7 @@ class Poller:
         )
         try:
             if window.active():
-                await self.handler.handle(self.execution)
+                await self.workflow.run(self.execution)
         finally:
             heartbeat.cancel()
             with suppress(asyncio.CancelledError):
@@ -99,6 +99,14 @@ class Poller:
                         "Control-plane unavailable worker=%s status=%s",
                         self.worker_id,
                         error.status,
+                    )
+                    await self.pause(backoff)
+                    backoff = min(30, backoff * 2)
+                except (LeaseLost, TimeoutError) as error:
+                    # A lease ended by shutdown or an exhausted grace window is a normal exit.
+                    self.health.progress()
+                    logger.warning(
+                        "Job stopped worker=%s error=%s", self.worker_id, type(error).__name__
                     )
                     await self.pause(backoff)
                     backoff = min(30, backoff * 2)

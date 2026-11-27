@@ -6,7 +6,7 @@ import json
 from sqlalchemy import select
 from support.function_case_library import make_sprint
 from support.order_api import make_order
-from support.project_api import account, project
+from support.project_api import account, project, seed_llm_connection
 from support.project_api import api as api
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -47,18 +47,9 @@ def graph_output():
 
 
 def make_llm(api, headers, pid):
-    response = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=headers,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "secret",
-            "modelId": "model",
-        },
+    return seed_llm_connection(
+        api, headers, project_id=pid, base_url="https://llm.example/v1", api_key="secret"
     )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
 
 
 def dispatch(api, headers, order_id, connection_id, graph_input=None):

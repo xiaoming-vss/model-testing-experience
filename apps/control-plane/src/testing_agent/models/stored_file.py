@@ -36,9 +36,17 @@ class StoredFile(Base):
     cleanup_until: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, comment="清理领取租约截止时间（UTC）；超时可由其他实例接管"
     )
-    purpose: Mapped[str] = mapped_column(String(32), comment="文件业务用途")
+    purpose: Mapped[str] = mapped_column(
+        String(32),
+        comment=("文件业务用途：requirement/attachment/project_skill/ui_artifact/perf_case_data"),
+    )
     resource_type: Mapped[str] = mapped_column(
-        String(32), default="", comment="已关联的业务资源类型"
+        String(32),
+        default="",
+        comment=(
+            "已关联的业务资源类型：requirement/bug/ai_generate_run/perf_case/project"
+            "_skill/ui_worker_task；空字符串表示未关联"
+        ),
     )
     resource_id: Mapped[str] = mapped_column(String(64), default="", comment="已关联的业务资源标识")
     completed_at: Mapped[datetime | None] = mapped_column(

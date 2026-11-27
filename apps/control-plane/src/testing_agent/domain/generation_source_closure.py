@@ -18,7 +18,6 @@ BlockReason = Literal[
     "source_unknown",
     "source_conflict",
     "source_stale",
-    "source_mismatch",
     "pending_upstream",
     "concurrent_change",
 ]

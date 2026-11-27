@@ -17,16 +17,20 @@ from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.environment_access import authorized_environment_vars
-from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.project_access import require_project_id
 
 
 @dataclass
 class ExecutionAuthority:
+    """The recorded actor a worker execution is bound to.
+
+    API, UI and perf runs do not record a personal-connection dependency; only
+    AI runs do, through ``stage_storage.authorization``.
+    """
+
     actor: str
     project_id: str
     run: Any
-    connection_ids: list[tuple[str, str]]
 
 
 async def execution_authority(session, task) -> ExecutionAuthority:
@@ -38,7 +42,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
         )
         if run is None or not run.project_id:
             raise ErrForbidden()
-        return ExecutionAuthority(run.trigger_user_id, run.project_id, run, [])
+        return ExecutionAuthority(run.trigger_user_id, run.project_id, run)
     if task.domain not in {"api", "ui"}:
         raise ErrForbidden()
     model: Any
@@ -61,7 +65,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
     )
     if run is None or not run.project_id:
         raise ErrForbidden()
-    return ExecutionAuthority(run.trigger_user_id, run.project_id, run, [])
+    return ExecutionAuthority(run.trigger_user_id, run.project_id, run)
 
 
 async def fail_authorization(session, task, authority=None):
@@ -106,20 +110,6 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
         if not await session.scalar(select(User.user_id).where(User.user_id == authority.actor)):
             raise ErrForbidden()
         await require_project_id(session, authority.actor, authority.project_id)
-        for provider, connection_id in authority.connection_ids:
-            connection = await require_personal_connection(
-                session, authority.actor, provider, connection_id, authority.project_id
-            )
-            if provider == "gitlab":
-                from testing_agent.services.service_instance import normalize_instance_url
-
-                bindings = (authority.run.snapshot_json or {}).get("bindings", [])
-                if any(
-                    binding.get("connectionId") == connection_id
-                    and binding.get("instanceUrl") != normalize_instance_url(connection.base_url)
-                    for binding in bindings
-                ):
-                    raise ErrForbidden()
         if task.domain == "api":
             await authorized_environment_vars(
                 session, authority.actor, authority.run.environment_id
@@ -234,15 +224,7 @@ async def revoke_executions(
                     continue
                 if connection_id and connection_id not in identity.connection_ids:
                     continue
-                from testing_agent.services.standalone_worker_service import StandaloneWorkerService
-
-                standalone = StandaloneWorkerService(session)
-                if await standalone.is_standalone(task):
-                    await standalone.retire(
-                        task, "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
-                    )
-                else:
-                    await direct.retire_authorization(task)
+                await direct.retire_authorization(task)
             # Unknown legacy AI entries are handled by the coordinated cutover,
             # and must never fall back to the retired ledger during revocation.
             continue
@@ -254,7 +236,9 @@ async def revoke_executions(
             continue
         if project_id and authority.project_id != project_id:
             continue
-        if connection_id and not any(cid == connection_id for _, cid in authority.connection_ids):
+        if connection_id:
+            # These runs record no connection dependency, so revoking one connection
+            # does not terminate them; AI runs are matched above by their own identity.
             continue
         await fail_authorization(session, task, authority)
         if task.domain in {"api", "ui"}:

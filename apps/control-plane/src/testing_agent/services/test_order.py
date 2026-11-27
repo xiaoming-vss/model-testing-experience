@@ -106,6 +106,8 @@ class TestOrderService:
             tested_version=body.tested_version,
         )
         self.repository.add(order)
+        if source_order is not None:
+            await self._copy_retest_entries(source_order, order)
         try:
             await self.repository.commit()
         except IntegrityError as exc:
@@ -114,8 +116,6 @@ class TestOrderService:
             if error is None:
                 raise
             raise error from exc
-        if source_order is not None:
-            await self._copy_retest_entries(source_order, order)
         return dump(TestOrderResponse, await self.repository.get_order(order.order_id))
 
     async def _copy_retest_entries(self, source: TestOrder, order: TestOrder) -> None:
@@ -137,7 +137,6 @@ class TestOrderService:
             for index, entry in enumerate(retest)
         ]
         self.entry_repository.add_all(copies)
-        await self.entry_repository.commit()
 
     async def list_project(
         self,

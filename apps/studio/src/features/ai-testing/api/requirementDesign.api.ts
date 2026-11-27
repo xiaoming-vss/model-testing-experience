@@ -1,12 +1,4 @@
-import { buildQuery, request } from '@/shared/api/request'
-import type { RequirementAnalysisTask, RequirementAnalysisTaskRun } from '../types'
-
-export type RequirementDesignRun = RequirementAnalysisTaskRun & { hasResult?: boolean; availableArtifacts?: string[] }
-
-export type RequirementDesignHistory = {
-  items: RequirementDesignRun[]; total: number; statusCounts?: Record<string, number>;
-  reviewPendingCount?: number; latestRun?: RequirementDesignRun
-}
+import { request } from '@/shared/api/request'
 
 export type RequirementDesignKind = 'requirement_analysis' | 'function' | 'api' | 'ui'
 export type RequirementDesignTask = {
@@ -16,6 +8,7 @@ export type RequirementDesignTask = {
   sourceType: string
   hasSource: boolean
   sourceFilename: string
+  interfaceIds?: string[]
   createdAt?: string
   updatedAt?: string
 }
@@ -34,8 +27,6 @@ export type RequirementDesignConfiguration = {
 }
 export const requirementDesignApi = {
   overview: (requirementId: string) => request<RequirementDesignOverview>(`/v1/requirements/${requirementId}/design`),
-  history: (requirementId: string, kind: RequirementDesignKind, params: { page: number; pageSize: number; pipelineFilter: string }) =>
-    request<RequirementDesignHistory>(`/v1/requirements/${requirementId}/design/${kind}/runs${buildQuery(params)}`),
   configure: (requirementId: string, kind: RequirementDesignKind, body: RequirementDesignConfiguration) =>
-    request<RequirementAnalysisTask>(`/v1/requirements/${requirementId}/design/${kind}/configuration`, { method: 'POST', body: JSON.stringify(body) }),
+    request<{ taskId?: string }>(`/v1/requirements/${requirementId}/design/${kind}/configuration`, { method: 'POST', body: JSON.stringify(body) }),
 }

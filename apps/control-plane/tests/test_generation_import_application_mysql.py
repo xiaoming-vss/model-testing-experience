@@ -9,10 +9,13 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support import generation_candidate_graph as graph_fixture
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.memory_storage import Storage
+from support.mysql_initialization import clean_schema as clean_schema
+from support.mysql_initialization import mysql as mysql
+from support.mysql_initialization import seed_row
+from support.mysql_initialization import sessions as sessions
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.generation_content_hash import generation_content_hash
@@ -31,26 +34,12 @@ OUTPUT = (
     "cases:\n  - module: module\n    title: existing\n"
     "    steps: login\n    expected_results: success\n"
 )
+TARGET = dict(requirement_id="req", kind="function", stage="detailed_cases")
 
 
-class Storage:
-    def __init__(self):
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield DOCUMENT
-
-    def close(self):
-        pass
-
-
-def test_application_rechecks_authorization_and_replays_on_mysql(mysql, monkeypatch):  # noqa: F811
+@pytest.fixture
+def import_graph(mysql, monkeypatch):
+    """Seed requirement ``req`` whose candidate graph ends in the importable ``d``."""
     digest = sha256(DOCUMENT).hexdigest()
     root = fingerprint_root_input(
         "requirement_document",
@@ -196,94 +185,98 @@ def test_application_rechecks_authorization_and_replays_on_mysql(mysql, monkeypa
             tables["function_test_cases"],
             {"case_id": "case", "suite_id": "suite", "title": "existing", "module": "module"},
         )
+    return SimpleNamespace(actor=actor, function_task_id=tasks["function"]["task_id"])
 
-    async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
-        storage = Storage()
-        files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
 
-        def application(session):
-            return CurrentImportApplication(
-                generation_services(AiGenerateTaskRepository(session), files=files).chain,
-                secret=SECRET,
-            )
+@pytest.fixture
+def files():
+    """File service over the seeded document; ``files.storage`` counts and can refuse reads."""
+    return SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=Storage(DOCUMENT))
 
-        try:
-            async with factory() as session:
-                app = application(session)
-                with pytest.raises(AppError) as forbidden:
-                    await app.preview(
-                        requirement_id="req",
-                        kind="function",
-                        stage="detailed_cases",
-                        current_token="current-d",
-                        target_id="",
-                        actor_id="other",
-                        now=100,
-                    )
-                assert forbidden.value.http_code == 403 and storage.calls == 0
-                preview = await app.preview(
-                    requirement_id="req",
-                    kind="function",
-                    stage="detailed_cases",
-                    current_token="current-d",
-                    target_id="",
-                    actor_id=actor,
-                    now=100,
-                )
-                assert preview.requires_confirmation
-            request = CurrentImportRequest(
-                expected_current_token=preview.current_token,
-                expected_lineage_hash=preview.full_lineage_hash,
-                preview_token=preview.preview_token,
-                request_id=uuid4(),
-                confirm_overwrite=True,
-            )
 
-            async def submit():
-                async with factory() as session:
-                    return await application(session).execute(
-                        requirement_id="req",
-                        kind="function",
-                        stage="detailed_cases",
-                        request=request,
-                        actor_id=actor,
-                        now=101,
-                    )
+def application(session, files):
+    return CurrentImportApplication(
+        generation_services(AiGenerateTaskRepository(session), files=files).chain, secret=SECRET
+    )
 
-            results = await asyncio.gather(submit(), submit())
-            assert sorted(result["replayed"] for result in results) == [False, True]
-            assert results[0]["importRecords"] == results[1]["importRecords"]
-            async with factory() as session:
-                assert (
-                    await session.scalar(sa.select(sa.func.count()).select_from(AiGenerateImport))
-                    == 1
-                )
-                assert (
-                    await session.scalar(
-                        sa.select(sa.func.count()).select_from(AiGenerateImportRequest)
-                    )
-                    == 1
-                )
-                updated = await session.scalar(
-                    sa.select(FunctionTestCase).where(FunctionTestCase.case_id == "case")
-                )
-                assert updated is not None and updated.steps == "login"
-                await delete_chain_storage_for_task(session, task_id=tasks["function"]["task_id"])
-                await session.commit()
-            storage.fail = True
-            async with factory() as session:
-                replay = await application(session).execute(
-                    requirement_id="req",
-                    kind="function",
-                    stage="detailed_cases",
-                    request=request,
-                    actor_id=actor,
-                    now=1000,
-                )
-                assert replay["replayed"] and replay["importRecords"] == results[0]["importRecords"]
-        finally:
-            await engine.dispose()
 
-    asyncio.run(exercise())
+async def preview(sessions, files, actor_id):
+    """Preview the current ``d`` for ``actor_id``."""
+    async with sessions() as session:
+        return await application(session, files).preview(
+            **TARGET, current_token="current-d", target_id="", actor_id=actor_id, now=100
+        )
+
+
+def confirmed_request(previewed):
+    return CurrentImportRequest(
+        expected_current_token=previewed.current_token,
+        expected_lineage_hash=previewed.full_lineage_hash,
+        preview_token=previewed.preview_token,
+        request_id=uuid4(),
+        confirm_overwrite=True,
+    )
+
+
+async def execute(sessions, files, request, actor_id, now=101):
+    async with sessions() as session:
+        return await application(session, files).execute(
+            **TARGET, request=request, actor_id=actor_id, now=now
+        )
+
+
+async def test_preview_by_another_actor_is_refused_before_reading_the_document(
+    import_graph, files, sessions
+):
+    with pytest.raises(AppError) as forbidden:
+        await preview(sessions, files, "other")
+
+    assert forbidden.value.http_code == 403
+    assert files.storage.calls == 0
+
+
+async def test_authorized_preview_requires_confirmation(import_graph, files, sessions):
+    previewed = await preview(sessions, files, import_graph.actor)
+
+    assert previewed.requires_confirmation
+
+
+async def test_concurrent_executes_of_one_request_import_once_and_replay(
+    import_graph, files, sessions
+):
+    actor = import_graph.actor
+    request = confirmed_request(await preview(sessions, files, actor))
+
+    results = await asyncio.gather(
+        execute(sessions, files, request, actor), execute(sessions, files, request, actor)
+    )
+
+    async with sessions() as session:
+        imports = await session.scalar(sa.select(sa.func.count()).select_from(AiGenerateImport))
+        requests = await session.scalar(
+            sa.select(sa.func.count()).select_from(AiGenerateImportRequest)
+        )
+        updated = await session.scalar(
+            sa.select(FunctionTestCase).where(FunctionTestCase.case_id == "case")
+        )
+    assert sorted(result["replayed"] for result in results) == [False, True]
+    assert results[0]["importRecords"] == results[1]["importRecords"]
+    assert imports == 1
+    assert requests == 1
+    assert updated is not None and updated.steps == "login"
+
+
+async def test_replay_after_chain_storage_removal_returns_the_receipt_without_a_read(
+    import_graph, files, sessions
+):
+    actor = import_graph.actor
+    request = confirmed_request(await preview(sessions, files, actor))
+    imported = await execute(sessions, files, request, actor)
+    async with sessions() as session:
+        await delete_chain_storage_for_task(session, task_id=import_graph.function_task_id)
+        await session.commit()
+
+    files.storage.fail = True
+    replay = await execute(sessions, files, request, actor, now=1000)
+
+    assert replay["replayed"] and replay["importRecords"] == imported["importRecords"]

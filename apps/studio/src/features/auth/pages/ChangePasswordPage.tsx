@@ -15,7 +15,7 @@ export function ChangePasswordPage() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const [form] = Form.useForm()
-  const forced = Boolean(user?.mustChangePassword ?? user?.must_change_password)
+  const forced = Boolean(user?.mustChangePassword)
 
   const mutation = useMutation({
     mutationFn: api.changePassword,

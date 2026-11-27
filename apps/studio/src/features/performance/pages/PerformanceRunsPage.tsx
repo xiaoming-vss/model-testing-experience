@@ -7,6 +7,7 @@ import { Alert, Button, Progress, Segmented, Select, Space, Table, Tag, Typograp
 import type { TableProps } from 'antd'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { useActiveProject } from '@/domain/projects/hooks/useActiveProject'
+import { PERF_RUN_POLL_INTERVAL } from '@/domain/runs/polling'
 import { ProjectAccessScope } from '@/domain/projects/components/ProjectAccessScope'
 import { api, listItems, listTotal } from '@/services/api'
 import { formatTime, getErrorMessage } from '@/utils/format'
@@ -51,7 +52,7 @@ export function PerformanceRunsPage() {
       pageSize,
     }),
     enabled: Boolean(activeProjectId) && runKind === 'suite',
-    refetchInterval: (query) => query.state.data?.items?.some((run) => isPerfRunActive(run.status)) ? 3000 : false,
+    refetchInterval: (query) => query.state.data?.items?.some((run) => isPerfRunActive(run.status)) ? PERF_RUN_POLL_INTERVAL : false,
   })
   const caseRunsQuery = useQuery({
     queryKey: ['perfRuns', activeProjectId, caseFilter, statusFilter, page, pageSize],
@@ -63,7 +64,7 @@ export function PerformanceRunsPage() {
       pageSize,
     }),
     enabled: Boolean(activeProjectId) && runKind === 'case',
-    refetchInterval: (query) => query.state.data?.items?.some((run) => isPerfRunActive(run.status)) ? 3000 : false,
+    refetchInterval: (query) => query.state.data?.items?.some((run) => isPerfRunActive(run.status)) ? PERF_RUN_POLL_INTERVAL : false,
   })
   const activeQuery = runKind === 'case' ? caseRunsQuery : suiteRunsQuery
   const suiteRuns = listItems(suiteRunsQuery.data)

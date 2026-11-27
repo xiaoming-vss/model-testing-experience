@@ -114,7 +114,8 @@ def dispatch(api, state, suffix, *, headers=None, body=None):
             await repository.close()
 
     asyncio.run(run())
-    response = api.get(url + "/zentao-jobs/" + job, headers=headers)
+    response = api.get(state["url"], headers=headers)
     assert response.status_code == 200
-    assert response.json()["data"]["jobStatus"] not in ("queued", "claimed", "running")
-    return api.get(state["url"], headers=headers)
+    latest = response.json()["data"]["latestJob"] or {}
+    assert latest["jobStatus"] not in ("queued", "claimed", "running")
+    return response

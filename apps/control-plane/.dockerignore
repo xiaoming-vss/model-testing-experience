@@ -14,7 +14,6 @@ __pycache__
 *.zip
 
 config/local.toml
-config/container.toml
 storage
 tests
 docs

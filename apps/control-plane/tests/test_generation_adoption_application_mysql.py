@@ -1,7 +1,6 @@
 """Real MySQL authorization, preparation and concurrent adoption boundaries."""
 
 import asyncio
-import threading
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from types import SimpleNamespace
@@ -9,10 +8,13 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support import generation_candidate_graph as graph_fixture
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.memory_storage import Storage
+from support.mysql_initialization import clean_schema as clean_schema
+from support.mysql_initialization import mysql as mysql
+from support.mysql_initialization import seed_row
+from support.mysql_initialization import sessions as sessions
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.generation_root_fingerprints import fingerprint_root_input
@@ -28,35 +30,12 @@ from testing_agent.schemas.generation_candidates import CandidateAdoptRequest, C
 from testing_agent.services.generation_adoption_application import CandidateAdoptionApplication
 
 DOCUMENT = b"verified document"
+STAGE = dict(requirement_id="req", kind="requirement_analysis", stage="extracting_text")
 
 
-class Body:
-    def iter_chunks(self, chunk_size):
-        yield DOCUMENT
-
-    def close(self):
-        pass
-
-
-class Storage:
-    def __init__(self):
-        self.calls = 0
-        self.block = False
-        self.fail = False
-        self.entered = threading.Event()
-        self.release = threading.Event()
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        if self.block:
-            self.entered.set()
-            if not self.release.wait(10):
-                raise RuntimeError("test storage timed out")
-        return {"Body": Body()}
-
-
-def test_adoption_application_rechecks_document_and_serializes_retries(mysql, monkeypatch):  # noqa: F811
+@pytest.fixture
+def material_graph(mysql, monkeypatch):
+    """Seed requirement ``req`` with an available trial material ``m`` in an empty stage slot."""
     digest = sha256(DOCUMENT).hexdigest()
     root = fingerprint_root_input(
         "requirement_document",
@@ -178,143 +157,161 @@ def test_adoption_application_rechecks_document_and_serializes_retries(mysql, mo
                 "content_token": "empty-m",
             },
         )
+    return SimpleNamespace(actor=actor, stage_id=stage["id"])
 
-    async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
-        storage = Storage()
-        files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
-        request = CandidateAdoptRequest(
-            action="adopt",
-            candidate_id="m",
-            expected_candidate_token="token-m",
-            expected_attempt_id="attempt-m",
-            expected_current_token="empty-m",
-            request_id=uuid4(),
+
+@pytest.fixture
+def files():
+    """File service over the seeded document; ``files.storage`` counts, blocks and refuses reads."""
+    return SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=Storage(DOCUMENT))
+
+
+def application(session, files):
+    return CandidateAdoptionApplication(
+        generation_services(AiGenerateTaskRepository(session), files=files).chain
+    )
+
+
+def adopt_request():
+    return CandidateAdoptRequest(
+        action="adopt",
+        candidate_id="m",
+        expected_candidate_token="token-m",
+        expected_attempt_id="attempt-m",
+        expected_current_token="empty-m",
+        request_id=uuid4(),
+    )
+
+
+async def adopt(sessions, files, request, actor_id):
+    async with sessions() as session:
+        return await application(session, files).adopt(**STAGE, request=request, actor_id=actor_id)
+
+
+async def clear(sessions, files, request, actor_id):
+    async with sessions() as session:
+        return await application(session, files).clear(**STAGE, request=request, actor_id=actor_id)
+
+
+async def current_slot(sessions, stage_id):
+    async with sessions() as session:
+        return await session.scalar(
+            sa.select(AiGenerationStageContent).where(AiGenerationStageContent.stage_id == stage_id)
         )
 
-        def application(session):
-            return CandidateAdoptionApplication(
-                generation_services(AiGenerateTaskRepository(session), files=files).chain
-            )
 
-        async def submit():
-            async with factory() as session:
-                return await application(session).adopt(
-                    requirement_id="req",
-                    kind="requirement_analysis",
-                    stage="extracting_text",
-                    request=request,
-                    actor_id=actor,
-                )
+async def adopt_then_clear(sessions, files, actor_id):
+    """Adopt ``m`` once and clear the slot once; returns the adoption request and clear result."""
+    request = adopt_request()
+    adopted = await adopt(sessions, files, request, actor_id)
+    cleared = await clear(
+        sessions,
+        files,
+        CurrentClearRequest(expected_current_token=adopted.content_token, request_id=uuid4()),
+        actor_id,
+    )
+    return request, cleared
 
-        try:
-            async with factory() as session:
-                with pytest.raises(AppError) as forbidden:
-                    await application(session).adopt(
-                        requirement_id="req",
-                        kind="requirement_analysis",
-                        stage="extracting_text",
-                        request=request,
-                        actor_id="other",
-                    )
-                assert forbidden.value.http_code == 403 and storage.calls == 0
-                preview = await application(session).preview(
-                    requirement_id="req",
-                    kind="requirement_analysis",
-                    stage="extracting_text",
-                    request=request,
-                    actor_id=actor,
-                )
-                assert preview.can_adopt
-                assert (await session.get(AiGenerationCandidate, "m")).frozen_at is None
-                assert (
-                    await session.scalar(
-                        sa.select(sa.func.count()).select_from(AiGenerationReviewReceipt)
-                    )
-                    == 0
-                )
-            storage.block = True
-            pending = asyncio.create_task(submit())
-            assert await asyncio.to_thread(storage.entered.wait, 5)
-            async with factory() as writer:
-                await asyncio.wait_for(
-                    writer.execute(
-                        sa.update(Requirement)
-                        .where(Requirement.requirement_id == "req")
-                        .values(document_filename="changed.docx")
-                    ),
-                    timeout=3,
-                )
-                await writer.commit()
-            storage.release.set()
-            with pytest.raises(AppError) as stale:
-                await pending
-            assert stale.value.data["reason"] in {"source_unknown", "source_stale"}
-            async with factory() as writer:
-                await writer.execute(
+
+async def test_adoption_by_another_actor_is_refused_before_reading_the_document(
+    material_graph, files, sessions
+):
+    with pytest.raises(AppError) as forbidden:
+        await adopt(sessions, files, adopt_request(), "other")
+
+    assert forbidden.value.http_code == 403
+    assert files.storage.calls == 0
+
+
+async def test_preview_reports_the_material_adoptable_without_side_effects(
+    material_graph, files, sessions
+):
+    async with sessions() as session:
+        previewed = await application(session, files).preview(
+            **STAGE, request=adopt_request(), actor_id=material_graph.actor
+        )
+        frozen_at = (await session.get(AiGenerationCandidate, "m")).frozen_at
+        receipts = await session.scalar(
+            sa.select(sa.func.count()).select_from(AiGenerationReviewReceipt)
+        )
+
+    assert previewed.can_adopt
+    assert frozen_at is None
+    assert receipts == 0
+
+
+async def test_document_replaced_during_the_read_rejects_the_adoption(
+    material_graph, files, sessions
+):
+    files.storage.block = True
+    pending = asyncio.create_task(adopt(sessions, files, adopt_request(), material_graph.actor))
+    try:
+        assert await asyncio.to_thread(files.storage.entered.wait, 5)
+        async with sessions() as writer:
+            await asyncio.wait_for(
+                writer.execute(
                     sa.update(Requirement)
                     .where(Requirement.requirement_id == "req")
-                    .values(document_filename="requirement.docx")
-                )
-                await writer.commit()
-            storage.block = False
-            results = await asyncio.gather(submit(), submit())
-            assert sorted(item.replayed for item in results) == [False, True]
-            assert results[0].content_token == results[1].content_token
-            async with factory() as session:
-                assert (
-                    await session.scalar(
-                        sa.select(sa.func.count()).select_from(AiGenerationReviewReceipt)
-                    )
-                    == 1
-                )
-                slot = await session.scalar(
-                    sa.select(AiGenerationStageContent).where(
-                        AiGenerationStageContent.stage_id == stage["id"]
-                    )
-                )
-                assert slot.source_candidate_id == "m"
-            clear_body = CurrentClearRequest(
-                expected_current_token=results[0].content_token, request_id=uuid4()
+                    .values(document_filename="changed.docx")
+                ),
+                timeout=3,
             )
+            await writer.commit()
+        files.storage.release.set()
 
-            async def clear():
-                async with factory() as session:
-                    return await application(session).clear(
-                        requirement_id="req",
-                        kind="requirement_analysis",
-                        stage="extracting_text",
-                        request=clear_body,
-                        actor_id=actor,
-                    )
+        with pytest.raises(AppError) as stale:
+            await pending
+        assert stale.value.data["reason"] in {"source_unknown", "source_stale"}
+    finally:
+        files.storage.release.set()
+        await asyncio.gather(pending, return_exceptions=True)
 
-            clear_results = await asyncio.gather(clear(), clear())
-            assert sorted(item.replayed for item in clear_results) == [False, True]
-            assert clear_results[0].content_token == clear_results[1].content_token
-            async with factory() as session:
-                calls = storage.calls
-                storage.fail = True
-                replay = await application(session).adopt(
-                    requirement_id="req",
-                    kind="requirement_analysis",
-                    stage="extracting_text",
-                    request=request,
-                    actor_id=actor,
-                )
-                assert replay.replayed and storage.calls == calls
-                session.expire_all()
-                slot = await session.scalar(
-                    sa.select(AiGenerationStageContent).where(
-                        AiGenerationStageContent.stage_id == stage["id"]
-                    )
-                )
-                assert (
-                    slot.source_candidate_id is None
-                    and slot.content_token == clear_results[0].content_token
-                )
-        finally:
-            storage.release.set()
-            await engine.dispose()
 
-    asyncio.run(exercise())
+async def test_concurrent_adoptions_of_one_request_adopt_once_and_replay(
+    material_graph, files, sessions
+):
+    request, actor = adopt_request(), material_graph.actor
+
+    results = await asyncio.gather(
+        adopt(sessions, files, request, actor), adopt(sessions, files, request, actor)
+    )
+
+    async with sessions() as session:
+        receipts = await session.scalar(
+            sa.select(sa.func.count()).select_from(AiGenerationReviewReceipt)
+        )
+    slot = await current_slot(sessions, material_graph.stage_id)
+    assert sorted(item.replayed for item in results) == [False, True]
+    assert results[0].content_token == results[1].content_token
+    assert receipts == 1
+    assert slot.source_candidate_id == "m"
+
+
+async def test_concurrent_clears_of_one_request_clear_once_and_replay(
+    material_graph, files, sessions
+):
+    actor = material_graph.actor
+    adopted = await adopt(sessions, files, adopt_request(), actor)
+    request = CurrentClearRequest(expected_current_token=adopted.content_token, request_id=uuid4())
+
+    results = await asyncio.gather(
+        clear(sessions, files, request, actor), clear(sessions, files, request, actor)
+    )
+
+    assert sorted(item.replayed for item in results) == [False, True]
+    assert results[0].content_token == results[1].content_token
+
+
+async def test_replaying_the_adoption_after_a_clear_changes_nothing(
+    material_graph, files, sessions
+):
+    actor = material_graph.actor
+    request, cleared = await adopt_then_clear(sessions, files, actor)
+    calls = files.storage.calls
+
+    files.storage.fail = True
+    replay = await adopt(sessions, files, request, actor)
+    slot = await current_slot(sessions, material_graph.stage_id)
+
+    assert replay.replayed and files.storage.calls == calls
+    assert slot.source_candidate_id is None and slot.content_token == cleared.content_token

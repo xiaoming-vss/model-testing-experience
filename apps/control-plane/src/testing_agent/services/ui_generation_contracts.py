@@ -7,17 +7,10 @@ from typing import Any
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.domain.ui_completion import compile_case
 from testing_agent.domain.ui_generation_artifacts import (
-    UI_WORKFLOW_VERSION,
     validate_design,
     validate_surface,
 )
 from testing_agent.services.ui_test_case import validate_ui_import_payload
-
-
-def is_ui_workflow(run: Any) -> bool:
-    return (getattr(run, "snapshot_json", None) or {}).get(
-        "uiWorkflowVersion"
-    ) == UI_WORKFLOW_VERSION
 
 
 def validate_ui_yaml(raw: str) -> None:

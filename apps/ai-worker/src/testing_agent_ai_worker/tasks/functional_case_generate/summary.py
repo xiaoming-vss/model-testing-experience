@@ -34,7 +34,6 @@ def build_progress(
         intermediate_json_text=""
         if current_stage == "detailed_cases" and stage_status == "running"
         else config_json,
-        output_yaml="",
         result_summary_json=build_result_summary_json(
             task=task,
             status="running",
@@ -72,22 +71,41 @@ def build_result_summary_json(
     detailed_cases_json: str,
     error_message: str | None,
     relations_json: str = "",
+    previous_cases_json: str = "",
 ) -> str:
-    """构造平台展示用摘要 JSON。"""
+    """构造平台展示用摘要 JSON；修订时附带被删除的当前用例数。"""
 
+    details = {
+        "sourceFormat": (task.payload.source_format or "").strip().lower(),
+        "sourceFormatVersion": (task.payload.source_format_version or "").strip(),
+        "sourceType": (task.payload.source_type or "").strip().lower(),
+        "caseCount": count_cases(detailed_cases_json),
+        "configJsonLength": len(config_json),
+        "resultLength": len(detailed_cases_json),
+        **relation_summary_stats(relations_json),
+    }
+    if previous_cases_json.strip():
+        details["removedCaseCount"] = removed_case_count(previous_cases_json, detailed_cases_json)
     return build_task_result_summary(
         task=task,
         status=status,
         error_message=error_message,
-        details={
-            "sourceFormat": (task.payload.source_format or "").strip().lower(),
-            "sourceFormatVersion": (task.payload.source_format_version or "").strip(),
-            "sourceType": (task.payload.source_type or "").strip().lower(),
-            "caseCount": count_cases(detailed_cases_json),
-            "configJsonLength": len(config_json),
-            "resultLength": len(detailed_cases_json),
-            **relation_summary_stats(relations_json),
-        },
+        details=details,
+    )
+
+
+def removed_case_count(previous_cases_json: str, detailed_cases_json: str) -> int:
+    """修订前的用例里，平台编号没有出现在修订结果中的条数；不带编号的手写用例不统计。"""
+
+    previous = parse_optional_json(previous_cases_json)
+    current = parse_optional_json(detailed_cases_json)
+    if not isinstance(previous, dict) or not isinstance(current, dict):
+        return 0
+    kept = {case.get("case_id") for case in current.get("cases") or [] if isinstance(case, dict)}
+    return sum(
+        1
+        for case in previous.get("cases") or []
+        if isinstance(case, dict) and case.get("case_id") and case["case_id"] not in kept
     )
 
 

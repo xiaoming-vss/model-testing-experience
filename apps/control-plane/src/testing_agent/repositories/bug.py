@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import case, func, select
+from sqlalchemy.exc import IntegrityError
 
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
@@ -13,6 +14,14 @@ from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.models.user import User
 from testing_agent.repositories.base import ResourceRepository
+
+
+def bug_no_conflict(exc: IntegrityError) -> bool:
+    """The one project-scoped Bug number uniqueness violation check."""
+    detail = str(exc.orig)
+    return "uk_bugs_project_bug_no" in detail or (
+        "UNIQUE constraint failed: bugs.project_id, bugs.bug_no" in detail
+    )
 
 
 class BugRepository(ResourceRepository):

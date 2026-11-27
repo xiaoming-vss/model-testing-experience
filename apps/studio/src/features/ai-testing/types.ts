@@ -3,11 +3,6 @@ import type { ListResponse } from '@/shared/api/request'
 export type RunHistoryResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number>; reviewPendingCount?: number; latestRun?: T }
 export type AiTaskListResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number> }
 
-export type ApiCaseGenerateTaskSourceType = 'interface_library'
-export type UiCaseGenerateTaskSourceType = 'repository'
-export type FunctionalCaseGenerateTaskSourceType = 'requirement' | string
-export type FunctionalCaseGenerateTaskSourceFormat = 'requirement_understanding_json' | string
-export type RequirementAnalysisTaskSourceType = 'text' | 'word' | 'docx' | string
 export type ApiCaseGenerateTaskRunStatus =
   | 'draft'
   | 'pending'
@@ -18,26 +13,6 @@ export type ApiCaseGenerateTaskRunStatus =
   | 'error'
   | 'canceled'
   | string
-
-export type GenerateTaskRunReviewStatus = 'pending' | 'approved' | 'rejected'
-export type GenerateTaskRunImportStatus = 'pending' | 'imported'
-
-export type ImportedTarget = {
-  targetType: 'api_collection' | 'function_suite' | 'ui_suite'
-  targetId: string
-}
-
-export type GenerateTaskRunImportLifecycle = {
-  generationChainManaged?: boolean
-  availableArtifacts?: string[]
-  hasResult?: boolean
-  reviewStatus: GenerateTaskRunReviewStatus
-  importStatus: GenerateTaskRunImportStatus
-  importedTargets: ImportedTarget[]
-  importedAt: string | null
-}
-
-export type ApiCaseGenerateTaskRunReviewStatus = GenerateTaskRunReviewStatus
 
 export type AiSkillLibraryItem = {
   skillSpaceId: string
@@ -54,184 +29,6 @@ export type AiSkillLibraryItem = {
 
 export type UploadAiSkillPayload = {
   files: File[]
-}
-
-export type FunctionalCaseGenerateTaskStage =
-  | 'enhanced_text'
-  | 'requirement_analysis'
-  | 'case_names'
-  | 'detailed_cases'
-  | 'relation_analysis'
-  | 'completed'
-  | string
-
-export type RequirementAnalysisTaskStage =
-  | 'requirement_review'
-  | 'extracting_text'
-  | string
-
-export type FunctionalCaseGenerateTaskStageStatus =
-  | 'pending'
-  | 'claimed'
-  | 'running'
-  | 'waiting_review'
-  | 'success'
-  | 'failed'
-  | 'error'
-  | 'canceled'
-  | string
-
-export type ApiCaseGenerateTask = {
-  taskId?: string
-  taskType?: 'api_case_generate' | string
-  name: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  creatorUserId?: string
-  sourceType?: ApiCaseGenerateTaskSourceType
-  interfaceIds: string[]
-  interfaceCount?: number
-  instruction: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export type UiCaseGenerateTask = {
-  taskId?: string
-  taskType?: 'ui_case_generate' | string
-  name: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  creatorUserId?: string
-  sourceType: UiCaseGenerateTaskSourceType
-  instruction: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export type FunctionalCaseGenerateTask = {
-  taskId?: string
-  taskType?: 'functional_case_generate' | string
-  name: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  creatorUserId?: string
-  instruction: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export type RequirementAnalysisTask = {
-  taskId?: string
-  taskType?: 'requirement_analysis' | string
-  name: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  creatorUserId?: string
-  sourceType?: RequirementAnalysisTaskSourceType
-  sourceContent?: string
-  instruction: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export type FunctionalCaseGenerateTaskRunSnapshot = {
-  generationChainManaged?: boolean
-  instruction?: string
-  name?: string
-  projectId?: string
-  requirementId?: string
-  runId?: string
-  sourceContent?: string
-  sourceFormat?: FunctionalCaseGenerateTaskSourceFormat | string
-  sourceFormatVersion?: string
-  sourceType?: FunctionalCaseGenerateTaskSourceType | string
-  sprintId?: string
-  taskId?: string
-  taskType?: string
-}
-
-export type RequirementAnalysisTaskRunSnapshot = {
-  workflowVersion?: number
-  instruction?: string
-  name?: string
-  projectId?: string
-  requirementId?: string
-  runId?: string
-  sourceContent?: string
-  sourceType?: RequirementAnalysisTaskSourceType
-  sprintId?: string
-  taskId?: string
-  taskType?: string
-  [key: string]: unknown
-}
-
-export type FunctionalCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
-  snapshotJson?: FunctionalCaseGenerateTaskRunSnapshot
-  runId?: string
-  taskId?: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  status?: ApiCaseGenerateTaskRunStatus
-  reviewerUserId?: string
-  reviewedAt?: string
-  reviewComment?: string
-  startedAt?: string
-  finishedAt?: string
-  durationMs?: number
-  errorMessage?: string
-  createdAt?: string
-  updatedAt?: string
-  triggerType?: string
-  triggerUserId?: string
-  snapshot?: FunctionalCaseGenerateTaskRunSnapshot
-  configJson?: unknown
-  resultYaml?: string
-  resultSummaryJson?: unknown
-  checkpointEnabled?: boolean
-  currentStage?: FunctionalCaseGenerateTaskStage
-  stageStatus?: FunctionalCaseGenerateTaskStageStatus
-  stageOutput?: unknown
-}
-
-export type RequirementAnalysisTaskRun = {
-  generationChainManaged?: boolean
-  importStatus?: GenerateTaskRunImportLifecycle['importStatus']
-  /** 历史摘要按已发布阶段返回，详情接口按 configJson 返回，均为后端真实产物。 */
-  availableArtifacts?: string[]
-  hasResult?: boolean
-  workflowVersion?: number
-  runId?: string
-  taskId?: string
-  projectId?: string
-  sprintId?: string
-  requirementId?: string
-  status?: ApiCaseGenerateTaskRunStatus
-  reviewStatus?: ApiCaseGenerateTaskRunReviewStatus
-  reviewerUserId?: string
-  reviewedAt?: string
-  reviewComment?: string
-  startedAt?: string
-  finishedAt?: string
-  durationMs?: number
-  errorMessage?: string
-  createdAt?: string
-  updatedAt?: string
-  triggerType?: string
-  triggerUserId?: string
-  checkpointEnabled?: boolean
-  currentStage?: RequirementAnalysisTaskStage
-  stageStatus?: FunctionalCaseGenerateTaskStageStatus
-  snapshotJson?: RequirementAnalysisTaskRunSnapshot
-  configJson?: unknown
-  firstStepOutput?: string | Record<string, unknown>
-  resultYaml?: string
-  resultSummaryJson?: unknown
 }
 
 export type CodeRiskTask = {
@@ -399,16 +196,6 @@ export type RepositoryProfileTask = {
   updatedAt?: string
 }
 
-export type RepositoryProfileSnapshotBinding = {
-  bindingId?: string
-  repositoryId?: string
-  pathWithNamespace?: string
-  branch?: string
-  headCommit?: string
-  profileError?: string
-  [key: string]: unknown
-}
-
 export type RepositoryProfileTaskRun = {
   availableArtifacts?: string[]
   hasResult?: boolean
@@ -427,10 +214,6 @@ export type RepositoryProfileTaskRun = {
   currentStage?: string
   stageStatus?: string
   reviewStatus?: string
-  snapshotJson?: {
-    bindings?: RepositoryProfileSnapshotBinding[]
-    [key: string]: unknown
-  }
   configJson?: unknown
   resultYaml?: string
   resultSummaryJson?: unknown
@@ -445,18 +228,6 @@ export type RepositoryProfileCandidateView = {
   label: string
   profile?: RepositoryProfile | null
   resultYaml: string
-  sourceRunId: string
-  requirementMaterialCurrent?: {
-    candidateId: string
-    snapshotId: string
-    contentHash: string
-    basisHash: string
-    lineageHash: string
-    documentRootHash: string
-    taskId: string
-    attemptId?: string | null
-    currentToken: string
-  } | null
   createdAt: string
 }
 

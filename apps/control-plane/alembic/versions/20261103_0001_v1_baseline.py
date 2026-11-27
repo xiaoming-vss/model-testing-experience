@@ -248,7 +248,7 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(length=30), nullable=False, comment="外部服务提供方类型"),
         sa.Column("name", sa.String(length=120), nullable=False, comment="集成连接名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
-        sa.Column("auth_type", sa.String(length=50), nullable=False, comment="外部服务认证方式"),
+        sa.Column("auth_type", sa.String(length=50), nullable=False, comment="外部服务认证方式：api_key/personal_access_token/mcp_header_token"),
         sa.Column("account", sa.String(length=120), nullable=False, comment="外部服务登录账号"),
         sa.Column(
             "secret_json",
@@ -315,7 +315,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("job_id", sa.String(length=64), nullable=False, comment="集成任务业务标识"),
         sa.Column("protocol_version", sa.Integer(), nullable=False, comment="集成执行协议版本"),
-        sa.Column("task_type", sa.String(length=40), nullable=False, comment="任务类型"),
+        sa.Column("task_type", sa.String(length=40), nullable=False, comment="任务类型：zentao_bug_sync/zentao_bug_fields_update"),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
         sa.Column("bug_id", sa.String(length=64), nullable=False, comment="平台 Bug 业务标识"),
         sa.Column(
@@ -699,13 +699,13 @@ def upgrade() -> None:
             comment="建立或维护绑定时的个人连接标识；调用时重新解析操作者本人授权",
         ),
         sa.Column(
-            "local_resource_type", sa.String(length=30), nullable=False, comment="本地资源类型"
+            "local_resource_type", sa.String(length=30), nullable=False, comment="本地资源类型：project/sprint/requirement"
         ),
         sa.Column(
             "local_resource_id", sa.String(length=64), nullable=False, comment="本地资源业务标识"
         ),
         sa.Column(
-            "remote_resource_type", sa.String(length=30), nullable=False, comment="外部资源类型"
+            "remote_resource_type", sa.String(length=30), nullable=False, comment="外部资源类型：zentao 为 project/execution/story，gitlab 为 repository"
         ),
         sa.Column(
             "remote_resource_id", sa.String(length=120), nullable=False, comment="外部资源标识"
@@ -977,9 +977,9 @@ def upgrade() -> None:
             nullable=True,
             comment="清理领取租约截止时间（UTC）；超时可由其他实例接管",
         ),
-        sa.Column("purpose", sa.String(length=32), nullable=False, comment="文件业务用途"),
+        sa.Column("purpose", sa.String(length=32), nullable=False, comment="文件业务用途：requirement/attachment/project_skill/ui_artifact/perf_case_data"),
         sa.Column(
-            "resource_type", sa.String(length=32), nullable=False, comment="已关联的业务资源类型"
+            "resource_type", sa.String(length=32), nullable=False, comment="已关联的业务资源类型：requirement/bug/ai_generate_run/perf_case/project_skill/ui_worker_task；空字符串表示未关联"
         ),
         sa.Column(
             "resource_id", sa.String(length=64), nullable=False, comment="已关联的业务资源标识"
@@ -1122,7 +1122,7 @@ def upgrade() -> None:
             nullable=False,
             comment="所属任务业务标识；与任务域组成唯一键",
         ),
-        sa.Column("task_type", sa.String(length=50), nullable=False, comment="Worker 执行任务类型"),
+        sa.Column("task_type", sa.String(length=50), nullable=False, comment="Worker 执行任务类型：AI 域 requirement_analysis/functional_case_generate/api_case_generate/ui_case_generate/repository_profile/test_report_generate/code_risk_analysis/test_order_graph/test_order_case_visualization；API 域 api_collection_run/api_case_debug；UI 域 suite_run/case_debug；性能域 perf_run"),
         sa.Column("run_id", sa.String(length=64), nullable=False, comment="运行业务标识"),
         sa.Column(
             "status",
@@ -1188,11 +1188,11 @@ def upgrade() -> None:
         "ai_generate_tasks",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column("task_id", sa.String(length=64), nullable=False, comment="任务业务标识"),
-        sa.Column("task_type", sa.String(length=50), nullable=False, comment="任务类型"),
+        sa.Column("task_type", sa.String(length=50), nullable=False, comment="任务类型：requirement_analysis/functional_case_generate/api_case_generate/ui_case_generate/repository_profile/test_report_generate/code_risk_analysis/test_order_graph/test_order_case_visualization"),
         sa.Column("name", sa.String(length=120), nullable=False, comment="AI 任务名称"),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
-        sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
-        sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
+        sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识；空字符串表示未关联迭代"),
+        sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识；空字符串表示未关联需求"),
         sa.Column(
             "order_id",
             sa.String(length=64),
@@ -1213,7 +1213,7 @@ def upgrade() -> None:
             comment="任务创建者用户业务标识",
         ),
         sa.Column(
-            "source_type", sa.String(length=30), nullable=False, comment="AI 任务输入来源类型"
+            "source_type", sa.String(length=30), nullable=False, comment="AI 任务输入来源类型：docx/richtext/requirement/interface_library/repository/manual/daily_metrics/test_order_graph/test_order_case_visualization"
         ),
         sa.Column("source_content", mysql.LONGTEXT(), nullable=False, comment="AI 任务源输入内容"),
         sa.Column(
@@ -1360,8 +1360,8 @@ def upgrade() -> None:
             nullable=False,
             comment="Bug 重新激活累计次数",
         ),
-        sa.Column("severity", sa.String(length=20), nullable=False, comment="Bug 严重程度"),
-        sa.Column("priority", sa.String(length=20), nullable=False, comment="优先级"),
+        sa.Column("severity", sa.String(length=20), nullable=False, comment="Bug 严重程度：fatal/serious/normal/minor"),
+        sa.Column("priority", sa.String(length=20), nullable=False, comment="优先级：urgent/high/medium/low"),
         sa.Column(
             "reporter_user_id",
             sa.String(length=64),
@@ -1507,7 +1507,7 @@ def upgrade() -> None:
             "action",
             sa.String(length=20),
             nullable=False,
-            comment="create/update；历史同名需显式选择绑定或新建",
+            comment="功能用例推送动作：create/update；历史同名需显式选择绑定或新建",
         ),
         sa.Column(
             "target_json", mysql.JSON(), nullable=False, comment="写入前冻结的远端目标和已绑定编号"
@@ -1740,7 +1740,7 @@ def upgrade() -> None:
             "role",
             sa.String(length=16),
             nullable=False,
-            comment="项目内角色：owner/member/viewer/developer",
+            comment="项目内角色：member/viewer/developer；项目所有者由 projects.user_id 表达",
         ),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
@@ -1787,7 +1787,7 @@ def upgrade() -> None:
             "scope_key",
             sa.String(length=64),
             nullable=False,
-            comment="技能文件作用域键，用于区分全局与项目",
+            comment="技能文件作用域键：项目业务标识或 system（全局）",
         ),
         sa.Column(
             "filename",
@@ -2184,48 +2184,6 @@ def upgrade() -> None:
             comment="发起本次执行的用户业务标识",
         ),
         sa.Column(
-            "workflow_status",
-            sa.String(length=20),
-            nullable=True,
-            comment="独立多阶段执行的聚合状态；单阶段执行为空并由尝试确定",
-        ),
-        sa.Column(
-            "current_stage",
-            sa.String(length=40),
-            nullable=True,
-            comment="独立多阶段执行当前阶段；单阶段执行为空",
-        ),
-        sa.Column(
-            "checkpoint_enabled",
-            sa.Boolean(),
-            nullable=True,
-            comment="独立多阶段执行是否启用人工检查点；单阶段执行为空",
-        ),
-        sa.Column(
-            "trigger_type",
-            sa.String(length=30),
-            nullable=True,
-            comment="独立执行的触发方式；空值按历史默认方式处理",
-        ),
-        sa.Column(
-            "source_snapshot_json",
-            sa.JSON(none_as_null=True),
-            nullable=True,
-            comment="独立执行创建时冻结的业务输入快照 JSON",
-        ),
-        sa.Column(
-            "started_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="独立多阶段执行开始时间（UTC）；未知为空",
-        ),
-        sa.Column(
-            "finished_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="独立多阶段执行结束时间（UTC）；未结束为空",
-        ),
-        sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="执行创建时间（UTC）"
         ),
         sa.ForeignKeyConstraint(
@@ -2235,7 +2193,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("execution_id", name=op.f("pk_ai_executions")),
-        comment="AI 任务的一次执行身份及发起者；独立多阶段执行保存聚合状态和初始输入",
+        comment="AI 任务的一次执行身份及发起者",
     )
     op.create_index(
         "idx_ai_execution_task_created",
@@ -2249,13 +2207,13 @@ def upgrade() -> None:
         sa.Column(
             "task_id", sa.String(length=64), nullable=False, comment="所属生成链任务业务标识"
         ),
-        sa.Column("stage", sa.String(length=40), nullable=False, comment="生成链阶段标识"),
+        sa.Column("stage", sa.String(length=40), nullable=False, comment="生成链阶段标识：requirement_review/extracting_text/historical_requirement_relations/historical_test_case_verification/requirement_analysis/case_names/detailed_cases/interface_extract/api_design/generate/ui_surface/ui_design/ui_yaml"),
         sa.Column(
             "review_status",
             sa.String(length=20),
             server_default="pending",
             nullable=False,
-            comment="稳定阶段当前候选审核状态",
+            comment="稳定阶段当前候选审核状态：pending/not_required",
         ),
         sa.Column(
             "current_attempt_id",
@@ -2520,9 +2478,9 @@ def upgrade() -> None:
             nullable=False,
             comment="执行 Bug 动作的用户业务标识",
         ),
-        sa.Column("action", sa.String(length=30), nullable=False, comment="Bug 处理动作"),
-        sa.Column("from_status", sa.String(length=20), nullable=False, comment="动作前 Bug 状态"),
-        sa.Column("to_status", sa.String(length=20), nullable=False, comment="动作后 Bug 状态"),
+        sa.Column("action", sa.String(length=30), nullable=False, comment="Bug 处理动作：confirm/resolve/close/activate/create/edit/transfer/attachment/comment；旧版兼容动作 reject/submit_fix/regression_pass/regression_fail/reopen"),
+        sa.Column("from_status", sa.String(length=20), nullable=False, comment="动作前 Bug 状态：active/resolved/closed；创建时为空"),
+        sa.Column("to_status", sa.String(length=20), nullable=False, comment="动作后 Bug 状态：active/resolved/closed"),
         sa.Column("content", sa.Text(), nullable=False, comment="Bug 动态正文"),
         sa.Column("detail_json", mysql.JSON(), nullable=False, comment="Bug 动作详细变更 JSON"),
         sa.Column(
@@ -2752,7 +2710,7 @@ def upgrade() -> None:
         sa.Column("requirement_id", sa.String(length=64), nullable=False, comment="需求业务标识"),
         sa.Column("sprint_id", sa.String(length=64), nullable=False, comment="迭代业务标识"),
         sa.Column("name", sa.String(length=120), nullable=False, comment="需求名称"),
-        sa.Column("document_type", sa.String(length=20), nullable=False, comment="需求文档类型"),
+        sa.Column("document_type", sa.String(length=20), nullable=False, comment="需求文档类型：docx/richtext"),
         sa.Column(
             "document_content", mysql.LONGTEXT(), nullable=False, comment="需求文档正文或提取内容"
         ),
@@ -2772,7 +2730,7 @@ def upgrade() -> None:
             "document_download_url",
             sa.String(length=512),
             nullable=False,
-            comment="历史文档下载地址元数据；不用于文件交付",
+            comment="历史文档下载地址元数据；仍作为 AI Worker 源内容的回退值",
         ),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
@@ -2920,7 +2878,7 @@ def upgrade() -> None:
             nullable=True,
             comment="本次尝试输出的阶段候选正文",
         ),
-        sa.Column("output_format", sa.String(length=20), nullable=True, comment="候选正文格式"),
+        sa.Column("output_format", sa.String(length=20), nullable=True, comment="候选正文格式：json/text/yaml"),
         sa.Column(
             "output_context_json",
             sa.JSON(none_as_null=True),
@@ -2932,7 +2890,7 @@ def upgrade() -> None:
             "review_status",
             sa.String(length=20),
             nullable=True,
-            comment="独立执行此候选的审核状态；需求链和无需审核时为空",
+            comment="历史独立执行审核状态：pending/approved/rejected；候选链不再写入，需求链和无需审核时为空",
         ),
         sa.Column(
             "reviewer_user_id",
@@ -3211,7 +3169,7 @@ def upgrade() -> None:
             "case_type",
             sa.String(length=20),
             nullable=False,
-            comment="引用用例类型；当前手工执行使用 function",
+            comment="引用用例类型：function；当前仅支持功能用例",
         ),
         sa.Column("case_id", sa.String(length=64), nullable=False, comment="测试用例业务标识"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
@@ -3470,7 +3428,7 @@ def upgrade() -> None:
         ),
         sa.Column("headers_json", mysql.JSON(), nullable=True, comment="请求头模板 JSON"),
         sa.Column("query_json", mysql.JSON(), nullable=True, comment="URL 查询参数模板 JSON"),
-        sa.Column("body_type", sa.String(length=20), nullable=False, comment="请求体类型"),
+        sa.Column("body_type", sa.String(length=20), nullable=False, comment="请求体类型：none/json/form/raw"),
         sa.Column("body_json", mysql.JSON(), nullable=True, comment="结构化请求体模板 JSON"),
         sa.Column("body_text", sa.Text(), nullable=False, comment="文本请求体模板"),
         sa.Column("timeout_ms", sa.Integer(), nullable=False, comment="请求超时时间，单位毫秒"),
@@ -3565,7 +3523,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -3662,8 +3620,8 @@ def upgrade() -> None:
         ),
         sa.Column("module", sa.String(length=120), nullable=False, comment="功能用例所属业务模块"),
         sa.Column("title", sa.String(length=255), nullable=False, comment="功能测试用例标题"),
-        sa.Column("priority", sa.String(length=30), nullable=False, comment="优先级"),
-        sa.Column("case_type", sa.String(length=30), nullable=False, comment="用例类型"),
+        sa.Column("priority", sa.String(length=30), nullable=False, comment="优先级：P0/P1/P2/P3"),
+        sa.Column("case_type", sa.String(length=30), nullable=False, comment="用例类型：功能测试/异常测试/边界测试/流程测试/兼容测试/安全测试；允许自由文本"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
@@ -3862,7 +3820,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -3971,7 +3929,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=120), nullable=False, comment="API 断言规则名称"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
-        sa.Column("assert_source", sa.String(length=30), nullable=False, comment="断言数据来源"),
+        sa.Column("assert_source", sa.String(length=30), nullable=False, comment="断言数据来源：status_code/header/body_jsonpath/body_text"),
         sa.Column(
             "target_expr", sa.String(length=512), nullable=False, comment="断言目标提取表达式"
         ),
@@ -4056,7 +4014,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual/live_debug/collection"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -4286,7 +4244,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -4568,7 +4526,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual/suite"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -4673,7 +4631,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=120), nullable=False, comment="API 提取规则名称"),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
         sa.Column("order_no", sa.Integer(), nullable=False, comment="执行或展示顺序"),
-        sa.Column("source", sa.String(length=30), nullable=False, comment="变量提取的数据来源"),
+        sa.Column("source", sa.String(length=30), nullable=False, comment="变量提取的数据来源：header/body_jsonpath/body_text/status_code"),
         sa.Column("source_expr", sa.String(length=512), nullable=False, comment="变量提取表达式"),
         sa.Column("var_key", sa.String(length=120), nullable=False, comment="变量名称"),
         sa.Column(
@@ -4756,7 +4714,7 @@ def upgrade() -> None:
             nullable=False,
             comment="本次运行发起者用户业务标识",
         ),
-        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式：manual/live_debug"),
         sa.Column(
             "status",
             sa.String(length=20),
@@ -5029,7 +4987,7 @@ def upgrade() -> None:
         sa.Column(
             "requirement_id", sa.String(length=64), nullable=False, comment="所属需求业务标识"
         ),
-        sa.Column("kind", sa.String(length=40), nullable=False, comment="需求生成链类型"),
+        sa.Column("kind", sa.String(length=40), nullable=False, comment="需求生成链类型：requirement_analysis/function/api/ui"),
         sa.Column(
             "task_id", sa.String(length=64), nullable=False, comment="当前链绑定的生成任务业务标识"
         ),
@@ -5093,15 +5051,15 @@ def upgrade() -> None:
             nullable=False,
             comment="候选产物正文快照",
         ),
-        sa.Column("format", sa.String(length=20), nullable=False, comment="候选产物正文格式"),
+        sa.Column("format", sa.String(length=20), nullable=False, comment="候选产物正文格式：json/text/yaml"),
         sa.Column(
             "context_json", sa.JSON(none_as_null=True), nullable=True, comment="候选产物上下文"
         ),
         sa.Column(
             "candidate_token", sa.String(length=64), nullable=False, comment="候选并发修改令牌"
         ),
-        sa.Column("disposition", sa.String(length=20), nullable=False, comment="候选处置状态"),
-        sa.Column("generation_mode", sa.String(length=20), nullable=False, comment="候选生成模式"),
+        sa.Column("disposition", sa.String(length=20), nullable=False, comment="候选处置状态：available/rejected/deleted"),
+        sa.Column("generation_mode", sa.String(length=20), nullable=False, comment="候选生成模式：current/trial"),
         sa.Column(
             "source_manifest_json",
             sa.JSON(none_as_null=True),
@@ -5176,14 +5134,14 @@ def upgrade() -> None:
             nullable=False,
             comment="当前内容所属需求生成链业务标识",
         ),
-        sa.Column("stage", sa.String(length=40), nullable=False, comment="当前内容所属阶段类型"),
+        sa.Column("stage", sa.String(length=40), nullable=False, comment="当前内容所属阶段类型：requirement_review/extracting_text/historical_requirement_relations/historical_test_case_verification/requirement_analysis/case_names/detailed_cases/interface_extract/api_design/generate/ui_surface/ui_design/ui_yaml"),
         sa.Column(
             "content",
             sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
             nullable=True,
             comment="当前确认正文；空槽时为空",
         ),
-        sa.Column("format", sa.String(length=20), nullable=True, comment="当前确认正文格式"),
+        sa.Column("format", sa.String(length=20), nullable=True, comment="当前确认正文格式：json/text/yaml"),
         sa.Column(
             "context_json", sa.JSON(none_as_null=True), nullable=True, comment="当前确认正文上下文"
         ),
@@ -5293,7 +5251,7 @@ def upgrade() -> None:
         sa.Column(
             "attempt_id", sa.String(length=64), nullable=True, comment="审核来源尝试审计标识"
         ),
-        sa.Column("decision", sa.String(length=20), nullable=False, comment="本次审核操作结论"),
+        sa.Column("decision", sa.String(length=20), nullable=False, comment="本次审核操作结论：adopted/profile_adopted/cleared/derived/rejected/deleted"),
         sa.Column(
             "result_content_token",
             sa.String(length=64),
@@ -5397,14 +5355,14 @@ def upgrade() -> None:
             "source_kind",
             sa.String(length=20),
             nullable=False,
-            comment="来源类型：current、standalone 或 legacy 历史证据",
+            comment="来源类型：current/standalone/legacy（legacy 为历史证据）",
         ),
         sa.Column(
             "requirement_id", sa.String(length=64), nullable=False, comment="导入目标需求审计标识；历史目标已缺失时为空字符串"
         ),
         sa.Column("task_id", sa.String(length=64), nullable=False, comment="来源生成任务审计标识"),
-        sa.Column("kind", sa.String(length=40), nullable=False, comment="来源生成链或独立任务类型"),
-        sa.Column("stage", sa.String(length=40), nullable=False, comment="被导入内容所属阶段"),
+        sa.Column("kind", sa.String(length=40), nullable=False, comment="来源生成链或独立任务类型：requirement_analysis/function/api/ui 或 repository_profile/test_report_generate/code_risk_analysis/test_order_graph/test_order_case_visualization"),
+        sa.Column("stage", sa.String(length=40), nullable=False, comment="被导入内容所属阶段：requirement_review/extracting_text/historical_requirement_relations/historical_test_case_verification/requirement_analysis/case_names/detailed_cases/interface_extract/api_design/generate/ui_surface/ui_design/ui_yaml"),
         sa.Column(
             "source_attempt_id",
             sa.String(length=64),
@@ -5435,7 +5393,7 @@ def upgrade() -> None:
             nullable=False,
             comment="实际导入的生成产物正文快照",
         ),
-        sa.Column("format", sa.String(length=20), nullable=False, comment="实际导入产物正文格式"),
+        sa.Column("format", sa.String(length=20), nullable=False, comment="实际导入产物正文格式：json/text/yaml"),
         sa.Column(
             "content_hash",
             sa.String(length=128),
@@ -5496,7 +5454,7 @@ def upgrade() -> None:
             "target_case_count", sa.Integer(), nullable=False, comment="导入后正式目标的用例总数"
         ),
         sa.Column(
-            "mixed_source", sa.Boolean(), nullable=False, comment="正式目标是否仍有本次未覆盖的用例"
+            "mixed_source", sa.Boolean(), nullable=False, comment="正式目标是否仍有本次未覆盖的用例：true/false"
         ),
         sa.Column(
             "imported_by", sa.String(length=64), nullable=False, comment="执行导入的用户审计标识"

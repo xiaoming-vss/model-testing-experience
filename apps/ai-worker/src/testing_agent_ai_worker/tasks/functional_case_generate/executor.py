@@ -26,7 +26,7 @@ from testing_agent_ai_worker.skill_names import (
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     FunctionalChainRunResult,
     run_functional_chain,
-    run_skill_step,
+    run_functional_skill_step,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.checkpoint import (
     EMPTY_CASES_JSON,
@@ -102,7 +102,7 @@ class FunctionalCaseExecutor(TaskExecutor):
         *,
         agent_config: AgentBackendConfig,
         chain_runner=run_functional_chain,
-        skill_runner=run_skill_step,
+        skill_runner=run_functional_skill_step,
         detailed_batch_runner=run_functional_detailed_case_batches,
         attachment_downloader=None,
         review_concurrency: int = 4,

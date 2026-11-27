@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import delete, exists, func, or_, select
+from sqlalchemy.orm import defer, load_only
 
 from testing_agent.domain.api_interface_query import ApiInterfaceQuery
 from testing_agent.models.api_interface import ApiInterface
@@ -11,6 +12,18 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.base import BaseRepository
+
+INTERFACE_LIST_COLUMNS = (
+    ApiInterface.interface_id,
+    ApiInterface.software_repository_id,
+    ApiInterface.name,
+    ApiInterface.method,
+    ApiInterface.path,
+    ApiInterface.description,
+    ApiInterface.tags_json,
+    ApiInterface.source_type,
+    ApiInterface.updated_at,
+)
 
 
 def _like_pattern(keyword: str) -> str:
@@ -136,6 +149,7 @@ class ApiInterfaceRepository(BaseRepository):
                 ApiInterface,
                 SoftwareRepository.name.label("software_repository_name"),
             )
+            .options(load_only(*INTERFACE_LIST_COLUMNS))
             .join(
                 SoftwareRepository,
                 SoftwareRepository.software_repository_id == ApiInterface.software_repository_id,
@@ -232,6 +246,7 @@ class ApiInterfaceRepository(BaseRepository):
                     Requirement.requirement_id == ApiInterfaceRequirement.requirement_id,
                 )
                 .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+                .options(defer(Requirement.document_content, raiseload=True))
                 .where(ApiInterfaceRequirement.interface_id.in_(ids))
                 .order_by(Requirement.name.asc(), Requirement.id.asc())
             )

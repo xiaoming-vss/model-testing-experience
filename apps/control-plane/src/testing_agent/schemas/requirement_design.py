@@ -1,4 +1,4 @@
-"""Requirement-scoped generation configuration; legacy task endpoints remain valid."""
+"""Requirement-scoped generation configuration and history reads."""
 
 from datetime import datetime
 from typing import Literal
@@ -41,6 +41,7 @@ class RequirementDesignTaskSummary(DesignModel):
     source_type: str
     has_source: bool
     source_filename: str
+    interface_ids: list[str] = Field(default_factory=list)
     created_at: datetime | str | None
     updated_at: datetime | str | None
 

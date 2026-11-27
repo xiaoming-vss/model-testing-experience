@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,21 @@ SERVICE_SQL_CLASSIFICATIONS = {
     "types-only",
 }
 SERVICE_SQL_MIGRATIONS = {"migrated", "long-term-exception"}
+SQL_STATEMENT = re.compile(
+    r"(?<!\.)(?<!def )\b(?:select|insert|delete)\s*\("
+    r"|(?<!\.)(?<!def )\bupdate\s*\("
+    r"|\.with_for_update\("
+    r"|\.executemany?\("
+    r"|\bsession\.(?:add|delete)\("
+)
+RAW_SQL = re.compile(r"\b(?:SELECT|INSERT|UPDATE|DELETE)\b")
+SQL_WRITE = re.compile(
+    r"(?<!\.)(?<!def )\b(?:insert|delete)\s*\("
+    r"|(?<!\.)(?<!def )\bupdate\s*\("
+    r"|\.with_for_update\("
+    r"|\bsession\.(?:add|delete)\("
+    r"|\b(?:SELECT|INSERT|UPDATE|DELETE)\b"
+)
 
 
 def test_fastapi_dependencies_are_split_by_domain():
@@ -168,13 +184,6 @@ def test_source_does_not_call_foreign_private_interfaces():
             if not method.startswith("_") or method.startswith("__"):
                 continue
             receiver = ast.unparse(node.func.value)
-            # urllib's parsed URL is a named tuple; _replace is its documented public API.
-            if (
-                path.relative_to(root).as_posix() == "services/zentao_auth.py"
-                and receiver == "parsed"
-                and method == "_replace"
-            ):
-                continue
             assert receiver in local, f"{path}:{node.lineno}: expose a public interface"
 
 
@@ -248,7 +257,7 @@ def test_provider_bindings_do_not_depend_on_the_binding_facade_or_each_other():
 
 def test_provider_queries_do_not_import_connection_management_or_commit():
     root = PROJECT_ROOT / "src/testing_agent/services"
-    for name in ("gitlab_queries.py", "zentao_queries.py"):
+    for name in ("gitlab_queries.py",):
         for node in ast.walk(ast.parse((root / name).read_text())):
             if isinstance(node, ast.ImportFrom):
                 assert node.module != "testing_agent.services.integration_connection"
@@ -281,7 +290,7 @@ def test_integration_connections_are_split_by_provider():
     assert len(service_path.read_text().splitlines()) < 400
 
     package = root / "services/integration_connections"
-    for name in ("common.py", "zentao.py", "gitlab.py", "mcp.py", "llm.py"):
+    for name in ("common.py", "gitlab.py", "mcp.py", "llm.py"):
         assert (package / name).exists(), f"integration_connections/{name} is missing"
     for path in package.glob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):
@@ -359,7 +368,6 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
         root / "services/ui_generate_import.py",
         root / "services/function_generate_import.py",
         root / "services/ai_run_launcher.py",
-        root / "services/ai_stage_workflow.py",
         root / "services/worker_task.py",
         root / "services/worker_authorization.py",
         *list((root / "services/ai_execution").glob("*.py")),
@@ -523,8 +531,6 @@ def test_remaining_routes_are_split_by_business_resource():
         "resource_bindings.py",
         "project_skills.py",
         "sprint_metrics.py",
-        "api_ai_tasks.py",
-        "function_ai_tasks.py",
         "api_runs.py",
         "ui_runs.py",
         "api_worker.py",
@@ -549,8 +555,6 @@ def test_split_routers_do_not_forward_aggregate_routes():
         "resource_bindings.py",
         "project_skills.py",
         "sprint_metrics.py",
-        "api_ai_tasks.py",
-        "function_ai_tasks.py",
         "api_runs.py",
         "ui_runs.py",
         "api_worker.py",
@@ -595,6 +599,7 @@ def test_routers_do_not_import_persistence_details():
         "import sqlalchemy",
         "from testing_agent.models",
         "from testing_agent.db.session",
+        "get_session",
     )
 
     for path in (PROJECT_ROOT / "src" / "testing_agent" / "routers").glob("*.py"):
@@ -713,14 +718,31 @@ def test_service_sql_is_allowlisted_or_marked():
     assert not violations, "\n".join(violations)
 
 
+def test_allowlisted_service_sql_matches_its_classification():
+    violations = []
+    for relative, entry in _load_service_sql_allowlist().items():
+        source = (PROJECT_ROOT / "src" / "testing_agent" / relative).read_text(encoding="utf-8")
+        has_statement = bool(SQL_STATEMENT.search(source) or RAW_SQL.search(source))
+        classification = entry["classification"]
+        if classification == "types-only" and has_statement:
+            violations.append(f"{relative}: types-only entry contains SQL statements")
+        if classification != "types-only" and not has_statement:
+            violations.append(f"{relative}: allowlist entry has no SQL statements")
+        if classification == "read-only" and SQL_WRITE.search(source):
+            violations.append(f"{relative}: read-only entry contains a write or lock")
+        if classification == "locking-read" and ".with_for_update(" not in source:
+            violations.append(f"{relative}: locking-read entry has no row lock")
+    assert not violations, "\n".join(violations)
+
+
 def test_pure_read_migration_backlog_is_classified():
     entries = _load_service_sql_allowlist()
     classified = {relative for relative, entry in entries.items() if entry.get("migration")}
     assert classified == {
         "services/code_risk_analysis.py",
         "services/environment_access.py",
+        "services/perf_worker.py",
         "services/stage_storage/chain_view.py",
-        "services/standalone_worker_authorization.py",
         "services/stored_file_access.py",
         "services/ui_generation_source.py",
         "services/worker_domains/perf.py",

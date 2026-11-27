@@ -8,14 +8,13 @@ import type {
   GitlabResourceListResponse,
   LlmConnection,
   ZentaoBinding,
-  ZentaoConnection,
 } from '../types'
 
-function integrationPath(projectId: string, provider: 'llm' | 'zentao' | 'gitlab') {
+function integrationPath(projectId: string, provider: 'llm' | 'gitlab') {
   return `/v1/projects/${encodeURIComponent(projectId)}/integrations/${provider}/connections`
 }
 
-function integrationConnectionPath(projectId: string, provider: 'llm' | 'zentao' | 'gitlab', connectionId: string) {
+function integrationConnectionPath(projectId: string, provider: 'llm' | 'gitlab', connectionId: string) {
   return `${integrationPath(projectId, provider)}/${encodeURIComponent(connectionId)}`
 }
 
@@ -25,7 +24,6 @@ export const baseServicesApi = {
   getLlmConnections: (projectId: string) => request<ListResponse<LlmConnection>>(integrationPath(projectId, 'llm')),
   getGitlabConnections: (projectId: string) =>
     request<ListResponse<GitlabConnection>>(integrationPath(projectId, 'gitlab')),
-  getZentaoConnections: (projectId: string) => request<ListResponse<ZentaoConnection>>(integrationPath(projectId, 'zentao')),
   getProjectBindings: (projectId: string) => request<ListResponse<ZentaoBinding>>(`/v1/projects/${projectId}/bindings`),
   createProjectBinding: (projectId: string, body: CreateZentaoBindingPayload) =>
     request<ZentaoBinding>(`/v1/projects/${projectId}/bindings`, {

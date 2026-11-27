@@ -28,7 +28,6 @@ from testing_agent.api.deps_generation import (
     get_generation_metrics,
     get_generation_queries,
     get_generation_reports,
-    get_generation_stages,
     get_generation_task_commands,
     get_requirement_design_service,
     get_ui_generation_sources,
@@ -42,6 +41,7 @@ from testing_agent.api.deps_integration import (
     get_integration_bug_service,
     get_integration_connection_service,
     get_shared_service,
+    get_zentao_mcp_candidate_query,
 )
 from testing_agent.api.deps_perf import (
     get_perf_case_service,
@@ -59,7 +59,6 @@ from testing_agent.api.deps_projects import (
     get_requirement_software_repository_service,
     get_resource_binding_service,
     get_software_repository_service,
-    get_sprint_code_overview_service,
     get_sprint_daily_metrics_service,
     get_sprint_service,
 )
@@ -84,18 +83,18 @@ from testing_agent.api.deps_testing import (
     get_test_order_entry_service,
     get_test_order_graph_service,
     get_test_order_service,
+    get_test_run_availability_service,
+    get_test_run_stream_service,
     get_ui_run_variables_service,
     get_ui_test_case_run_service,
     get_ui_test_case_service,
     get_ui_test_suite_service,
 )
 from testing_agent.core.config import Settings, get_settings
-from testing_agent.db.session import get_session
 
 __all__ = [
     "Settings",
     "get_settings",
-    "get_session",
     "get_access_token",
     "get_current_user_id",
     "require_super_admin",
@@ -115,7 +114,6 @@ __all__ = [
     "get_software_repository_service",
     "get_requirement_software_repository_service",
     "get_resource_binding_service",
-    "get_sprint_code_overview_service",
     "get_project_skill_space_service",
     "get_sprint_daily_metrics_service",
     "get_integration_connection_service",
@@ -124,6 +122,7 @@ __all__ = [
     "build_integration_bug_service",
     "get_integration_bug_service",
     "get_shared_service",
+    "get_zentao_mcp_candidate_query",
     "get_api_case_service",
     "build_api_case_service",
     "get_api_collection_service",
@@ -148,6 +147,8 @@ __all__ = [
     "get_test_order_entry_service",
     "get_test_order_graph_service",
     "get_case_visualization_service",
+    "get_test_run_stream_service",
+    "get_test_run_availability_service",
     "get_perf_worker_service",
     "get_perf_case_service",
     "get_perf_run_service",
@@ -164,7 +165,6 @@ __all__ = [
     "get_requirement_design_service",
     "get_worker_task_service",
     "get_ui_worker_artifact_service",
-    "get_generation_stages",
     "get_ui_generation_sources",
     "get_generation_chain",
 ]

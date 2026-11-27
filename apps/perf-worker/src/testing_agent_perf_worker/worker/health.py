@@ -17,6 +17,7 @@ class HealthFile:
     max_age_seconds: int
 
     def progress(self, stage: str) -> None:
+        # The write is a temp file plus an atomic rename, so the probe never reads a partial file.
         payload = {
             "pid": os.getpid(),
             "stage": stage,
@@ -56,3 +57,7 @@ class HealthFile:
             timestamp = timestamp.replace(tzinfo=UTC)
         age = (datetime.now(UTC) - timestamp).total_seconds()
         return 0 <= age <= self.max_age_seconds
+
+    def stop(self) -> None:
+        """Remove the file on exit so a later process reusing the PID cannot look healthy."""
+        self.path.unlink(missing_ok=True)

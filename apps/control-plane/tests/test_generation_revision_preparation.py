@@ -7,40 +7,28 @@ from types import SimpleNamespace
 import pytest
 from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db  # noqa: F401
+from support.memory_storage import Storage
 
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.generation_revision_preparation import (
     attach_prepared_revision_uploads,
     prepare_revision_uploads,
 )
-from testing_agent.services.stored_file import StoredFileService, utcnow
-
-
-class Storage:
-    content = b"image content"
-
-    def get_object(self, key):
-        assert key == "sealed"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield self.content
-
-    def close(self):
-        pass
+from testing_agent.services.stored_file import StoredFileService
 
 
 async def test_revision_uploads_verify_bytes_and_recheck_before_attach(db):  # noqa: F811
-    storage = Storage()
+    storage = Storage(b"image content", key="sealed")
     row = StoredFile(
         file_id="image",
         project_id="p",
         uploaded_by="u",
         filename="screen.png",
         content_type="image/png",
-        size=len(storage.content),
-        sha256=sha256(storage.content).hexdigest(),
+        size=len(storage.data),
+        sha256=sha256(storage.data).hexdigest(),
         bucket="bucket",
         object_key="sealed",
         staging_key="",
@@ -48,7 +36,7 @@ async def test_revision_uploads_verify_bytes_and_recheck_before_attach(db):  # n
         purpose="attachment",
         resource_type="",
         resource_id="",
-        expires_at=utcnow() + timedelta(hours=1),
+        expires_at=naive_utcnow() + timedelta(hours=1),
     )
     db.add(row)
     db.commit()
@@ -61,10 +49,10 @@ async def test_revision_uploads_verify_bytes_and_recheck_before_attach(db):  # n
             session, files=files, project_id="p", actor_id="another", file_ids=["image"]
         )
 
-    storage.content = b"changed image"
+    storage.data = b"changed image"
     with pytest.raises(IncompleteRootInput):
         await prepare_revision_uploads(session, **options, file_ids=["image"])
-    storage.content = b"image content"
+    storage.data = b"image content"
     row.filename = "changed.png"
     db.flush()
     with pytest.raises(IncompleteRootInput, match="changed"):
@@ -78,7 +66,7 @@ async def test_revision_uploads_verify_bytes_and_recheck_before_attach(db):  # n
     assert attachments == (
         {"fileId": "image", "filename": "screen.png", "contentType": "image/png"},
     )
-    assert hashes == {"image": sha256(storage.content).hexdigest()}
+    assert hashes == {"image": sha256(storage.data).hexdigest()}
     assert row.status == "attached" and row.resource_id == "attempt"
     db.rollback()
     assert row.status == "ready"

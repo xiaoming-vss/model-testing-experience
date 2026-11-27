@@ -109,6 +109,35 @@ describe('UI 用例步骤解析', () => {
     ])
   })
 
+  it('press 步骤保留定位字段', () => {
+    const steps = JSON.parse(
+      serializeSteps([
+        {
+          stepName: '在搜索框回车',
+          keyword: 'press',
+          locatorType: 'css',
+          locatorValue: '#keyword',
+          operationValue: 'Enter',
+          enabled: true,
+          continueOnFailure: false,
+        },
+      ]),
+    )
+
+    expect(steps).toEqual([
+      {
+        orderNo: 1,
+        stepName: '在搜索框回车',
+        keyword: 'press',
+        locatorType: 'css',
+        locatorValue: '#keyword',
+        operationValue: 'Enter',
+        continueOnFailure: false,
+        enabled: true,
+      },
+    ])
+  })
+
   it('后置提取在解析与序列化之间不丢失', () => {
     const saveTo = [
       {

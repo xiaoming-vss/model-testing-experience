@@ -15,9 +15,7 @@ export type TestOrder = {
   entriesSkipped?: number
   status?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type CreateTestOrderPayload = {
@@ -55,9 +53,7 @@ export type TestOrderEntry = {
   executedAt?: string
   snapshot?: FunctionCaseContent
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type TestOrderEntrySummary = Omit<TestOrderEntry, 'snapshot' | 'actualResults' | 'failureReason' | 'blockReason' | 'zentaoBugId'>
@@ -131,7 +127,6 @@ export type TestOrderGraphRun = {
   /** 回显的派发配置：节点名称要用里面的 `graphInput.cases`（图谱本身只存 case_id）。 */
   configJson?: string | Record<string, unknown>
   createdAt?: string
-  created_at?: string
 }
 
 export type TestOrderGraph = {

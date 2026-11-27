@@ -1,13 +1,11 @@
 """MySQL REPEATABLE READ importers use locked current rows after an old snapshot."""
 
 import asyncio
-from types import SimpleNamespace
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.domain.generation_import_source import CurrentImportSource
@@ -36,7 +34,12 @@ def test_old_transaction_snapshot_cannot_hide_new_conflicts_or_cases(mysql):  # 
         seed_row(
             connection,
             tables["api_collections"],
-            {"collection_id": "api", "requirement_id": "req", "name": "api"},
+            {
+                "collection_id": "api",
+                "project_id": project["project_id"],
+                "requirement_id": "req",
+                "name": "api",
+            },
         )
         seed_row(
             connection,
@@ -56,8 +59,7 @@ def test_old_transaction_snapshot_cannot_hide_new_conflicts_or_cases(mysql):  # 
 """
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
             async with factory() as reader, factory() as writer:
                 await reader.scalar(sa.select(sa.func.count()).select_from(ApiCase))
@@ -94,18 +96,37 @@ def test_old_transaction_snapshot_cannot_hide_new_conflicts_or_cases(mysql):  # 
                 )
                 repository = AiGenerateTaskRepository(reader)
                 bundle = generation_services(repository)
-                source = SimpleNamespace(
-                    result_yaml=payload, snapshot_json={}, requirement_id="req", run_id="audit"
+                source = CurrentImportSource(
+                    requirement_id="req",
+                    chain_id="chain",
+                    kind="api",
+                    stage="generate",
+                    stage_id="stage",
+                    task_id="task",
+                    candidate_id="candidate",
+                    snapshot_id="snapshot",
+                    source_attempt_id=None,
+                    content_token="token",
+                    content=payload,
+                    format="yaml",
+                    context=None,
+                    source_manifest={},
+                    source_snapshot={"source": {}, "config": {}},
+                    upstream_outputs=(),
+                    content_hash="hash",
+                    basis_hash="basis",
+                    source_lineage_hash="source-lineage",
+                    full_lineage_hash="full-lineage",
+                    confirmed_by=None,
+                    confirmed_at=None,
+                    review_comment=None,
                 )
                 result = await bundle.api_importer.import_api_run(
-                    "audit",
+                    source,
                     "api",
                     False,
                     project["user_id"],
-                    artifact_content=payload,
-                    approved_source=source,
                     preview_only=True,
-                    locking_reads=True,
                 )
                 assert result["requiresConfirmation"] and len(result["conflicts"]) == 1
                 assert result["conflicts"][0]["existingCase"]["assertRules"][0]["name"] == "status"

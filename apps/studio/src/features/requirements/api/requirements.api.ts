@@ -5,21 +5,16 @@ import type {
   RequirementListItem,
   RequirementOption,
   RequirementCreatePayload,
-  RequirementDocumentType,
   RequirementDocumentUploadPayload,
   RequirementUpdatePayload,
 } from '../types'
-
-function normalizeRequestDocumentType(documentType?: RequirementDocumentType) {
-  if (documentType === 'docx') return 'word'
-  return documentType
-}
+import { normalizeRequirementDocumentType } from '../utils/requirementDocument'
 
 function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUpdatePayload) {
   const payload: Record<string, string> = {}
 
   if (body.name !== undefined) payload.name = body.name
-  if (body.documentType !== undefined) payload.documentType = normalizeRequestDocumentType(body.documentType) ?? ''
+  if (body.documentType !== undefined) payload.documentType = normalizeRequirementDocumentType(body.documentType) ?? ''
   if ('documentFileId' in body && body.documentFileId !== undefined) payload.documentFileId = body.documentFileId
   if (body.documentContent !== undefined) payload.documentContent = body.documentContent
 
@@ -44,7 +39,7 @@ export const requirementsApi = {
       const documentFileId = await uploadStoredFile(sprint.projectId, file, 'requirement', body.onUploadProgress)
       return request<Requirement>(`/v1/sprints/${sprintId}/requirements`, {
         method: 'POST', body: JSON.stringify({ name: body.name,
-          documentType: normalizeRequestDocumentType(body.documentType), documentFileId }),
+          documentType: normalizeRequirementDocumentType(body.documentType), documentFileId }),
       })
     }
     throw new Error('请上传需求文件或填写需求内容')
@@ -63,11 +58,11 @@ export const requirementsApi = {
     if (file) {
       if (file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
       const requirement = await request<Requirement>(`/v1/requirements/${requirementId}`)
-      const sprint = await request<{ projectId: string }>(`/v1/sprints/${requirement.sprintId ?? requirement.sprint_id}`)
+      const sprint = await request<{ projectId: string }>(`/v1/sprints/${requirement.sprintId}`)
       const documentFileId = await uploadStoredFile(sprint.projectId, file, 'requirement', body.onUploadProgress)
       return request<Requirement>(`/v1/requirements/${requirementId}`, {
         method: 'PATCH', body: JSON.stringify({ documentFileId, name: body.name,
-          documentType: normalizeRequestDocumentType(body.documentType) }),
+          documentType: normalizeRequirementDocumentType(body.documentType) }),
       })
     }
     throw new Error('请选择需求文件')

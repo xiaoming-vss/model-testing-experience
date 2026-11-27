@@ -1,7 +1,7 @@
 {
   "files": {
     "src/app/layouts/AppShell.tsx": {
-      "maxLinesPerFunction": 175
+      "maxLinesPerFunction": 166
     },
     "src/domain/projects/components/DynamicValuePickerModal.tsx": {
       "maxLinesPerFunction": 193
@@ -17,17 +17,14 @@
       "maxLinesPerFunction": 248
     },
     "src/features/ai-testing/components/ApiGenerationSourcePanel.tsx": {
-      "maxLinesPerFunction": 170
+      "maxLinesPerFunction": 169
     },
     "src/features/ai-testing/components/ApiInterfaceSelector.tsx": {
-      "maxLinesPerFunction": 310
+      "maxLinesPerFunction": 301
     },
     "src/features/ai-testing/components/CandidateStageWorkspace.tsx": {
-      "maxLinesPerFunction": 636,
-      "maxLines": 710
-    },
-    "src/features/ai-testing/components/FunctionalCaseRelationsGraph.tsx": {
-      "maxLinesPerFunction": 269
+      "maxLinesPerFunction": 613,
+      "maxLines": 684
     },
     "src/features/ai-testing/components/GeneratedCasesReviewView.tsx": {
       "maxLinesPerFunction": 280
@@ -36,7 +33,7 @@
       "maxLinesPerFunction": 167
     },
     "src/features/ai-testing/components/RequirementGenerationPanorama.tsx": {
-      "maxLinesPerFunction": 280
+      "maxLinesPerFunction": 277
     },
     "src/features/ai-testing/components/RequirementMaterialReader.tsx": {
       "maxLinesPerFunction": 355,
@@ -58,17 +55,11 @@
       "maxLines": 346
     },
     "src/features/ai-testing/hooks/useRequirementRepositoryProfileWorkspace.ts": {
-      "maxLinesPerFunction": 285,
-      "maxLines": 319
+      "maxLinesPerFunction": 284,
+      "maxLines": 318
     },
     "src/features/ai-testing/pages/AiSkillLibraryPage.tsx": {
       "maxLinesPerFunction": 206
-    },
-    "src/features/ai-testing/types.ts": {
-      "maxLines": 437
-    },
-    "src/features/ai-testing/utils/caseRelationsGraph.ts": {
-      "maxLines": 424
     },
     "src/features/ai-testing/utils/traceablePointsGraph.ts": {
       "maxLinesPerFunction": 174,
@@ -114,7 +105,7 @@
       "maxLinesPerFunction": 322
     },
     "src/features/base-services/components/SharedServicesPanel.tsx": {
-      "maxLinesPerFunction": 154
+      "maxLinesPerFunction": 153
     },
     "src/features/base-services/components/ZentaoBindingPanel.tsx": {
       "maxLinesPerFunction": 371,
@@ -155,8 +146,8 @@
       "maxLinesPerFunction": 171
     },
     "src/features/performance/components/PerfStepsEditor.tsx": {
-      "maxLines": 678,
-      "maxLinesPerFunction": 274
+      "maxLinesPerFunction": 274,
+      "maxLines": 670
     },
     "src/features/performance/components/StartPerfRunModal.tsx": {
       "maxLinesPerFunction": 189
@@ -185,8 +176,8 @@
       "maxLinesPerFunction": 222
     },
     "src/features/test-cases/hooks/useCaseLibraryPage.ts": {
-      "maxLinesPerFunction": 475,
-      "maxLines": 540
+      "maxLinesPerFunction": 473,
+      "maxLines": 538
     },
     "src/features/test-orders/components/AddCasesFromLibraryModal.tsx": {
       "maxLinesPerFunction": 342
@@ -195,7 +186,7 @@
       "maxLinesPerFunction": 290
     },
     "src/features/test-orders/components/TestOrderGraphViewer.tsx": {
-      "maxLinesPerFunction": 222
+      "maxLinesPerFunction": 217
     },
     "src/features/test-orders/pages/TestOrderPage.tsx": {
       "maxLinesPerFunction": 310

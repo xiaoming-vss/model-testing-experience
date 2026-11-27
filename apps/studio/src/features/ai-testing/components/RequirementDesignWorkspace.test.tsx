@@ -16,6 +16,9 @@ vi.mock('../hooks/usePersonalLlmChoice', () => ({
   usePersonalLlmChoice: () => ({ choose: async () => 'mine', chooseRun: async () => ({ connectionId: 'mine', checkpointEnabled: true }), dialog: null }),
 }))
 vi.mock('@/domain/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
+vi.mock('@/features/base-services/components/usePersonalConnectionChoice', () => ({
+  usePersonalConnectionChoice: () => ({ forRequirement: async () => ({}), dialog: null }),
+}))
 vi.mock('../api/generationChain.api', () => ({
   generationChainApi: {
     overview: vi.fn(), chain: vi.fn(),
@@ -105,6 +108,40 @@ it('文档与代码风险从泳道入口打开，未配置链打开生成设置'
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
+
+it('代码风险弹窗提供发起入口，首次运行自动创建任务并复用本人授权', async () => {
+  vi.mocked(interfaceLibraryApi.getRequirementSoftwareRepositories).mockResolvedValue(listPayload([
+    { softwareRepositoryId: 'repo-1', softwareRepositoryName: '订单服务', branch: 'dev', baselineBranch: 'main' } as never,
+  ]))
+  const create = vi.spyOn(aiTestingApi, 'createCodeRiskTask').mockResolvedValue({ taskId: 'risk-task' } as never)
+  const run = vi.spyOn(aiTestingApi, 'runCodeRiskTask').mockResolvedValue({ runId: 'risk-run' } as never)
+  mount()
+  const user = userEvent.setup()
+  await screen.findByRole('button', { name: '材料整理 · 有候选' })
+  await user.click(screen.getByRole('button', { name: /代码风险分析/ }))
+  const start = await within(await screen.findByRole('dialog')).findByRole('button', { name: /发起分析/ })
+  await waitFor(() => expect(start).toBeEnabled())
+  await user.click(start)
+
+  expect(create).toHaveBeenCalledWith('project', { requirementId: 'req' })
+  await waitFor(() => expect(run).toHaveBeenCalledWith('risk-task', expect.objectContaining({
+    llmConnectionId: 'mine', instruction: undefined, triggerType: 'manual', gitlabConnectionIds: {},
+  })))
+})
+
+it('需求未关联软件仓库时代码风险入口禁用，原因只在悬停时提示', async () => {
+  mount()
+  const user = userEvent.setup()
+  await screen.findByRole('button', { name: '材料整理 · 有候选' })
+  await user.click(screen.getByRole('button', { name: /代码风险分析/ }))
+  const dialog = await screen.findByRole('dialog')
+  const start = await within(dialog).findByRole('button', { name: /发起分析/ })
+  await waitFor(() => expect(start).toBeDisabled())
+  const reason = '该需求未关联软件仓库，请先在需求列表完成「关联软件仓库」。'
+  expect(screen.queryByText(reason)).not.toBeInTheDocument()
+  await user.hover(start.closest('span')!)
+  expect(await screen.findByText(reason)).toBeInTheDocument()
+})
 
 it('历史需求自动补齐需求分析和功能测试，不打开设置弹窗', async () => {
   vi.mocked(generationChainApi.overview)

@@ -28,7 +28,11 @@ class ApiAssertRule(Base):
     order_no: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="执行或展示顺序"
     )
-    assert_source: Mapped[str] = mapped_column(String(30), nullable=False, comment="断言数据来源")
+    assert_source: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        comment=("断言数据来源：status_code/header/body_jsonpath/body_text"),
+    )
     target_expr: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="断言目标提取表达式"
     )

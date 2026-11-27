@@ -1,74 +1,17 @@
 import asyncio
-from dataclasses import replace
 
 from sqlalchemy import func, select
+from support.perf_api import (
+    PERF_YAML,
+    environment,
+    monitoring_connection,
+    worker_headers,
+    worker_settings,
+)
 from support.project_api import account, project
 from support.project_api import api as api  # noqa: F401
 
-from testing_agent.core.config import get_settings
 from testing_agent.models.worker_task import WorkerTask
-
-_PERF_YAML = """
-specVersion: "1.0"
-case:
-  name: ping
-  steps:
-    - name: ping
-      method: GET
-      path: /ping
-      checks:
-        - type: status
-          op: eq
-          value: 200
-  load:
-    model: vus
-    vus: 1
-    duration: "1s"
-  acceptance:
-    source: user_confirmed
-    confirmed: true
-    criteria:
-      http_req_failed: ["rate<0.01"]
-"""
-
-_WORKER_HEADERS = {"X-Worker-Token": "perf-worker-token"}
-
-
-def _settings(api):
-    settings = replace(
-        get_settings(),
-        integration_key="test-integration-key",
-        perf_worker_key="perf-worker-token",
-    )
-    api.app.dependency_overrides[get_settings] = lambda: settings
-    return settings
-
-
-def _environment(api, headers, project_id, name="perf-env"):
-    response = api.post(
-        f"/v1/projects/{project_id}/api-environments",
-        headers=headers,
-        json={
-            "name": name,
-            "kind": "perf",
-            "baseUrl": "http://127.0.0.1:18080",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["environmentId"]
-
-
-def _connection(api, headers, project_id, name="prom"):
-    response = api.post(
-        f"/v1/projects/{project_id}/monitoring-connections",
-        headers=headers,
-        json={
-            "name": name,
-            "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
 
 
 def _suite(api, headers, project_id, name="suite"):
@@ -85,7 +28,7 @@ def _case(api, headers, project_id, suite_id, name="case-a"):
     response = api.post(
         f"/v1/projects/{project_id}/perf-cases",
         headers=headers,
-        json={"name": name, "yaml": _PERF_YAML, "suiteId": suite_id},
+        json={"name": name, "yaml": PERF_YAML, "suiteId": suite_id},
     )
     assert response.status_code == 200, response.text
     return response.json()["data"]
@@ -121,7 +64,7 @@ def _run_suite(api, headers, suite_id, environment_id, connection_id):
 def _claim(api, worker_id="worker-suite"):
     response = api.post(
         "/internal/perf-worker/tasks/claim",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": worker_id},
     )
     if response.status_code == 204:
@@ -133,7 +76,7 @@ def _claim(api, worker_id="worker-suite"):
 def _start(api, task_id, worker_id="worker-suite"):
     response = api.post(
         f"/internal/perf-worker/tasks/{task_id}/started",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": worker_id, "startedAt": "2026-11-17T10:00:00Z"},
     )
     assert response.status_code == 204, response.text
@@ -142,7 +85,7 @@ def _start(api, task_id, worker_id="worker-suite"):
 def _complete(api, task_id, run_id, *, status="completed", worker_id="worker-suite"):
     response = api.post(
         f"/internal/perf-worker/tasks/{task_id}/completed",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={
             "workerId": worker_id,
             "runId": run_id,
@@ -180,24 +123,24 @@ def _pending_tasks(api, run_ids):
 
 
 def _setup(api, prefix):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, prefix)
     project_id = project(api, headers, f"{prefix}-project")
-    environment_id = _environment(api, headers, project_id)
-    connection_id = _connection(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
+    connection_id = monitoring_connection(api, headers, project_id)
     suite = _suite(api, headers, project_id, f"{prefix}-suite")
     first = _case(api, headers, project_id, suite["suiteId"], "case-a")
     second = _case(api, headers, project_id, suite["suiteId"], "case-b")
     return headers, suite, first, second, environment_id, connection_id
 
 
-def test_perf_suite_crud_and_case_order(api):
-    _settings(api)
+def test_perf_suite_crud(api):
+    worker_settings(api)
     _, headers = account(api, "suite-owner")
     project_id = project(api, headers, "suite-project")
     suite = _suite(api, headers, project_id)
-    first = _case(api, headers, project_id, suite["suiteId"], "first")
-    second = _case(api, headers, project_id, suite["suiteId"], "second")
+    _case(api, headers, project_id, suite["suiteId"], "first")
+    _case(api, headers, project_id, suite["suiteId"], "second")
 
     detail = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers)
     assert detail.status_code == 200, detail.text
@@ -206,26 +149,40 @@ def test_perf_suite_crud_and_case_order(api):
     assert [item["orderNo"] for item in data["cases"]] == [1, 2]
     assert data["caseCount"] == 2
 
-    reordered = api.put(
-        f"/v1/perf-suites/{suite['suiteId']}/case-order",
-        headers=headers,
-        json={"caseIds": [second["caseId"], first["caseId"]]},
-    )
-    assert reordered.status_code == 200, reordered.text
-    assert [item["name"] for item in reordered.json()["data"]["cases"]] == ["second", "first"]
-    assert [item["orderNo"] for item in reordered.json()["data"]["cases"]] == [1, 2]
-
-    invalid = api.put(
-        f"/v1/perf-suites/{suite['suiteId']}/case-order",
-        headers=headers,
-        json={"caseIds": [first["caseId"]]},
-    )
-    assert invalid.status_code == 400, invalid.text
-
     listed = api.get(f"/v1/projects/{project_id}/perf-suites", headers=headers)
     assert listed.status_code == 200, listed.text
     assert listed.json()["data"]["total"] == 1
     assert listed.json()["data"]["items"][0]["caseCount"] == 2
+
+
+def test_suite_detail_reports_invalidated_cases(api):
+    worker_settings(api)
+    _, headers = account(api, "suite-invalidated")
+    project_id = project(api, headers, "suite-invalidated-project")
+    suite = _suite(api, headers, project_id)
+    first = _case(api, headers, project_id, suite["suiteId"], "first")
+    _case(api, headers, project_id, suite["suiteId"], "second")
+
+    invalidated = api.post(
+        f"/v1/projects/{project_id}/perf-cases/batch-invalidation",
+        headers=headers,
+        json={"caseIds": [first["caseId"]], "invalidated": True},
+    )
+    assert invalidated.status_code == 200, invalidated.text
+
+    cases = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).json()["data"]["cases"]
+    assert cases[0]["invalidatedAt"] is not None
+    assert cases[1]["invalidatedAt"] is None
+
+    restored = api.post(
+        f"/v1/projects/{project_id}/perf-cases/batch-invalidation",
+        headers=headers,
+        json={"caseIds": [first["caseId"]], "invalidated": False},
+    )
+    assert restored.status_code == 200, restored.text
+
+    cases = api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).json()["data"]["cases"]
+    assert [case["invalidatedAt"] for case in cases] == [None, None]
 
 
 def test_suite_run_requires_sprint_from_same_project(api):
@@ -263,7 +220,7 @@ def test_perf_suite_runs_cases_serially(api):
     assert first_task["runId"] == child_ids[0]
     snapshot = api.get(
         f"/internal/perf-worker/tasks/{first_task['taskId']}/snapshot",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         params={"workerId": "worker-suite"},
     )
     assert snapshot.status_code == 200, snapshot.text
@@ -346,7 +303,7 @@ def test_perf_suite_stop_skips_remaining_cases(api):
 
     heartbeat = api.post(
         f"/internal/perf-worker/tasks/{first_task['taskId']}/heartbeat",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": "worker-suite"},
     )
     assert heartbeat.status_code == 200, heartbeat.text
@@ -363,6 +320,18 @@ def test_perf_suite_stop_skips_remaining_cases(api):
     assert _pending_tasks(api, child_ids) == 0
 
 
+def _run_status(api, headers, run_id):
+    response = api.get(f"/v1/perf-runs/{run_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]["status"]
+
+
+def _suite_detail(api, headers, suite_run_id):
+    response = api.get(f"/v1/perf-suite-runs/{suite_run_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
 def test_stopping_child_run_cascades_to_suite(api):
     headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-child-stop")
     run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
@@ -372,15 +341,85 @@ def test_stopping_child_run_cascades_to_suite(api):
     assert stopped.status_code == 200, stopped.text
     assert stopped.json()["data"]["status"] == "canceled"
 
-    detail = api.get(f"/v1/perf-suite-runs/{run['suiteRunId']}", headers=headers).json()["data"]
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert detail["outcome"] == "stopped"
+    assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
+    assert _pending_tasks(api, child_ids) == 0
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
+
+
+def test_stopping_an_unstarted_child_run_stops_the_running_one(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(
+        api, "suite-child-stop-running"
+    )
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    first_task = _claim(api)
+    _start(api, first_task["taskId"])
+    stopped = api.post(f"/v1/perf-runs/{child_ids[1]}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["data"]["status"] == "canceled"
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "stopping"
+    assert [item["status"] for item in detail["items"]] == ["running", "skipped"]
+    assert _run_status(api, headers, child_ids[0]) == "stopping"
+    assert _run_status(api, headers, child_ids[1]) == "canceled"
+
+    heartbeat = api.post(
+        f"/internal/perf-worker/tasks/{first_task['taskId']}/heartbeat",
+        headers=worker_headers(),
+        json={"workerId": "worker-suite"},
+    )
+    assert heartbeat.status_code == 200, heartbeat.text
+    assert heartbeat.json()["stopRequested"] is True
+
+    _complete(api, first_task["taskId"], child_ids[0])
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
     assert detail["status"] == "canceled"
     assert detail["outcome"] == "stopped"
     assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
     assert _pending_tasks(api, child_ids) == 0
 
 
+def test_stopping_an_unstarted_child_run_cancels_the_queued_one(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(
+        api, "suite-child-stop-queued"
+    )
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    stopped = api.post(f"/v1/perf-runs/{child_ids[1]}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+    assert stopped.json()["data"]["status"] == "canceled"
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert detail["outcome"] == "stopped"
+    assert [item["status"] for item in detail["items"]] == ["canceled", "skipped"]
+    assert _pending_tasks(api, child_ids) == 0
+    assert _claim(api) is None
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
+
+
+def test_suite_stop_leaves_no_open_child_run(api):
+    headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-stop-open")
+    run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
+    child_ids = [item["childRunId"] for item in run["items"]]
+
+    stopped = api.post(f"/v1/perf-suite-runs/{run['suiteRunId']}/stop", headers=headers)
+    assert stopped.status_code == 200, stopped.text
+
+    detail = _suite_detail(api, headers, run["suiteRunId"])
+    assert detail["status"] == "canceled"
+    assert [_run_status(api, headers, child_id) for child_id in child_ids] == ["canceled"] * 2
+
+
 def test_deleting_suite_cascades_cases_and_run_history(api):
-    headers, suite, first, _second, environment_id, connection_id = _setup(api, "suite-delete")
+    headers, suite, _first, _second, environment_id, connection_id = _setup(api, "suite-delete")
     run = _run_suite(api, headers, suite["suiteId"], environment_id, connection_id)
     child_ids = [item["childRunId"] for item in run["items"]]
     first_task = _claim(api)
@@ -390,7 +429,6 @@ def test_deleting_suite_cascades_cases_and_run_history(api):
     deleted = api.delete(f"/v1/perf-suites/{suite['suiteId']}", headers=headers)
     assert deleted.status_code == 200, deleted.text
     assert api.get(f"/v1/perf-suites/{suite['suiteId']}", headers=headers).status_code == 404
-    assert api.get(f"/v1/perf-cases/{first['caseId']}", headers=headers).status_code == 404
     assert api.get(f"/v1/perf-suite-runs/{run['suiteRunId']}", headers=headers).status_code == 404
     assert api.get(f"/v1/perf-runs/{child_ids[0]}", headers=headers).status_code == 404
     assert _pending_tasks(api, child_ids) == 0
@@ -445,7 +483,7 @@ def test_perf_run_list_filters_trigger_type(api):
 
 
 def test_project_deletion_requires_removing_perf_suites(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "suite-project-delete")
     project_id = project(api, headers, "suite-project-delete-project")
     suite = _suite(api, headers, project_id, "delete-blocker-suite")

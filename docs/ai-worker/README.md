@@ -17,7 +17,7 @@
 - Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
 - Python 依赖：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`、`jsonschema`
 - Node 运行时：`@earendil-works/pi-coding-agent==1.3.0`，由 `package.json` / `package-lock.json` 固定
-- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；默认不监听端口，设置 `TESTING_AGENT_HEALTH_PORT` 后提供 `/healthz` 探针，Compose 本地运行不注入该变量
+- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；默认不监听端口，设置 `TESTING_AGENT_HEALTH_PORT` 后提供 `/healthz` 探针。Compose 与 K8s 都会注入该变量并用它做健康检查；本地直接启动时不注入
 
 ## 执行底座
 
@@ -29,6 +29,8 @@
 | `pi` | `agent/pi.py` | 每次模型调用启动固定版本 Pi CLI 的 RPC 子进程 |
 
 选择方式、Pi 的会话/超时/进程回收语义和容器验收见 [Pi 后端](pi-backend.md)；收敛决策见 [ADR 0001](adr/0001-unified-agent-backend.md)。两个底座共用的技能下载、阶段检查点、产物校验和控制面协议保持一致；代码风险分析与仓库画像仅支持 Pi。切换前处理在途任务和人工检查点，会话历史不跨底座迁移。
+
+`agent/nanobot.py` 的 `migrate_legacy_sessions` 只把升级前运行卷中的 `temp-configs/sessions` 移到 `sessions`，在启动接收任务前执行；源和目标同时存在时显式失败，不覆盖历史。当所有受支持部署的 Nanobot 运行卷都已是新目录结构，或 Nanobot 后端退役后，可删除该迁移。
 
 ## 源码结构
 
@@ -55,7 +57,7 @@
 | `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `agent.nanobot.runtime_root` |
 | `TESTING_AGENT_PI_RUNTIME_ROOT` | `agent.pi.runtime_root` |
 
-其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[ui_generation]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
+其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[ui_generation]`、`[logging]`。`[worker].worker_id` 留空（或只有空白）时，启动时生成 `ai-worker-<主机名>`：Compose 下是容器主机名，K8s 下即 Pod 名。控制面按该 ID 校验任务归属，多个副本必须得到不同的值，不要显式配置成相同的 ID。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
 
 ```toml
 [agent]
@@ -133,7 +135,9 @@ uv run --locked mtx-ai-worker                     # 启动（后端由配置决�
 
 ## 心跳、租约与结果恢复
 
-心跳失败记录安全 warning 和连续失败次数，并在剩余租约不足时缩短下一次重试间隔。连续失败达到阈值或超过最后一次成功心跳/进度对应的租约期限时，Worker 停止在下一个进度检查点继续执行，不再回传该任务结果；控制面租约回收会把尝试标记为失败。已进入的模型调用不会被强制中断，进程级 SIGTERM 仍按既有规则终止子进程。
+心跳间隔取配置值与租约一半的较小者。本地租约窗口从续租请求发出的时刻起算，心跳或进度成功都算续租；连续失败达到阈值、窗口到期，或控制面以 `401/403/404/409/410` 拒绝开始、心跳或进度时，租约失效，Worker 停止在下一个进度检查点，不再回传该任务结果；控制面租约回收会把尝试标记为失败。心跳失败记录安全 warning、状态码和连续失败次数，并在剩余租约不足时缩短下一次重试间隔。`started`、心跳和进度请求的超时不超过剩余租约的一半，完成回传不受此限制。
+
+租约失效不会强制中断已进入的模型调用。关闭行为：Ctrl+C（SIGINT）停止领取新任务并等待在途任务完成；SIGTERM 立即终止模型子进程并退出进程。
 
 AI 任务没有停止信号，控制面 `control-state` 对 AI 队列恒为 `stopRequested=false`，因此 Worker 不产生 `canceled`；`TaskStatus.CANCELED` 仅为协议兼容保留，新执行器不得依赖该状态。
 
@@ -183,7 +187,7 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 
 每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
 
-需求生成链的新 API 三阶段运行使用快照标记 `apiWorkflowVersion: api_three_stage/1.0`。任务只保存所选接口 ID，运行开始时读取接口库最新定义并校验接口存在；快照向 Worker 提供 `softwareRepositories`、`interfaces` 和需求上下文，不冻结 OpenAPI/Swagger 原文。`interface_extract` 只调用 `mtx-extract-interface-test-config`，输入为选中接口的结构化 JSON（含 base path 拼接后的 `fullPath`、security 和 securitySchemes），结果校验通过后等待审核；`api_design` 读取已审核提取版本调用 `api-case-designer`，每 5 个接口一批，产出 `api_test_design/1.0` 设计 JSON 后等待审核；`generate` 同时读取已审核提取和设计版本调用 `mtx-generate-api-test-case`，每 10 条设计用例一批，逐条落实设计并校验名称、顺序、请求、状态区间断言、设计断言和 patch 效果。每次只获取当前阶段的 Skill；任一批失败则阶段失败，不发布部分结果；历史 API 任务已清理。需求生成链统一使用三阶段协议，旧的非 checkpoint 独立 API 运行链路保持不变。
+需求生成链的新 API 三阶段运行使用快照标记 `apiWorkflowVersion: api_three_stage/1.0`。任务只保存所选接口 ID，运行开始时读取接口库最新定义并校验接口存在；快照向 Worker 提供 `softwareRepositories`、`interfaces` 和需求上下文，不冻结 OpenAPI/Swagger 原文。`interface_extract` 只调用 `mtx-extract-interface-test-config`，输入为选中接口的结构化 JSON（含 base path 拼接后的 `fullPath`、security 和 securitySchemes），结果校验通过后等待审核；`api_design` 读取已审核提取版本调用 `api-case-designer`，每 5 个接口一批，产出 `api_test_design/1.0` 设计 JSON 后等待审核；`generate` 同时读取已审核提取和设计版本调用 `mtx-generate-api-test-case`，每 10 条设计用例一批，逐条落实设计并校验名称、顺序、请求、状态区间断言、设计断言和 patch 效果。每次只获取当前阶段的 Skill；任一批失败则阶段失败，不发布部分结果；历史 API 任务已清理。需求生成链统一使用三阶段协议。
 
 测试点阶段契约与审查见 [可追溯测试点生成](traceable-test-points.md)。
 

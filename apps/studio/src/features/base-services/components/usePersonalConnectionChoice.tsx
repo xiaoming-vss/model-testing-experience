@@ -5,7 +5,7 @@ import { api, listItems } from '@/services/api'
 import { normalizeInstanceUrl } from '../utils/personalConnections'
 
 type Choice = { connectionId: string; name: string; baseUrl: string; status: string }
-export function usePersonalConnectionChoice(provider: 'gitlab' | 'zentao') {
+export function usePersonalConnectionChoice() {
   const [choices, setChoices] = useState<Choice[] | null>(null)
   const [selected, setSelected] = useState<string>()
   const [instance, setInstance] = useState('')
@@ -21,7 +21,7 @@ export function usePersonalConnectionChoice(provider: 'gitlab' | 'zentao') {
   async function choose(projectId: string, instanceUrl?: string, allowUnavailable = false) {
     let rows: Choice[]
     try {
-      rows = listItems(await (provider === 'gitlab' ? api.getGitlabConnections(projectId) : api.getZentaoConnections(projectId)))
+      rows = listItems(await api.getGitlabConnections(projectId))
         .filter(c => c.status === 'active' && (!instanceUrl || normalizeInstanceUrl(c.baseUrl) === normalizeInstanceUrl(instanceUrl)))
     } catch (error) {
       if (allowUnavailable) return ''
@@ -48,13 +48,8 @@ export function usePersonalConnectionChoice(provider: 'gitlab' | 'zentao') {
     }
     return result
   }
-  async function forZentaoRequirement(projectId: string, requirementId: string) {
-    const binding = listItems(await api.getRequirementBindings(requirementId)).find(b => b.provider === 'zentao' && b.status === 'active')
-    if (!binding?.instanceUrl) throw new Error('需求未绑定禅道实例，请先由项目所有者绑定')
-    return choose(projectId, binding.instanceUrl)
-  }
-  const dialog = <Modal mask={{ closable: false }} centered title={`选择本人 ${provider === 'gitlab' ? 'GitLab' : '禅道'} 授权${instance ? ` · ${instance}` : ''}`} open={choices !== null} onCancel={() => finish()} onOk={() => finish(selected)} okButtonProps={{ disabled: !choices?.some(c => c.connectionId === selected) }}>
+  const dialog = <Modal mask={{ closable: false }} centered title={`选择本人 GitLab 授权${instance ? ` · ${instance}` : ''}`} open={choices !== null} onCancel={() => finish()} onOk={() => finish(selected)} okButtonProps={{ disabled: !choices?.some(c => c.connectionId === selected) }}>
     {choices?.length ? <Select style={{ width: '100%' }} aria-label="选择本人授权" placeholder="请选择本次操作使用的连接" value={selected} onChange={setSelected} options={choices.map(c => ({ value: c.connectionId, label: `${c.name} · ${c.baseUrl}` }))} /> : <Alert type="info" showIcon title="没有可用的本人授权" description="请先关闭此窗口，前往基础服务配置对应实例的个人连接。" />}
   </Modal>
-  return { choose, forRequirement, forZentaoRequirement, dialog }
+  return { choose, forRequirement, dialog }
 }

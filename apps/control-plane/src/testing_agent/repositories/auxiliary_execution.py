@@ -15,27 +15,31 @@ from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 
 
-async def lock_or_create_stage(session: AsyncSession, task_id: str) -> AiGenerationStage:
-    """Find or create the task's stable stage while its task row is already locked."""
+async def lock_or_create_stage(
+    session: AsyncSession, task_id: str, stage_name: str = "generate"
+) -> tuple[AiGenerationStage, bool]:
+    """Find or create one task stage while its task row is already locked.
+
+    The unique (task_id, stage) constraint arbitrates concurrent creation; the
+    savepoint lets a loser read the winner without rolling back its caller.
+    """
     await session.run_sync(ensure_outer_transaction)
     try:
         async with session.begin_nested():
-            stage = AiGenerationStage(
-                id=str(uuid4()), task_id=task_id, stage="generate", review_status="not_required"
-            )
+            stage = AiGenerationStage(id=str(uuid4()), task_id=task_id, stage=stage_name)
             session.add(stage)
             await session.flush()
-        return stage
+        return stage, True
     except IntegrityError:
         existing = await session.scalar(
             select(AiGenerationStage)
-            .where(AiGenerationStage.task_id == task_id, AiGenerationStage.stage == "generate")
+            .where(AiGenerationStage.task_id == task_id, AiGenerationStage.stage == stage_name)
             .with_for_update()
             .execution_options(populate_existing=True)
         )
         if existing is None:
             raise
-        return existing
+        return existing, False
 
 
 def _ranked_attempts(task_id: str):

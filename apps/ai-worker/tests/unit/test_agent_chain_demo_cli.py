@@ -4,22 +4,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 import testing_agent_ai_worker.cli.agent_chain_demo as chain_demo_module
 from testing_agent_ai_worker.cli.agent_chain_demo import main, run_chain_demo
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult
-
-
-class _Printer:
-    def __init__(self) -> None:
-        self.lines: list[str] = []
-
-    def __call__(self, value: str) -> None:
-        self.lines.append(value)
+from tests.support.cli import LinePrinter
 
 
 class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
@@ -64,7 +52,9 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             source_path.write_text(
                 '{"interfaces":[{"interfaceId":"interface-1"}]}', encoding="utf-8"
             )
-            printer = _Printer()
+            config_path = str(Path(temp_dir) / "config.json")
+            workspace = str(Path(temp_dir) / "workspace")
+            printer = LinePrinter()
             captured: dict[str, str | None] = {}
 
             async def fake_chain_runner(
@@ -98,8 +88,8 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
                 session_key="demo:chain",
                 extractor_skill_name="mtx-extract-interface-test-config",
                 generator_skill_name="mtx-generate-api-test-case",
-                config_path="D:/tmp/config.json",
-                workspace="D:/tmp/workspace",
+                config_path=config_path,
+                workspace=workspace,
                 extra_instruction="帮我生成登录、项目增删改查的用例",
                 runner=fake_chain_runner,
                 printer=printer,
@@ -113,8 +103,8 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
                 "session_key": "demo:chain",
                 "extractor_skill_name": "mtx-extract-interface-test-config",
                 "generator_skill_name": "mtx-generate-api-test-case",
-                "config_path": "D:/tmp/config.json",
-                "workspace": "D:/tmp/workspace",
+                "config_path": config_path,
+                "workspace": workspace,
                 "extra_instruction": "帮我生成登录、项目增删改查的用例",
             },
         )

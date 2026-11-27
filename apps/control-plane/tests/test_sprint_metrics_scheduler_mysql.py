@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.mysql_initialization import async_sessions
 from support.mysql_initialization import mysql as mysql
 
 from testing_agent.models.project import Project
@@ -18,8 +18,7 @@ from testing_agent.services.sprint_metrics_scheduler import due_today
 
 
 async def test_concurrent_collectors_commit_one_daily_snapshot(mysql, monkeypatch):
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     prefix = uuid4().hex
     now = datetime(2026, 10, 13, 15, 56, tzinfo=UTC)
     due = due_today(now)

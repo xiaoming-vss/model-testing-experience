@@ -73,16 +73,33 @@ class AiGenerateImport(Base):
         comment="本次导入的幂等请求业务标识",
     )
     source_kind: Mapped[str] = mapped_column(
-        String(20), nullable=False, comment="来源类型：current、standalone 或 legacy 历史证据"
+        String(20),
+        nullable=False,
+        comment="来源类型：current/standalone/legacy（legacy 为历史证据）",
     )
     requirement_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="导入目标需求审计标识；历史目标已缺失时为空字符串"
     )
     task_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="来源生成任务审计标识")
     kind: Mapped[str] = mapped_column(
-        String(40), nullable=False, comment="来源生成链或独立任务类型"
+        String(40),
+        nullable=False,
+        comment=(
+            "来源生成链或独立任务类型：requirement_analysis/function/api/ui 或 reposito"
+            "ry_profile/test_report_generate/code_risk_analysis/test_orde"
+            "r_graph/test_order_case_visualization"
+        ),
     )
-    stage: Mapped[str] = mapped_column(String(40), nullable=False, comment="被导入内容所属阶段")
+    stage: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        comment=(
+            "被导入内容所属阶段：requirement_review/extracting_text/historical_requ"
+            "irement_relations/historical_test_case_verification/requirem"
+            "ent_analysis/case_names/detailed_cases/interface_extract/api"
+            "_design/generate/ui_surface/ui_design/ui_yaml"
+        ),
+    )
     source_attempt_id: Mapped[str | None] = mapped_column(
         String(64), comment="来源尝试审计标识，不作为存活依赖"
     )
@@ -98,7 +115,9 @@ class AiGenerateImport(Base):
     content: Mapped[str] = mapped_column(
         CONTENT, nullable=False, comment="实际导入的生成产物正文快照"
     )
-    format: Mapped[str] = mapped_column(String(20), nullable=False, comment="实际导入产物正文格式")
+    format: Mapped[str] = mapped_column(
+        String(20), nullable=False, comment=("实际导入产物正文格式：json/text/yaml")
+    )
     content_hash: Mapped[str | None] = mapped_column(
         String(128), comment="导入产物正文指纹；未知时为空"
     )
@@ -132,7 +151,7 @@ class AiGenerateImport(Base):
         Integer, nullable=False, comment="导入后正式目标的用例总数"
     )
     mixed_source: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, comment="正式目标是否仍有本次未覆盖的用例"
+        Boolean, nullable=False, comment="正式目标是否仍有本次未覆盖的用例：true/false"
     )
     imported_by: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="执行导入的用户审计标识"

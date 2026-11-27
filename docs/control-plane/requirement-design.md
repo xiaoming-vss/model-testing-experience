@@ -4,7 +4,7 @@
 
 | 接口 | 行为 |
 | --- | --- |
-| GET `/v1/requirements/{id}/design` | 返回配置摘要、旧运行计数及是否存在已审核的需求理解版本 |
+| GET `/v1/requirements/{id}/design` | 返回配置摘要（含 API 已选 `interfaceIds`）、旧运行计数及是否存在已审核的需求理解版本 |
 | GET `/v1/requirements/{id}/design/{kind}/runs` | 分页读取同类历史任务的运行摘要 |
 | POST `/v1/requirements/{id}/design/{kind}/configuration` | 复用或新增配置，自动填写项目、迭代、需求和名称 |
 | POST `/v1/requirements/{id}/design/{kind}/run` | 仅返回 400 提示，引导客户端改用独立阶段运行接口；不再发起任务 |

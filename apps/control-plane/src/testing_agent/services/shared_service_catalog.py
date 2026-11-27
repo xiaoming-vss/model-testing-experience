@@ -11,7 +11,10 @@ from testing_agent.core.errors import AppError
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.shared_service import SharedService
 from testing_agent.repositories.shared_service_catalog import SharedServiceCatalogRepository
-from testing_agent.services.personal_credentials import PersonalCredentialAccess
+from testing_agent.services.personal_credentials import (
+    PersonalCredentialAccess,
+    has_mcp_token,
+)
 
 PROBE_CONCURRENCY = 4
 type DiscoverInstance = Callable[[str, str], Awaitable[dict[str, Any]]]
@@ -54,7 +57,7 @@ class SharedServiceCatalog:
             own = owned.get(resource.service_id)
             if resource.provider != "mcp":
                 requests.append(ProbeResult())
-            elif own and own.status == "active" and (own.secret_json or {}).get("token"):
+            elif has_mcp_token(own):
                 try:
                     token = self.credentials.mcp_token(
                         own, user_id=user_id, project_id=resource.project_id

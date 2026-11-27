@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     run_functional_chain,
 )
@@ -205,7 +206,31 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
         errors = json.loads(feedback)
         self.assertEqual(len(errors), 20)
         self.assertEqual(errors[0]["path"], "$.cases[0].priority")
-        self.assertTrue(all(len(e["actual"]) <= 200 for e in errors))
+        # Issues name the location and the rule; model output is not echoed into them.
+        self.assertTrue(all(item["actual"] == "" for item in errors))
+
+    async def test_validation_failure_names_the_location_without_model_output(self):
+        bad = {"cases": [{**case(), "priority": "9", "case_title": "SECRET-TITLE"}]}
+
+        async def generate(prompt):
+            return json.dumps(bad)
+
+        with self.assertRaises(OutputValidationError) as caught:
+            await generate_validated(
+                stage="detailed_cases",
+                module="登录",
+                batch=1,
+                inputs="input",
+                generate=generate,
+            )
+
+        # The final failure reaches the user: it says where validation gave up and nothing else.
+        self.assertIsInstance(caught.exception, UserFacingError)
+        self.assertEqual(
+            str(caught.exception),
+            "detailed_cases/登录 输出校验失败（共 3 次调用）：$.cases[0].priority（literal_error）",
+        )
+        self.assertNotIn("SECRET-TITLE", str(caught.exception))
 
     async def test_batch_duplicate_repairs_later_batch_no_partial_publish(self):
         calls, progress = [], []
@@ -314,10 +339,12 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
             calls.append(prompt)
             return SimpleNamespace(content="auth failed", error="auth failed")
 
-        with self.assertRaisesRegex(RuntimeError, "模型调用失败"):
+        with self.assertRaisesRegex(UserFacingError, "模型调用出错") as caught:
             await generate_validated(
                 stage="traceable_case_names", inputs="input", generate=generate
             )
+        # Provider error text is never repeated to the user.
+        self.assertNotIn("auth failed", str(caught.exception))
         self.assertEqual(len(calls), 1)
 
 
@@ -356,12 +383,11 @@ class CheckpointValidationTests(unittest.TestCase):
             with (
                 tempfile.TemporaryDirectory() as tmp,
                 patch(
-                    "testing_agent_ai_worker.tasks.functional_case_generate.chain._default_from_config",
+                    "testing_agent_ai_worker.tasks.functional_case_generate.chain.create_agent",
                     return_value=Bot(),
                 ),
             ):
                 task = Task(
-                    claim_id="c",
                     task_id="t",
                     attempt_id="r",
                     generate_task_id="g",

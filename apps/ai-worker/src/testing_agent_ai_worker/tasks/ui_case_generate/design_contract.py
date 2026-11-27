@@ -66,21 +66,6 @@ class Design(Contract):
     cases: list[Case] = Field(min_length=1)
 
 
-def strict_json(raw: str) -> Any:
-    def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
-        result = {}
-        for key, value in items:
-            if key in result:
-                raise ValueError(f"JSON 重复字段: {key}")
-            result[key] = value
-        return result
-
-    def constant(value: str) -> None:
-        raise ValueError(f"JSON 不允许非有限数值: {value}")
-
-    return json.loads(raw, object_pairs_hook=pairs, parse_constant=constant)
-
-
 def design_instruction() -> str:
     return (
         "\n第二阶段返回的完整 JSON 对象必须符合以下 JSON Schema：\n"
@@ -96,15 +81,16 @@ def validate_design_output(value: Any, cases: list[dict[str, Any]]) -> dict[str,
     try:
         Design.model_validate(value)
     except ValidationError as exc:
+        # Input values are model output; the repair prompt already quotes the raw draft.
         issues = [
             {
                 "path": "$"
                 + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e["loc"]),
                 "code": e["type"],
                 "expected": e["msg"],
-                "actual": e.get("input"),
+                "actual": "",
             }
-            for e in exc.errors(include_url=False, include_context=False)[:20]
+            for e in exc.errors(include_url=False, include_context=False, include_input=False)[:20]
         ]
         raise ValueError(json.dumps(issues, ensure_ascii=False, default=str)) from exc
     originals = {case["caseId"]: case for case in cases}

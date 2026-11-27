@@ -62,13 +62,16 @@ class AiGenerationAttempt(Base):
     output_content: Mapped[str | None] = mapped_column(
         CONTENT, comment="本次尝试输出的阶段候选正文"
     )
-    output_format: Mapped[str | None] = mapped_column(String(20), comment="候选正文格式")
+    output_format: Mapped[str | None] = mapped_column(
+        String(20), comment="候选正文格式：json/text/yaml"
+    )
     output_context_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON(none_as_null=True), comment="候选正文及来源的扩展上下文"
     )
     error_message: Mapped[str | None] = mapped_column(Text, comment="执行失败时的错误信息")
     review_status: Mapped[str | None] = mapped_column(
-        String(20), comment="独立执行此候选的审核状态；需求链和无需审核时为空"
+        String(20),
+        comment="历史独立执行审核状态：pending/approved/rejected；候选链不再写入，需求链和无需审核时为空",
     )
     reviewer_user_id: Mapped[str | None] = mapped_column(
         String(64), comment="独立执行此候选的审核人业务标识；未审核为空"

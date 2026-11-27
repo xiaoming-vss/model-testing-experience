@@ -19,7 +19,6 @@ from testing_agent.repositories.software_repository import SoftwareRepositoryRep
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.repositories.ui_element import UiElementRepository
-from testing_agent.services.baseline_resolution import BaselineResolutionService
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.project import ProjectService
@@ -31,7 +30,6 @@ from testing_agent.services.requirement_software_repository import (
 from testing_agent.services.resource_binding import ResourceBindingService
 from testing_agent.services.software_repository import SoftwareRepositoryService
 from testing_agent.services.sprint import SprintService
-from testing_agent.services.sprint_code_overview import SprintCodeOverviewService
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
 from testing_agent.services.ui_element import UiElementService
 from testing_agent.services.zentao_mcp import ZentaoMcpResources
@@ -102,27 +100,9 @@ def get_resource_binding_service(
         ResourceBindingRepository(session),
         IntegrationConnectionService(
             IntegrationConnectionRepository(session),
-            ZentaoMcpResources(),
             credential_cipher=IntegrationCredentialCipher(settings.integration_key),
         ),
         ZentaoMcpResources(),
-    )
-
-
-def get_sprint_code_overview_service(
-    session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> SprintCodeOverviewService:
-    credential_cipher = IntegrationCredentialCipher(settings.integration_key)
-    integration_connection_service = IntegrationConnectionService(
-        IntegrationConnectionRepository(session),
-        credential_cipher=credential_cipher,
-    )
-    return SprintCodeOverviewService(
-        build_sprint_service(session),
-        BaselineResolutionService(RequirementSoftwareRepositoryRepository(session)),
-        integration_connection_service,
-        credential_cipher,
     )
 
 

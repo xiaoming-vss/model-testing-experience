@@ -8,7 +8,6 @@ from testing_agent.services.connection_security import (
     require_secure_scheme,
     warn_if_insecure,
 )
-from testing_agent.services.zentao_resource import truncate_error
 
 
 def normalize_gitlab_base_url(base_url: str) -> str:
@@ -18,6 +17,8 @@ def normalize_gitlab_base_url(base_url: str) -> str:
         raise ValueError("GitLab 地址不合法")
     if parsed.query or parsed.fragment:
         raise ValueError("GitLab 地址不能包含查询参数或片段")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("GitLab 地址不能包含用户名或密码，请只填写访问令牌")
     return normalized
 
 
@@ -49,6 +50,5 @@ class GitLabAuthProvider:
         ) as client:
             response = await client.get(url, headers={"PRIVATE-TOKEN": access_token})
         if response.status_code < 200 or response.status_code >= 300:
-            raise RuntimeError(
-                f"GitLab 鉴权失败，HTTP {response.status_code}: {truncate_error(response.text)}"
-            )
+            # GitLab's response body may echo request data; report the status only.
+            raise RuntimeError(f"GitLab 鉴权失败，HTTP {response.status_code}")

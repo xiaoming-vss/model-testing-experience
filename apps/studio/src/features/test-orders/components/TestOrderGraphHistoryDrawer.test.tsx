@@ -20,7 +20,7 @@ it('可查看历史并删除已结束图谱，运行中不可删除', async () =
   expect(await screen.findByText('成功')).toBeInTheDocument()
   const tableRows = screen.getAllByRole('row')
   const done = tableRows.find(row => within(row).queryByText('成功'))!
-  const busy = tableRows.find(row => within(row).queryByText('生成中'))!
+  const busy = tableRows.find(row => within(row).queryByText('执行中'))!
   const user = userEvent.setup()
   await user.click(within(done).getByRole('button', { name: '查看' }))
   expect(select).toHaveBeenCalledWith('old')

@@ -12,7 +12,8 @@ UI 自动化运行时可读取项目环境变量，并在步骤成功后把页�
 - `keyword`、`locatorType`、`comparator` 禁止变量，导入时直接拒绝。
 - 内置变量 `{{baseUrl}}` 取运行所选 UI 环境的基础地址；环境未配置基础地址时预检失败。
 - 变量值不做二次解析、不 trim，空字符串也算“已定义”。
-- 内置函数每个步骤重新生成，不跨步骤保持。
+- 内置函数每个步骤重新生成，不跨步骤保持；同一步骤内同名函数取值一致。
+- 内置函数为 `$timestamp`、`$timestamp_ms`、`$now`、`$date`、`$uuid`、`$randomInt`、`$randomString`，结果一律是文本。函数表只在 api-ui-worker 的 `template_functions.py` 实现一次，API 请求与 UI 步骤共用；API 请求在同一次请求内保持同名函数取值一致。控制面保存逐字节副本 `domain/template_functions.py`，只用于预渲染运行起始时的请求快照，根测试核对两份一致并以 `tests/fixtures/api-template-contract.json` 约束三方结果。
 
 定位类型决定转义方式：
 

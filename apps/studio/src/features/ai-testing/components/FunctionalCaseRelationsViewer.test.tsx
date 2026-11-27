@@ -2,16 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { api } from '@/services/api'
-import type { FunctionalCaseGenerateTaskRun } from '../types'
+import { generationCandidatesApi } from '../api/generationCandidates.api'
+import type { CandidateRelationsView } from '../api/generationCandidates.contract'
 import { FunctionalCaseRelationsViewer } from './FunctionalCaseRelationsViewer'
 
-vi.mock('@/services/api', () => ({
-  api: {
-    getFunctionalCaseGenerateTask: vi.fn(),
-    getFunctionalCaseGenerateTaskRun: vi.fn(),
-  },
-}))
+vi.mock('../api/generationCandidates.api', () => ({ generationCandidatesApi: { relations: vi.fn() } }))
 vi.mock('@/domain/projects/components/ProjectAccessScope', () => ({
   ProjectAccessScope: ({ children }: { children: React.ReactNode }) => children,
 }))
@@ -32,17 +27,16 @@ const relations = {
   edges: [{ edge_id: 'E01', from_case_id: 'c1', to_case_id: 'c2', relation_type: 'next', order: 1 }],
 }
 
-const readyRun: FunctionalCaseGenerateTaskRun = {
-  runId: 'run-1',
-  taskId: 'task-1',
-  status: 'success',
-  currentStage: 'completed',
-  reviewStatus: 'approved',
-  configJson: { caseRelations: relations },
+const readyRun: CandidateRelationsView = {
+  candidateId: 'candidate',
+  snapshotId: 'snapshot',
+  currentToken: 'token',
+  sourceAttemptId: 'run-1',
   resultYaml: '[]',
-  importStatus: 'pending',
-  importedTargets: [],
-  importedAt: '',
+  status: 'success',
+  attemptId: null,
+  errorMessage: '',
+  caseRelations: relations,
 }
 
 let client: QueryClient
@@ -51,13 +45,7 @@ beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  vi.mocked(api.getFunctionalCaseGenerateTask).mockResolvedValue({
-    taskId: 'task-1',
-    name: '登录需求',
-    projectId: 'project-1',
-    instruction: '',
-  })
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue(readyRun)
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue(readyRun)
 })
 
 afterEach(() => {
@@ -69,7 +57,7 @@ afterEach(() => {
 function mount() {
   render(
     <QueryClientProvider client={client}>
-      <FunctionalCaseRelationsViewer taskId="task-1" runId="run-1" />
+      <FunctionalCaseRelationsViewer projectId="project-1" candidate={{ requirementId: 'req', currentToken: 'token' }} />
     </QueryClientProvider>
   )
 }
@@ -89,9 +77,10 @@ it('渲染层级图谱，并可切换到完整 JSON 查看', async () => {
 })
 
 it('尚未生成图谱时显示空状态，不交给图谱解析器报错', async () => {
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue({
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue({
     ...readyRun,
-    configJson: {},
+    status: 'not_started',
+    caseRelations: null,
   })
   mount()
 
@@ -100,11 +89,11 @@ it('尚未生成图谱时显示空状态，不交给图谱解析器报错', asyn
 })
 
 it('图谱生成失败时展示失败原因', async () => {
-  vi.mocked(api.getFunctionalCaseGenerateTaskRun).mockResolvedValue({
+  vi.mocked(generationCandidatesApi.relations).mockResolvedValue({
     ...readyRun,
     status: 'failed',
-    currentStage: 'relation_analysis',
     errorMessage: '缺少需求分析输入',
+    caseRelations: null,
   })
   mount()
 

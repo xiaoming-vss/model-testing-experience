@@ -10,7 +10,6 @@ from typing import Any
 
 UI_STAGES = ("ui_surface", "ui_design", "ui_yaml")
 UI_FIELDS = {"ui_surface": "uiSurface", "ui_design": "uiDesign"}
-UI_WORKFLOW_VERSION = "ui_three_stage/1.0"
 
 
 def normalize(text: Any) -> str:

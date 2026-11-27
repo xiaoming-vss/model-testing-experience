@@ -25,6 +25,7 @@ from support.database_read_paths import (
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_case_run import ApiCaseRun
+from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
@@ -34,6 +35,7 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
+from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
 from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
 
@@ -187,7 +189,39 @@ async def test_ai_task_list_reads_are_batched(database, size):
     assert len(rows) == min(size, 20)
     assert sum(counts.values()) == size
     assert len(sql) == 3
-    assert all("test_orders" not in query and "document_content" not in query for query in sql)
+    assert all(
+        "test_orders" not in query
+        and "document_content" not in query
+        and "source_content" not in query
+        for query in sql
+    )
+
+
+async def test_run_list_pages_skip_private_payloads(database):
+    sync, session, sql = database
+    seed_cases(sync, 1)
+    sync.add(
+        ApiCollectionRun(
+            collection_run_id="collection-run",
+            collection_id="ac",
+            project_id="p",
+            environment_id="e",
+            trigger_user_id="u",
+            status="queued",
+            private_payload="X" * 100_000,
+            created_at=NOW,
+        )
+    )
+    sync.commit()
+    sql.clear()
+    api_runs, _ = await ApiCollectionRunRepository(session).page_runs("ac", 1, 20)
+    ui_runs, _ = await UiTestCaseRunRepository(session).page_suite_runs("uc", 1, 20)
+    assert [run.collection_run_id for run in api_runs] == ["collection-run"]
+    assert {run.suite_run_id for run in ui_runs} == {"old", "new"}
+    assert len(sql) == 4
+    assert all(
+        "private_payload" not in statement and "snapshot_json" not in statement for statement in sql
+    )
 
 
 async def test_ai_task_scope_batches_test_order_lookups(database):

@@ -8,19 +8,13 @@ export type ZentaoBinding = {
   mcpServiceId?: string
   instanceUrl?: string
   bindingId?: string
-  binding_id?: string
   provider: 'zentao' | string
   connectionId?: string
-  connection_id?: string
   remoteResourceId?: string
-  remote_resource_id?: string
   remoteNameSnapshot?: string
-  remote_name_snapshot?: string
   status?: string
   boundAt?: string
-  bound_at?: string
   createdAt?: string
-  created_at?: string
 }
 
 export type Project = {
@@ -28,34 +22,24 @@ export type Project = {
   isSuperAdmin?: boolean
   permissions?: ProjectAction[]
   projectId?: string
-  project_id?: string
   userId?: string
-  user_id?: string
   name: string
   description?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type Sprint = {
   zentaoBinding?: ZentaoBinding | null
   sprintId?: string
-  sprint_id?: string
   projectId?: string
-  project_id?: string
   name: string
   description?: string
   status: SprintStatus
   startTime?: string
-  start_time?: string
   endTime?: string
-  end_time?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type SprintStatus = 'planned' | 'running' | 'completed'
@@ -84,72 +68,35 @@ export type SprintUpdatePayload = Partial<{
 }>
 
 export type SprintDailyMetricsTestStats = {
-  total?: number
-  executed?: number
-  pending?: number
-  unexecuted?: number
-  success?: number
-  failed?: number
-  passed?: number
+  total: number
+  executed: number
+  pending: number
+  success: number
+  failed: number
 }
 
 export type SprintDailyMetricsBugStats = {
-  total?: number
-  fatal?: number
-  serious?: number
-  severe?: number
-  normal?: number
-  suggestion?: number
-  hint?: number
-  resolved?: number
-  closed?: number
-  unresolved?: number
+  total: number
+  resolved: number
+  closed: number
+  unresolved: number
+  fatal: number
+  serious: number
+  normal: number
+  suggestion: number
 }
 
+/** 与后端 dump_metric 的响应字段一一对应。 */
 export type SprintDailyMetricsSnapshot = {
-  sprintId?: string
-  sprint_id?: string
-  snapshotDate?: string
-  snapshot_date?: string
-  date?: string
-  projectId?: string
-  project_id?: string
-  totalCases?: number
-  total_cases?: number
-  functional?: SprintDailyMetricsTestStats
-  function?: SprintDailyMetricsTestStats
-  functionTesting?: SprintDailyMetricsTestStats
-  function_testing?: SprintDailyMetricsTestStats
-  api?: SprintDailyMetricsTestStats
-  ui?: SprintDailyMetricsTestStats
-  bug?: SprintDailyMetricsBugStats | null
-  bugs?: SprintDailyMetricsBugStats
-  functionTotal?: number
-  function_total?: number
-  apiTotal?: number
-  api_total?: number
-  uiTotal?: number
-  ui_total?: number
-  bugTotal?: number
-  bug_total?: number
-  bugResolved?: number
-  bug_resolved?: number
-  bugClosed?: number
-  bug_closed?: number
-  bugUnresolved?: number
-  bug_unresolved?: number
-  bugFatal?: number
-  bug_fatal?: number
-  bugSevere?: number
-  bug_severe?: number
-  bugNormal?: number
-  bug_normal?: number
-  bugHint?: number
-  bug_hint?: number
+  projectId: string
+  sprintId: string
+  snapshotDate: string
+  function: SprintDailyMetricsTestStats
+  api: SprintDailyMetricsTestStats
+  ui: SprintDailyMetricsTestStats
+  bug: SprintDailyMetricsBugStats | null
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 export type CreateTestReportGenerateRunPayload = {
   requestId?: string
@@ -172,39 +119,24 @@ export type TestReportGenerateRunStatus =
 
 export type TestReportGenerateRunSnapshot = {
   snapshotDate?: string
-  snapshot_date?: string
   dailyMetrics?: SprintDailyMetricsSnapshot
-  daily_metrics?: SprintDailyMetricsSnapshot
   [key: string]: unknown
 }
 
 export type TestReportGenerateRun = {
   runId?: string
-  run_id?: string
   projectId?: string
-  project_id?: string
   sprintId?: string
-  sprint_id?: string
   status?: TestReportGenerateRunStatus
   connectionId?: string
-  connection_id?: string
   llmConnectionId?: string
-  llm_connection_id?: string
   instruction?: string
   resultYaml?: string
-  result_yaml?: string
   resultSummaryJson?: unknown
-  result_summary_json?: unknown
   errorMessage?: string
-  error_message?: string
   snapshotJson?: TestReportGenerateRunSnapshot
-  snapshot_json?: TestReportGenerateRunSnapshot
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
   startedAt?: string
-  started_at?: string
   finishedAt?: string
-  finished_at?: string
 }

@@ -18,6 +18,7 @@ class StorageConfigurationTests(unittest.TestCase):
         config['shared']['perf_worker_token'] = 'perf-test-only'
         for key in ('password', 'root_password'):
             config['database'][key] = 'test-only'
+        config['control_plane']['security']['super_admin']['initial_password'] = 'test-only-password'
         config['control_plane']['storage']['s3'].update({
             'enabled': True, 'endpoint': 'https://objects.test', 'bucket': 'private',
             'access_key': 'test-access', 'secret_key': 'test-secret',

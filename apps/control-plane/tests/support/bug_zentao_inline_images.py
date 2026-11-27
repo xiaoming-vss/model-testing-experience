@@ -4,7 +4,6 @@ import json
 
 import httpx
 import pytest
-from integration_test_driver import enable
 
 from support.bug_zentao_attachments import attachments as attachments
 from support.bug_zentao_attachments import seed
@@ -13,11 +12,6 @@ from support.bug_zentao_push_api import setup as setup
 from support.project_api import api as api
 from testing_agent.models.bug import Bug
 from testing_agent.models.stored_file import StoredFile
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
 
 
 @pytest.fixture

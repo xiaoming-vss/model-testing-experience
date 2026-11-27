@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +24,7 @@ from ..contracts.types import (
 )
 from ..control_plane.client import ControlPlaneClient, ExecutionLeaseLost
 from ..core import logger
+from ..core.reporting import ReportDeliveryError, deliver
 from .browser_cancellation import (
     await_browser_operation,
     await_browser_start,
@@ -265,6 +265,10 @@ class UiSuiteRunner:
 
             except ExecutionLeaseLost:
                 raise
+            except ReportDeliveryError:
+                # An item result could not be delivered. That is not a case failure
+                # and must not turn the whole suite into an error result.
+                raise
             except Exception as e:
                 has_error = True
                 error_message = str(e)
@@ -500,7 +504,8 @@ class UiSuiteRunner:
             return
         from ..contracts.types import UiSuiteItemStartedPayload
 
-        await asyncio.to_thread(
+        await deliver(
+            task_id,
             self._control_plane_client.report_suite_item_started,
             task_id,
             item_id,
@@ -517,7 +522,8 @@ class UiSuiteRunner:
         """上报测试集项完成"""
         if not self._control_plane_client:
             return
-        await asyncio.to_thread(
+        await deliver(
+            task_id,
             self._control_plane_client.report_suite_item_completed,
             task_id,
             item_id,

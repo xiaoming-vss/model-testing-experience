@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from testing_agent_ai_worker.agent import create_agent
 from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
@@ -15,6 +16,7 @@ from testing_agent_ai_worker.agent.prompt import (
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.skill_names import CASE_RELATIONS_SKILL, SCOPE_SKILL, TEST_POINTS_SKILL
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     run_functional_detailed_case_batches,
@@ -23,14 +25,6 @@ from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches imp
 from .module_execution import prepare_module_workspace
 from .traceable_review import generate_traceable_points
 from .validation import generate_validated, validate_output
-
-
-def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
-
-    from testing_agent_ai_worker.agent import create_agent
-
-    return create_agent(**kwargs)
 
 
 @dataclass(slots=True)
@@ -65,10 +59,10 @@ def _traceable_inputs(text: str) -> tuple[dict, dict]:
     tail = material_text[end:].lstrip()
     marker = "【需求分析结果 JSON】"
     if not tail.startswith(marker):
-        raise ValueError("测试点缺少冻结的测试范围分析")
+        raise UserFacingError("测试点缺少冻结的测试范围分析")
     scope, _ = decoder.raw_decode(tail[len(marker) :].lstrip())
     if not isinstance(material, dict) or not isinstance(scope, dict):
-        raise ValueError("测试点缺少材料整理或测试范围分析")
+        raise UserFacingError("测试点缺少材料整理或测试范围分析")
     return material, scope
 
 
@@ -156,7 +150,7 @@ async def _run_traceable_phase(
     return await bot.run(prompt, session_key=phase_session, **media_args)
 
 
-async def run_skill_step(
+async def run_functional_skill_step(
     *,
     input_text: str,
     session_key: str,
@@ -171,7 +165,7 @@ async def run_skill_step(
 ) -> str:
     """执行单步 skill。"""
 
-    factory = from_config or _default_from_config
+    factory = from_config or create_agent
 
     message = build_skill_message(
         skill_name=skill_name,
@@ -190,7 +184,7 @@ async def run_skill_step(
         if stage == "case_names":
             material, scope = _traceable_inputs(input_text)
             if not workspace:
-                raise ValueError("测试点生成缺少工作目录")
+                raise UserFacingError("测试点生成缺少工作目录")
             return await generate_traceable_points(
                 generation_input=message,
                 parallel_draft=not is_revision,
@@ -239,12 +233,12 @@ async def run_functional_chain(
 ) -> FunctionalChainRunResult:
     """执行功能测试用例生成的完整三段链路。"""
 
-    factory = from_config or _default_from_config
+    factory = from_config or create_agent
 
     async with factory(config_path=config_path, workspace=workspace) as bot:
         if resume_stage in {"case_names", "detailed_cases"}:
             if not prior_analysis.strip():
-                raise ValueError("阶段重试缺少已确认需求分析")
+                raise UserFacingError("阶段重试缺少已确认需求分析")
             validate_output("requirement_analysis", prior_analysis)
             analysis_result = prior_analysis
         else:
@@ -266,7 +260,7 @@ async def run_functional_chain(
 
         if resume_stage == "detailed_cases":
             if not prior_case_names.strip():
-                raise ValueError("阶段重试缺少已确认测试点")
+                raise UserFacingError("阶段重试缺少已确认测试点")
             case_names_result = prior_case_names
         else:
             case_names_body = _build_functional_case_names_body(
@@ -274,7 +268,7 @@ async def run_functional_chain(
                 analysis_json=analysis_result,
             )
             if not workspace:
-                raise ValueError("测试点生成缺少工作目录")
+                raise UserFacingError("测试点生成缺少工作目录")
             material, scope = _traceable_inputs(case_names_body)
             case_names_result = await generate_traceable_points(
                 generation_input=build_skill_message(

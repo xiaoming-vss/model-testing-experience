@@ -18,6 +18,7 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import runpy
 import sys
 import tomllib
 from typing import Any
@@ -35,6 +36,13 @@ PLACEHOLDERS = {
     "CHANGEME",
     "PLACEHOLDER",
 }
+# The control plane refuses to start with these; the rules are read from its source so the
+# check cannot accept a password the service rejects (this script runs on a bare Python 3.11).
+_SECRET_RULES = runpy.run_path(
+    str(ROOT / "apps/control-plane/src/testing_agent/core/secrets.py")
+)
+password_is_insecure = _SECRET_RULES["password_is_insecure"]
+MIN_PASSWORD_LENGTH = _SECRET_RULES["MIN_PASSWORD_LENGTH"]
 ALLOWED_AGENT_BACKENDS = {"nanobot", "pi"}
 
 
@@ -552,16 +560,30 @@ class Checker:
             ("platform", platform_password),
             ("control-plane values", values_password),
         ):
-            if isinstance(value, str) and value.strip().upper() in (
-                PLACEHOLDERS - {""}
-            ):
-                message = (
-                    f"Super admin initial_password: {name} uses a placeholder value"
-                )
+            # The service refuses to seed an admin without it: an empty value is not "unset".
+            problem = self._password_problem(value)
+            if problem is not None:
+                message = f"Super admin initial_password: {name} {problem}"
                 if self.strict:
                     self._fail(message)
                 else:
                     self._warn(f"{message} (template mode)")
+
+    @staticmethod
+    def _password_problem(value: Any) -> str | None:
+        if value is None:
+            return "is missing"
+        if not isinstance(value, str):
+            return "is not a string"
+        if not value.strip():
+            return "is empty"
+        if value.strip().upper() in PLACEHOLDERS:
+            return "uses a placeholder value"
+        if password_is_insecure(value):
+            return (
+                f"is a committed example value or shorter than {MIN_PASSWORD_LENGTH} characters"
+            )
+        return None
 
     def check_integration_execution(self) -> None:
         platform_enabled = _normalize_bool(

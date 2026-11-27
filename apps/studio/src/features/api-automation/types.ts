@@ -1,16 +1,11 @@
 export type ApiCollection = {
   collectionId?: string
-  collection_id?: string
   projectId?: string
-  project_id?: string
   requirementId?: string | null
-  requirement_id?: string | null
   name: string
   description?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type ApiEnvironment = {
@@ -38,37 +33,24 @@ export type ApiEnvironmentVar = {
 
 export type ApiCase = {
   caseId?: string
-  case_id?: string
   collectionId?: string
-  collection_id?: string
   name: string
   description?: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   urlTemplate: string
-  url_template?: string
   bodyJson?: string
-  body_json?: string
   bodyText?: string
-  body_text?: string
   bodyType?: 'json' | 'form' | 'raw' | 'none'
-  body_type?: 'json' | 'form' | 'raw' | 'none'
   headersJson?: string
-  headers_json?: string
   headers?: unknown
   queryJson?: string
-  query_json?: string
   query?: unknown
   enabled?: boolean
   continueOnFailure?: boolean
-  continue_on_failure?: boolean
   timeoutMs?: number
-  timeout_ms?: number
   orderNo?: number
-  order_no?: number
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
   invalidatedAt?: string | null
 }
 
@@ -88,9 +70,7 @@ export type ApiAssertComparator =
 
 export type ApiAssertRule = {
   assertRuleId?: string
-  assert_rule_id?: string
   caseId?: string
-  case_id?: string
   name: string
   enabled: boolean
   orderNo?: number
@@ -99,18 +79,14 @@ export type ApiAssertRule = {
   comparator: ApiAssertComparator
   expectedValue?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type ApiExtractRuleSource = 'header' | 'body_jsonpath' | 'body_text' | 'status_code'
 
 export type ApiExtractRule = {
   extractRuleId?: string
-  extract_rule_id?: string
   caseId?: string
-  case_id?: string
   name: string
   enabled: boolean
   orderNo?: number
@@ -119,9 +95,7 @@ export type ApiExtractRule = {
   varKey: string
   defaultValue?: string
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type CreateApiCollectionPayload = {
@@ -251,8 +225,6 @@ export type ApiCaseRunAssertResult = {
 export type ApiCaseRunResult = {
   runId?: string
   caseRunId?: string
-  run_id?: string
-  case_run_id?: string
   status?: ApiCaseRunStatus
   caseId?: string
   environmentId?: string

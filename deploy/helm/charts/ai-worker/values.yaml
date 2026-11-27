@@ -26,10 +26,15 @@ healthPort: 8080
 # 结构与 worker TOML 一一对应。
 config:
   worker:
-    worker_id: ai-worker-01
+    # 留空时使用 "ai-worker-<Pod 名>"，每个副本唯一。控制面按该 ID 校验任务归属，
+    # 多副本不要配置成相同的值。
+    worker_id: ""
     poll_interval_seconds: 5
     heartbeat_interval_seconds: 15
     max_concurrent_tasks: 2
+    # 单次测试点审查及本 Worker 进程的并发上限
+    traceable_review_concurrency: 4
+    traceable_review_global_concurrency: 4
     run_once: false
 
   # 控制面地址和 Worker 令牌。worker_token 必须与控制面的
@@ -37,13 +42,6 @@ config:
   platform:
     base_url: http://control-plane:9000
     worker_token: ""
-    task_claim_path: /internal/ai-worker/tasks/claim
-    task_snapshot_path: /internal/ai-worker/tasks/{task_id}/snapshot
-    task_started_path: /internal/ai-worker/tasks/{task_id}/started
-    task_heartbeat_path: /internal/ai-worker/tasks/{task_id}/heartbeat
-    task_progress_path: /internal/ai-worker/tasks/{task_id}/progress
-    task_completed_path: /internal/ai-worker/tasks/{task_id}/completed
-    task_llm_credentials_path: /internal/ai-worker/tasks/{task_id}/llm-credentials
     request_timeout_seconds: 60
 
   # 执行底座。backend 只决定实际渲染和生效的子配置。
@@ -55,8 +53,8 @@ config:
     nanobot:
       runtime_root: /data/runtime
       stream_idle_timeout_seconds: 300
-      # 留空时不在 TOML 中输出该字段，使用服务默认值。
-      provider_request_timeout_seconds: null
+      # 与 config/platform.example.toml 保持一致；留空时使用服务默认值。
+      provider_request_timeout_seconds: 300
 
     pi:
       runtime_root: /data/runtime

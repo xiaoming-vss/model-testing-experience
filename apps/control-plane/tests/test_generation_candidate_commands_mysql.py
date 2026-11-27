@@ -4,9 +4,8 @@ import asyncio
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.models import AiGenerationAttempt, AiGenerationStage, Base
@@ -81,8 +80,7 @@ def test_concurrent_rejection_replays_one_receipt(mysql):  # noqa: F811
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
         body = CandidateDispositionRequest(
             action="reject",
@@ -179,7 +177,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                 connection,
                 candidate,
                 {
-                    "candidate_id": f"command-{value}",
+                    "candidate_id": f"deletion-{value}",
                     "chain_id": chain["chain_id"],
                     "stage_id": stage["id"],
                     "candidate_token": f"token-{value}",
@@ -195,14 +193,13 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                 "stage_id": stage["id"],
                 "chain_id": chain["chain_id"],
                 "stage": "case_names",
-                "source_candidate_id": "command-current",
+                "source_candidate_id": "deletion-current",
                 "content_token": "slot-token",
             },
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
         body = CandidateDispositionRequest(
             action="delete",
@@ -219,7 +216,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     requirement["requirement_id"],
                     "function",
                     "case_names",
-                    "command-delete",
+                    "deletion-delete",
                     body,
                     project["user_id"],
                 )
@@ -241,7 +238,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(receipt)
-                .where(receipt.c.candidate_id == "command-delete")
+                .where(receipt.c.candidate_id == "deletion-delete")
             )
             == 1
         )
@@ -249,7 +246,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(candidate)
-                .where(candidate.c.candidate_id == "command-delete")
+                .where(candidate.c.candidate_id == "deletion-delete")
             )
             == 0
         )
@@ -259,7 +256,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     tables["ai_generation_stage_contents"].c.stage_id == stage["id"]
                 )
             )
-            == "command-current"
+            == "deletion-current"
         )
 
 
@@ -337,8 +334,7 @@ def test_edit_and_reference_freeze_cannot_both_win(mysql):  # noqa: F811
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
 
         async def edit():
@@ -472,8 +468,7 @@ def test_edit_allocates_attempt_number_from_current_read(mysql, monkeypatch):  #
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         scoped = asyncio.Event()
         original = CandidateQueries.scope
 
@@ -606,8 +601,7 @@ def test_concurrent_derive_replays_one_candidate(mysql):  # noqa: F811
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         start = asyncio.Event()
         body = CandidateDeriveRequest(
             expectedCandidateToken="parent-token",

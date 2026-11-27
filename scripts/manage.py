@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import secrets
 import subprocess
 import sys
@@ -17,6 +18,11 @@ import tomllib
 from urllib.parse import quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+# This script must run on a bare Python 3.11, so it cannot import the control plane.
+# ``core/secrets.py`` has no runtime imports: its rules are loaded by path, not copied.
+password_is_insecure = runpy.run_path(
+    str(ROOT / "apps/control-plane/src/testing_agent/core/secrets.py")
+)["password_is_insecure"]
 PROJECTS = {
     "control-plane": "apps/control-plane",
     "ai-worker": "apps/ai-worker",
@@ -171,11 +177,11 @@ def upgrade_config(root=ROOT):
             while value in shared.values():
                 value = secrets.token_hex(32)
             shared[key] = value
-    example_control_plane = read(root / "config/platform.example.toml").get(
-        "control_plane", {}
-    )
+    example = read(root / "config/platform.example.toml")
+    example_control_plane = example.get("control_plane", {})
     control_plane = data.setdefault("control_plane", {})
     _fill_missing(control_plane, example_control_plane)
+    _fill_missing(data.setdefault("api_ui_worker", {}), example.get("api_ui_worker", {}))
     security = control_plane.setdefault("security", {})
     for section in ("super_admin", "login", "jwt"):
         target = security.setdefault(section, {})
@@ -186,12 +192,8 @@ def upgrade_config(root=ROOT):
     initial_password = super_admin.get("initial_password", "")
     if not isinstance(initial_password, str):
         raise ValueError("control_plane.security.super_admin.initial_password must be a string")
-    normalized_password = initial_password.strip()
-    if (
-        len(normalized_password) < 8
-        or normalized_password.lower()
-        in {"mtx123456", "password", "secret", "change-me", "generate"}
-    ):
+    # The service refuses these at startup; replace them while upgrading.
+    if password_is_insecure(initial_password):
         super_admin["initial_password"] = secrets.token_hex(16)
     if data == original:
         print("Unified configuration already has current settings.")
@@ -276,6 +278,13 @@ def validate(data):
     if not super_admin.get("username") or not super_admin.get("email"):
         raise ValueError(
             "control_plane.security.super_admin.username and email are required"
+        )
+    if not isinstance(super_admin.get("initial_password"), str) or password_is_insecure(
+        super_admin["initial_password"]
+    ):
+        raise ValueError(
+            "control_plane.security.super_admin.initial_password must be a non-placeholder "
+            "password of at least 8 characters, or run upgrade-config to generate one"
         )
     if not external:
         for key in ("password", "root_password"):
@@ -387,11 +396,6 @@ def configurations(data, mode, root=ROOT):
         {
             "control_plane": {"base_url": cp_url, "worker_token": s["worker_token"]},
             "notifications": {"redis_url": redis_url},
-            "worker": {
-                "poll_interval_ms": data.get("api_ui_worker", {}).get("worker", {}).get(
-                    "poll_interval_ms", 30000
-                )
-            },
             "ui": {
                 "artifacts_dir": "/app/artifacts" if docker else "artifacts",
             },
@@ -478,7 +482,6 @@ def configure(mode, root=ROOT):
                 MYSQL_ROOT_PASSWORD=db["root_password"],
             )
         write(runtime / "compose.env", env_text(env))
-        (runtime / "compose.ldap-ca.json").unlink(missing_ok=True)
     else:
         write(
             root / PROJECTS["studio"] / ".env.local",
@@ -507,9 +510,6 @@ def compose_command(root=ROOT):
         command.extend(["-f", str(root / "deploy/compose.external-db.yaml")])
     if external_redis_url(data):
         command.extend(["-f", str(root / "deploy/compose.external-redis.yaml")])
-    ca_override = root / ".runtime/compose.ldap-ca.json"
-    if ca_override.exists():
-        command.extend(["-f", str(ca_override)])
     return command
 
 

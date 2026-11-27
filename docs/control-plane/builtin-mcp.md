@@ -9,7 +9,6 @@
 - `PATCH /{serviceId}`：所有者修改 `baseUrl` 时同时提交 `confirmInstanceSwitch: true`（页面复选框确认），在同一次保存中核对新 MCP 并完成目标切换；未确认拒绝修改地址。目标变化或混杂历史关联时，清理旧关联与更新地址在同一事务完成。连接失败、缺少本人 Token、权限失败或正在推送时保持原配置和关联。名称可修改；历史客户端提交的 `zentaoInstanceUrl` 不决定实际目标。其他服务保持原编辑规则。
 - `PUT /{serviceId}/authorization`：成员保存 `{"token":"本人 Token"}`，按既有机制加密；只读取和使用本人授权。保存后检查该项目端点及实例信息，连接失败仍保留 Token 供修复后重查。
 - `DELETE /{serviceId}/authorization`：撤销本人的授权，不影响其他成员。
-- `POST /{serviceId}/instance-reset`：保留历史客户端兼容，页面已不再调用或提供独立切换按钮；新流程统一使用编辑配置的 PATCH 保存。
 - `DELETE /{serviceId}`：所有者删除项目连接与相关个人授权，不停止外部 MCP，不删除绑定或 Bug 推送历史。
 
 响应包含只读 `zentaoInstanceUrl`、`zentaoApiBaseUrl`、`instanceError` 、`instanceResetRequired`、`pendingInstanceUrl` 和 `connectionStatus`（`unchecked`、`available`、`error`）。没有本人 Token 时保存地址并显示待检查。目录读取或刷新使用当前成员 Token 重新检查，检查中由页面展示；不借用其他成员凭据。响应不返回 Token。
@@ -31,7 +30,7 @@ MCP 通过 `get_zentao_instance` 返回配置中的 `schemaVersion: 1`、`instan
 - [Bug 手动推送](bug-zentao-push.md)
 - [用例 MCP 推送](zentao-mcp-case-push.md)
 
-Bug 统计、禅道测试单读取、禅道用例读取／导入及 connector-zentao 已停用。AIWork、Worker、nanobot 的任务级 MCP 集成不属于本次调整。
+Bug 统计、禅道测试单读取、禅道用例读取／导入及 connector-zentao 已停用；旧 REST 账号密码连接器及 `/integrations/zentao/...` 连接管理路由已删除，禅道只保留 MCP 通道。AIWork、Worker、nanobot 的任务级 MCP 集成不属于本次调整。
 
 ## 数据兼容
 

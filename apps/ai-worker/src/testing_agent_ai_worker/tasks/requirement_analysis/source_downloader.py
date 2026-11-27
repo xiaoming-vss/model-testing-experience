@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import unquote, urlparse
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
@@ -39,7 +40,7 @@ class PlatformRequirementSourceDownloader:
         workspace: Path,
     ) -> Path:
         if not document_download_url.strip():
-            raise ValueError("requirement_analysis documentDownloadUrl 不能为空")
+            raise UserFacingError("requirement_analysis documentDownloadUrl 不能为空")
 
         file_bytes = self.client.get_signed_file_bytes(document_download_url)
         target_dir = workspace / "inputs" / _safe_path_part(task.task_id or "task")
@@ -69,7 +70,7 @@ def _default_suffix(document_type: str) -> str:
         return ".html"
     if normalized in {"word", "docx"}:
         return ".docx"
-    raise ValueError("需求材料提取仅支持 Word/DOCX 或富文本")
+    raise UserFacingError("需求材料提取仅支持 Word/DOCX 或富文本")
 
 
 def _safe_filename(filename: str, default_suffix: str) -> str:

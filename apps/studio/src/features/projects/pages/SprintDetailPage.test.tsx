@@ -28,7 +28,7 @@ it('拒绝使用路径中其他项目的权限展示迭代', async () => {
 })
 
 
-it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接口失败：%s）', async (connectionFailure) => {
+it('缺陷未采集时仍可更新本地统计', async () => {
   const local = { total: 2, executed: 1, pending: 1, success: 1, failed: 0 }
   const snapshot = { snapshotDate: '2026-09-24', function: local, bug: null, bugs: [] }
   const updatedSnapshot = { ...snapshot, bug: { total: 4, resolved: 1, closed: 1, unresolved: 2, fatal: 1, serious: 1, normal: 1, suggestion: 1 } }
@@ -36,7 +36,6 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     if (init?.method === 'PUT') refreshed = true
     const path = String(input)
-    if (connectionFailure && path.includes('/zentao/connections')) throw new TypeError('Failed to fetch')
     const data = path.endsWith('/sprints/s1')
       ? { sprintId: 's1', projectId: 'p1', name: '当前迭代', status: 'completed' }
       : path.endsWith('/projects/p1')
@@ -44,8 +43,7 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
         : path.endsWith('/sprints/s1/bindings') ? { items: [{ provider: 'zentao', status: 'active', instanceUrl: 'http://zentao.local' }] }
           : path.includes('/daily-metrics/') ? (refreshed ? updatedSnapshot : snapshot)
           : path.includes('/daily-metrics?') ? { items: [refreshed ? updatedSnapshot : snapshot], total: 1 }
-            : path.includes('/code-overview') ? { repositories: [] }
-              : { items: [], total: 0 }
+            : { items: [], total: 0 }
     return new Response(JSON.stringify({ code: 0, message: 'ok', data }))
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

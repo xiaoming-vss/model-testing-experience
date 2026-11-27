@@ -1,5 +1,6 @@
 # 迁移 Job 专用配置副本；内容与 control-plane-config 一致，
 # 供 pre-install/pre-upgrade hook 在 Deployment 创建前挂载。
+{{- if .Values.migration.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,3 +14,4 @@ metadata:
 data:
   local.toml: |
 {{ include "control-plane.configToml" . | indent 4 }}
+{{- end }}

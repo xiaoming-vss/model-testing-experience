@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.http_diagnostics import safe_exception_trace
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.domain.project_policy import (
     ProjectAction,
     allows_project_action,
@@ -27,10 +28,6 @@ from testing_agent.repositories.file_verification import FileVerificationReposit
 logger = logging.getLogger(__name__)
 VERIFY_WINDOW = timedelta(minutes=10)
 GC_INTERVAL = timedelta(minutes=5)
-
-
-def now_utc() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -93,7 +90,7 @@ class FileVerificationWorkflow:
                 status = row.status
                 await self.session.commit()
                 return {"fileId": file_id, "status": status}
-            now = now_utc()
+            now = naive_utcnow()
             if row.status != "pending" or row.expires_at <= now:
                 raise AppError(409, "上传已过期，请重新上传", 409)
             previous = (
@@ -149,7 +146,7 @@ class FileVerificationWorkflow:
             await self.authorized(source.project_id, actor)
             row = await self.repository.file(file_id, lock=True)
             operation = await self.repository.operation(operation_id)
-            now = now_utc()
+            now = naive_utcnow()
             if (
                 row is None
                 or operation is None
@@ -197,8 +194,8 @@ class FileVerificationWorkflow:
             operation = await self.repository.operation(operation_id)
             if operation is not None and operation.state != "published":
                 operation.state = "discarded" if settled else "abandoned"
-                operation.settled_at = now_utc() if settled else None
-                operation.gc_after = now_utc()
+                operation.settled_at = naive_utcnow() if settled else None
+                operation.gc_after = naive_utcnow()
                 if row is not None and row.verification_id == operation_id:
                     row.verification_id = ""
             await self.session.commit()
@@ -208,7 +205,7 @@ class FileVerificationWorkflow:
 
     async def collect(self, limit: int = 100) -> dict[str, int]:
         """Never drop an unsettled tombstone: its old thread may still write after delete."""
-        now = now_utc()
+        now = naive_utcnow()
         rows = await self.repository.garbage(self.settings.bucket, now, limit)
         claimed: list[tuple[str, str]] = []
         for row in rows:

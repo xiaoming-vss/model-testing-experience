@@ -1,12 +1,15 @@
 """Maintenance-only restore decisions. Remote reads precede local CAS transactions."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import or_, select
 
 from testing_agent.core.errors import ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
-from testing_agent.domain.integration_execution import digest, require_safe_snapshot, utc
+from testing_agent.core.utc import as_utc
+from testing_agent.domain.integration_execution import digest, require_safe_snapshot
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
@@ -31,11 +34,36 @@ def values(row):
     if row is None:
         return None
     return {
-        column.key: utc(value).isoformat() if isinstance(value, datetime) else value
+        column.key: as_utc(value).isoformat() if isinstance(value, datetime) else value
         for column in row.__table__.columns
         if column.key not in {"created_at", "updated_at"}
         for value in [getattr(row, column.key)]
     }
+
+
+def build_integration_restore_service(session, settings) -> IntegrationRestoreService:
+    """Assemble maintenance dependencies without importing the FastAPI dependency layer."""
+    from testing_agent.repositories.bug import BugRepository
+    from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
+    from testing_agent.services.bug_zentao_push import BugZentaoPushService
+    from testing_agent.services.integration_authorization import IntegrationAuthorization
+    from testing_agent.services.integration_connection import IntegrationConnectionService
+    from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+    from testing_agent.services.stored_file import StoredFileService
+
+    cipher = IntegrationCredentialCipher(settings.integration_key)
+    connections = IntegrationConnectionService(
+        IntegrationConnectionRepository(session), credential_cipher=cipher
+    )
+    from testing_agent.services.bug import BugService
+
+    pushes = BugZentaoPushService(
+        BugService(BugRepository(session), files=StoredFileService(session, settings.s3)),
+        connections,
+    )
+    return IntegrationRestoreService(
+        session, pushes, IntegrationAuthorization(session, cipher), settings
+    )
 
 
 class IntegrationRestoreService:
@@ -493,7 +521,7 @@ class IntegrationRestoreService:
                 isolated += 1
             else:
                 require(
-                    utc(decision.reviewed_at)
+                    as_utc(decision.reviewed_at)
                     + timedelta(
                         seconds=self.settings.integration_execution.restore_review_max_age_seconds
                     )

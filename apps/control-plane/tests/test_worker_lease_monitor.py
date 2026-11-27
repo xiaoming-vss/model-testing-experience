@@ -151,7 +151,6 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
     from support.api_run_scope import seed
     from support.stored_files import longtext_sqlite  # noqa: F401
 
-    from testing_agent.core.errors import AppError
     from testing_agent.models import Base
     from testing_agent.models.api_case_run import ApiCaseRun
     from testing_agent.models.worker_task import WorkerTask
@@ -281,9 +280,10 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
                 )
                 == 201
             )
-            with pytest.raises(AppError):
-                await WorkerTaskService(WorkerTaskRepository(session)).complete(
-                    "api", "q0", WorkerTaskEventRequest(workerId="old", status="success")
-                )
+            # The late completion is acknowledged as the recorded failure, not applied.
+            late = await WorkerTaskService(WorkerTaskRepository(session)).complete(
+                "api", "q0", WorkerTaskEventRequest(workerId="old", status="success")
+            )
+            assert late == {"taskId": "q0", "workerId": "old", "status": "error"}
     finally:
         await engine.dispose()

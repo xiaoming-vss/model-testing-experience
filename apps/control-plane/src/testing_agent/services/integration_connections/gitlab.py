@@ -11,7 +11,7 @@ from testing_agent.core.errors import (
 )
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.services.connection_security import connection_security_flags
-from testing_agent.services.integration_connections.common import ConnectionSupport, dump_connection
+from testing_agent.services.integration_connections.common import ConnectionSupport
 from testing_agent.services.zentao_resource import truncate_error
 
 
@@ -122,49 +122,6 @@ class GitLabConnectionCommands(ConnectionSupport):
             connection.last_auth_at = datetime.now(UTC)
             connection.last_auth_error = ""
         return await self._finish_write(connection, commit=commit)
-
-    async def reauth_gitlab(
-        self,
-        connection_id: str,
-        body: dict[str, Any] | None,
-        user_id: str,
-        project_id: str = "",
-    ) -> dict:
-        await self.ensure_project_access(user_id, project_id)
-        connection = await self.get_owned(user_id, "gitlab", connection_id, project_id)
-        if body and "accessToken" in body:
-            access_token = str(body["accessToken"] or "").strip()
-            if not access_token:
-                raise ErrBadRequest()
-        else:
-            access_token = self._decrypt_gitlab_token(connection.access_token)
-        allow_http, insecure_skip_verify = connection_security_flags(connection.extra_json)
-        self._require_secure_scheme(connection.base_url, allow_http)
-        base_url = connection.base_url
-        expected_updated_at = connection.updated_at
-        # End the read transaction before waiting on the external service.
-        await self.repository.commit()
-        await self._validate_gitlab(
-            base_url,
-            access_token,
-            allow_http=allow_http,
-            insecure_skip_verify=insecure_skip_verify,
-        )
-        connection = await self._reload_locked(
-            user_id,
-            "gitlab",
-            connection_id,
-            project_id,
-            expected_updated_at=expected_updated_at,
-        )
-        if body and "accessToken" in body:
-            connection.access_token = self._encrypt_gitlab_token(access_token)
-        connection.status = ConnectionStatus.ACTIVE.value
-        connection.last_auth_at = datetime.now(UTC)
-        connection.last_auth_error = ""
-        await self.repository.commit()
-        await self.repository.refresh(connection)
-        return dump_connection(connection)
 
     async def _validate_gitlab(
         self,

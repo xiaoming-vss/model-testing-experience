@@ -3,8 +3,12 @@
 from unittest.mock import AsyncMock
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
@@ -68,15 +72,10 @@ async def test_direct_detail_resolves_stage_attempt_without_old_run_table(mysql)
                 },
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    statements = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, sql, _p, _x, _m: statements.append(sql.lower()),
-    )
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             repository = AiGenerateTaskRepository(session)
             access = GenerationAccess(repository)
             access.owned_task = AsyncMock(return_value=await repository.get_task(task["task_id"]))
@@ -164,7 +163,7 @@ async def test_direct_worker_uses_dispatch_actor_personal_model_connection(mysql
                 "status": "claimed",
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
+    engine, sessions = async_sessions(mysql)
     authorization = SimpleNamespace(
         actor_id="actor",
         task=SimpleNamespace(project_id=task["project_id"]),
@@ -183,7 +182,7 @@ async def test_direct_worker_uses_dispatch_actor_personal_model_connection(mysql
     personal = AsyncMock(return_value=connection)
     monkeypatch.setattr("testing_agent.services.worker_task.require_personal_connection", personal)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             payload = await WorkerTaskService(WorkerTaskRepository(session)).llm_credentials(
                 "worker"
             )

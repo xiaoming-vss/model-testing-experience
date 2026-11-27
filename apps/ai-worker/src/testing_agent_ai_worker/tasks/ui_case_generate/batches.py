@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import json
-import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable
 
+from testing_agent_ai_worker.tasks.runtime_json import strict_json, strip_json_fence
+
 from ..output_repair import generate_validated
 from .artifacts import DEFAULT_CAPABILITIES
-from .design_contract import design_instruction, strict_json, validate_design_output
+from .design_contract import design_instruction, validate_design_output
 
 
 def build_batches(cases: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
@@ -22,9 +23,7 @@ def build_batches(cases: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
 
 
 def parse_response(raw: str) -> Any:
-    text = raw.strip()
-    fenced = re.fullmatch(r"```(?:json)?\s*\n(.*)\n```", text, flags=re.DOTALL)
-    return strict_json(fenced.group(1).strip() if fenced else text)
+    return strict_json(strip_json_fence(raw))
 
 
 async def generate_batches(

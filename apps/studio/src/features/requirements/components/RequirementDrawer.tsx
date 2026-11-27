@@ -3,7 +3,7 @@ import { UploadOutlined } from '@ant-design/icons'
 import { Alert, Drawer, Form, Input, Progress, Select, Spin, Upload } from 'antd'
 import type { FormInstance, UploadFile } from 'antd'
 import { Suspense, lazy, useEffect, useState, type ComponentProps } from 'react'
-import { getRequirementDocumentDisplayName } from '@/features/requirements/utils/requirementDocument'
+import { getRequirementDocumentDisplayName, isWordRequirementDocument as isWordDocument } from '@/features/requirements/utils/requirementDocument'
 import type { RequirementCreatePayload, RequirementDocumentType } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { serviceCardLoadingClass } from '@/shared/utils/surfaceClasses'
@@ -34,10 +34,6 @@ const documentTypeOptions: Array<{ label: string; value: RequirementDocumentType
   { label: '富文本', value: 'richtext' },
   { label: 'Word', value: 'word' },
 ]
-
-function isWordDocument(documentType?: RequirementDocumentType) {
-  return documentType === 'word' || documentType === 'docx'
-}
 
 function getUploadAccept(documentType?: RequirementDocumentType) {
   if (isWordDocument(documentType)) return '.docx'

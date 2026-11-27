@@ -54,7 +54,9 @@ Runtime candidates use evidenceType `runtime` and a JSON pointer such as
 `/locators/4`. The target has count 1 and the exact locator type/value. Its full
 evidence wording remains in the raw registry. Context.object, when known, is a
 literal identity such as `recordName=sample-a` supported by that locator entry.
-Use null when the identity is absent; retain the narrower scope.
+Use null when the identity is absent; retain the narrower scope. locatorType is
+one of `css`, `xpath`, `role`, `text`, `placeholder`, `label`, `test_id` or
+`testid`.
 
 Conditions describe source predicates with source references. A template's
 eligibility rule does not prove a captured record's state. Generated-class runtime

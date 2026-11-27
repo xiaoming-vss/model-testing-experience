@@ -16,7 +16,8 @@ from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.skills import required_skills
-from testing_agent_ai_worker.tasks.case_visualization.contract import SKILL_NAME, TASK_TYPE
+from testing_agent_ai_worker.skill_names import CASE_VISUALIZATION_SKILL
+from testing_agent_ai_worker.tasks.case_visualization.contract import TASK_TYPE
 from testing_agent_ai_worker.tasks.case_visualization.executor import CaseVisualizationExecutor
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -38,7 +39,7 @@ class VisualizationExecutorTests(unittest.TestCase):
             config_json=json.dumps({"visualizationInput": EXAMPLES[0]["input"]}),
         )
         workspace = resolve_task_workspace(self.config, self.task)
-        shutil.copytree(SKILL, workspace / "skills" / SKILL_NAME)
+        shutil.copytree(SKILL, workspace / "skills" / CASE_VISUALIZATION_SKILL)
 
     def execute(self, output):
         with patch(
@@ -64,7 +65,7 @@ class VisualizationExecutorTests(unittest.TestCase):
         self.assertEqual(
             len(json.loads(result.result_summary_json)["visualization"]["skillDigest"]), 64
         )
-        self.assertEqual(required_skills(self.task), [SKILL_NAME])
+        self.assertEqual(required_skills(self.task), [CASE_VISUALIZATION_SKILL])
 
     def test_invalid_output_fails_without_semantic_retry(self):
         output = copy.deepcopy(EXAMPLES[0]["output"])
@@ -126,7 +127,7 @@ class VisualizationExecutorTests(unittest.TestCase):
         self.assertEqual(result.status, TaskStatus.FAILED)
 
     def test_empty_skill_never_calls_model(self):
-        skill = resolve_task_workspace(self.config, self.task) / "skills" / SKILL_NAME
+        skill = resolve_task_workspace(self.config, self.task) / "skills" / CASE_VISUALIZATION_SKILL
         (skill / "SKILL.md").write_text("", encoding="utf-8")
         result, calls = self.execute(EXAMPLES[0]["output"])
         self.assertEqual(result.status, TaskStatus.FAILED)

@@ -3,7 +3,8 @@
 Worker exceptions can carry model prompts, source documents, repository content
 or credentials in their message. Only the exception type, a source-only
 traceback and task/attempt identifiers may cross the logging or reporting
-boundary.
+boundary. The ``SafeMessageError`` family is the single exception: its messages
+are authored in code and are reported to the user as is.
 """
 
 from __future__ import annotations
@@ -21,6 +22,23 @@ class ConfigError(RuntimeError):
     """Settings could not be loaded; the message is safe to print."""
 
 
+class SafeMessageError(Exception):
+    """Marker for failures whose message is authored in code and reported unchanged.
+
+    Build such a message from literals, closed vocabularies such as stage, field
+    or skill names, counts and platform identifiers. Never interpolate provider,
+    SDK or third-party exception text into it.
+    """
+
+
+class UserFacingError(SafeMessageError, ValueError):
+    """A known business failure whose message is written for the user."""
+
+
+class AgentOutputError(SafeMessageError, RuntimeError):
+    """The model ended without a complete answer; the reason is a closed vocabulary."""
+
+
 def exception_type(exc: BaseException) -> str:
     return type(exc).__name__
 
@@ -36,6 +54,8 @@ def safe_traceback(exc: BaseException) -> str:
 
 
 def safe_execution_error(exc: BaseException) -> str:
+    if isinstance(exc, SafeMessageError):
+        return str(exc)
     return f"{exception_type(exc)}: {SAFE_EXECUTION_ERROR}"
 
 
@@ -55,3 +75,9 @@ def safe_validation_summary(exc: ValidationError) -> str:
 
 def safe_validation_error(exc: ValidationError, *, subject: str) -> str:
     return f"{subject}: {safe_validation_summary(exc)}；{SAFE_VALIDATION_HINT}"
+
+
+def validation_error_message(exc: ValidationError) -> str:
+    """Name a rejected draft by location and rule; the default text repeats its input values."""
+
+    return f"ValidationError: {safe_validation_summary(exc)}"

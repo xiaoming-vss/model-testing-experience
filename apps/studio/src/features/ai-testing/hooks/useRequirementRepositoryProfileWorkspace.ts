@@ -63,7 +63,7 @@ export function useRequirementRepositoryProfileWorkspace(
   })
   const currentMaterialAvailable = Boolean(currentMaterialQuery.data?.candidateId && !currentMaterialQuery.data.invalidatedAt)
   const personalLlm = usePersonalLlmChoice(projectId)
-  const personalGitlab = usePersonalConnectionChoice('gitlab')
+  const personalGitlab = usePersonalConnectionChoice()
 
   const bindingsQuery = useQuery({
     queryKey: ['requirementSoftwareRepositories', requirementId],
@@ -146,7 +146,6 @@ export function useRequirementRepositoryProfileWorkspace(
         return {
           candidateId: candidate.candidateId,
           label: `候选 ${candidate.candidateId.slice(0, 8)}`,
-          sourceRunId: '',
           resultYaml: content,
           profile: parseProfile(content),
           createdAt: candidate.createdAt,
@@ -158,7 +157,7 @@ export function useRequirementRepositoryProfileWorkspace(
   const selectedProfileView: RepositoryProfileCandidateView | undefined = candidateViews.find(candidate => candidate.candidateId === selectedCandidateId)
     ?? (materialCandidateMode && detailData && detailData.candidateId === selectedCandidateId ? {
       candidateId: detailData.candidateId, label: `候选 ${detailData.candidateId.slice(0, 8)}`,
-      sourceRunId: '', resultYaml: detailData.content, profile: parseProfile(detailData.content),
+      resultYaml: detailData.content, profile: parseProfile(detailData.content),
       createdAt: detailData.createdAt,
     } : latestProfileView)
   const candidateViewsLoading = materialCandidateMode && (candidatesQuery.isPending || (Boolean(selectedCandidateId) && candidateDetail.isPending))

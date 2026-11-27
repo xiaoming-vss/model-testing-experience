@@ -143,16 +143,16 @@ export function buildCaseFormValues(apiCase: ApiCase): ApiCaseFormValues {
     ...defaults,
     name: apiCase.name ?? defaults.name,
     method: apiCase.method ?? defaults.method,
-    path: apiCase.urlTemplate ?? apiCase.url_template ?? defaults.path,
+    path: apiCase.urlTemplate ?? defaults.path,
     description: apiCase.description ?? defaults.description,
-    headers: parseKeyValueJson(apiCase.headersJson ?? apiCase.headers_json ?? apiCase.headers),
-    query: parseKeyValueJson(apiCase.queryJson ?? apiCase.query_json ?? apiCase.query),
-    bodyType: apiCase.bodyType ?? apiCase.body_type ?? defaults.bodyType,
-    bodyJson: apiCase.bodyJson ?? apiCase.body_json ?? defaults.bodyJson,
-    bodyText: apiCase.bodyText ?? apiCase.body_text ?? defaults.bodyText,
-    timeoutMs: apiCase.timeoutMs ?? apiCase.timeout_ms ?? defaults.timeoutMs,
+    headers: parseKeyValueJson(apiCase.headersJson ?? apiCase.headers),
+    query: parseKeyValueJson(apiCase.queryJson ?? apiCase.query),
+    bodyType: apiCase.bodyType ?? defaults.bodyType,
+    bodyJson: apiCase.bodyJson ?? defaults.bodyJson,
+    bodyText: apiCase.bodyText ?? defaults.bodyText,
+    timeoutMs: apiCase.timeoutMs ?? defaults.timeoutMs,
     enabled: apiCase.enabled ?? defaults.enabled,
-    continueOnFailure: apiCase.continueOnFailure ?? apiCase.continue_on_failure ?? defaults.continueOnFailure,
+    continueOnFailure: apiCase.continueOnFailure ?? defaults.continueOnFailure,
   }
 }
 
@@ -211,7 +211,7 @@ export function mergeDefinedApiCaseFields(baseCase: ApiCase, nextCase: ApiCase):
 }
 
 export function getCaseId(apiCase: ApiCase) {
-  return apiCase.caseId ?? apiCase.case_id ?? ''
+  return apiCase.caseId ?? ''
 }
 
 export function getCollectionRunItemKey(item: ApiCollectionRunItem, index: number) {
@@ -235,7 +235,7 @@ export function getCaseDisplayPath(urlTemplate: string) {
 }
 
 function getCaseOrderNo(apiCase: ApiCase) {
-  return orderNoOrMax(apiCase.orderNo ?? apiCase.order_no)
+  return orderNoOrMax(apiCase.orderNo)
 }
 
 function getCaseCreatedTime(apiCase: ApiCase) {
@@ -255,13 +255,13 @@ export function sortCasesByOrderNo(cases: ApiCase[]) {
 
 export { formatOptionalValue, moveArrayItem, parseMaybeJsonValue }
 
-export function sortRulesByOrderNo<T extends { orderNo?: number; createdAt?: string; created_at?: string }>(rules: T[]) {
+export function sortRulesByOrderNo<T extends { orderNo?: number; createdAt?: string }>(rules: T[]) {
   return [...rules].sort((left, right) => {
     const order = compareByOrderNo(left, right)
     if (order !== 0) return order
 
-    const leftCreatedTime = left.createdAt ?? left.created_at ?? ''
-    const rightCreatedTime = right.createdAt ?? right.created_at ?? ''
+    const leftCreatedTime = left.createdAt ?? ''
+    const rightCreatedTime = right.createdAt ?? ''
     return new Date(leftCreatedTime).getTime() - new Date(rightCreatedTime).getTime()
   })
 }

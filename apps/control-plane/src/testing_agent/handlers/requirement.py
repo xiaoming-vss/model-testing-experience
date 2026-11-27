@@ -72,8 +72,7 @@ async def download_requirement_document(
     user_id: str = Depends(get_current_user_id),
     service: RequirementService = Depends(get_requirement_service),
 ):
-    requirement = await service.get_download(user_id, requirement_id)
-    ticket = await service.files.download(user_id, requirement.document_file_id)
+    ticket = await service.download_document(user_id, requirement_id)
     if "application/json" in accept:
         return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
     return RedirectResponse(ticket["url"], status_code=307, headers={"Cache-Control": "no-store"})

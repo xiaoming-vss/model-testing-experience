@@ -4,6 +4,7 @@ from testing_agent_ai_worker.skill_names import (
     API_DESIGN_SKILL,
     API_EXTRACT_SKILL,
     API_GENERATE_SKILL,
+    TEST_ORDER_GRAPH_SKILL,
 )
 
 STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION = (
@@ -45,7 +46,7 @@ FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION = (
     "不得在对象前后输出空行、解释、澄清提问、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
 TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
-    "请直接返回符合 update-test-case-graph skill 要求的完整累计图谱 JSON（关系输出协议 2.0）。"
+    f"请直接返回符合 {TEST_ORDER_GRAPH_SKILL} skill 要求的完整累计图谱 JSON（关系输出协议 2.0）。"
     "顶层只包含 schema_version、main_paths、edges；"
     "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
     "第一个字符必须是 {，最后一个字符必须是 }；"

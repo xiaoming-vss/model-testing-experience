@@ -9,12 +9,15 @@ from urllib.parse import quote
 import httpx
 
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.config.models import AI_WORKER_TASKS_PATH
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.skill_names import (
     API_DESIGN_SKILL,
     API_EXTRACT_SKILL,
     API_GENERATE_SKILL,
     CASE_RELATIONS_SKILL,
     CASE_VISUALIZATION_SKILL,
+    CODE_RISK_SKILL,
     DETAILED_CASES_SKILL,
     HISTORICAL_REQUIREMENT_SKILL,
     HISTORICAL_TEST_CASE_SKILL,
@@ -22,7 +25,9 @@ from testing_agent_ai_worker.skill_names import (
     REPOSITORY_PROFILE_SKILL,
     REQUIREMENT_REVIEW_SKILL,
     SCOPE_SKILL,
+    TEST_ORDER_GRAPH_SKILL,
     TEST_POINTS_SKILL,
+    TEST_REPORT_SKILL,
     UI_YAML_SKILL,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
@@ -43,10 +48,10 @@ TASK_SKILLS = {
     "test_order_case_visualization": [CASE_VISUALIZATION_SKILL],
     "api_case_generate": [API_EXTRACT_SKILL, API_GENERATE_SKILL],
     "ui_case_generate": [UI_YAML_SKILL],
-    "code_risk_analysis": ["code-risk-analysis"],
+    "code_risk_analysis": [CODE_RISK_SKILL],
     "repository_profile": [REPOSITORY_PROFILE_SKILL],
-    "test_report_generate": ["advanced-test-report-generator"],
-    "test_order_graph": ["update-test-case-graph"],
+    "test_report_generate": [TEST_REPORT_SKILL],
+    "test_order_graph": [TEST_ORDER_GRAPH_SKILL],
 }
 
 
@@ -61,7 +66,7 @@ def required_skills(task):
             "generate": API_GENERATE_SKILL,
         }
         if not task.checkpoint_enabled or task.current_stage not in names:
-            raise ValueError("API 三阶段生成需要有效阶段及人工审核")
+            raise UserFacingError("API 三阶段生成需要有效阶段及人工审核")
         return [names[task.current_stage]]
     if (
         task.task_type == "ui_case_generate"
@@ -70,7 +75,7 @@ def required_skills(task):
         from testing_agent_ai_worker.tasks.ui_case_generate.artifacts import UI_SKILLS
 
         if not task.checkpoint_enabled or task.current_stage not in UI_SKILLS:
-            raise ValueError("UI 三阶段生成需要有效阶段及人工审核")
+            raise UserFacingError("UI 三阶段生成需要有效阶段及人工审核")
         return [UI_SKILLS[task.current_stage]]
     stages = {
         "requirement_analysis": REQUIREMENT_SKILLS,
@@ -79,12 +84,12 @@ def required_skills(task):
     if stages is not None:
         if task.task_type == "requirement_analysis":
             if task.payload.metadata.get("workflowVersion", 2) != 2:
-                raise ValueError("不支持的需求分析工作流版本")
+                raise UserFacingError("不支持的需求分析工作流版本")
             if not task.checkpoint_enabled:
-                raise ValueError("需求分析必须启用材料人工审核")
+                raise UserFacingError("需求分析必须启用材料人工审核")
             name = stages.get(task.current_stage or "extracting_text")
             if name is None:
-                raise ValueError("不支持的需求分析阶段")
+                raise UserFacingError("不支持的需求分析阶段")
             if (task.current_stage or "extracting_text") == "extracting_text":
                 name = extraction_skill(task.payload.document_type)
             return [name]
@@ -116,7 +121,7 @@ class SkillPreparer:
             staging.rename(target)
         except httpx.HTTPStatusError as exc:
             # Do not put signed URLs or response payloads in task error messages.
-            raise ValueError(
+            raise UserFacingError(
                 f"获取默认 Skill 失败（HTTP {exc.response.status_code}），"
                 f"请检查技能库及任务权限：{', '.join(names)}"
             ) from None
@@ -125,12 +130,12 @@ class SkillPreparer:
                 shutil.rmtree(staging)
 
     def _fetch(self, task, name, target):
-        base = f"/internal/ai-worker/tasks/{quote(task.task_id, safe='')}/skills/{name}"
+        base = f"{AI_WORKER_TASKS_PATH}/{quote(task.task_id, safe='')}/skills/{name}"
         query = "?workerId=" + quote(self.worker_id, safe="")
         manifest = self.client.get(base + query)
         entries = manifest.get("files", []) if manifest else []
         if not entries or len(entries) > 2000:
-            raise ValueError(f"默认 Skill 文件清单为空或超限: {name}")
+            raise UserFacingError(f"默认 Skill 文件清单为空或超限: {name}")
         seen, total = set(), 0
         for entry in entries:
             path = entry["path"]
@@ -141,11 +146,11 @@ class SkillPreparer:
                 or any(p in {"", ".", ".."} for p in path.split("/"))
                 or path.casefold() in seen
             ):
-                raise ValueError("技能文件路径不合法")
+                raise UserFacingError("技能文件路径不合法")
             seen.add(path.casefold())
             total += entry["size"]
             if entry["size"] < 0 or total > 1024 * 1024 * 1024:
-                raise ValueError("技能文件超出大小限制")
+                raise UserFacingError("技能文件超出大小限制")
             content = self.client.get_signed_file_bytes(
                 base + "/files/" + quote(entry["fileId"], safe="") + query
             )
@@ -153,9 +158,9 @@ class SkillPreparer:
                 len(content) != entry["size"]
                 or hashlib.sha256(content).hexdigest() != entry["sha256"]
             ):
-                raise ValueError(f"技能文件校验失败: {name}/{path}")
+                raise UserFacingError(f"技能文件校验失败: {name}/{path}")
             output = target / path
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_bytes(content)
         if not (target / "SKILL.md").is_file():
-            raise ValueError(f"默认 Skill 缺少 SKILL.md: {name}")
+            raise UserFacingError(f"默认 Skill 缺少 SKILL.md: {name}")

@@ -7,8 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.models import Base
@@ -79,8 +78,7 @@ def test_file_changed_during_external_read_is_rejected(mysql):  # noqa: F811
     files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
 
     async def run():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
             async with factory() as reader, factory() as editor:
                 preparing = asyncio.create_task(

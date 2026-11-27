@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from dataclasses import asdict
 from datetime import UTC, datetime
 
 from sqlalchemy import case, update
@@ -18,7 +17,7 @@ from testing_agent.repositories.user import UserRepository
 def ldap_fingerprint(settings: Settings) -> str:
     if not settings.ldap.enabled:
         return ""
-    values = asdict(settings.ldap)
+    values = settings.ldap.model_dump()
     if not values.get("tls_ca_pem"):
         values.pop("tls_ca_pem", None)  # Preserve fingerprints created before inline CA support.
     serialized = json.dumps(values, sort_keys=True, ensure_ascii=True)

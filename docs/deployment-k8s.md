@@ -68,7 +68,7 @@ deploy/helm/charts/
 | 集成 Worker 令牌 | `shared.integration_worker_token` | control-plane `config.security.integration_worker.key`；integration-worker `config.control_plane.worker_token` |
 | JWT 密钥 | `shared.jwt_key` | control-plane `config.security.jwt.key` |
 | 集成接口密钥 | `shared.integration_key` | control-plane `config.security.integration.key` |
-| 超级管理员 | `control_plane.security.super_admin.username` / `email` | control-plane `config.security.super_admin.username` / `email` |
+| 超级管理员 | `control_plane.security.super_admin.username` / `email` / `initial_password` | control-plane `config.security.super_admin.username` / `email` / `initial_password` |
 | 集成运行代次 | `shared.integration_runtime_generation`（启用时） | control-plane `config.integration_execution.runtime_generation`（启用时） |
 | 数据库 | `database.url`（非空时） | control-plane `config.data.db.user.dsn` |
 | Redis | `redis.url`（非空时） | control-plane `config.test_run_notifications.redis_url`；api-ui-worker `config.notifications.redis_url` |
@@ -79,7 +79,7 @@ deploy/helm/charts/
 
 - 密钥、令牌只比较相等性，不输出原值；空值和 `GENERATE`、`change-me` 等占位值按未配置处理并报告，不视为一致。
 - `database.url` 或 `redis.url` 为空表示 Compose 使用内置服务。此时 K8s 必须显式填写外部数据库地址，Redis 可以留空降级；不拿 Compose 内置地址与 K8s 地址比较。
-- 超级管理员的 `initial_password` 只检查非占位；它仅在首次启动 seed 时使用，允许每个集群独立设置。
+- 超级管理员的 `initial_password` 必填：留空、少于 8 个字符或使用示例里的占位值都按未配置处理。规则取自控制面 `core/secrets.py`，`manage.py` 和服务启动校验使用同一份，不会出现检查通过而控制面启动失败的情况。它仅在首次启动 seed 时使用，允许每个集群独立设置，不比较相等性。
 - `agent.backend` 必须一致；ai-worker chart 默认值与平台示例同为 `nanobot`，切换为 `pi` 时两侧同步修改。
 
 ### 明确例外（允许不同）
@@ -91,10 +91,10 @@ deploy/helm/charts/
 | `config.apiUpstream`、各 Worker 的 `base_url` | K8s 内使用 Service DNS（`http://control-plane:9000`），不是浏览器或 Compose 地址 |
 | `/data/runtime`、`/app/logs`、`/app/artifacts`、`/app/runtime` 等容器路径 | chart 挂载约定 |
 | control-plane `config.http.host` | K8s 固定为 `0.0.0.0` |
-| 性能 Worker 的 `shared.perf_worker_token` | 暂无 Helm chart |
+| 性能 Worker 的 `shared.perf_worker_token` | 控制面 chart 已渲染 `security.perf_worker.key`；perf-worker 自身暂无 Helm chart |
 | 非安全、非连通性的调优字段（连接池、超时、保留天数、导入预算等） | 允许按集群容量覆盖 |
 
-性能 Worker 没有 chart，检查脚本不要求其 values；后续新增 chart 时把对应关键字段补入清单。
+性能 Worker 自身没有 chart，检查脚本不要求其 values；后续新增 chart 时把对应关键字段补入清单。
 
 ## Values 的 key
 
@@ -115,6 +115,7 @@ deploy/helm/charts/
 | `podAnnotations` | Pod template annotations |
 | `terminationGracePeriodSeconds` | 优雅退出时间 |
 | `podSecurityContext` / `securityContext` | 安全上下文；control-plane 不设置，其他 chart 使用默认值 |
+| `nameOverride` / `fullnameOverride` | 覆盖资源名前缀；Service 名固定为 `control-plane` / `studio` / `ai-worker` 等，不受这两个 key 影响 |
 
 ### control-plane
 
@@ -188,7 +189,7 @@ control-plane 需要确认：
 2. 把 `config.test_run_notifications.redis_url` 改成 K8s 可访问的 Redis 地址；Redis 为空时实时功能降级。
 3. 把 `config.storage.s3` 的 endpoint、bucket、access_key、secret_key 改成实际值；endpoint 必须同时被浏览器和 Worker 访问到。
 4. 确认 `config.security.jwt.key`、`config.security.integration.key`、`config.security.worker.key`、`config.security.integration_worker.key` 在各副本/各服务间一致。
-5. 确认 `config.security.super_admin.username`、`email` 已填写；首次启动会 seed 超级管理员。
+5. 确认 `config.security.super_admin.username`、`email`、`initial_password` 已填写；`initial_password` 至少 8 个字符且不能是占位值，否则控制面启动失败。首次启动会 seed 超级管理员。
 6. 确认 `config.http.host = "0.0.0.0"`；本地生成配置的 `127.0.0.1` 会导致探针和 Studio 代理无法访问。
 
 Worker 需要额外确认：
@@ -342,6 +343,9 @@ control-plane chart 内部的安装顺序由 Helm hook 保证：
 1. `control-plane-migrate-config` ConfigMap（pre-install/pre-upgrade）
 2. `control-plane-migrate` Job 执行 `alembic upgrade head`
 3. 控制面 Deployment/Service
+4. `control-plane-skills-sync` Job（post-install/post-upgrade；`skillsSync.enabled=true` 且启用 S3 时发布默认技能）
+
+首次安装等 `control-plane-skills-sync` Job 成功后再依赖默认技能；它失败不会回滚控制面，但默认技能不会出现在 Skill 库。
 
 如果迁移失败，control-plane release 失败，控制面不会启动。查看：
 
@@ -440,7 +444,7 @@ helm rollback control-plane <revision> -n mtx-dev
 
 **控制面 CrashLoopBackOff**
 
-先确认 migrate Job 成功、`alembic_version` 正确、`security.super_admin.username/email` 已填写；控制面启动时会 seed 超级管理员。
+先确认 migrate Job 成功、`alembic_version` 正确、`security.super_admin.username/email/initial_password` 已填写且 `initial_password` 不是占位值；控制面启动时会 seed 超级管理员。
 
 **Studio 502**
 

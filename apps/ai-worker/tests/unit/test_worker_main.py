@@ -1,7 +1,7 @@
 import io
 import logging
 import os
-import sys
+import socket
 import tempfile
 import threading
 import time
@@ -9,11 +9,6 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import (
@@ -31,6 +26,10 @@ from testing_agent_ai_worker.main import build_task_runner, main, run_poll_once,
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
+
+RUNTIME_ROOT = str(Path(tempfile.gettempdir()) / "pi-runtime")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class _FakePoller:
@@ -138,6 +137,7 @@ class WorkerMainTests(unittest.TestCase):
     def test_load_settings_reads_worker_toml_sections(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "worker.toml"
+            runtime_root = str(Path(temp_dir) / "pi-runtime")
             config_path.write_text(
                 "\n".join(
                     [
@@ -164,7 +164,7 @@ class WorkerMainTests(unittest.TestCase):
                         'backend = "pi"',
                         "",
                         "[agent.pi]",
-                        'runtime_root = "D:/tmp/pi-runtime"',
+                        f'runtime_root = "{runtime_root}"',
                         "stream_idle_timeout_seconds = 240",
                         "",
                         "[logging]",
@@ -205,7 +205,7 @@ class WorkerMainTests(unittest.TestCase):
                 agent=AgentConfig(
                     backend="pi",
                     pi=PiConfig(
-                        runtime_root="D:/tmp/pi-runtime",
+                        runtime_root=runtime_root,
                         stream_idle_timeout_seconds=240,
                     ),
                 ),
@@ -219,20 +219,36 @@ class WorkerMainTests(unittest.TestCase):
             ),
         )
 
+    def test_load_settings_derives_a_per_host_worker_id_from_an_empty_value(self) -> None:
+        for configured in ("", "   "):
+            with (
+                self.subTest(configured=configured),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                config_path = Path(temp_dir) / "worker.toml"
+                config_path.write_text(
+                    "\n".join(["[worker]", f'worker_id = "{configured}"']),
+                    encoding="utf-8",
+                )
+
+                settings = load_settings(config_path)
+
+                self.assertEqual(f"ai-worker-{socket.gethostname()}", settings.worker.worker_id)
+
     def test_load_settings_applies_secret_and_runtime_environment_overrides(self) -> None:
         with patch.dict(
             os.environ,
             {
                 "TESTING_AGENT_PLATFORM_BASE_URL": "https://platform.runtime.example",
                 "TESTING_AGENT_WORKER_TOKEN": "runtime-worker-token",
-                "TESTING_AGENT_PI_RUNTIME_ROOT": "D:/runtime/pi",
+                "TESTING_AGENT_PI_RUNTIME_ROOT": RUNTIME_ROOT,
             },
         ):
             settings = load_settings(PROJECT_ROOT / "config" / "worker.example.toml")
 
         self.assertEqual("https://platform.runtime.example", settings.platform.base_url)
         self.assertEqual("runtime-worker-token", settings.platform.worker_token)
-        self.assertEqual("D:/runtime/pi", settings.agent.pi.runtime_root)
+        self.assertEqual(RUNTIME_ROOT, settings.agent.pi.runtime_root)
 
     def test_config_errors_report_paths_without_secret_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -280,7 +296,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -316,7 +332,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -367,7 +383,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(poll_interval_seconds=3, run_once=False),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -397,7 +413,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(poll_interval_seconds=3, run_once=True),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -421,7 +437,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(poll_interval_seconds=3, run_once=True),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -462,9 +478,7 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=False, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            agent=AgentConfig(
-                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
-                            ),
+                            agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -508,9 +522,7 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=True, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            agent=AgentConfig(
-                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
-                            ),
+                            agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -550,9 +562,7 @@ class WorkerMainTests(unittest.TestCase):
                         settings=Settings(
                             worker=WorkerConfig(poll_interval_seconds=5),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            agent=AgentConfig(
-                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
-                            ),
+                            agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                         ),
                         poller=_SequenceThenIdlePoller([self._make_simple_task("task-drain")]),
                         task_runner=runner,
@@ -600,9 +610,7 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=True, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            agent=AgentConfig(
-                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
-                            ),
+                            agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -654,7 +662,7 @@ class WorkerMainTests(unittest.TestCase):
                         poll_interval_seconds=0, run_once=False, max_concurrent_tasks=2
                     ),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -681,9 +689,7 @@ class WorkerMainTests(unittest.TestCase):
                     settings=Settings(
                         worker=WorkerConfig(poll_interval_seconds=3, run_once=False),
                         platform=PlatformConfig(base_url="https://platform.example.com"),
-                        agent=AgentConfig(
-                            backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
-                        ),
+                        agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root=RUNTIME_ROOT)),
                         logging=LoggingConfig(),
                     ),
                     poller=poller,
@@ -709,7 +715,7 @@ class WorkerMainTests(unittest.TestCase):
                 agent=AgentConfig(
                     backend="pi",
                     pi=PiConfig(
-                        runtime_root="D:/tmp/pi-runtime",
+                        runtime_root=RUNTIME_ROOT,
                     ),
                 ),
                 code_risk_analysis=CodeRiskAnalysisConfig(),

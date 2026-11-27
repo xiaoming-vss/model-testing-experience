@@ -23,14 +23,12 @@ class WorkerLifecycle:
         self.run_once = run_once
 
     def heartbeat_interval_for(self, lease_seconds: int) -> int:
-        """计算 heartbeat 间隔。
+        """计算 heartbeat 间隔：最多为租约的一半，漏掉一次仍来得及续租。
 
-        如果显式配置了心跳间隔，则优先使用配置值；
-        否则根据平台租约做一个保守估算，尽量在过期前续租。
+        显式配置的间隔是上限；未配置时只由租约决定。
         """
 
+        half = max(1, lease_seconds // 2)
         if self.heartbeat_interval_seconds > 0:
-            return self.heartbeat_interval_seconds
-        if lease_seconds <= 2:
-            return 1
-        return max(1, lease_seconds // 2)
+            return min(self.heartbeat_interval_seconds, half)
+        return half

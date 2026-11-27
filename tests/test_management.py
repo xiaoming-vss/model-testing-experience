@@ -50,7 +50,7 @@ class ManagementTests(unittest.TestCase):
                          "redis://127.0.0.1:16379/0")
         self.assertEqual(docker["api-ui-worker"]["notifications"]["redis_url"],
                          "redis://redis:6379/0")
-        self.assertEqual(docker["api-ui-worker"]["worker"]["poll_interval_ms"], 30000)
+        self.assertEqual(docker["api-ui-worker"]["worker"]["poll_interval_ms"], 3000)
         self.data["redis"]["url"] = "rediss://shared.example:6380/1"
         for mode in ("local", "docker"):
             configs = manage.configurations(self.data, mode, self.root)
@@ -176,6 +176,18 @@ class ManagementTests(unittest.TestCase):
         # 已有统一配置优先，不被旧 pi 配置覆盖。
         self.assertEqual(upgraded["ai_worker"]["worker"]["max_concurrent_tasks"], 2)
 
+    def test_upgrade_adds_api_ui_worker_poll_interval(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old.pop("api_ui_worker", None)
+        manage.write(path, manage.toml_text(old), permissions=0o600)
+
+        manage.upgrade_config(self.root)
+        upgraded = manage.read(path)
+
+        self.assertEqual(upgraded["api_ui_worker"]["worker"]["poll_interval_ms"], 3000)
+        self.assertTrue(upgraded["api_ui_worker"]["ui"]["trace_enabled"])
+
     def test_upgrade_removes_retired_public_host(self):
         path = self.root / "config/platform.toml"
         old = manage.read(path)
@@ -226,11 +238,6 @@ class ManagementTests(unittest.TestCase):
         for mode in ("local", "docker"):
             config = manage.configurations(self.data, mode, self.root)["control-plane"]
             self.assertNotIn("ldap", config["security"])
-        override = self.root / ".runtime/compose.ldap-ca.json"
-        override.parent.mkdir(exist_ok=True)
-        override.write_text("{}")
-        manage.configure("docker", self.root)
-        self.assertFalse(override.exists())
 
     def test_mysql_slow_log_is_generated_and_configurable(self):
         manage.configure("docker", self.root)
@@ -278,11 +285,40 @@ class ManagementTests(unittest.TestCase):
         manage.upgrade_config(self.root)
         upgraded = manage.read(path)
         password = upgraded["control_plane"]["security"]["super_admin"]["initial_password"]
-        self.assertGreaterEqual(len(password), 8)
-        self.assertNotIn(
-            password.lower(),
-            {"mtx123456", "password", "secret", "change-me", "generate"},
-        )
+        # One rule, read from the control plane: whatever it refuses is replaced here.
+        self.assertFalse(manage.password_is_insecure(password))
+        manage.validate(manage.read(path))
+
+    def test_upgrade_config_replaces_every_password_the_control_plane_refuses(self):
+        path = self.root / "config/platform.toml"
+        # "changeme" and "test-jwt" used to pass validate() and fail only at service start.
+        for password in (
+            "short",
+            "changeme",
+            "change_me",
+            "test-jwt",
+            "worker-token",
+            "test-integration",
+            "replace-with-local-integration-key",
+        ):
+            with self.subTest(password=password):
+                data = manage.read(path)
+                data["control_plane"]["security"]["super_admin"]["initial_password"] = password
+                manage.write(path, manage.toml_text(data), permissions=0o600)
+                manage.upgrade_config(self.root)
+                upgraded = manage.read(path)
+                self.assertFalse(
+                    manage.password_is_insecure(
+                        upgraded["control_plane"]["security"]["super_admin"]["initial_password"]
+                    )
+                )
+
+    def test_validate_rejects_a_password_the_control_plane_refuses(self):
+        data = json.loads(json.dumps(self.data))
+        data["control_plane"]["security"]["super_admin"]["initial_password"] = "changeme"
+
+        with self.assertRaisesRegex(ValueError, "initial_password"):
+            manage.validate(data)
 
     def test_integration_config_upgrade_preserves_custom_values_permissions_and_secrets(self):
         path = self.root / "config/platform.toml"

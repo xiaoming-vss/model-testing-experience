@@ -12,8 +12,8 @@ from uuid import uuid4
 import httpx
 import pytest
 from test_sync_recovery import cp as cp
+from test_sync_recovery import job_summary, start_worker, stop_worker
 from test_sync_recovery import remote as remote
-from test_sync_recovery import start_worker, stop_worker
 
 
 def percentile95(values):
@@ -68,9 +68,7 @@ async def test_upload_timeout_keeps_heartbeats_and_ordinary_business_available(
                             "SELECT heartbeat_at FROM integration_jobs WHERE job_id=?", (job_id,)
                         ).fetchone()[0]
                         heartbeat_values.append(datetime.fromisoformat(value))
-                    status = await client.get(f"/v1/bugs/bug/zentao-jobs/{job_id}")
-                    assert status.status_code == 200
-                    result = status.json()["data"]
+                    result = await job_summary(tmp_path, job_id)
                     if result["jobStatus"] not in {"queued", "claimed", "running"}:
                         break
                     assert worker.poll() is None

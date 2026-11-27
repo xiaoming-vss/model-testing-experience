@@ -38,7 +38,10 @@ class SprintDailyMetricsRepository(BaseRepository):
 
     async def lock_sprint(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(
-            select(Sprint).where(Sprint.sprint_id == sprint_id).with_for_update()
+            select(Sprint)
+            .where(Sprint.sprint_id == sprint_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def list_running_sprint_ids(self, now: datetime) -> builtins.list[str]:
@@ -77,7 +80,7 @@ class SprintDailyMetricsRepository(BaseRepository):
             SprintDailyMetrics.snapshot_date == snapshot_date,
         )
         if for_update:
-            stmt = stmt.with_for_update()
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
         return await self.session.scalar(stmt)
 
     async def list_bug_snapshots(

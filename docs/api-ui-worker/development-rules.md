@@ -2,7 +2,7 @@
 
 - 状态：现行
 - 负责人：api-ui-worker maintainer
-- 最近复核：2026-11-19
+- 最近复核：2026-11-26
 - 复核周期：每季度
 - 适用范围：`apps/api-ui-worker/`
 - 变更/废弃：按[规范变更检查清单](../agents/domain.md#规范变更检查清单)执行；影响跨项目契约时先记录 ADR 并通知消费方。
@@ -26,9 +26,11 @@
 
 领取任务后必须建立基于 `time.monotonic` 的本地租约窗口，心跳成功才续租；心跳被明确拒绝或窗口到期时取消在途执行，不再产生新的 API/UI 外部副作用。本地租约失效时不合成执行结果，由控制面按租约状态处理。Worker 收到 SIGTERM/SIGINT 关闭时回传 `canceled`；控制面没有 `stopped` 完成状态，不得把关闭误报为 `error`。
 
-日志记录任务身份、状态和安全错误；不能输出完整步骤、运行变量、请求响应正文或含凭据的浏览器配置。离线 `once` 模式保留独立调试语义，不伪造平台任务归属或正式文件关联。
+“控制面明确拒绝执行”只在 `control_plane/client.py` 定义一处（`LEASE_LOST_STATUSES`，现为 `401/403/404/409/410`，见 [ADR 0032](../control-plane/adr/0032-replays-are-idempotent-for-the-original-identity.md)）。上报开始、读取快照、解析和写回环境变量、上报步骤进度、心跳和停止检查遇到这些状态都按租约失效处理，不合成结果；`400`/`422` 表示 Worker 发出的请求有问题，只能让当前步骤或任务失败，不得当作失租。不得为单个端点另写状态码集合。
 
-控制面请求异常统一使用 `ControlPlaneRequestError` 的固定格式：只保留方法、路由、状态码和安全 `code`，禁止拼接 `response.text` 或响应正文。poller 的日志和 `errorMessage` 直接使用该安全消息；新增控制面调用不得自行构造包含正文的异常文本。
+日志记录任务身份、状态和安全错误；不能输出完整步骤、运行变量、请求响应正文或含凭据的浏览器配置。轮询层遇到未知异常只记录异常类型，不记录异常文本。离线 `once` 模式保留独立调试语义，不伪造平台任务归属或正式文件关联。
+
+控制面请求异常统一使用 `ControlPlaneRequestError` 的固定格式：只保留方法、路由、状态码和安全 `code`，禁止拼接 `response.text` 或响应正文。连接失败等没有状态码的请求失败同样抛 `ControlPlaneRequestError`（状态码记为 0），不得抛出带异常文本的通用 `Exception`。poller 的日志和 `errorMessage` 直接使用该安全消息；新增控制面调用不得自行构造包含正文的异常文本。Worker 发出的请求体一律使用 camelCase 键。
 
 ## 验证入口
 
@@ -38,7 +40,8 @@
 | --- | --- |
 | 调度、心跳及停止 | `tests/test_poller_regressions.py`、`test_shutdown.py` |
 | 控制面通信与载荷 | `tests/test_control_plane_client.py`，加控制面 `test_worker_contract.py` |
-| API 执行 | `tests/test_api_runner.py`，加受影响模板、变量和断言行为回归 |
+| API 执行 | `tests/test_api_runner.py`、`tests/test_template_functions.py`，加受影响模板、变量和断言行为回归 |
+| 内置函数表 | 修改 `template_functions.py` 后同步控制面的逐字节副本，并更新根目录契约夹具 `tests/fixtures/api-template-contract.json`；运行根测试 `tests.test_template_functions_contract` |
 | UI 步骤及浏览器选项 | `tests/test_ui_steps_contract.py`、`test_ui_step_executor.py`、`test_ui_browser_options.py` |
 | 文件上传与清理 | `tests/test_artifact_upload.py`，加控制面文件授权与实际上传路径验收 |
 | 配置加载 | `tests/test_config.py`；保留无环境变量覆盖的现有契约 |

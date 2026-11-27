@@ -5,8 +5,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_execution import AiExecution
@@ -34,21 +38,15 @@ async def test_concurrent_first_graph_dispatch_creates_one_run(mysql, monkeypatc
         "testing_agent.services.test_order_graph.require_personal_connection",
         AsyncMock(return_value=SimpleNamespace(connection_id="llm")),
     )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    statements = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, sql, _p, _x, _m: statements.append(sql.lower()),
-    )
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     body = {
-        "graph_input": {
+        "graphInput": {
             "requirements": [],
             "cases": [{"case_id": "case"}],
             "case_requirement_links": [],
         },
-        "connection_id": "llm",
+        "connectionId": "llm",
     }
 
     async def dispatch():

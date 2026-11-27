@@ -3,7 +3,7 @@
 from fastapi import Depends
 
 from testing_agent.api.deps import get_current_user_id, get_generation_chain
-from testing_agent.core.errors import ErrBadRequest, dynamic_error, success_payload
+from testing_agent.core.errors import success_payload
 from testing_agent.schemas.generation_chain import (
     UiGenerationSourceCheck,
     UiGenerationSourceCheckRequest,
@@ -11,6 +11,7 @@ from testing_agent.schemas.generation_chain import (
 )
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.generation_chain import GenerationChainService
+from testing_agent.services.generation_ui_source_check import UiCurrentSourceCheck
 
 
 async def get_generation_chains(
@@ -35,15 +36,7 @@ async def get_ui_generation_source_options(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    await service.scope(requirement_id, user_id)
-    if service.ui_sources is None:
-        raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
-    from testing_agent.services.repository_profile_current import RepositoryProfileCurrent
-
-    current = await RepositoryProfileCurrent(service).read(
-        requirement_id=requirement_id, actor_id=user_id
-    )
-    options = service.ui_sources.current_options(current)
+    options = await UiCurrentSourceCheck(service).options(requirement_id, user_id)
     return success_payload(UiGenerationSourceOptions.model_validate(options))
 
 
@@ -53,36 +46,5 @@ async def check_ui_generation_source(
     user_id: str = Depends(get_current_user_id),
     service: GenerationChainService = Depends(get_generation_chain),
 ):
-    await service.scope(requirement_id, user_id)
-    if service.ui_sources is None:
-        raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
-    task = await service.tasks.get_requirement(requirement_id)
-    if task is None:
-        raise ErrBadRequest()
-    sprint = await service.tasks.get_sprint(task.sprint_id)
-    if sprint is None:
-        raise ErrBadRequest()
-    project_id = sprint.project_id
-    from testing_agent.services.generation_source_errors import source_error
-    from testing_agent.services.repository_profile_current import RepositoryProfileCurrent
-
-    reader = RepositoryProfileCurrent(service)
-    current = await reader.read(requirement_id=requirement_id, actor_id=user_id)
-    if current is None or current.candidate_id != body.profile_candidate_id:
-        raise source_error("source_mismatch")
-    result = await service.ui_sources.check_current(
-        current=current,
-        project_id=project_id,
-        user_id=user_id,
-        repository_id=body.repository_id,
-        pinned_commit=body.pinned_commit,
-        gitlab_connection_id=body.gitlab_connection_id,
-    )
-    verified = await reader.read(requirement_id=requirement_id, actor_id=user_id)
-    if verified is None or (
-        verified.candidate_id,
-        verified.snapshot_id,
-        verified.current_token,
-    ) != (current.candidate_id, current.snapshot_id, current.current_token):
-        raise source_error("concurrent_change")
+    result = await UiCurrentSourceCheck(service).check(requirement_id, user_id, body)
     return success_payload(UiGenerationSourceCheck.model_validate(result))

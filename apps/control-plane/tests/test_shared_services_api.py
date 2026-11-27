@@ -1,7 +1,5 @@
 """Project-visible definitions and personal-only authorizations at the HTTP boundary."""
 
-from types import SimpleNamespace
-
 import pytest
 from support.project_api import account, project
 from support.project_api import api as api_fixture
@@ -14,13 +12,7 @@ def remote_auth(monkeypatch):
     async def gitlab(*args, **kwargs):
         return None
 
-    async def zentao(*args, **kwargs):
-        return SimpleNamespace(access_token="personal-remote-token")
-
     monkeypatch.setattr("testing_agent.services.gitlab_auth.GitLabAuthProvider.validate", gitlab)
-    monkeypatch.setattr(
-        "testing_agent.services.zentao_auth.ZentaoAuthProvider.authenticate", zentao
-    )
 
 
 @pytest.mark.parametrize(
@@ -28,12 +20,11 @@ def remote_auth(monkeypatch):
     [
         ("llm", {"apiKey": "only-my-llm-key"}),
         ("gitlab", {"accessToken": "only-my-gitlab-token"}),
-        ("zentao", {"account": "personal-account", "password": "only-my-password"}),
     ],
 )
 def test_shared_visibility_and_separate_personal_authorization(api, provider, credentials):
     _, owner = account(api, "owner")
-    member_user, member = account(api, "member")
+    _, member = account(api, "member")
     _, outsider = account(api, "outsider")
     pid = project(api, owner)
     assert (
@@ -67,7 +58,7 @@ def test_shared_visibility_and_separate_personal_authorization(api, provider, cr
     own = api.get(path, headers=owner).json()["data"]["items"][0]
     assert own["authorization"]["status"] == "unauthorized"
     assert mine["connectionId"] not in str(own)
-    for key in ("only-my-llm-key", "only-my-gitlab-token", "only-my-password", "personal-account"):
+    for key in ("only-my-llm-key", "only-my-gitlab-token"):
         assert key not in str(own)
     # Existing execution selectors see only the current actor's personal connection.
     selector = f"/v1/projects/{pid}/integrations/{provider}/connections"
@@ -75,14 +66,6 @@ def test_shared_visibility_and_separate_personal_authorization(api, provider, cr
     personal = api.get(selector, headers=member).json()["data"]["items"]
     assert personal[0]["connectionId"] == mine["connectionId"]
     assert personal[0]["name"] == "团队服务"
-    assert (
-        api.patch(
-            f"{selector}/{mine['connectionId']}",
-            headers=member,
-            json={"baseUrl": "https://evil.test"},
-        ).status_code
-        == 400
-    )
     # One user's revocation does not revoke somebody else's authorization.
     owner_auth = api.put(endpoint, headers=owner, json=credentials)
     assert owner_auth.status_code == 200

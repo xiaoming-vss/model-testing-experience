@@ -51,8 +51,8 @@ export function AppShell() {
   const logout = useLogout()
   const { token, userQuery } = useCurrentUser()
   const currentUser = userQuery.data
-  const mustChangePassword = Boolean(currentUser?.mustChangePassword ?? currentUser?.must_change_password)
-  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin ?? currentUser?.is_super_admin)
+  const mustChangePassword = Boolean(currentUser?.mustChangePassword)
+  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin)
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const access = useProjectAccess(activeProjectId)
   const bugOnly = isBugOnlyProject(access.project)
@@ -183,7 +183,6 @@ export function AppShell() {
           {projectsQuery.isPending || (projects.length > 0 && !activeProjectId) ? <Spin aria-label="项目加载中" /> : <ProjectRouteGuard>
           <RouteSuspense>
           <Routes>
-            <Route path="/" element={<Navigate to="/projects" replace />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId/sprints/:sprintId" element={<SprintDetailPage />} />
             <Route path="/testing" element={<TestingPage />} />
@@ -195,16 +194,10 @@ export function AppShell() {
             <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
             <Route path="/bugs/new" element={<BugSubmitPage />} />
             <Route path="/bugs/:bugId" element={<BugDetailPage />} />
-            <Route path="/ai-testing" element={<Navigate to="/projects?board=requirements" replace />} />
-            <Route path="/ai-testing/tasks" element={<Navigate to="/projects?board=requirements" replace />} />
-            <Route path="/ai-testing/code-risk-tasks/:taskId" element={<Navigate to="/projects?board=requirements" replace />} />
             <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
             <Route path="/base-services" element={<BaseServicesPage skillLibrary={<AiSkillLibraryPage embedded />} />} />
-            <Route path="/api-automation" element={<Navigate to="/testing?tab=api" replace />} />
             <Route path="/api-automation/collections/:collectionId" element={<ApiCollectionDetailPage />} />
-            <Route path="/ui-automation" element={<Navigate to="/testing?tab=ui" replace />} />
             <Route path="/ui-automation/suites/:suiteId" element={<UiTestSuiteCasePage />} />
-            <Route path="/performance" element={<Navigate to="/testing?tab=perf" replace />} />
             <Route path="/performance/suites/:suiteId" element={<PerformanceSuiteDetailPage />} />
             <Route path="/performance/runs" element={<PerformanceRunsPage />} />
             <Route path="/performance/runs/:runId" element={<PerformanceRunDetailPage />} />
@@ -213,8 +206,6 @@ export function AppShell() {
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/admin/ldap" element={<LdapSettingsPage />} />
             <Route path="/admin/users" element={<AccountManagementPage />} />
-            <Route path="/projects/board=requirements" element={<Navigate to="/projects?board=requirements" replace />} />
-            <Route path="/projects/board=sprints" element={<Navigate to="/projects?board=sprints" replace />} />
             <Route path="*" element={<Navigate to="/projects" replace />} />
           </Routes>
           </RouteSuspense>

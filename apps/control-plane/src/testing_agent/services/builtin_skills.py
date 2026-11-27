@@ -36,6 +36,8 @@ def inspect_folder(folder: Path, maximum: int) -> list[tuple[str, bytes]]:
     for path in sorted(folder.rglob("*")):
         if path.is_symlink():
             raise ValueError(f"技能目录不接受符号链接: {path}")
+        if any(part in {"__pycache__", "tests"} for part in path.relative_to(folder).parts):
+            continue
         if path.is_file():
             entries.append((path.relative_to(folder).as_posix(), path.read_bytes()))
     ProjectSkillUploadRequest(

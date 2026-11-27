@@ -204,11 +204,10 @@ class TaskPayload(BaseModel):
 
 
 class Task(BaseModel):
-    claim_id: str = ""
     task_id: str
     attempt_id: str = ""
     generate_task_id: str = ""
-    task_type: str = "api_case_generate"
+    task_type: str
     name: str = ""
     project_id: str = ""
     sprint_id: str = ""

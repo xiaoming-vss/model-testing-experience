@@ -8,7 +8,6 @@ import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { api } from '@/services/api'
 import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { requirementDesignApi } from '../api/requirementDesign.api'
-import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { profileCandidatesApi } from '../api/profileCandidates.api'
@@ -18,19 +17,12 @@ import type { GenerationChain, GenerationChainStage, UiGenerationSourceOptions }
 import { RequirementDesignWorkspace } from './RequirementDesignWorkspace'
 
 vi.mock('../api/requirementDesign.api', () => ({
-  requirementDesignApi: { overview: vi.fn(), history: vi.fn(), start: vi.fn(), configure: vi.fn() },
+  requirementDesignApi: { overview: vi.fn(), configure: vi.fn() },
 }))
 
 vi.mock('../api/generationChain.api', () => ({
   generationChainApi: {
     overview: vi.fn(), chain: vi.fn(), uiSourceOptions: vi.fn(), uiSourceCheck: vi.fn(),
-  },
-}))
-vi.mock('../api/aiTesting.api', () => ({
-  aiTestingApi: {
-    getFunctionalCaseGenerateTaskRun: vi.fn(), getFunctionalCaseGenerateTask: vi.fn(),
-    getUiCaseGenerateTask: vi.fn(), getApiCaseGenerateTask: vi.fn(),
-    generateFunctionalCaseRelationAnalysis: vi.fn(async (runId: string) => ({ runId })),
   },
 }))
 vi.mock('../api/repositoryProfile.api', () => ({
@@ -121,7 +113,6 @@ function mount(documentPreview?: import('react').ReactNode, onReadingNodeChange?
 
 
 beforeEach(() => {
-  vi.mocked(aiTestingApi.getUiCaseGenerateTask).mockResolvedValue({ name: 'UI', sourceType: 'repository', instruction: '' })
   vi.mocked(generationChainApi.uiSourceOptions).mockResolvedValue(sourceOptions())
   vi.mocked(generationChainApi.uiSourceCheck).mockResolvedValue({
     pinnedCommit: 'a1b2c3d4', currentCommit: 'a1b2c3d4', branch: 'main', changed: false,
@@ -137,14 +128,11 @@ beforeEach(() => {
   vi.mocked(requirementDesignApi.overview).mockResolvedValue({
     tasks: [], runCounts: { requirement_analysis: 0, function: 0, api: 0, ui: 0 },
   })
-  vi.mocked(requirementDesignApi.history).mockResolvedValue({ items: [], total: 0 })
   vi.mocked(generationChainApi.overview).mockResolvedValue({
     chains: [emptyChain('requirement_analysis', '需求分析'), emptyChain('function', '功能测试'), emptyChain('api', 'API 测试'), chain()],
   })
   vi.mocked(generationChainApi.chain).mockResolvedValue(chain())
   vi.spyOn(api, 'getLlmConnections').mockResolvedValue(Object.assign([{ connectionId: 'llm', name: '本人模型', status: 'active' as const, provider: 'openai', baseUrl: 'https://example.test', authType: 'api_key', account: '', hasAccessToken: true, modelId: 'model' }], { items: [{ connectionId: 'llm', name: '本人模型', status: 'active' as const, provider: 'openai', baseUrl: 'https://example.test', authType: 'api_key', account: '', hasAccessToken: true, modelId: 'model' }], total: 1 }))
-  vi.spyOn(api, 'getFunctionalCaseGenerateTaskRun').mockImplementation(async runId => ({ runId, status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, importStatus: 'pending', importedTargets: [], importedAt: '' }))
-  vi.spyOn(api, 'getFunctionalCaseGenerateTask').mockResolvedValue({ taskId: 'task-function', name: '功能测试', projectId: 'project', instruction: '' })
 })
 
 it('候选模式在画布显示当前内容和候选摘要', async () => {

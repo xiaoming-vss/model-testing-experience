@@ -1,32 +1,14 @@
+from typing import ClassVar
+
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from testing_agent.core.ldap_config import LdapSettings
 
-class LdapConfigInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    enabled: bool = False
-    server_url: str = Field(default="", max_length=2048)
-    start_tls: bool = True
-    allow_insecure_connection: bool = False
-    tls_ca_file: str = Field(default="", max_length=2048)
-    tls_ca_pem: str = Field(default="", max_length=65536)
-    bind_dn: str = Field(default="", max_length=2048)
-    bind_password: SecretStr | None = None
-    user_search_base: str = Field(default="", max_length=2048)
-    user_search_filter: str = Field(default="(uid={username})", max_length=4096)
-    access_group_dn: str = Field(default="", max_length=2048)
-    username_attribute: str = "uid"
-    email_attribute: str = "mail"
-    external_id_attribute: str = "entryUUID"
-    group_member_attribute: str = "memberUid"
-    group_member_value_type: str = "username"
-    timeout_seconds: int = 5
-    login_timeout_seconds: int = 30
-    reconcile_interval_seconds: int = 300
-    auto_link_by_username: bool = False
-    token_expire_hours: int = 12
-    directory_rules_verified: bool = False
-    active_user_filter: str = Field(default="", max_length=4096)
-    disabled_user_filter: str = Field(default="", max_length=4096)
+
+class LdapConfigInput(LdapSettings):
+    """Admin input uses the runtime structure and adds a write-only secret field."""
+
+    bind_password: SecretStr | None = None  # type: ignore[assignment]
 
     def configuration(self) -> dict:
         data = self.model_dump(exclude={"bind_password"}, exclude_unset=True)
@@ -50,6 +32,7 @@ class TestLdapRequest(BaseModel):
 
 
 class LdapConfigView(LdapConfigInput):
+    require_bind_password: ClassVar[bool] = False
     bind_password: SecretStr | None = Field(default=None, exclude=True)
 
 

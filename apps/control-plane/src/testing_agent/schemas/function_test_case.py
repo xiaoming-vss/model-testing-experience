@@ -91,24 +91,6 @@ class ImportFunctionCasesToZentaoRequest(CasePushOptions):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ImportFunctionSuitesToZentaoRequest(CasePushOptions):
-    connection_id: str = Field(default="")
-    product_id: int = Field(gt=0)
-    module_id: int = Field(default=0, ge=0)
-    suite_ids: list[str] = Field(min_length=1, max_length=10000)
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    @field_validator("suite_ids")
-    @classmethod
-    def validate_suite_ids(cls, value: list[str]) -> list[str]:
-        normalized = [str(suite_id or "").strip() for suite_id in value]
-        if any(not suite_id for suite_id in normalized):
-            raise ValueError("suiteIds 不能为空")
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("suiteIds 不能包含重复项")
-        return normalized
-
-
 class FunctionCaseZentaoImportItemResponse(BaseModel):
     operation_id: str | None = None
     case_id: str = Field()
@@ -126,27 +108,6 @@ class FunctionCaseZentaoImportResponse(BaseModel):
     remote_execution_id: int = Field()
     imported_case_count: int = Field()
     items: list[FunctionCaseZentaoImportItemResponse]
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionSuiteZentaoImportItemResponse(BaseModel):
-    items: list[FunctionCaseZentaoImportItemResponse] = Field(default_factory=list)
-    suite_id: str = Field()
-    status: Literal["success", "failed"]
-    imported_case_count: int = Field()
-    error_code: int | None = Field(default=None)
-    error_message: str | None = Field(default=None)
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionSuitesZentaoImportResponse(BaseModel):
-    requirement_id: str = Field()
-    status: Literal["success", "partial_failure", "failed"]
-    total_suite_count: int = Field()
-    succeeded_suite_count: int = Field()
-    failed_suite_count: int = Field()
-    imported_case_count: int = Field()
-    items: list[FunctionSuiteZentaoImportItemResponse]
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 

@@ -4,7 +4,7 @@ import asyncio
 
 from support.function_case_library import make_sprint
 from support.order_api import make_order
-from support.project_api import account, project
+from support.project_api import account, project, seed_llm_connection
 
 
 def order_fixture(api):
@@ -16,18 +16,7 @@ def order_fixture(api):
 
 
 def make_llm(api, headers, pid):
-    response = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=headers,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "fixture-secret",
-            "modelId": "model",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
+    return seed_llm_connection(api, headers, project_id=pid)
 
 
 def query(api, statement):

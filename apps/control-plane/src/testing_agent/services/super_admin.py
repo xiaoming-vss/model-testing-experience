@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from testing_agent.core.config import Settings
-from testing_agent.core.secrets import INSECURE_SECRETS
+from testing_agent.core.secrets import MIN_PASSWORD_LENGTH, password_is_insecure
 from testing_agent.core.security import hash_password
 from testing_agent.core.sid import new_id
 from testing_agent.domain.account_policy import normalize_email
@@ -44,13 +44,13 @@ async def seed_super_admin(settings: Settings) -> None:
 
 
 def _initial_password(configured: str) -> str:
-    password = configured.strip()
-    if len(password) < 8 or password.lower() in INSECURE_SECRETS:
+    if password_is_insecure(configured):
         raise RuntimeError(
             "security.super_admin.initial_password must be set to a non-placeholder "
-            "password of at least 8 characters; run `python3 scripts/manage.py init` "
-            "or `upgrade-config` to generate one"
+            f"password of at least {MIN_PASSWORD_LENGTH} characters; run "
+            "`python3 scripts/manage.py init` or `upgrade-config` to generate one"
         )
+    password = configured.strip()
     return password
 
 

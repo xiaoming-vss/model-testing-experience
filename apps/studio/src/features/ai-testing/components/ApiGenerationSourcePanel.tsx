@@ -2,7 +2,7 @@ import { Alert, Button, Tag } from 'antd'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { getErrorMessage } from '@/utils/format'
-import { aiTestingApi } from '../api/aiTesting.api'
+import { requirementDesignApi } from '../api/requirementDesign.api'
 import type { RepositoryProfileCandidateView } from '../types'
 import { formatProfileConfidence, repositoryRoleMeta } from '../utils/repositoryProfileDisplay'
 import { RequirementDesignConfigurationModal } from './RequirementDesignConfigurationModal'
@@ -34,13 +34,16 @@ export function ApiGenerationSourcePanel({
 }) {
   const [open, setOpen] = useState(false)
   const client = useQueryClient()
-  const task = useQuery({
-    queryKey: ['apiGenerationInputTask', taskId],
-    queryFn: () => aiTestingApi.getApiCaseGenerateTask(taskId!),
-    enabled: Boolean(taskId),
+  const design = useQuery({
+    queryKey: ['requirementDesignOverview', requirementId],
+    queryFn: () => requirementDesignApi.overview(requirementId),
+    enabled: Boolean(requirementId),
     retry: false,
   })
-  const count = task.data?.interfaceCount ?? task.data?.interfaceIds?.length ?? 0
+  const designTasks = design.data?.tasks ?? []
+  const apiTask = designTasks.find(task => task.kind === 'api' && task.taskId === taskId)
+    ?? designTasks.find(task => task.kind === 'api')
+  const count = apiTask?.interfaceIds?.length ?? 0
   const backendRepositories = useMemo(
     () =>
       (profileCandidate?.profile?.repositories ?? []).filter(repository =>
@@ -127,7 +130,7 @@ export function ApiGenerationSourcePanel({
       <section className="gc-inspector-section gc-inspector-source" aria-label="API 测试接口">
         <h3>接口来源</h3>
         <p>
-          {task.isFetching
+          {design.isFetching
             ? '正在读取接口'
             : count
               ? `已选择 ${count} 个接口`
@@ -136,21 +139,19 @@ export function ApiGenerationSourcePanel({
         {canWrite || count ? (
           <Button
             size="small"
-            disabled={
-              task.isFetching || Boolean(task.error) || (canWrite && busy)
-            }
+            disabled={design.isFetching || Boolean(design.error) || (canWrite && busy)}
             onClick={() => setOpen(true)}
           >
             {canWrite ? (count ? '查看 / 修改接口' : '选择接口') : '查看接口'}
           </Button>
         ) : null}
-        {task.error ? (
+        {design.error ? (
           <Alert
             showIcon
             type="error"
-            title={getErrorMessage(task.error)}
+            title={getErrorMessage(design.error)}
             action={
-              <Button size="small" onClick={() => void task.refetch()}>
+              <Button size="small" onClick={() => void design.refetch()}>
                 重试读取
               </Button>
             }
@@ -162,16 +163,14 @@ export function ApiGenerationSourcePanel({
             requirementId={requirementId}
             projectId={projectId}
             kind="api"
-            tasks={[]}
             initialTaskId={taskId}
             readOnly={!canWrite}
             suggestedRepositories={suggestedRepositories}
             onClose={() => setOpen(false)}
             onSaved={() => {
               setOpen(false)
-              void client.invalidateQueries({ queryKey: ['apiGenerationInputTask'] })
               void client.invalidateQueries({
-                queryKey: ['requirementDesignConfiguration', 'api'],
+                queryKey: ['requirementDesignOverview', requirementId],
               })
               onSaved()
             }}

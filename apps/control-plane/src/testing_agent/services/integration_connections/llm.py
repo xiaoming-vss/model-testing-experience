@@ -43,10 +43,9 @@ class ApiKeyConnectionCommands(ConnectionSupport):
         self,
         connection,
         body: dict[str, Any],
-        provider: str,
         *,
         commit: bool,
     ) -> dict:
-        fields = self._candidate_update(connection, body, provider)
+        fields = self._candidate_update(connection, body)
         self._apply_update_fields(connection, fields)
         return await self._finish_write(connection, commit=commit)

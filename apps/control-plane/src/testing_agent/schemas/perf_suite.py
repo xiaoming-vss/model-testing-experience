@@ -22,12 +22,6 @@ class PerfSuiteUpdate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
 
-class PerfSuiteCaseOrderUpdate(BaseModel):
-    case_ids: list[str] = Field(min_length=1)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
-
-
 class PerfSuiteCaseResponse(PerfCaseSummaryResponse):
     yaml: str = ""
 

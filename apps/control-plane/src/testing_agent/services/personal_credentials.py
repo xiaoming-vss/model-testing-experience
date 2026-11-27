@@ -1,5 +1,7 @@
 """Deliver provider credentials only from a caller's own authorized connection."""
 
+from typing import TypeGuard
+
 from testing_agent.core.enums import ConnectionStatus
 from testing_agent.core.errors import (
     ErrIntegrationConnectionAuthFailed,
@@ -8,6 +10,15 @@ from testing_agent.core.errors import (
 )
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+
+
+def has_mcp_token(connection: IntegrationConnection | None) -> TypeGuard[IntegrationConnection]:
+    """The one active, non-empty personal MCP token predicate."""
+    return bool(
+        connection is not None
+        and connection.status == ConnectionStatus.ACTIVE.value
+        and (connection.secret_json or {}).get("token")
+    )
 
 
 class PersonalCredentialAccess:

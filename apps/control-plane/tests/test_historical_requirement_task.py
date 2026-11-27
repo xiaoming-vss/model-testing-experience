@@ -3,14 +3,20 @@
 import asyncio
 import json
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-from support.mysql_initialization import mysql  # noqa: F401
-from support.project_api import account, api, project, requirement  # noqa: F401
+from support.mysql_initialization import async_sessions, clear_schema, mysql  # noqa: F401
+from support.project_api import (  # noqa: F401
+    account,
+    api,
+    project,
+    requirement,
+    seed_llm_connection,
+)
 from support.requirement_versions import adopt_material, material_artifact
 
 from testing_agent.api.deps import verify_worker_token
@@ -32,13 +38,18 @@ from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.generation_candidates import AiGenerationStageContent
 
+WORKER = "historical-worker"
+RAW_BLOCK_MARKER = "HISTORICAL-RAW-BLOCK-MARKER"
+
 
 @pytest.fixture(params=("sqlite", "mysql"))
-def history_api(api, request, monkeypatch):  # noqa: F811
+def history_api(request, monkeypatch):
     if request.param == "sqlite":
-        yield api
+        yield request.getfixturevalue("api")
         return
+    # Skips here without a disposable MySQL, before an application is built for the test.
     database = request.getfixturevalue("mysql")
+    clear_schema(database)
     with database.begin() as connection:
         if connection.scalar(select(AuthRuntime.id).where(AuthRuntime.id == 1)) is None:
             connection.execute(
@@ -47,17 +58,17 @@ def history_api(api, request, monkeypatch):  # noqa: F811
                 )
             )
     # TestClient and the fixture helpers invoke the async session from different loops.
-    engine = create_async_engine(database.url.set(drivername="mysql+asyncmy"), poolclass=NullPool)
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(database, poolclass=NullPool)
 
     async def session():
         async with sessions() as value:
             yield value
 
-    monkeypatch.setattr(api.app.state, "test_sessions", sessions)
-    monkeypatch.setitem(api.app.dependency_overrides, get_session, session)
+    client = request.getfixturevalue("api")
+    monkeypatch.setattr(client.app.state, "test_sessions", sessions)
+    monkeypatch.setitem(client.app.dependency_overrides, get_session, session)
     try:
-        yield api
+        yield client
     finally:
         asyncio.run(engine.dispose())
 
@@ -104,6 +115,38 @@ async def _seed_verification_cases(client, previous, foreign):
         await session.commit()
 
 
+async def _remove_history_stage(client, rid):
+    """Drop the history stage of the chain, as if the chain predated the stage."""
+    async with client.app.state.test_sessions() as session:
+        stage_id = await session.scalar(
+            select(AiGenerationStage.id)
+            .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerationStage.task_id)
+            .where(
+                AiGenerateTask.requirement_id == rid,
+                AiGenerationStage.stage == HISTORICAL_REQUIREMENT_STAGE,
+            )
+        )
+        await session.execute(
+            delete(AiGenerationStageContent).where(AiGenerationStageContent.stage_id == stage_id)
+        )
+        await session.execute(delete(AiGenerationStage).where(AiGenerationStage.id == stage_id))
+        await session.commit()
+
+
+async def _stored_function_case(client, case_id):
+    async with client.app.state.test_sessions() as session:
+        return await session.scalar(
+            select(FunctionTestCase).where(FunctionTestCase.case_id == case_id)
+        )
+
+
+async def _attempt_source(client, attempt_id):
+    """Frozen ``sourceContent`` of an attempt, decoded."""
+    async with client.app.state.test_sessions() as session:
+        attempt = await session.get(AiGenerationAttempt, attempt_id)
+        return json.loads(attempt.input_snapshot_json["source"]["sourceContent"])
+
+
 def _verification_pass(batch, *, needs_full=False, invalidate=False):
     findings = []
     for case in batch["candidateCases"]:
@@ -132,106 +175,20 @@ def _verification_pass(batch, *, needs_full=False, invalidate=False):
     }
 
 
-def test_history_candidate_uses_same_project_adopted_material_and_independent_attempt(
-    history_api,
-    monkeypatch,
-):
-    client = history_api
-    monkeypatch.setitem(client.app.dependency_overrides, verify_worker_token, lambda: None)
-    _, headers = account(client, "historical-requirement")
-    pid = project(client, headers)
-    rid = requirement(client, headers, pid)
-    previous = _old_requirement(client, headers, pid)
-    foreign = requirement(client, headers, project(client, headers, "other-project"))
-    asyncio.run(_seed_verification_cases(client, previous, foreign))
-    old = material_artifact()
-    old["functions"][0]["sections"][0]["items"][0]["text"] = "保存后展示历史结果"
-    old["materialBlocks"][0]["content"]["text"] = "HISTORICAL-RAW-BLOCK-MARKER"
-    previous_candidate = adopt_material(client, previous, headers=headers, content=json.dumps(old))
-    adopt_material(client, foreign, headers=headers, content=json.dumps(old))
-    current_candidate = adopt_material(client, rid, headers=headers)
-    connection = client.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=headers,
-        json={
-            "name": "history",
-            "baseUrl": "https://llm.example",
-            "apiKey": "test",
-            "modelId": "test",
-        },
-    ).json()["data"]["connectionId"]
-
-    async def remove_new_slot_from_existing_chain():
-        async with client.app.state.test_sessions() as session:
-            stage_id = await session.scalar(
-                select(AiGenerationStage.id)
-                .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerationStage.task_id)
-                .where(
-                    AiGenerateTask.requirement_id == rid,
-                    AiGenerationStage.stage == HISTORICAL_REQUIREMENT_STAGE,
-                )
-            )
-            await session.execute(
-                delete(AiGenerationStageContent).where(
-                    AiGenerationStageContent.stage_id == stage_id
-                )
-            )
-            await session.execute(delete(AiGenerationStage).where(AiGenerationStage.id == stage_id))
-            await session.commit()
-
-    asyncio.run(remove_new_slot_from_existing_chain())
-    chain = f"/v1/requirements/{rid}/generation/requirement_analysis"
-    base = f"{chain}/stages/{HISTORICAL_REQUIREMENT_STAGE}"
-    verification = f"{chain}/stages/{HISTORICAL_TEST_STAGE}"
-    initial = client.get(base + "/current", headers=headers)
-    assert initial.status_code == 200, initial.text
-    assert initial.json()["data"]["candidateId"] is None
-    request = {"connectionId": connection, "requestId": str(uuid4())}
-    assert (
-        client.post(verification + "/candidate-run", headers=headers, json=request).status_code
-        == 400
-    )
-    response = client.post(base + "/candidate-run", headers=headers, json=request)
-    assert response.status_code == 200, response.text
-    receipt = response.json()["data"]
-    assert client.post(base + "/candidate-run", headers=headers, json=request).json()["data"][
-        "replayed"
-    ]
-
-    worker_id = "historical-worker"
-    claim_response = client.post("/internal/ai-worker/tasks/claim", json={"workerId": worker_id})
-    assert claim_response.status_code == 200, claim_response.text
-    claim = claim_response.json()
-    assert claim["attemptId"] == receipt["attemptId"]
-    assert claim["currentStage"] == HISTORICAL_REQUIREMENT_STAGE
-    internal = f"/internal/ai-worker/tasks/{claim['taskId']}"
-    snapshot_response = client.get(internal + "/snapshot")
-    assert snapshot_response.status_code == 200, snapshot_response.text
-    snapshot = snapshot_response.json()
-    run = snapshot["run"]
-    assert not run.get("documentDownloadUrl")
-    assert client.get(internal + "/requirement-document").status_code == 404
-    assert "HISTORICAL-RAW-BLOCK-MARKER" not in run["sourceContent"]
-    assert "firstStepOutput" not in json.loads(snapshot["configJson"])
-    payload = json.loads(run["sourceContent"])
-    assert [item["requirementId"] for item in payload["historicalRequirements"]] == [previous]
-    assert snapshot["candidateInput"]["selectedSources"][0]["candidateId"] == current_candidate
-    assert previous_candidate != current_candidate
-
-    output = {
+def _relation_output(requirement_id, payload):
+    """Relation analysis of ``requirement_id`` before any relation or question is added."""
+    return {
         "schemaVersion": "0.1",
         "artifactType": "historical_requirement_relation_analysis",
-        "requirementId": foreign,
+        "requirementId": requirement_id,
         "materialSnapshotId": payload["currentRequirement"]["materialSnapshotId"],
         "relations": [],
         "openQuestions": [],
     }
-    event = {"workerId": worker_id, "attemptId": claim["attemptId"], "status": "success"}
-    rejected = client.post(
-        internal + "/completed", json={**event, "resultYaml": json.dumps(output)}
-    )
-    assert rejected.status_code == 400, rejected.text
-    output["requirementId"] = rid
+
+
+def _add_one_relation(output, payload, previous):
+    """Relate ``previous`` to the current requirement and list its impacts and question."""
     history = payload["historicalRequirements"][0]
     output["relations"] = [
         {
@@ -275,47 +232,254 @@ def test_history_candidate_uses_same_project_adopted_material_and_independent_at
         ]
     )
     output["openQuestions"] = [{"impactId": "pending", "question": "是否适用于归档后的单据？"}]
-    completed = client.post(
-        internal + "/completed", json={**event, "resultYaml": json.dumps(output)}
+
+
+def _verification_result(frozen):
+    """Verification result for ``frozen`` with three first passes and no full-case pass yet."""
+    supplement = _verification_pass(frozen["batches"][2])
+    del supplement["supplementalScenarios"]
+    supplement["schemaVersion"] = "0.2"
+    supplement["supplementalPoints"] = [
+        {"pointId": "mobile-result", "title": "验证单据保存后在移动端可以查看保存结果"}
+    ]
+    return {
+        **verification_run_header(VERIFICATION_RUN_RESULT, frozen),
+        "batches": [
+            {
+                "firstPass": _verification_pass(frozen["batches"][0], needs_full=True),
+                "fullCasePass": None,
+            },
+            {"firstPass": _verification_pass(frozen["batches"][1]), "fullCasePass": None},
+            {"firstPass": supplement, "fullCasePass": None},
+        ],
+    }
+
+
+def _with_full_case_pass(result, frozen):
+    """Record the full-case pass for the case the first pass asked to read in full."""
+    follow_up = full_case_batch(frozen, frozen["batches"][0], result["batches"][0]["firstPass"])
+    assert [case["caseId"] for case in follow_up["candidateCases"]] == ["historical-case-0"]
+    result["batches"][0]["fullCasePass"] = _verification_pass(follow_up, invalidate=True)
+    return result
+
+
+@pytest.fixture
+def history(history_api, monkeypatch):
+    """Current requirement next to an older and a foreign one, each with adopted material."""
+    client = history_api
+    monkeypatch.setitem(client.app.dependency_overrides, verify_worker_token, lambda: None)
+    _, headers = account(client, "historical-requirement")
+    pid = project(client, headers)
+    rid = requirement(client, headers, pid)
+    previous = _old_requirement(client, headers, pid)
+    foreign = requirement(client, headers, project(client, headers, "other-project"))
+    asyncio.run(_seed_verification_cases(client, previous, foreign))
+    old = material_artifact()
+    old["functions"][0]["sections"][0]["items"][0]["text"] = "保存后展示历史结果"
+    old["materialBlocks"][0]["content"]["text"] = RAW_BLOCK_MARKER
+    previous_candidate = adopt_material(client, previous, headers=headers, content=json.dumps(old))
+    adopt_material(client, foreign, headers=headers, content=json.dumps(old))
+    current_candidate = adopt_material(client, rid, headers=headers)
+    connection = seed_llm_connection(
+        client,
+        headers,
+        project_id=pid,
+        name="history",
+        base_url="https://llm.example",
+        api_key="test",
     )
-    assert completed.status_code == 204, completed.text
-    candidates = client.get(base + "/candidates", headers=headers).json()["data"]["items"]
-    assert len(candidates) == 1
-    candidate = candidates[0]
-    # Studio reads the same frozen input the Worker received to resolve item text.
-    detail = client.get(f"{base}/candidates/{candidate['candidateId']}", headers=headers)
-    assert json.loads(detail.json()["data"]["materialContent"]) == payload
-    assert "HISTORICAL-RAW-BLOCK-MARKER" not in detail.json()["data"]["materialContent"]
-    slot = client.get(base + "/current", headers=headers).json()["data"]
-    adopted = client.post(
-        base + "/adoption",
+    asyncio.run(_remove_history_stage(client, rid))
+    chain = f"/v1/requirements/{rid}/generation/requirement_analysis"
+    return SimpleNamespace(
+        client=client,
         headers=headers,
+        rid=rid,
+        previous=previous,
+        foreign=foreign,
+        previous_candidate=previous_candidate,
+        current_candidate=current_candidate,
+        connection=connection,
+        base=f"{chain}/stages/{HISTORICAL_REQUIREMENT_STAGE}",
+        verification=f"{chain}/stages/{HISTORICAL_TEST_STAGE}",
+        function_stage=f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis",
+    )
+
+
+def _current(history):
+    response = history.client.get(history.base + "/current", headers=history.headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
+def _start_history_run(history):
+    """Run the history stage as the user; returns the request and its receipt."""
+    request = {"connectionId": history.connection, "requestId": str(uuid4())}
+    response = history.client.post(
+        history.base + "/candidate-run", headers=history.headers, json=request
+    )
+    assert response.status_code == 200, response.text
+    return request, response.json()["data"]
+
+
+def _claim(history):
+    """Let the history worker claim the pending attempt."""
+    response = history.client.post("/internal/ai-worker/tasks/claim", json={"workerId": WORKER})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _snapshot(history, task_id):
+    response = history.client.get(f"/internal/ai-worker/tasks/{task_id}/snapshot")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _complete(history, task_id, attempt_id, payload):
+    """Report ``payload`` as the successful result of the attempt; returns the response."""
+    return history.client.post(
+        f"/internal/ai-worker/tasks/{task_id}/completed",
+        json={
+            "workerId": WORKER,
+            "attemptId": attempt_id,
+            "status": "success",
+            "resultYaml": json.dumps(payload),
+        },
+    )
+
+
+def _complete_history(history):
+    """Start the history stage and relate the previous requirement to the current one."""
+    _, receipt = _start_history_run(history)
+    claim = _claim(history)
+    payload = json.loads(_snapshot(history, claim["taskId"])["run"]["sourceContent"])
+    output = _relation_output(history.rid, payload)
+    _add_one_relation(output, payload, history.previous)
+    completed = _complete(history, claim["taskId"], claim["attemptId"], output)
+    assert completed.status_code == 204, completed.text
+    candidates = history.client.get(history.base + "/candidates", headers=history.headers).json()[
+        "data"
+    ]["items"]
+    return SimpleNamespace(receipt=receipt, claim=claim, payload=payload, candidates=candidates)
+
+
+def _adopt_history(history, done):
+    """Adopt the relation candidate and ask to continue; returns the adoption result."""
+    candidate = done.candidates[0]
+    response = history.client.post(
+        history.base + "/adoption",
+        headers=history.headers,
         json={
             "action": "adopt",
             "candidateId": candidate["candidateId"],
             "expectedCandidateToken": candidate["candidateToken"],
-            "expectedAttemptId": claim["attemptId"],
-            "expectedCurrentToken": slot["currentToken"],
+            "expectedAttemptId": done.claim["attemptId"],
+            "expectedCurrentToken": _current(history)["currentToken"],
             "requestId": str(uuid4()),
             "continueAfter": True,
-            "connectionId": connection,
+            "connectionId": history.connection,
         },
     )
-    assert adopted.status_code == 200, adopted.text
-    adoption = adopted.json()["data"]
-    assert adoption["continuationAttemptId"], adoption["continuationError"]
-    adopted_slot = client.get(base + "/current", headers=headers).json()["data"]
-    assert json.loads(adopted_slot["materialContent"]) == payload
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
 
-    claimed = client.post("/internal/ai-worker/tasks/claim", json={"workerId": worker_id})
-    assert claimed.status_code == 200, claimed.text
-    task = claimed.json()
+
+def _verification_ready(history):
+    """Adopt the relations and claim the verification attempt they continue into."""
+    done = _complete_history(history)
+    _adopt_history(history, done)
+    task = _claim(history)
+    frozen = json.loads(_snapshot(history, task["taskId"])["run"]["sourceContent"])
+    return SimpleNamespace(relations=done, task=task, frozen=frozen)
+
+
+def test_history_stage_dispatches_one_replayable_attempt(history):
+    slot = _current(history)
+    refused = history.client.post(
+        history.verification + "/candidate-run",
+        headers=history.headers,
+        json={"connectionId": history.connection, "requestId": str(uuid4())},
+    )
+    request, receipt = _start_history_run(history)
+    replay = history.client.post(
+        history.base + "/candidate-run", headers=history.headers, json=request
+    )
+    claim = _claim(history)
+
+    assert slot["candidateId"] is None
+    assert refused.status_code == 400
+    assert replay.json()["data"]["replayed"]
+    assert claim["attemptId"] == receipt["attemptId"]
+    assert claim["currentStage"] == HISTORICAL_REQUIREMENT_STAGE
+
+
+def test_history_worker_input_and_result_stay_within_the_current_requirement(history):
+    _start_history_run(history)
+    claim = _claim(history)
+    document = history.client.get(
+        f"/internal/ai-worker/tasks/{claim['taskId']}/requirement-document"
+    )
+    snapshot = _snapshot(history, claim["taskId"])
+    run = snapshot["run"]
+    payload = json.loads(run["sourceContent"])
+    rejected = _complete(
+        history, claim["taskId"], claim["attemptId"], _relation_output(history.foreign, payload)
+    )
+
+    assert not run.get("documentDownloadUrl")
+    assert document.status_code == 404
+    assert RAW_BLOCK_MARKER not in run["sourceContent"]
+    assert "firstStepOutput" not in json.loads(snapshot["configJson"])
+    assert [item["requirementId"] for item in payload["historicalRequirements"]] == [
+        history.previous
+    ]
+    assert (
+        snapshot["candidateInput"]["selectedSources"][0]["candidateId"] == history.current_candidate
+    )
+    assert history.previous_candidate != history.current_candidate
+    assert rejected.status_code == 400, rejected.text
+
+
+def test_adopted_relations_become_known_and_continue_to_verification(history):
+    done = _complete_history(history)
+    candidate = done.candidates[0]
+    detail = history.client.get(
+        f"{history.base}/candidates/{candidate['candidateId']}", headers=history.headers
+    ).json()["data"]
+    adoption = _adopt_history(history, done)
+    slot = _current(history)
+    task = _claim(history)
+    rerun = history.client.post(
+        history.base + "/candidate-run",
+        headers=history.headers,
+        json={"connectionId": history.connection},
+    )
+    assert rerun.status_code == 200, rerun.text
+    known = asyncio.run(_attempt_source(history.client, rerun.json()["data"]["attemptId"]))[
+        "knownRelations"
+    ]
+
+    assert len(done.candidates) == 1
+    assert json.loads(detail["materialContent"]) == done.payload
+    assert RAW_BLOCK_MARKER not in detail["materialContent"]
+    assert adoption["continuationAttemptId"], adoption["continuationError"]
+    assert json.loads(slot["materialContent"]) == done.payload
     assert task["currentStage"] == HISTORICAL_TEST_STAGE
     assert task["attemptId"] == adoption["continuationAttemptId"]
-    assert task["attemptId"] != receipt["attemptId"]
-    worker_route = f"/internal/ai-worker/tasks/{task['taskId']}"
-    worker_input = client.get(worker_route + "/snapshot").json()
-    frozen = json.loads(worker_input["run"]["sourceContent"])
+    assert task["attemptId"] != done.receipt["attemptId"]
+    assert {edge["toRequirementId"] for edge in known} == {history.previous}
+    assert {edge["relationType"] for edge in known} == {"depends_on", "changes", "supplements"}
+
+
+def test_verification_input_freezes_impacts_and_leaves_other_runs_independent(history):
+    ready = _verification_ready(history)
+    candidate = ready.relations.candidates[0]
+    frozen = ready.frozen
+    function_run = history.client.post(
+        history.function_stage + "/candidate-run",
+        headers=history.headers,
+        json={"connectionId": history.connection},
+    )
+
     assert frozen["impactResultId"] == candidate["snapshotId"]
     assert [len(batch["candidateCases"]) for batch in frozen["batches"]] == [6, 1, 0]
     assert [batch["impact"]["impactId"] for batch in frozen["batches"]] == [
@@ -324,76 +488,40 @@ def test_history_candidate_uses_same_project_adopted_material_and_independent_at
         "added-submit-channel",
     ]
     assert set(frozen["fullCases"]) == {f"historical-case-{number}" for number in range(7)}
-    first_batch = frozen["batches"][0]
-    assert [step["position"] for step in first_batch["candidateCases"][0]["steps"]] == [4]
-
-    function_run = client.post(
-        f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/candidate-run",
-        headers=headers,
-        json={"connectionId": connection},
-    )
+    assert [step["position"] for step in frozen["batches"][0]["candidateCases"][0]["steps"]] == [4]
     assert function_run.status_code == 200, function_run.text
-    assert function_run.json()["data"]["attemptId"] != task["attemptId"]
-    first = _verification_pass(first_batch, needs_full=True)
-    supplement = _verification_pass(frozen["batches"][2])
-    del supplement["supplementalScenarios"]
-    supplement["schemaVersion"] = "0.2"
-    supplement["supplementalPoints"] = [
-        {
-            "pointId": "mobile-result",
-            "title": "验证单据保存后在移动端可以查看保存结果",
-        }
-    ]
-    result = {
-        **verification_run_header(VERIFICATION_RUN_RESULT, frozen),
-        "batches": [
-            {"firstPass": first, "fullCasePass": None},
-            {"firstPass": _verification_pass(frozen["batches"][1]), "fullCasePass": None},
-            {"firstPass": supplement, "fullCasePass": None},
-        ],
-    }
-    event = {"workerId": worker_id, "attemptId": task["attemptId"], "status": "success"}
-    incomplete = client.post(
-        worker_route + "/completed", json={**event, "resultYaml": json.dumps(result)}
+    assert function_run.json()["data"]["attemptId"] != ready.task["attemptId"]
+
+
+def test_verification_completion_needs_the_full_case_pass_and_known_point_fields(history):
+    ready = _verification_ready(history)
+    result = _with_full_case_pass(_verification_result(ready.frozen), ready.frozen)
+    result["batches"][2]["firstPass"]["supplementalPoints"][0]["action"] = "打开移动端单据"
+
+    incomplete = _complete(
+        history, ready.task["taskId"], ready.task["attemptId"], _verification_result(ready.frozen)
     )
+    excessive = _complete(history, ready.task["taskId"], ready.task["attemptId"], result)
+
     assert incomplete.status_code == 400, incomplete.text
-    follow_up = full_case_batch(frozen, first_batch, first)
-    assert [case["caseId"] for case in follow_up["candidateCases"]] == ["historical-case-0"]
-    result["batches"][0]["fullCasePass"] = _verification_pass(follow_up, invalidate=True)
-    supplement["supplementalPoints"][0]["action"] = "打开移动端单据"
-    excessive = client.post(
-        worker_route + "/completed", json={**event, "resultYaml": json.dumps(result)}
-    )
     assert excessive.status_code == 400, excessive.text
-    del supplement["supplementalPoints"][0]["action"]
-    verified = client.post(
-        worker_route + "/completed", json={**event, "resultYaml": json.dumps(result)}
-    )
+
+
+def test_verified_result_is_stored_without_touching_formal_cases(history):
+    ready = _verification_ready(history)
+    result = _with_full_case_pass(_verification_result(ready.frozen), ready.frozen)
+    verified = _complete(history, ready.task["taskId"], ready.task["attemptId"], result)
     assert verified.status_code == 204, verified.text
-    listed = client.get(verification + "/candidates", headers=headers).json()["data"]["items"]
+    listed = history.client.get(
+        history.verification + "/candidates", headers=history.headers
+    ).json()["data"]["items"]
+    detail = history.client.get(
+        f"{history.verification}/candidates/{listed[0]['candidateId']}",
+        headers=history.headers,
+    ).json()["data"]
+    case = asyncio.run(_stored_function_case(history.client, "historical-case-0"))
+
     assert len(listed) == 1
-    detail = client.get(f"{verification}/candidates/{listed[0]['candidateId']}", headers=headers)
-    assert json.loads(detail.json()["data"]["content"]) == result
-    # Studio reads the same frozen run input the Worker received (rule text, full cases).
-    assert json.loads(detail.json()["data"]["materialContent"]) == frozen
-
-    async def check_formal_case():
-        async with client.app.state.test_sessions() as session:
-            case = await session.scalar(
-                select(FunctionTestCase).where(FunctionTestCase.case_id == "historical-case-0")
-            )
-            assert case.invalidated_at is None
-
-    asyncio.run(check_formal_case())
-
-    rerun = client.post(base + "/candidate-run", headers=headers, json={"connectionId": connection})
-    assert rerun.status_code == 200, rerun.text
-
-    async def load_rerun_input():
-        async with client.app.state.test_sessions() as session:
-            attempt = await session.get(AiGenerationAttempt, rerun.json()["data"]["attemptId"])
-            return json.loads(attempt.input_snapshot_json["source"]["sourceContent"])
-
-    known = asyncio.run(load_rerun_input())["knownRelations"]
-    assert {edge["toRequirementId"] for edge in known} == {previous}
-    assert {edge["relationType"] for edge in known} == {"depends_on", "changes", "supplements"}
+    assert json.loads(detail["content"]) == result
+    assert json.loads(detail["materialContent"]) == ready.frozen
+    assert case.invalidated_at is None

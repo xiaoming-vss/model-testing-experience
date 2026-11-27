@@ -54,3 +54,28 @@ def test_invalid_pid_is_unhealthy(tmp_path: Path) -> None:
     health = HealthFile(path, 90)
 
     assert health.healthy() is False
+
+
+def test_progress_replaces_the_file_atomically_and_leaves_no_temp_file(tmp_path: Path) -> None:
+    path = tmp_path / "runtime" / "health.json"
+    health = HealthFile(path, 90)
+    health.progress("polling")
+    health.progress("running")
+
+    # The probe only ever reads a complete file, and no half-written sibling lingers.
+    assert sorted(item.name for item in path.parent.iterdir()) == ["health.json"]
+    assert json.loads(path.read_text())["stage"] == "running"
+    assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_stop_removes_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "health.json"
+    health = HealthFile(path, 90)
+    health.progress("running")
+
+    health.stop()
+
+    assert not path.exists()
+    assert health.healthy() is False
+    # Stopping twice, as an exit path and a signal handler might, is harmless.
+    health.stop()

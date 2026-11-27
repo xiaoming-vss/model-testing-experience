@@ -4,9 +4,8 @@ import asyncio
 
 import pytest
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.mysql_initialization import async_sessions, seed_row
 from support.mysql_initialization import mysql as mysql
-from support.mysql_initialization import seed_row
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.function_case_push import (
@@ -22,8 +21,7 @@ from testing_agent.services.function_case_push_journal import CasePushJournal, C
 async def test_mysql_project_serialization_grants_one_remote_write_permit(mysql):
     with mysql.begin() as connection:
         project = seed_row(connection, Project.__table__)
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     first_reserved, release = asyncio.Event(), asyncio.Event()
 
     async def reserve(request_id, first=False):
@@ -91,8 +89,7 @@ async def test_mysql_restore_review_and_batch_order_are_persisted(mysql):
 
     with mysql.begin() as connection:
         project = seed_row(connection, Project.__table__)
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as session:
             await session.scalar(

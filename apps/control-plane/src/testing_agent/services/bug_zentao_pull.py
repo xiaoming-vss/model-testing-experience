@@ -98,6 +98,15 @@ class BugZentaoPullService:
     def _remote_payload(snapshot: dict, description: dict) -> dict:
         return {**snapshot, "stepsDigest": description["digest"]}
 
+    def _local_groups(self, bug) -> dict[str, dict]:
+        """Pin every previewed local group so apply can detect local drift (R31)."""
+        return {
+            "profile": self._local_profile(bug),
+            "description": {"digest": self._local_digest(bug.description_html)},
+            "status": self._local_status(bug),
+            "assignee": {"userId": bug.assignee_user_id},
+        }
+
     # ----------------------------------------------------------------- preview
 
     async def preview(self, user_id: str, bug_id: str) -> dict:
@@ -162,6 +171,7 @@ class BugZentaoPullService:
         return {
             "remoteBugId": int(push.remote_bug_id),
             "remoteDigest": remote_digest,
+            "localDigest": digest_of(self._local_groups(bug)),
             "linkedSource": push.source,
             "groups": [group.model_dump(by_alias=True, mode="json") for group in groups],
         }
@@ -170,7 +180,8 @@ class BugZentaoPullService:
 
     async def apply(self, user_id: str, bug_id: str, body: ZentaoPullRequest) -> dict:
         bug, push, access = await self._context(user_id, bug_id)
-        await self.session.refresh(bug, with_for_update=True)
+        # Read the remote side before taking any local lock; a slow MCP call must
+        # not block concurrent editing of the same Bug.
         detail, snapshot = await self._remote(
             access, int(push.remote_bug_id), await self._bound_project_id(bug.project_id)
         )
@@ -178,6 +189,12 @@ class BugZentaoPullService:
         remote_digest = digest_of(self._remote_payload(snapshot, description))
         if remote_digest != body.remote_digest:
             raise AppError(409, "远端内容已变化，请重新预览后再应用（A09）", 409)
+        # Recheck permission and both local content + version once the network
+        # wait is over, then keep the lock through the local write.
+        await self.bugs.get_accessible_entity(user_id, bug_id, action="write")
+        await self.session.refresh(bug, with_for_update=True)
+        if digest_of(self._local_groups(bug)) != body.local_digest:
+            raise AppError(409, "本地内容已变化，请重新预览后再应用（R31）", 409)
         operation_id = new_id()
         applied: list[str] = []
         kept: list[str] = []

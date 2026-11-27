@@ -18,15 +18,15 @@ export function normalizeUserName(user?: User | null) {
 }
 
 export function normalizeProjectId(project: Project) {
-  return project.projectId ?? project.project_id ?? ''
+  return project.projectId ?? ''
 }
 
 export function normalizeSprintId(sprint: Sprint) {
-  return sprint.sprintId ?? sprint.sprint_id ?? ''
+  return sprint.sprintId ?? ''
 }
 
 export function normalizeRequirementId(requirement: Requirement) {
-  return requirement.requirementId ?? requirement.requirement_id ?? ''
+  return requirement.requirementId ?? ''
 }
 
 export function normalizeEnvironmentId(environment: ApiEnvironment) {
@@ -54,21 +54,22 @@ export function normalizeUiTestCaseId(uiTestCase: UiTestCase) {
 }
 
 export function normalizeAssertRuleId(assertRule: ApiAssertRule) {
-  return assertRule.assertRuleId ?? assertRule.assert_rule_id ?? ''
+  return assertRule.assertRuleId ?? ''
 }
 
 export function normalizeExtractRuleId(extractRule: ApiExtractRule) {
-  return extractRule.extractRuleId ?? extractRule.extract_rule_id ?? ''
+  return extractRule.extractRuleId ?? ''
 }
 
 export function pickStartTime(sprint?: Sprint) {
-  return sprint?.startTime ?? sprint?.start_time
+  return sprint?.startTime
 }
 
 export function pickEndTime(sprint?: Sprint) {
-  return sprint?.endTime ?? sprint?.end_time
+  return sprint?.endTime
 }
 
+/** Bug 记录仍可能只带 snake_case 时间，属已登记的兼容字段，不能收窄。 */
 export function pickCreatedAt(entity?: { createdAt?: string; created_at?: string }) {
   return entity?.createdAt ?? entity?.created_at
 }
@@ -84,14 +85,14 @@ const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: 'numeric', minute: 'numeric', second: 'numeric',
 })
 
-function parseApiTime(value: string) {
+export function parseUtcAssumedTime(value: string) {
   const isTimezoneLessIso = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)
   return new Date(isTimezoneLessIso ? `${value.replace(' ', 'T')}Z` : value)
 }
 
 export function formatTime(value?: string) {
   if (!value) return '-'
-  const date = parseApiTime(value)
+  const date = parseUtcAssumedTime(value)
   return Number.isNaN(date.getTime())
     ? value
     : timeFormatter.format(date)
@@ -99,7 +100,7 @@ export function formatTime(value?: string) {
 
 export function formatCompactTime(value?: string | null) {
   if (!value) return ''
-  const parsed = parseApiTime(value)
+  const parsed = parseUtcAssumedTime(value)
   if (Number.isNaN(parsed.getTime())) return ''
   return parsed.toLocaleString('zh-CN', {
     timeZone: displayTimeZone,

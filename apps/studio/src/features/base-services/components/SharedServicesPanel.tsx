@@ -1,5 +1,5 @@
 import { ListEmptyState } from '@/shared/components/ListEmptyState'
-import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE, pageSlice } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { SharedServiceDialogs } from './SharedServiceDialogs'
 import { ZentaoMcpServiceCard } from './ZentaoMcpServiceCard'
@@ -37,7 +37,7 @@ import {
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { sharedServicesApi as api, type PersonalAuthorization, type ServiceConfiguration, type ServiceProvider, type SharedService } from '../api/sharedServices.api'
 
-const labels = { llm: 'LLM', zentao: '禅道', gitlab: 'GitLab', mcp: 'MCP' }
+const labels = { llm: 'LLM', gitlab: 'GitLab', mcp: 'MCP' }
 const stateLabels = { unauthorized: '未授权', authorized: '已授权', invalid: '授权已失效' }
 
 export function SharedServicesPanel({ projectId, provider, toolbarActions }: { projectId?: string; provider: ServiceProvider; toolbarActions?: HTMLElement | null }) {
@@ -92,14 +92,14 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
         if (provider === 'mcp' && !mcpTemplate) return
         await api.create(projectId, provider, {
           name: values.name.trim(), baseUrl: values.baseUrl.trim(),
-          ...(provider === 'zentao' || provider === 'gitlab' ? { allowHttp: values.allowHttp === true, insecureSkipVerify: values.insecureSkipVerify === true } : {}),
+          ...(provider === 'gitlab' ? { allowHttp: values.allowHttp === true, insecureSkipVerify: values.insecureSkipVerify === true } : {}),
           ...(provider === 'llm' ? { modelId: values.modelId?.trim() } : {}),
           ...(provider === 'mcp' ? { templateId: values.templateId } : {}),
         })
         message.success('服务配置已保存，请单独完成我的授权')
       } else {
         if (provider === 'mcp') await api.rename(projectId, provider, editor.serviceId, values.name.trim(), values.baseUrl.trim(), values.confirmInstanceSwitch === true)
-        else if (provider === 'zentao' || provider === 'gitlab') await api.rename(projectId, provider, editor.serviceId, values.name.trim(), undefined, undefined, values.allowHttp === true, values.insecureSkipVerify === true)
+        else if (provider === 'gitlab') await api.rename(projectId, provider, editor.serviceId, values.name.trim(), undefined, undefined, values.allowHttp === true, values.insecureSkipVerify === true)
         else await api.rename(projectId, provider, editor.serviceId, values.name.trim())
       }
       closeEditor()
@@ -135,8 +135,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     finally { setSaving(false) }
   }
   const services = listItems(query.data)
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(services.length / pageSize)))
-  const pagedServices = services.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const pagedServices = pageSlice(services, page, pageSize)
   const createButton = <ProjectActionButton action="manage" projectId={projectId} type="primary" className="action-btn-create" operation="create" disabled={provider === 'mcp' && (templates.isPending || templates.isError || query.isPending || query.isError)} onClick={() => openEditor('create')}>{provider === 'mcp' ? '新增 MCP' : '新建服务'}</ProjectActionButton>
   return <>
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}

@@ -14,6 +14,32 @@ from testing_agent.models.sprint import Sprint
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import BaseRepository
 
+API_COLLECTION_RUN_SUMMARY_COLUMNS = (
+    ApiCollectionRun.collection_run_id,
+    ApiCollectionRun.collection_id,
+    ApiCollectionRun.project_id,
+    ApiCollectionRun.requirement_id,
+    ApiCollectionRun.requirement_name,
+    ApiCollectionRun.sprint_id,
+    ApiCollectionRun.sprint_name,
+    ApiCollectionRun.environment_id,
+    ApiCollectionRun.trigger_user_id,
+    ApiCollectionRun.trigger_type,
+    ApiCollectionRun.status,
+    ApiCollectionRun.total_count,
+    ApiCollectionRun.success_count,
+    ApiCollectionRun.failed_count,
+    ApiCollectionRun.error_count,
+    ApiCollectionRun.skipped_count,
+    ApiCollectionRun.runtime_vars_json,
+    ApiCollectionRun.error_message,
+    ApiCollectionRun.started_at,
+    ApiCollectionRun.finished_at,
+    ApiCollectionRun.duration_ms,
+    ApiCollectionRun.created_at,
+    ApiCollectionRun.updated_at,
+)
+
 
 class ApiCollectionRunRepository(BaseRepository):
     async def get_collection(self, collection_id: str) -> ApiCollection | None:
@@ -68,6 +94,7 @@ class ApiCollectionRunRepository(BaseRepository):
             (
                 await self.session.scalars(
                     select(ApiCollectionRun)
+                    .options(load_only(*API_COLLECTION_RUN_SUMMARY_COLUMNS))
                     .where(criteria)
                     .order_by(ApiCollectionRun.created_at.desc(), ApiCollectionRun.id.desc())
                     .offset((page - 1) * page_size)

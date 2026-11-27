@@ -23,7 +23,16 @@ class AiGenerateTask(Base):
         String(64), unique=True, nullable=False, comment="任务业务标识"
     )
     task_type: Mapped[str] = mapped_column(
-        String(50), index=True, nullable=False, default="api_case_generate", comment="任务类型"
+        String(50),
+        index=True,
+        nullable=False,
+        default="api_case_generate",
+        comment=(
+            "任务类型：requirement_analysis/functional_case_generate/api_case_"
+            "generate/ui_case_generate/repository_profile/test_report_gen"
+            "erate/code_risk_analysis/test_order_graph/test_order_case_vi"
+            "sualization"
+        ),
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False, comment="AI 任务名称")
     project_id: Mapped[str] = mapped_column(
@@ -34,8 +43,12 @@ class AiGenerateTask(Base):
         nullable=False,
         comment="项目业务标识",
     )
-    sprint_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="迭代业务标识")
-    requirement_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="需求业务标识")
+    sprint_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="迭代业务标识；空字符串表示未关联迭代"
+    )
+    requirement_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="需求业务标识；空字符串表示未关联需求"
+    )
     # 非需求域任务（测试报告、测试图谱）以其他业务实体为锚点，测试图谱锚在测试单上。
     order_id: Mapped[str] = mapped_column(
         String(64),
@@ -55,7 +68,13 @@ class AiGenerateTask(Base):
         String(64), nullable=False, comment="任务创建者用户业务标识"
     )
     source_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, comment="AI 任务输入来源类型"
+        String(30),
+        nullable=False,
+        comment=(
+            "AI 任务输入来源类型：docx/richtext/requirement/interface_library/repo"
+            "sitory/manual/daily_metrics/test_order_graph/test_order_case"
+            "_visualization"
+        ),
     )
     source_content: Mapped[str] = mapped_column(
         LONGTEXT, nullable=False, comment="AI 任务源输入内容"

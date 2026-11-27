@@ -193,18 +193,6 @@ def test_input_changes_stop_prepare_without_creating_domain_write_intent(api, in
     assert failure.json()["jobStatus"] == "failed"
 
 
-def test_job_summary_is_bug_scoped_and_does_not_disclose_frozen_inputs(api, integration):
-    state = integration
-    submitted, _ = submit(api, state)
-    _, outsider = account(api, "integration-outsider")
-    url = f"/v1/bugs/{state['bug']['bugId']}/zentao-jobs/{submitted['jobId']}"
-    assert api.get(url, headers=outsider).status_code in (403, 404)
-    response = api.get(url, headers=state["owner"])
-    assert response.status_code == 200, response.text
-    assert "snapshot" not in response.text and "connectionId" not in response.text
-    assert "owner-secret" not in response.text
-
-
 def test_old_worker_credentials_cannot_claim_integration_jobs(api, integration):
     old = get_settings().worker_key or "old"
     response = api.post(
@@ -513,9 +501,9 @@ def test_queue_http_shows_recent_capability_and_keeps_internal_worker_input_comp
     api, integration
 ):
     state = integration
-    submitted, _ = submit(api, state)
-    url = f"/v1/bugs/{state['bug']['bugId']}/zentao-jobs/{submitted['jobId']}"
-    queued = api.get(url, headers=state["owner"]).json()["data"]
+    submit(api, state)
+    url = state["url"]
+    queued = api.get(url, headers=state["owner"]).json()["data"]["activeJob"]
     assert queued["queueReason"] == "worker_offline" and queued["queueWaitSeconds"] >= 0
     unsupported = api.post(
         PREFIX + "/jobs/claim",
@@ -529,7 +517,8 @@ def test_queue_http_shows_recent_capability_and_keeps_internal_worker_input_comp
     )
     assert unsupported.status_code == 200 and unsupported.json()["job"] is None
     assert (
-        api.get(url, headers=state["owner"]).json()["data"]["queueReason"] == "worker_incompatible"
+        api.get(url, headers=state["owner"]).json()["data"]["latestJob"]["queueReason"]
+        == "worker_incompatible"
     )
     assert rows(api, IntegrationJob)[0].status == "queued"
     claimed = claim(api, state)["job"]

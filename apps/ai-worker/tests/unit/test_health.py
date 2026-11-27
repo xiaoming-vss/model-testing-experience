@@ -1,15 +1,8 @@
 import os
-import sys
 import unittest
 import urllib.error
 import urllib.request
-from pathlib import Path
 from unittest.mock import patch
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.app.health import (
     HealthServer,

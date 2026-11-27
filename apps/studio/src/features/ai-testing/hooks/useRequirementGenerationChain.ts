@@ -6,6 +6,24 @@ import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 
 export type SelectedChainStage = { kind: GenerationChainKind; stage: string }
 
+const OVERVIEW_KEY = (requirementId: string) => ['generationChain', requirementId, 'overview'] as const
+
+/** Resolve a stage key to its server-owned display name across every chain. */
+export function useGenerationStageLabels(requirementId: string, enabled: boolean) {
+  const overview = useQuery({
+    queryKey: OVERVIEW_KEY(requirementId),
+    queryFn: () => generationChainApi.overview(requirementId),
+    enabled,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  })
+  return useMemo(() => {
+    const labels: Record<string, string> = {}
+    for (const chain of overview.data?.chains ?? []) for (const item of chain.stages) labels[item.stage] = item.label
+    return (stage: string) => labels[stage] ?? stage
+  }, [overview.data])
+}
+
 /** Read the candidate-chain overview and manage the selected stage. */
 export function useRequirementGenerationChain({ requirementId, projectId, enabled }: {
   requirementId: string
@@ -16,7 +34,7 @@ export function useRequirementGenerationChain({ requirementId, projectId, enable
   const [selected, setSelected] = useState<SelectedChainStage>()
   const personalLlm = usePersonalLlmChoice(projectId)
   const overview = useQuery({
-    queryKey: ['generationChain', requirementId, 'overview'],
+    queryKey: OVERVIEW_KEY(requirementId),
     queryFn: () => generationChainApi.overview(requirementId),
     enabled,
     refetchInterval: query => (query.state.data?.chains ?? []).some(chain => chain.active || chain.busy)

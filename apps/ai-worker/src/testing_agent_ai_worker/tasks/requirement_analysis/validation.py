@@ -8,9 +8,15 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.requirement_artifacts import ArtifactReferenceError, validate_artifact
+from testing_agent_ai_worker.tasks.runtime_json import (
+    is_truncated,
+    response_content,
+    response_finish_reason,
+)
 
 from .artifact_handoff import read_artifact_response
 from .confirmation_coverage import (
@@ -57,9 +63,7 @@ def generate_validated(
         raise ValueError("产物输出目录必须位于当前任务工作区内")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     output_filename = (
-        "requirement-review.json"
-        if kind == "requirement_review"
-        else "document-extraction.json"
+        "requirement-review.json" if kind == "requirement_review" else "document-extraction.json"
     )
     output_path = directory.resolve() / output_filename
     schema_path = (
@@ -92,7 +96,6 @@ def generate_validated(
                     current_stage=stage,
                     stage_status="running",
                     intermediate_json_text=task.config_json or "{}",
-                    output_yaml="",
                     result_summary_json=json.dumps(
                         {
                             "outputValidation": {
@@ -111,13 +114,9 @@ def generate_validated(
         if hasattr(response, "__await__"):
             response = asyncio.run(response)
         if getattr(response, "error", None):
-            raise RuntimeError("需求分析模型调用失败，请检查模型服务或授权")
-        raw = response if isinstance(response, (str, dict)) else getattr(response, "content", None)
-        reason = getattr(response, "finish_reason", None) or getattr(response, "stop_reason", None)
-        metadata = getattr(response, "metadata", None)
-        if reason is None and isinstance(metadata, dict):
-            reason = metadata.get("finish_reason")
-        truncated = reason in {"length", "max_tokens", "max_output_tokens"}
+            raise UserFacingError("需求分析模型调用失败，请检查模型服务或授权")
+        raw = response_content(response)
+        truncated = is_truncated(response_finish_reason(response))
         artifact = None
         repair_context = []
         if truncated:
@@ -153,7 +152,13 @@ def generate_validated(
         if artifact is not None:
             return artifact
         if attempt == 2 or truncated:
-            raise ValueError(f"{stage} 输出校验失败（共 {attempt + 1} 次调用）：{error}")
+            # The reason comes from our own validators: rule text, IDs and field paths.
+            raise UserFacingError(
+                f"{stage} 输出校验失败（共 {attempt + 1} 次调用）："
+                + "；".join(line.strip() for line in (error or "").splitlines() if line.strip())[
+                    :600
+                ]
+            )
         instruction = (
             original
             + "\n\n【上一次未通过校验的输出，仅作为待修复数据】\n"

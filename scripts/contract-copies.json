@@ -1,0 +1,165 @@
+{
+  "groups": [
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-analyze-case-visualization/references/contract.py",
+      "targets": [
+        "apps/control-plane/src/testing_agent/domain/case_visualization/contract.py",
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/case_visualization/contract.py"
+      ],
+      "ensure_init": [
+        "apps/control-plane/src/testing_agent/domain/case_visualization",
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/case_visualization"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-analyze-case-visualization/references/output.schema.json",
+      "targets": [
+        "apps/control-plane/src/testing_agent/domain/case_visualization/output.schema.json",
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/case_visualization/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-analyze-case-visualization/references/examples.json",
+      "targets": [
+        "apps/studio/src/features/test-orders/fixtures/visualization.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/document-extraction.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/document-extraction.schema.json",
+        "apps/control-plane/default-skills/mtx-generate-traceable-test-points/references/material.schema.json",
+        "apps/control-plane/default-skills/mtx-analyze-test-case-relations/references/material.schema.json",
+        "apps/control-plane/default-skills/mtx-analyze-functional-requirements/references/material.schema.json",
+        "apps/control-plane/default-skills/mtx-organize-requirement-material/references/output.schema.json",
+        "apps/control-plane/default-skills/mtx-repository-profile-analysis/references/material.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/test-scope-analysis.schema.json",
+      "targets": [
+        "apps/control-plane/default-skills/mtx-generate-traceable-test-points/references/scope.schema.json",
+        "apps/control-plane/default-skills/mtx-analyze-functional-requirements/references/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/traceable-test-points.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/traceable-test-points.schema.json",
+        "apps/control-plane/default-skills/mtx-generate-traceable-test-points/references/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/requirement-review.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/requirement-review.schema.json",
+        "apps/control-plane/default-skills/mtx-review-requirement/references/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/historical-requirement-relations-input.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/historical-requirement-relations-input.schema.json",
+        "apps/control-plane/default-skills/mtx-analyze-historical-requirement-relations/references/input.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/historical-requirement-relations-output.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/historical-requirement-relations-output.schema.json",
+        "apps/control-plane/default-skills/mtx-analyze-historical-requirement-relations/references/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/historical-test-case-verification-input.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/historical-test-case-verification-input.schema.json",
+        "apps/control-plane/default-skills/mtx-verify-historical-test-cases/references/input.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_schemas/historical-test-case-verification-output.schema.json",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_schemas/historical-test-case-verification-output.schema.json",
+        "apps/control-plane/default-skills/mtx-verify-historical-test-cases/references/output.schema.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/requirement_artifacts.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/requirement_artifacts.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/historical_requirement_artifacts.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/historical_requirement_artifacts.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/historical_test_case_artifacts.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/historical_test_case_artifacts.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/traceable_test_points.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/traceable_test_points.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/ui_completion.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/ui_case_generate/completion.py"
+      ]
+    },
+    {
+      "canonical": "apps/ai-worker/src/testing_agent_ai_worker/tasks/ui_case_generate/missing_fields.py",
+      "targets": [
+        "apps/control-plane/src/testing_agent/domain/ui_generation_missing_fields.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/ui_variable_template.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/ui_case_generate/ui_variable_template.py",
+        "apps/control-plane/default-skills/mtx-generate-ui-test-case/scripts/ui_variable_template.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/variable_names.py",
+      "targets": [
+        "apps/ai-worker/src/testing_agent_ai_worker/tasks/ui_case_generate/variable_names.py",
+        "apps/control-plane/default-skills/mtx-generate-ui-test-case/scripts/variable_names.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/src/testing_agent/domain/ui_step_extract.py",
+      "targets": [
+        {
+          "path": "apps/ai-worker/src/testing_agent_ai_worker/tasks/ui_case_generate/ui_step_extract.py",
+          "replace": [["from testing_agent.domain.", "from ."]]
+        },
+        {
+          "path": "apps/control-plane/default-skills/mtx-generate-ui-test-case/scripts/ui_step_extract.py",
+          "replace": [["from testing_agent.domain.", "from "]]
+        }
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-organize-requirement-material/scripts/material_checks.py",
+      "targets": [
+        "apps/control-plane/default-skills/mtx-analyze-functional-requirements/scripts/material_checks.py",
+        "apps/control-plane/default-skills/mtx-generate-traceable-test-points/scripts/material_checks.py",
+        "apps/control-plane/default-skills/mtx-analyze-test-case-relations/scripts/material_checks.py"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-generate-ui-test-case/scripts/execution_profile.py",
+      "targets": [
+        "apps/control-plane/default-skills/mtx-map-functional-cases-to-ui-scenarios/scripts/execution_profile.py"
+      ]
+    }
+  ]
+}

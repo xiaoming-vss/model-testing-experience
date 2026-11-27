@@ -1,7 +1,6 @@
 import json
 import tempfile
 import unittest
-from pathlib import Path
 
 from testing_agent_ai_worker.config.models import PiConfig, RepositoryProfileConfig
 from testing_agent_ai_worker.models.task import (
@@ -11,12 +10,12 @@ from testing_agent_ai_worker.models.task import (
     Task,
     TaskPayload,
 )
-from testing_agent_ai_worker.tasks.git_workspace import GitWorkspaceError
 from testing_agent_ai_worker.tasks.repository_profile.workspace import (
     ProfileWorkspaceError,
     cleanup_profile_workspace,
     prepare_profile_workspace,
 )
+from tests.support.git import FakeGitRunner
 
 
 def _task(*bindings: RepositoryBinding) -> Task:
@@ -74,23 +73,14 @@ def _credentials(*repository_ids: str) -> list[GitlabCredentials]:
     ]
 
 
-class _FakeGitRunner:
-    def __init__(self) -> None:
-        self.calls: list[dict] = []
-        self.head = "def456"
-
-    def run(self, args, *, cwd=None, env=None, timeout=300.0):
-        self.calls.append({"args": list(args), "cwd": cwd, "env": env})
-        if args[0] == "clone":
-            if "bad-repo" in args[-2]:
-                raise GitWorkspaceError("clone failed")
-            repo = Path(args[-1])
-            (repo / "src").mkdir(parents=True, exist_ok=True)
-            (repo / "README.md").write_text("readme\n", encoding="utf-8")
-            return ""
-        if args[0] == "rev-parse":
-            return f"{self.head}\n"
-        return ""
+def _runner() -> FakeGitRunner:
+    """Git stand-in of the profile tests: one readable repository, ``bad-repo`` fails to clone."""
+    return FakeGitRunner(
+        head="def456",
+        files={"README.md": "readme\n"},
+        directories=("src",),
+        fail_clone="bad-repo",
+    )
 
 
 class RepositoryProfileWorkspaceTests(unittest.TestCase):
@@ -101,7 +91,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
         self.config = RepositoryProfileConfig()
 
     def test_clones_only_working_branch_head_and_lists_top_level_entries(self) -> None:
-        runner = _FakeGitRunner()
+        runner = _runner()
         workspace = prepare_profile_workspace(
             _task(_binding("repo-1")),
             _credentials("repo-1"),
@@ -122,7 +112,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
         self.assertNotIn("secret-repo-1", " ".join(clone_call["args"]))
 
     def test_one_repository_failure_keeps_the_other_readable(self) -> None:
-        runner = _FakeGitRunner()
+        runner = _runner()
         workspace = prepare_profile_workspace(
             _task(_binding("bad-repo"), _binding("repo-1")),
             _credentials("bad-repo", "repo-1"),
@@ -140,7 +130,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
         )
 
     def test_profile_error_skips_repository_without_cloning(self) -> None:
-        runner = _FakeGitRunner()
+        runner = _runner()
         workspace = prepare_profile_workspace(
             _task(_binding("repo-1", profile_error="无权限"), _binding("repo-2")),
             _credentials("repo-2"),
@@ -158,7 +148,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
         )
 
     def test_all_repositories_unavailable_fails(self) -> None:
-        runner = _FakeGitRunner()
+        runner = _runner()
         with self.assertRaisesRegex(ProfileWorkspaceError, "所有绑定仓库均无法读取"):
             prepare_profile_workspace(
                 _task(_binding("repo-1", profile_error="无权限")),
@@ -174,7 +164,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
             _credentials("repo-1"),
             agent_config=self.agent_config,
             config=self.config,
-            runner=_FakeGitRunner(),
+            runner=_runner(),
         )
         manifest = json.dumps(workspace.manifest)
         self.assertNotIn("secret-repo-1", manifest)
@@ -186,7 +176,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
             _credentials("repo-1"),
             agent_config=self.agent_config,
             config=self.config,
-            runner=_FakeGitRunner(),
+            runner=_runner(),
         )
         cleanup_profile_workspace(workspace, success=False, config=self.config)
         self.assertTrue((workspace.run_root / ".retain-until").exists())
@@ -200,7 +190,7 @@ class RepositoryProfileWorkspaceTests(unittest.TestCase):
             _credentials("repo-1", "repo-2"),
             agent_config=self.agent_config,
             config=self.config,
-            runner=_FakeGitRunner(),
+            runner=_runner(),
         )
         self.assertEqual(
             ["repo-2"], [repo.binding.repository_id for repo in workspace.repositories]

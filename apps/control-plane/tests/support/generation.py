@@ -12,7 +12,6 @@ from testing_agent.repositories.requirement_design import RequirementDesignRepos
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.services.ai_report import TestReportWorkflow
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
-from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
 from testing_agent.services.ai_task_access import GenerationImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
@@ -60,10 +59,6 @@ def generation_services(
         files=files,
         id_factory=identifiers,
     )
-    stages_workflow = GenerationStageWorkflow(
-        repository=repository,
-        owned_run=access.owned_run,
-    )
     bundle = SimpleNamespace(
         repository=repository,
         access=access,
@@ -71,12 +66,10 @@ def generation_services(
         files=files,
         queries=GenerationQueries(repository, access),
         launcher=launcher,
-        stages=stages_workflow,
         reports=TestReportWorkflow(
             repository=repository,
             sprint_daily_metrics_service=metrics,
             ensure_project_access=access.ensure_project_access,
-            owned_run=access.owned_run,
             id_factory=identifiers,
         ),
         api_importer=ApiCandidateImporter(
@@ -125,7 +118,6 @@ def install_generation_services(app, services):
         (deps.get_generation_queries, services.queries),
         (deps.get_generation_task_commands, services.commands),
         (deps.get_generation_launcher, services.launcher),
-        (deps.get_generation_stages, services.stages),
         (deps.get_generation_reports, services.reports),
         (deps.get_generation_api_importer, services.api_importer),
         (deps.get_generation_import_context, services.imports),

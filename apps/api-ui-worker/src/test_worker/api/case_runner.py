@@ -104,12 +104,17 @@ def build_request(
 def build_request_from_template(
     template: dict[str, Any], runtime_vars: dict[str, str]
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    # One cache per request: the same built-in function (for example a uuid in the
+    # path and in the body) resolves to one value.
+    builtins: dict[str, str] = {}
     method = (template.get("method") or "GET").upper()
-    base_url = render_template(template.get("baseUrl", ""), runtime_vars)
-    url_template = render_template(template.get("urlTemplate", ""), runtime_vars)
+    base_url = render_template(template.get("baseUrl", ""), runtime_vars, builtins)
+    url_template = render_template(
+        template.get("urlTemplate", ""), runtime_vars, builtins
+    )
     url = join_base_url(base_url, url_template)
-    headers = render_json_map(template.get("headersJson", "{}"), runtime_vars)
-    query = render_json_map(template.get("queryJson", "{}"), runtime_vars)
+    headers = render_json_map(template.get("headersJson", "{}"), runtime_vars, builtins)
+    query = render_json_map(template.get("queryJson", "{}"), runtime_vars, builtins)
     body_type = template.get("bodyType") or "none"
     body = ""
     request: dict[str, Any] = {
@@ -122,16 +127,16 @@ def build_request_from_template(
 
     if body_type == "json" and template.get("bodyJson"):
         json_body, rendered_body = render_json_body(
-            template.get("bodyJson"), runtime_vars
+            template.get("bodyJson"), runtime_vars, builtins
         )
         request["json"] = json_body
         body = rendered_body
     elif body_type == "form" and template.get("bodyJson"):
-        form_body = render_json_map(template.get("bodyJson"), runtime_vars)
+        form_body = render_json_map(template.get("bodyJson"), runtime_vars, builtins)
         request["data"] = form_body
         body = json.dumps(form_body, ensure_ascii=False, separators=(",", ":"))
     elif body_type == "raw" and template.get("bodyText"):
-        body = render_template(template.get("bodyText"), runtime_vars)
+        body = render_template(template.get("bodyText"), runtime_vars, builtins)
         request["content"] = body
 
     request_snapshot = {
@@ -148,12 +153,17 @@ def build_request_from_template(
 def build_request_from_rendered_snapshot(
     snapshot_request: dict[str, Any], runtime_vars: dict[str, str]
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    builtins: dict[str, str] = {}
     method = (snapshot_request.get("method") or "GET").upper()
-    url = render_template(snapshot_request.get("url", ""), runtime_vars)
-    headers = render_json_map(snapshot_request.get("headersJson", "{}"), runtime_vars)
-    query = render_json_map(snapshot_request.get("queryJson", "{}"), runtime_vars)
+    url = render_template(snapshot_request.get("url", ""), runtime_vars, builtins)
+    headers = render_json_map(
+        snapshot_request.get("headersJson", "{}"), runtime_vars, builtins
+    )
+    query = render_json_map(
+        snapshot_request.get("queryJson", "{}"), runtime_vars, builtins
+    )
     body_type = snapshot_request.get("bodyType") or "none"
-    body = render_template(snapshot_request.get("body", ""), runtime_vars)
+    body = render_template(snapshot_request.get("body", ""), runtime_vars, builtins)
     request: dict[str, Any] = {
         "method": method,
         "url": url,
@@ -163,11 +173,11 @@ def build_request_from_rendered_snapshot(
     }
 
     if body_type == "json" and body:
-        json_body, rendered_body = render_json_body(body, runtime_vars)
+        json_body, rendered_body = render_json_body(body, runtime_vars, builtins)
         request["json"] = json_body
         body = rendered_body
     elif body_type == "form" and body:
-        form_body = render_json_map(body, runtime_vars)
+        form_body = render_json_map(body, runtime_vars, builtins)
         request["data"] = form_body
         body = json.dumps(form_body, ensure_ascii=False, separators=(",", ":"))
     elif body_type == "raw" and body:

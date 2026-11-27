@@ -19,13 +19,10 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_suite import PerfSuiteRepository
-from testing_agent.schemas.perf_case import (
-    PerfCaseCreate,
-    PerfCaseResponse,
-    PerfCaseSummaryResponse,
-    PerfCaseUpdate,
+from testing_agent.schemas.perf_case import PerfCaseCreate, PerfCaseResponse, PerfCaseUpdate
+from testing_agent.services.case_lifecycle import (
+    batch_set_invalidated,
 )
-from testing_agent.services.case_lifecycle import set_case_invalidated
 from testing_agent.services.perf_case_spec import case_data_sources, parse_case_yaml
 from testing_agent.services.project_access import ProjectAction, require_project_id
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
@@ -123,22 +120,6 @@ class PerfCaseService:
             raise ErrBadRequest()
         return suite
 
-    def _summary(self, case: PerfCase) -> dict[str, Any]:
-        response = PerfCaseSummaryResponse(
-            case_id=case.case_id,
-            project_id=case.project_id,
-            suite_id=case.suite_id or "",
-            order_no=case.order_no,
-            name=case.name,
-            description=case.description,
-            version=case.version,
-            data_files=case.data_files_json or [],
-            created_at=case.created_at,
-            updated_at=case.updated_at,
-            invalidated_at=case.invalidated_at,
-        )
-        return response.model_dump(by_alias=True, mode="json")
-
     def _detail(self, case: PerfCase) -> dict[str, Any]:
         response = PerfCaseResponse(
             case_id=case.case_id,
@@ -194,30 +175,17 @@ class PerfCaseService:
         await self.repository.refresh(case)
         return self._detail(case)
 
-    async def list(
-        self, user_id: str, project_id: str, *, invalidated: bool | None = None
-    ) -> dict[str, Any]:
-        await self._require_project(user_id, project_id, "read")
-        rows = await self.repository.list_by_project(project_id, invalidated=invalidated)
-        return {"total": len(rows), "items": [self._summary(row) for row in rows]}
-
     async def batch_set_invalidated(
         self, user_id: str, project_id: str, case_ids: Sequence[str], invalidated: bool
-    ) -> dict[str, Any]:
-        await self._require_project(user_id, project_id, "write")
-        rows = await self.repository.list_project_cases_by_ids(project_id, case_ids)
-        if len(rows) != len(case_ids) or {case.case_id for case in rows} != set(case_ids):
-            raise ErrPerfCaseNotFound()
-        changed = set_case_invalidated(rows, invalidated)
-        try:
-            await self.repository.commit()
-        except Exception:
-            await self.repository.rollback()
-            raise
-        return {"caseIds": case_ids, "updatedCount": changed}
-
-    async def get(self, user_id: str, case_id: str) -> dict[str, Any]:
-        return self._detail(await self._accessible(user_id, case_id, action="read"))
+    ) -> dict:
+        return await batch_set_invalidated(
+            self.repository,
+            self.repository.session,
+            user_id,
+            project_id,
+            case_ids,
+            invalidated,
+        )
 
     async def update(self, user_id: str, case_id: str, body: PerfCaseUpdate) -> dict[str, Any]:
         case = await self.repository.get_case(case_id, for_update=True)

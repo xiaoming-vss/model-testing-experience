@@ -31,7 +31,6 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.forEach(c => c.clear()); clients.length = 0; vi.restoreAllMocks() })
 
 it('creates a binding through the project MCP without selecting an old connection', async () => {
-  const old = vi.spyOn(api, 'getZentaoConnections')
   const create = vi.spyOn(api, 'createProjectBinding').mockResolvedValue(projectBinding)
   mount()
   const select = await screen.findByRole('combobox', { name: '禅道项目' })
@@ -39,7 +38,6 @@ it('creates a binding through the project MCP without selecting an old connectio
   await userEvent.click(await screen.findByText('项目101 (101)'))
   await userEvent.click(screen.getByRole('button', { name: '绑 定' }))
   await waitFor(() => expect(create).toHaveBeenCalledWith('p1', { provider: 'zentao', remoteResourceId: '101', mcpServiceId: 'mcp1' }))
-  expect(old).not.toHaveBeenCalled()
 })
 
 it('updates an existing requirement using inherited parents and no original connection', async () => {

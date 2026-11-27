@@ -103,7 +103,7 @@ export function useUiTestSuiteCasePage() {
     queryFn: () => api.getUiTestSuite(suiteId),
     enabled: Boolean(suiteId),
   })
-  const requirementId = suiteQuery.data?.requirementId ?? suiteQuery.data?.requirement_id ?? ''
+  const requirementId = suiteQuery.data?.requirementId ?? ''
 
   const requirementQuery = useQuery({
     queryKey: ['requirement', requirementId],
@@ -111,7 +111,7 @@ export function useUiTestSuiteCasePage() {
     enabled: Boolean(requirementId),
   })
 
-  const sprintId = requirementQuery.data?.sprintId ?? requirementQuery.data?.sprint_id ?? ''
+  const sprintId = requirementQuery.data?.sprintId ?? ''
 
   const sprintQuery = useQuery({
     queryKey: ['sprint', sprintId],
@@ -120,7 +120,7 @@ export function useUiTestSuiteCasePage() {
   })
 
   // 测试集归属项目，需求/迭代只是可选的来源关联，不能再用它们反推项目。
-  const projectId = suiteQuery.data?.projectId ?? suiteQuery.data?.project_id ?? ''
+  const projectId = suiteQuery.data?.projectId ?? ''
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', projectId, 'ui'],
     queryFn: () => api.getApiEnvironments(projectId, 'ui'),
@@ -663,7 +663,7 @@ export function useUiTestSuiteCasePage() {
   const importUiCasesMutation = useMutation({
     mutationFn: ({ file, filename }: { file: Blob; filename: string }) => api.importUiTestCases(suiteId, file, filename),
     onSuccess: (result) => {
-      const importedCaseCount = result.importedCaseCount ?? result.imported ?? 0
+      const importedCaseCount = result.importedCaseCount ?? 0
       message.success(`导入成功：${importedCaseCount} 条用例，${result.importedStepCount ?? 0} 个步骤`)
       setCaseImportModalOpen(false)
       setCaseImportMode('upload')

@@ -1,9 +1,9 @@
 """Render bounded stage attempt rows in the existing history response."""
 
 from collections import defaultdict
-from datetime import UTC
 from typing import Any
 
+from testing_agent.core.utc import as_utc
 from testing_agent.domain.ai_execution_format import FIELDS
 from testing_agent.domain.generation_chain import CANDIDATE_DELETED_REASON
 
@@ -18,8 +18,8 @@ def project_direct_history(rows, counts, pending, latest, imports) -> dict[str, 
         targets = list(dict.fromkeys((item.target_type, item.target_id) for item in associated))
         start, end = row.started_at, row.finished_at
         if start and end:
-            start = start if start.tzinfo else start.replace(tzinfo=UTC)
-            end = end if end.tzinfo else end.replace(tzinfo=UTC)
+            start = as_utc(start)
+            end = as_utc(end)
         duration = max(0, int((end - start).total_seconds() * 1000)) if start and end else 0
         field = FIELDS.get(row.stage)
         return {

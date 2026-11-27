@@ -7,15 +7,12 @@ from testing_agent.handlers.function_test_case import (
     batch_invalidate_function_cases,
     create_function_case,
     delete_function_case,
-    function_case_push_status,
     get_function_case,
     import_function_cases,
     import_function_cases_to_zentao,
-    import_function_suites_to_zentao,
     list_function_cases,
     list_project_function_cases,
     preview_function_case_push,
-    preview_function_suite_push,
     reconcile_function_case_push,
     update_function_case,
 )
@@ -37,7 +34,6 @@ from testing_agent.schemas.function_test_case import (
     FunctionCasesBatchDeleteResponse,
     FunctionCaseZentaoImportItemResponse,
     FunctionCaseZentaoImportResponse,
-    FunctionSuitesZentaoImportResponse,
 )
 from testing_agent.schemas.function_test_suite import FunctionSuiteResponse
 
@@ -75,11 +71,6 @@ router.post(
     "/function-test-suites/{suite_id}/zentao/testcases/import",
     response_model=ApiResponse[FunctionCaseZentaoImportResponse],
 )(import_function_cases_to_zentao)
-router.post(
-    "/requirements/{requirement_id}/zentao/testcases/import",
-    response_model=ApiResponse[FunctionSuitesZentaoImportResponse],
-    response_model_exclude_none=True,
-)(import_function_suites_to_zentao)
 router.get(
     "/function-test-suites/{suite_id}/cases",
     response_model=ApiResponse[ListResponse[FunctionCaseResponse]],
@@ -120,14 +111,6 @@ router.post(
     "/function-test-suites/{suite_id}/zentao/testcases/preview",
     response_model=ApiResponse[CasePushPreview],
 )(preview_function_case_push)
-router.post(
-    "/requirements/{requirement_id}/zentao/testcases/preview",
-    response_model=ApiResponse[CasePushPreview],
-)(preview_function_suite_push)
-router.get(
-    "/function-case-push-operations/{operation_id}",
-    response_model=ApiResponse[FunctionCaseZentaoImportItemResponse],
-)(function_case_push_status)
 router.post(
     "/function-test-suites/{suite_id}/zentao/testcases/operations/{operation_id}/reconcile",
     response_model=ApiResponse[FunctionCaseZentaoImportItemResponse],

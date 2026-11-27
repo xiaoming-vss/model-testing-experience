@@ -1,16 +1,8 @@
 import json
-import sys
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 import testing_agent_ai_worker.tasks.functional_case_generate.executor as executor_module
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
@@ -22,6 +14,7 @@ from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import FunctionalChainRunResult
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
 
 
 class FunctionalCaseExecutorTests(unittest.TestCase):
@@ -38,7 +31,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         config_json: str = "",
     ) -> Task:
         return Task(
-            claim_id="claim-functional-1",
             task_id="task-functional-1",
             attempt_id="run-functional-1",
             generate_task_id="generate-functional-1",
@@ -160,9 +152,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 detailed_cases_output=detailed_cases_json,
             )
 
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = executor_cls(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=fake_chain_runner,
         )
@@ -184,10 +177,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(progress_events[1].stage_status, "running")
         self.assertEqual(progress_events[2].stage_status, "running")
         self.assertEqual(progress_events[3].stage_status, "running")
-        self.assertEqual(progress_events[0].output_yaml, "")
-        self.assertEqual(progress_events[1].output_yaml, "")
-        self.assertEqual(progress_events[2].output_yaml, "")
-        self.assertEqual(progress_events[3].output_yaml, "")
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
@@ -196,7 +185,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["analysis_skill_name"], "mtx-analyze-functional-requirements")
@@ -398,9 +387,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 ensure_ascii=False,
             ),
         )
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = executor_cls(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=lambda **kwargs: None,
             skill_runner=fake_skill_runner,
@@ -420,7 +410,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(
@@ -645,7 +635,6 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(len(progress_events), 2)
         self.assertEqual(progress_events[0].current_stage, "detailed_cases")
         self.assertEqual(progress_events[0].stage_status, "running")
-        self.assertEqual(progress_events[1].output_yaml, "")
         self.assertEqual(result.status, TaskStatus.SUCCESS)
         self.assertEqual(result.output_yaml, final_batch_json)
         final_config = json.loads(result.intermediate_json_text)

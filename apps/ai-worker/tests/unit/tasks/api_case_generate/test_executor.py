@@ -1,14 +1,8 @@
 import json
-import sys
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import PiConfig
@@ -20,7 +14,6 @@ from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExec
 
 def make_api_case_task(*, task_type: str = "api_case_generate") -> Task:
     return Task(
-        claim_id="claim-api-1",
         task_id="task-1",
         attempt_id="run-1",
         generate_task_id="generate-1",
@@ -57,9 +50,10 @@ class ApiCaseExecutorTests(unittest.TestCase):
                 generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
             )
 
+        runtime_root = self.enterContext(tempfile.TemporaryDirectory())
         executor = ApiCaseExecutor(
             agent_config=PiConfig(
-                runtime_root="D:/tmp/pi-runtime",
+                runtime_root=runtime_root,
             ),
             chain_runner=fake_chain_runner,
         )
@@ -93,7 +87,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/pi-runtime").resolve(),
+            Path(runtime_root).resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["extractor_skill_name"], "mtx-extract-interface-test-config")

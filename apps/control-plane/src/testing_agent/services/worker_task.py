@@ -5,12 +5,13 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from testing_agent.core.enums import RUN_CLOSED_STATUSES, RUN_TERMINAL_STATUSES, RunStatus
+from testing_agent.core.enums import RUN_CLOSED_STATUSES, RunStatus
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
     ErrForbidden,
     ErrNotFound,
+    ErrWorkerLeaseLost,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
@@ -29,7 +30,6 @@ from testing_agent.services.execution_secrets import private_payload, redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
-from testing_agent.services.standalone_worker_service import StandaloneWorkerService
 from testing_agent.services.test_run_notifications import (
     notify_run_changed,
     notify_task_control,
@@ -43,7 +43,6 @@ from testing_agent.services.worker import (
     find_task,
     llm_credentials_payload,
     parse_event_time,
-    project_skill_worker_payload,
     task_payload,
     update_task_claimed,
 )
@@ -55,7 +54,11 @@ from testing_agent.services.worker_domains import api as api_domain
 from testing_agent.services.worker_domains import perf as perf_domain
 from testing_agent.services.worker_domains import ui as ui_domain
 from testing_agent.services.worker_domains.events import ensure_final_status
-from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
+from testing_agent.services.worker_domains.guard import (
+    ensure_task_id,
+    ensure_worker_match,
+    is_late_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,11 +107,6 @@ class WorkerTaskService:
         processed = []
         for task in tasks:
             if domain == "ai":
-                standalone = StandaloneWorkerService(self.repository.session)
-                if await standalone.is_standalone(task):
-                    await standalone.retire(task, "Worker 心跳超时，执行已终止，请重试")
-                    processed.append(task)
-                    continue
                 direct = DirectStageWorkerService(self.repository.session)
                 if await direct.is_direct(task):
                     await direct.expire(task)
@@ -186,14 +184,6 @@ class WorkerTaskService:
         if task is None:
             return None
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                try:
-                    return await standalone.claim(task, body)
-                except AppError as exc:
-                    if exc.code == ErrForbidden.code:
-                        return None
-                    raise
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 try:
@@ -207,7 +197,9 @@ class WorkerTaskService:
             )
         try:
             authority = await authorize_execution(self.repository.session, task, pending=True)
-        except type(ErrForbidden):
+        except AppError as exc:
+            if exc.code != ErrForbidden.code:
+                raise
             return None
         run = authority.run
         direct_debug = (
@@ -239,11 +231,6 @@ class WorkerTaskService:
     async def snapshot(self, domain: str, task_id: str) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                payload = await standalone.snapshot(task)
-                await self.repository.commit()
-                return payload
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 payload = await direct.snapshot(task)
@@ -258,19 +245,15 @@ class WorkerTaskService:
     async def started(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                return await standalone.started(task, body)
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 return await direct.started(task, body)
             raise ErrNotFound()
+        if is_late_event(task, body):
+            # Nothing has run yet: acknowledging would let the worker start a finished task.
+            raise ErrWorkerLeaseLost()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if task.status in RUN_TERMINAL_STATUSES:
-            # A late start must not reopen a run that already finished.
-            return {"taskId": task_id, "workerId": body.worker_id}
         if body.run_id and body.run_id != task.run_id:
             raise ErrBadRequest()
         if domain in {"api", "ui"} and task.status == "stopping":
@@ -295,11 +278,6 @@ class WorkerTaskService:
         """Read stop intent only for the current, authorized lease holder."""
         task = await find_task(self.repository.session, domain, task_id)
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                await standalone.authorize(task)
-                ensure_worker_match(task, worker_id)
-                return {"stopRequested": False}
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 await direct.authorize(task)
@@ -313,21 +291,17 @@ class WorkerTaskService:
     async def heartbeat(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                return await standalone.heartbeat(task, body)
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 return await direct.heartbeat(task, body)
             raise ErrNotFound()
-        if task.status in RUN_TERMINAL_STATUSES:
+        if is_late_event(task, body, from_owner_only=False):
             # A late heartbeat must not rewrite finished_at or extend the lease.
             return {"taskId": task_id, "workerId": body.worker_id}
         if body.run_id and body.run_id != task.run_id:
             raise ErrBadRequest()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
         heartbeat_at = parse_event_time(body.heartbeat_at)
         if body.heartbeat_at and heartbeat_at is None:
             raise ErrBadRequest()
@@ -341,19 +315,15 @@ class WorkerTaskService:
     async def complete(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
         if domain == "ai":
-            standalone = StandaloneWorkerService(self.repository.session)
-            if await standalone.is_standalone(task):
-                return await standalone.complete(task, body)
             direct = DirectStageWorkerService(self.repository.session)
             if await direct.is_direct(task):
                 return await direct.complete(task, body)
             raise ErrNotFound()
-        authority = await authorize_execution(self.repository.session, task)
-        ensure_worker_match(task, body.worker_id)
-        ensure_task_id(task, body)
-        if domain in {"api", "ui"} and task.status in RUN_TERMINAL_STATUSES:
+        if domain in {"api", "ui"} and is_late_event(task, body):
             # Duplicate completion after the run closed is a no-op.
             return {"taskId": task_id, "workerId": body.worker_id, "status": task.status}
+        authority = await authorize_execution(self.repository.session, task)
+        ensure_worker_match(task, body.worker_id)
         if domain == "ui":
             await self.validate_ui_artifacts(task_id, body)
         status = ensure_final_status(body.status, {"success", "failed", "error", "canceled"})
@@ -476,48 +446,19 @@ class WorkerTaskService:
         await notify_run_changed("ui", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "status": status}
 
-    async def list_project_skills(self, project_id: str) -> dict:
-        rows = await self.repository.list_project_skills(project_id)
-        return {
-            "projectId": project_id,
-            "skills": [project_skill_worker_payload(row) for row in rows],
-        }
-
     async def ai_worker_task(self, task_id: str) -> WorkerTask:
         """Load an AI task and validate its current execution authority."""
         task = await self.repository.get_worker_task("ai", task_id)
         if task is None:
             raise ErrNotFound()
-        session = getattr(self.repository, "session", None)
-        standalone = StandaloneWorkerService(session) if session is not None else None
-        if standalone is not None and await standalone.is_standalone(task):
-            await standalone.authorize(task)
-            return task
-        direct = DirectStageWorkerService(session) if session is not None else None
-        if direct is not None and await direct.is_direct(task):
+        direct = DirectStageWorkerService(self.repository.session)
+        if await direct.is_direct(task):
             await direct.authorize(task)
             return task
         raise ErrNotFound()
 
     async def llm_credentials(self, task_id: str) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
-        standalone = StandaloneWorkerService(self.repository.session)
-        if await standalone.is_standalone(task):
-            standalone_authority = await standalone.authorize(task)
-            snapshot = standalone_authority.dispatched_attempt.input_snapshot_json or {}
-            connection = await require_personal_connection(
-                self.repository.session,
-                standalone_authority.actor_id,
-                "llm",
-                str(snapshot.get("llmConnectionId") or ""),
-                standalone_authority.task.project_id,
-            )
-            payload = llm_credentials_payload(task_id, connection, self.credential_cipher)
-            if not str(payload.get("apiKey") or "").strip():
-                await standalone.retire(task, "操作人的模型授权已失效，请重新配置")
-                await self.repository.commit()
-                raise ErrForbidden()
-            return payload
         direct = DirectStageWorkerService(self.repository.session)
         if await direct.is_direct(task):
             authority = await direct.authorize(task)
@@ -542,10 +483,6 @@ class WorkerTaskService:
         响应时解密,仅驻内存、不落盘、不入日志。
         """
         task = await find_task(self.repository.session, "ai", task_id)
-        standalone = StandaloneWorkerService(self.repository.session)
-        if await standalone.is_standalone(task):
-            await standalone.authorize(task)
-            raise ErrNotFound()
         direct = DirectStageWorkerService(self.repository.session)
         if await direct.is_direct(task):
             stage_authority = await direct.authorize(task)
@@ -571,48 +508,37 @@ class WorkerTaskService:
 
     async def requirement_document(self, task_id: str):
         task = await self.ai_worker_task(task_id)
-        session = getattr(self.repository, "session", None)
-        standalone = StandaloneWorkerService(session) if session is not None else None
-        if standalone is not None and await standalone.is_standalone(task):
-            await standalone.authorize(task)
-            # Independent runs use their frozen inline source, not a requirement file.
+        direct = DirectStageWorkerService(self.repository.session)
+        authority = await direct.authorize(task)
+        if task.task_type not in {
+            "requirement_analysis",
+            "functional_case_generate",
+            "ui_case_generate",
+            "code_risk_analysis",
+        }:
             raise ErrNotFound()
-        direct = DirectStageWorkerService(session) if session is not None else None
-        if direct is not None and await direct.is_direct(task):
-            authority = await direct.authorize(task)
-            if task.task_type not in {
-                "requirement_analysis",
-                "functional_case_generate",
-                "ui_case_generate",
-                "code_risk_analysis",
-            }:
-                raise ErrNotFound()
-            source = authority.input_snapshot.get("source") or {}
-            if source.get("sourceType") in HISTORICAL_STAGES:
-                raise ErrNotFound()
-            requirement = await self.repository.get_requirement(authority.task.requirement_id)
-            if requirement is None:
-                raise ErrNotFound()
-            original_file, original_hash = source.get("documentFileId"), source.get("documentHash")
-            if task.task_type == "requirement_analysis" and source.get("workflowVersion") == 2:
-                if (original_file and original_file != requirement.document_file_id) or (
-                    original_hash and original_hash != requirement.document_hash
-                ):
-                    from testing_agent.core.errors import AppError
+        source = authority.input_snapshot.get("source") or {}
+        if source.get("sourceType") in HISTORICAL_STAGES:
+            raise ErrNotFound()
+        requirement = await self.repository.get_requirement(authority.task.requirement_id)
+        if requirement is None:
+            raise ErrNotFound()
+        original_file, original_hash = source.get("documentFileId"), source.get("documentHash")
+        if task.task_type == "requirement_analysis" and source.get("workflowVersion") == 2:
+            if (original_file and original_file != requirement.document_file_id) or (
+                original_hash and original_hash != requirement.document_hash
+            ):
+                from testing_agent.core.errors import AppError
 
-                    raise AppError(409, "原始需求文件已变更，请发起新运行；历史产物仍保留", 409)
-            if not getattr(requirement, "document_file_id", ""):
-                from testing_agent.core.errors import ErrRequirementFileMissing
+                raise AppError(409, "原始需求文件已变更，请发起新运行；历史产物仍保留", 409)
+        if not getattr(requirement, "document_file_id", ""):
+            from testing_agent.core.errors import ErrRequirementFileMissing
 
-                raise ErrRequirementFileMissing()
-            return requirement
-        raise ErrNotFound()
+            raise ErrRequirementFileMissing()
+        return requirement
 
     async def progress(self, task_id: str, body: WorkerProgressRequest) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
-        standalone = StandaloneWorkerService(self.repository.session)
-        if await standalone.is_standalone(task):
-            return await standalone.progress(task, body)
         direct = DirectStageWorkerService(self.repository.session)
         if await direct.is_direct(task):
             return await direct.progress(task, body)

@@ -80,13 +80,6 @@ async def complete_task(
     return Response(status_code=204)
 
 
-async def list_project_skills(
-    project_id: str,
-    service: WorkerTaskService = Depends(get_worker_task_service),
-):
-    return await service.list_project_skills(project_id)
-
-
 async def llm_credentials(
     task_id: str,
     service: WorkerTaskService = Depends(get_worker_task_service),

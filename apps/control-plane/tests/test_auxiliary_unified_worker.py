@@ -102,13 +102,14 @@ async def test_auxiliary_worker_claim_progress_and_result(db, monkeypatch, task_
     assert queue.status == attempt.status == "success"
     assert attempt.output_content == "result"
     assert stage.review_status == "not_required"
-    with pytest.raises(AppError):
-        await service.complete(
-            queue,
-            WorkerTaskEventRequest(
-                worker_id="worker", run_id=attempt.id, status="success", output_yaml="late"
-            ),
-        )
+    # A retried completion is acknowledged with the recorded outcome and never applied.
+    late = await service.complete(
+        queue,
+        WorkerTaskEventRequest(
+            worker_id="worker", run_id=attempt.id, status="success", output_yaml="late"
+        ),
+    )
+    assert late == {"taskId": queue.task_id, "workerId": "worker", "status": "success"}
     assert attempt.output_content == "result"
 
 

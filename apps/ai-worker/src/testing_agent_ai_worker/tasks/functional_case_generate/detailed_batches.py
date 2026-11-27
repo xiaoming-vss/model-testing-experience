@@ -11,26 +11,60 @@ from dataclasses import replace
 from typing import Any
 from uuid import uuid4
 
+from testing_agent_ai_worker.agent import create_agent
 from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION,
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.tasks.runtime_json import strip_json_fence
 from testing_agent_ai_worker.traceable_test_points import validate_traceable_test_points
 
 from .case_ids import assign_case_ids
 from .module_execution import ModuleProgress, prepare_module_workspace
-from .validation import context, generate_validated, normalize_json
+from .validation import CaseRetentionError, context, generate_validated
 
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
+REVISION_RETENTION_RULE = (
+    "请保留未涉及修改的用例，输出当前模块优化后的完整用例集合。"
+    "确需删除的用例，把其 caseId 与原因写入 removedCases；"
+    "未列入 removedCases 的当前用例都必须出现在 cases 中。"
+)
 
-def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
 
-    from testing_agent_ai_worker.agent import create_agent
+def _module_of(case: Any) -> str:
+    return str(case.get("case_module") or case.get("module") or "未分组").strip() or "未分组"
 
-    return create_agent(**kwargs)
+
+def _retention_check(previous: list[Any]) -> Callable[[dict[str, Any]], None]:
+    """A revision keeps every current case that it does not declare in ``removedCases``."""
+
+    # Only platform-issued identity can be followed; hand-written cases carry none.
+    tracked = [case for case in previous if isinstance(case, dict) and case.get("case_id")]
+
+    def check(output: dict[str, Any]) -> None:
+        kept = {case["case_id"] for case in assign_case_ids(output.get("cases") or [], tracked)}
+        declared = {
+            str(item.get("caseId") or "").strip() for item in output.get("removedCases") or []
+        }
+        lost = [
+            case
+            for case in tracked
+            if case["case_id"] not in kept and case["case_id"] not in declared
+        ]
+        if lost:
+            listing = "、".join(
+                f"{case.get('case_title') or case.get('title') or case.get('name')}"
+                f"（{case['case_id']}）"
+                for case in lost[:20]
+            )
+            raise CaseRetentionError(
+                f"未保留也未声明删除的当前用例：{listing}。"
+                "未涉及修改的用例必须保留；确需删除的用例请把 caseId 与原因写入 removedCases。"
+            )
+
+    return check
 
 
 def _build_functional_detailed_case_body(
@@ -64,7 +98,7 @@ def _build_functional_detailed_case_instruction(extra_instruction: str) -> str:
 def _normalize_json_text(raw_json_text: str) -> str:
     """移除模型可能返回的 markdown fence，保留纯 JSON 文本。"""
 
-    return normalize_json(raw_json_text)
+    return strip_json_fence(raw_json_text)
 
 
 def _build_model_batches(case_names_json: str) -> list[dict[str, Any]]:
@@ -145,18 +179,17 @@ async def run_functional_detailed_case_batches(
 ) -> str:
     """执行 detailed cases 的分片生成并合并结果。"""
 
-    factory = from_config or _default_from_config
+    factory = from_config or create_agent
     merged_cases: list[Any] = []
     batches = _build_model_batches(case_names_json)
     current_cases = []
+    module_previous: dict[str, list[Any]] = {}
     if current_cases_json.strip() and revision_instruction:
         current_cases = _extract_cases(current_cases_json, "当前候选结果")
         # Edited candidates may contain modules absent from the original test points.
         known_modules = {batch["model_name"] for batch in batches}
         for case in current_cases:
-            module = (
-                str(case.get("case_module") or case.get("module") or "未分组").strip() or "未分组"
-            )
+            module = _module_of(case)
             if module not in known_modules:
                 batches.append(
                     {
@@ -173,6 +206,10 @@ async def run_functional_detailed_case_batches(
                     }
                 )
                 known_modules.add(module)
+        for batch in batches:
+            module_previous[batch["model_name"]] = [
+                case for case in current_cases if _module_of(case) == batch["model_name"]
+            ]
 
     prompts: list[str] = []
     for batch in batches:
@@ -182,21 +219,13 @@ async def run_functional_detailed_case_batches(
             case_names_json=json.dumps(batch["payload"], ensure_ascii=False),
         )
         if revision_instruction:
-            module_cases = [
-                case
-                for case in current_cases
-                if (
-                    str(case.get("case_module") or case.get("module") or "未分组").strip()
-                    or "未分组"
-                )
-                == batch["model_name"]
-            ]
             body += (
                 "\n\n【当前模块候选用例】\n"
-                + json.dumps({"cases": module_cases}, ensure_ascii=False)
+                + json.dumps({"cases": module_previous[batch["model_name"]]}, ensure_ascii=False)
                 + "\n\n【本轮优化要求】\n"
                 + revision_instruction
-                + "\n请保留未涉及修改的用例，输出当前模块优化后的完整用例集合。"
+                + "\n"
+                + REVISION_RETENTION_RULE
             )
         prompts.append(
             build_skill_message(
@@ -217,6 +246,11 @@ async def run_functional_detailed_case_batches(
     async def run_module(index: int, *, initial: str | None = None) -> str:
         nonlocal stopping
         batch = batches[index]
+        guard = (
+            {"post_validate": _retention_check(module_previous[batch["model_name"]])}
+            if revision_instruction
+            else {}
+        )
         async with slots:
             if stopping:
                 raise asyncio.CancelledError()
@@ -250,6 +284,7 @@ async def run_functional_detailed_case_batches(
                             media_args={"media": media} if media else {},
                         ),
                         inputs=prompts[index],
+                        **guard,
                     )
                 await progress.emit(
                     index, "completed", caseCount=len(_extract_cases(result, batch["model_name"]))

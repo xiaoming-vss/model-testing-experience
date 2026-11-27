@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent import models as m
-from testing_agent.core.enums import RUN_ACTIVE_STATUSES
 from testing_agent.core.errors import AppError, ErrAiGenerateTaskRunRunning, ErrNotFound
 from testing_agent.db.base import Base
 from testing_agent.domain.resource_deletion import AUXILIARY_TASK_TYPES
@@ -71,17 +70,6 @@ async def _reject_running_generation_tasks(session, requirement: m.Requirement) 
         .with_for_update()
     )
     if active_stage:
-        raise ErrAiGenerateTaskRunRunning()
-    active_execution = await session.scalar(
-        select(m.AiExecution.execution_id)
-        .where(
-            m.AiExecution.task_id.in_(task_ids),
-            m.AiExecution.workflow_status.in_(RUN_ACTIVE_STATUSES),
-        )
-        .limit(1)
-        .with_for_update()
-    )
-    if active_execution:
         raise ErrAiGenerateTaskRunRunning()
 
 

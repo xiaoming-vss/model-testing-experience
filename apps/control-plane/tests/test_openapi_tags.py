@@ -12,14 +12,16 @@ def test_v1_routes_are_grouped_in_openapi():
     assert tags_for("/v1/api-collections/{collectionId}", "get") == ["API Tests"]
     assert tags_for("/v1/function-test-suites/{suiteId}", "get") == ["Function Tests"]
     assert tags_for("/v1/ui-test-suites/{suiteId}", "get") == ["UI Tests"]
-    assert tags_for("/v1/api-case-generate-tasks/{taskId}", "get") == ["API AI Tasks"]
-    assert tags_for("/v1/function-case-generate-tasks/{taskId}", "get") == ["Function AI Tasks"]
     assert tags_for("/v1/test-report-generate-runs/{runId}", "get") == ["Test Report AI Tasks"]
     assert tags_for("/v1/test-report-generate-runs/{runId}/pdf", "get") == ["Test Report AI Tasks"]
     assert tags_for("/v1/api-case-runs/{runId}", "get") == ["API Runs"]
     assert tags_for("/v1/ui-test-case-runs/{runId}", "get") == ["UI Runs"]
-    assert tags_for("/v1/integrations/zentao/connections", "get") == ["Zentao Integrations"]
-    assert tags_for("/v1/integrations/llm/connections", "get") == ["LLM Integrations"]
+    assert tags_for("/v1/projects/{projectId}/integrations/zentao/connections", "get") == [
+        "Zentao Integrations"
+    ]
+    assert tags_for("/v1/projects/{projectId}/integrations/llm/connections", "get") == [
+        "LLM Integrations"
+    ]
 
 
 def test_internal_worker_routes_are_grouped_in_openapi():

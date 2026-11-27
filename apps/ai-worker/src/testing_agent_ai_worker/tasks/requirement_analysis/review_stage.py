@@ -3,9 +3,12 @@
 import json
 from pathlib import Path
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress
 from testing_agent_ai_worker.platform.revision_attachments import (
-    parse_revision_attachments,
+    load_revision_images,
+    revision_attachment_refs,
+    revision_image_paths,
 )
 from testing_agent_ai_worker.requirement_artifacts import validate_artifact
 from testing_agent_ai_worker.skill_names import REQUIREMENT_REVIEW_SKILL
@@ -35,15 +38,15 @@ def execute_review_stage(
 ):
     """Return None: the review stage stops at waiting_review, never as a final result."""
     if task.payload.metadata.get("workflowVersion", 2) != 2:
-        raise ValueError("不支持的需求分析工作流版本")
+        raise UserFacingError("不支持的需求分析工作流版本")
     if not task.checkpoint_enabled:
-        raise ValueError("需求分析必须启用人工审核")
+        raise UserFacingError("需求分析必须启用人工审核")
     stage = task.current_stage or "requirement_review"
     if stage != "requirement_review":
-        raise ValueError(f"需求评审不支持阶段: {stage}")
+        raise UserFacingError(f"需求评审不支持阶段: {stage}")
     config = json.loads(task.config_json or "{}")
     if not isinstance(config, dict):
-        raise ValueError("configJson 必须是对象")
+        raise UserFacingError("configJson 必须是对象")
     revision = str(config.get("revisionInstruction") or "").strip()
     if source_downloader is None:
         raise ValueError("requirement_analysis source_downloader is required")
@@ -78,18 +81,14 @@ def execute_review_stage(
         body["currentArtifact"] = validate_artifact(
             config.get("reviewOutput"), "requirement_review"
         )
-        attachments = parse_revision_attachments(config)
-        if attachments:
-            if attachment_downloader is None:
-                raise ValueError("未配置继续优化图片下载器")
-            revision_images = attachment_downloader.download(
-                task_id=task.task_id, workspace=workspace, attachments=attachments
-            )
-            media.extend(entry["sourcePath"] for entry in revision_images)
-            body["revisionAttachments"] = [
-                {"fileId": entry["fileId"], "filename": entry["filename"]}
-                for entry in revision_images
-            ]
+        images = load_revision_images(
+            task_id=task.task_id,
+            workspace=workspace,
+            config=config,
+            downloader=attachment_downloader,
+        )
+        media.extend(revision_image_paths(images))
+        body["revisionAttachments"] = revision_attachment_refs(images)
     artifact = generate_validated(
         kind="requirement_review",
         task=task,

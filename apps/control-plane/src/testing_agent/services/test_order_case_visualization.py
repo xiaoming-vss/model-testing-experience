@@ -49,59 +49,6 @@ class TestOrderCaseVisualizationService:
         await self.orders.get_accessible_entity(actor, order_id, action="read")
         return await self._view(order_id, entry_id, content=True)
 
-    async def lookup(self, actor: str, order_id: str, entry_ids: list[str]) -> dict[str, Any]:
-        await self.orders.get_accessible_entity(actor, order_id, action="read")
-        entries = await self.repository.entries(order_id, entry_ids)
-        bindings = {
-            x.entry_id: x for x in await self.repository.bindings([e.entry_id for e in entries])
-        }
-        rows = await self.repository.summary_attempts(
-            [x.task_id for x in bindings.values()],
-            [x.effective_attempt_id for x in bindings.values() if x.effective_attempt_id],
-        )
-        attempts = {attempt.id: attempt for _, attempt in rows}
-        latest: dict[str, AiGenerationAttempt] = {}
-        for task_id, attempt in rows:
-            if task_id not in latest or attempt.attempt_no > latest[task_id].attempt_no:
-                latest[task_id] = attempt
-        items = []
-        for entry in entries:
-            binding = bindings.get(entry.entry_id)
-            result: dict[str, Any] = {
-                "executionEntryId": entry.entry_id,
-                "snapshotHash": None,
-                "effectiveArtifact": None,
-                "latestRun": None,
-            }
-            try:
-                frozen = freeze_input(entry.entry_id, entry.snapshot_json)
-                result["snapshotHash"] = frozen["snapshotHash"]
-            except ValueError as exc:
-                result["unavailableReason"] = str(exc)
-                items.append(result)
-                continue
-            if binding:
-                result["latestRun"] = run_summary(latest.get(binding.task_id))
-                effective = attempts.get(binding.effective_attempt_id or "")
-                context = (effective.output_context_json or {}) if effective else {}
-                if (
-                    effective
-                    and effective.status == "success"
-                    and effective.invalidated_at is None
-                    and binding.effective_snapshot_hash == frozen["snapshotHash"]
-                    and context.get("schemaVersion") == "1.0"
-                    and context.get("artifactStatus") in {"ready", "partial"}
-                ):
-                    result["effectiveArtifact"] = {
-                        "artifactId": effective.id,
-                        "runId": effective.execution_id,
-                        "schemaVersion": "1.0",
-                        "status": context["artifactStatus"],
-                        "content": None,
-                    }
-            items.append(result)
-        return {"items": items, "total": len(items)}
-
     async def _view(self, order_id: str, entry_id: str, *, content: bool) -> dict[str, Any]:
         entry = await self.repository.entry(order_id, entry_id)
         if entry is None:
@@ -175,7 +122,7 @@ class TestOrderCaseVisualizationService:
         entry_id: str,
         body: dict[str, Any],
     ) -> dict[str, Any]:
-        order = await self._locked_order(actor, order_id, body["connection_id"])
+        order = await self._locked_order(actor, order_id, body["connectionId"])
         receipt = await self._dispatch(actor, order, entry_id, body)
         await self.session.commit()
         return receipt
@@ -194,7 +141,7 @@ class TestOrderCaseVisualizationService:
             frozen = freeze_input(entry_id, entry.snapshot_json)
         except ValueError as exc:
             raise dynamic_error(ErrBadRequest, str(exc)) from exc
-        connection = body["connection_id"]
+        connection = body["connectionId"]
         mode = body.get("mode", "generate")
         signature = request_signature(
             TASK_TYPE,
@@ -206,7 +153,7 @@ class TestOrderCaseVisualizationService:
             },
         )
         request_id = hashlib.sha256(
-            f"visualization:{actor}:{body['request_id']}".encode()
+            f"visualization:{actor}:{body['requestId']}".encode()
         ).hexdigest()
         binding = await self.repository.binding(entry_id)
         task = await self.repository.task(binding.task_id) if binding else None
@@ -220,7 +167,7 @@ class TestOrderCaseVisualizationService:
             )
             if replay:
                 return {"entryId": entry_id, "disposition": "queued", "runId": replay.execution_id}
-            stage = await lock_or_create_stage(self.session, task.task_id)
+            stage, _ = await lock_or_create_stage(self.session, task.task_id)
             if stage.active_attempt_id:
                 active = await self.repository.attempt(stage.active_attempt_id)
                 return {
@@ -280,15 +227,15 @@ class TestOrderCaseVisualizationService:
         order_id: str,
         body: dict[str, Any],
     ) -> dict[str, Any]:
-        order = await self._locked_order(actor, order_id, body["connection_id"])
+        order = await self._locked_order(actor, order_id, body["connectionId"])
         signature = hashlib.sha256(canonical(body).encode()).hexdigest()
-        batch = await self.repository.batch_replay(actor, body["request_id"])
+        batch = await self.repository.batch_replay(actor, body["requestId"])
         if batch:
             if batch.order_id != order_id or batch.signature != signature:
                 raise dynamic_error(ErrBadRequest, "请求标识已用于其他输入")
         else:
             items = []
-            for entry_id in body["entry_ids"]:
+            for entry_id in body["entryIds"]:
                 try:
                     async with self.session.begin_nested():
                         receipt = await self._dispatch(
@@ -296,10 +243,10 @@ class TestOrderCaseVisualizationService:
                             order,
                             entry_id,
                             {
-                                "request_id": hashlib.sha256(
-                                    f"batch:{body['request_id']}:{entry_id}".encode()
+                                "requestId": hashlib.sha256(
+                                    f"batch:{body['requestId']}:{entry_id}".encode()
                                 ).hexdigest(),
-                                "connection_id": body["connection_id"],
+                                "connectionId": body["connectionId"],
                                 "mode": "generate",
                             },
                         )
@@ -316,7 +263,7 @@ class TestOrderCaseVisualizationService:
                 batch_id=new_id(),
                 order_id=order_id,
                 actor_id=actor,
-                request_id=body["request_id"],
+                request_id=body["requestId"],
                 signature=signature,
                 items=items,
             )

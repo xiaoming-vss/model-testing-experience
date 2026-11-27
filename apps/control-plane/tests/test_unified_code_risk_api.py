@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock
 
-from support.project_api import account, project, requirement
+from support.project_api import account, project, requirement, seed_llm_connection
 from support.project_api import api as api
 from support.requirement_versions import adopt_material
 
@@ -24,18 +24,13 @@ def test_code_risk_worker_result_history_and_delete(api, monkeypatch):
     )
     requirement_id = requirement(api, owner, pid)
     material_id = adopt_material(api, requirement_id, headers=owner)
-    connection = api.post(
-        f"/v1/projects/{pid}/integrations/llm/connections",
-        headers=owner,
-        json={
-            "name": "llm",
-            "baseUrl": "https://llm.example/v1",
-            "apiKey": "secret",
-            "modelId": "model",
-        },
+    connection_id = seed_llm_connection(
+        api,
+        owner,
+        project_id=pid,
+        base_url="https://llm.example/v1",
+        api_key="secret",
     )
-    assert connection.status_code == 200, connection.text
-    connection_id = connection.json()["data"]["connectionId"]
     task = api.post(
         f"/v1/projects/{pid}/code-risk-analysis-tasks",
         headers=owner,

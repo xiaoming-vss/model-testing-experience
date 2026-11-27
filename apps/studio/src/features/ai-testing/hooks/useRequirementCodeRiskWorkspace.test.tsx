@@ -36,12 +36,23 @@ function renderWorkspace(active = false) {
   return { ...rendered, client }
 }
 
+it('弹窗未打开时不读取任务、运行和仓库关联', async () => {
+  const { result, unmount, client } = renderWorkspace(false)
+  await act(async () => { await new Promise<void>(resolve => setTimeout(resolve, 0)) })
+  expect(aiTestingApi.getCodeRiskTasks).not.toHaveBeenCalled()
+  expect(aiTestingApi.getCodeRiskTaskRuns).not.toHaveBeenCalled()
+  expect(interfaceLibraryApi.getRequirementSoftwareRepositories).not.toHaveBeenCalled()
+  expect(result.current.runDisabledReason).toBe('正在读取运行信息，请稍候。')
+  unmount()
+  client.clear()
+})
+
 it('网络失败后复用请求标识，成功后下一次生成使用新标识', async () => {
   const launch = vi.spyOn(aiTestingApi, 'runCodeRiskTask')
     .mockRejectedValueOnce(new TypeError('network unavailable'))
     .mockResolvedValueOnce({ runId: 'run-1', status: 'pending' } as never)
     .mockResolvedValueOnce({ runId: 'run-2', status: 'pending' } as never)
-  const { result, unmount, client } = renderWorkspace()
+  const { result, unmount, client } = renderWorkspace(true)
   await waitFor(() => expect(result.current.runDisabledReason).toBeUndefined())
 
   await act(async () => { await expect(result.current.start.mutateAsync()).rejects.toThrow('network unavailable') })

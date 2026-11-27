@@ -5,12 +5,11 @@ from typing import TYPE_CHECKING, Any
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.models.ui_test_case import UiTestCase
-from testing_agent.services.ai_task_output import validate_ui_candidate_cases
 from testing_agent.services.import_payload import parse_import_payload
-from testing_agent.services.ui_generation_contracts import is_ui_workflow
 from testing_agent.services.ui_test_case import validate_ui_import_payload
 
 if TYPE_CHECKING:
+    from testing_agent.domain.generation_import_source import CurrentImportSource
     from testing_agent.services.ai_task_access import CandidateImportContext
 
 
@@ -47,39 +46,21 @@ def apply_generated_case(case: UiTestCase, item: dict[str, Any]) -> None:
 
 async def import_ui_run(
     service: CandidateImportContext,
-    run_id: str,
+    source: CurrentImportSource,
     suite_id: str,
     confirm_overwrite: bool,
     user_id: str,
     *,
-    artifact_content: str | None = None,
-    allow_reimport: bool = False,
-    approved_source: Any | None = None,
     preview_only: bool = False,
 ) -> dict[str, Any]:
-    if approved_source is None:
-        raise ErrBadRequest()
-    run = approved_source
-    if artifact_content is None and (
-        run.status != "success"
-        or run.review_status != "approved"
-        or (run.import_status == "imported" and not allow_reimport)
-    ):
-        raise ErrBadRequest()
-
     suite = await service.repository.get_ui_suite(suite_id)
     if suite is None:
         raise ErrNotFound()
-    if suite.requirement_id != run.requirement_id:
+    if suite.requirement_id != source.requirement_id:
         raise ErrBadRequest()
-    await service.ensure_requirement_access(user_id, run.requirement_id, action="execute")
+    await service.ensure_requirement_access(user_id, source.requirement_id, action="execute")
 
-    raw_content = (run.result_yaml or "") if artifact_content is None else artifact_content
-    generated_cases = (
-        validate_ui_import_payload(parse_import_payload(raw_content))
-        if is_ui_workflow(run)
-        else validate_ui_candidate_cases(raw_content)
-    )
+    generated_cases = validate_ui_import_payload(parse_import_payload(source.content))
     generated_names: set[str] = set()
     for item in generated_cases:
         normalized_name = normalized_case_name(item["name"])
@@ -113,23 +94,18 @@ async def import_ui_run(
             "requiresConfirmation": bool(conflicts),
             "conflicts": conflicts,
             "importChanges": [],
-            "run": {},
         }
 
-    try:
-        changed_case_ids: set[str] = set()
-        for item in generated_cases:
-            target = existing_by_name.get(normalized_case_name(item["name"]))
-            if target is None:
-                target = UiTestCase(case_id=new_id(), suite_id=suite_id)
-                service.repository.add(target)
-            apply_generated_case(target, item)
-            changed_case_ids.add(target.case_id)
+    changed_case_ids: set[str] = set()
+    for item in generated_cases:
+        target = existing_by_name.get(normalized_case_name(item["name"]))
+        if target is None:
+            target = UiTestCase(case_id=new_id(), suite_id=suite_id)
+            service.repository.add(target)
+        apply_generated_case(target, item)
+        changed_case_ids.add(target.case_id)
 
-        await service.repository.flush()
-    except Exception:
-        await service.repository.rollback()
-        raise
+    await service.repository.flush()
 
     return {
         "requiresConfirmation": False,
@@ -141,5 +117,4 @@ async def import_ui_run(
                 "changedCaseIds": sorted(changed_case_ids),
             }
         ],
-        "run": {},
     }

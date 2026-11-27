@@ -18,6 +18,7 @@ function previewData(overrides: Partial<ZentaoRemotePreview> = {}): ZentaoRemote
   return {
     remoteBugId: 50,
     remoteDigest: 'digest-abcdef',
+    localDigest: 'local-abcdef',
     linkedSource: 'push',
     groups: [
       group({ group: 'profile', state: 'conflict', local: { title: '本地标题', severity: 'serious', priority: 'medium' }, remote: { title: '远端标题', severity: 'serious', priority: 'low' }, reason: '两端都已修改且内容不同，请选择保留哪一侧' }),
@@ -45,7 +46,21 @@ function mount() {
       <BugZentaoPullModal open bugId="b1" projectId="p1" onClose={vi.fn()} />
     </QueryClientProvider>,
   )
+  return client
 }
+
+it('refreshes the bug, its list and its activities after applying remote values', async () => {
+  vi.spyOn(bugsApi, 'pullBugZentao').mockResolvedValue({ applied: ['status'], kept: ['profile', 'description', 'assignee'], notes: [] })
+  const client = mount()
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  await screen.findByText(/远端标题/)
+  await userEvent.click(screen.getByRole('button', { name: '确认同步' }))
+  // 详情查询的键是 ['bug', id]；失效别的键会让页面停在同步前的内容。
+  await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bug', 'b1'] }))
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugs'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugActivities', 'b1'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['bugZentaoPush', 'b1'] })
+})
 
 it('shows per-group two-side comparison with states and no-op defaults', async () => {
   mount()
@@ -72,6 +87,7 @@ it('rejects applying assignee without choosing a platform member (Q05)', async (
   await userEvent.click(screen.getByRole('button', { name: '确认同步' }))
   await waitFor(() => expect(pull).toHaveBeenCalledWith('b1', {
     remoteDigest: 'digest-abcdef',
+    localDigest: 'local-abcdef',
     groups: [
       { group: 'profile', action: 'apply_remote' },
       { group: 'status', action: 'keep_local' },

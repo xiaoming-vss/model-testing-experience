@@ -11,7 +11,7 @@
 
 ## 模块与依赖
 
-沿用本项目 Python 3.12 与独立运行环境。`main/app` 负责入口和装配，`worker/` 管理领取、租约及停止，`handlers/` 分派任务，`services/` 编排步骤，`repositories/` 访问控制面 HTTP，`gateways/` 访问 MCP，`domain/` 保存纯规则，`schemas/` 限制协议载荷。
+沿用本项目 Python 3.12 与独立运行环境。`main/app` 负责入口和装配，`worker/` 管理领取、租约、停止及任务分派，`services/` 编排步骤，`repositories/` 访问控制面 HTTP，`gateways/` 访问 MCP，`domain/` 保存纯规则，`schemas/` 限制协议载荷。
 
 业务服务必须显式接收依赖，不能直接创建第二套控制面或 MCP 客户端。Worker 不安装控制面 ORM、数据库或 Web 框架，不持有数据库连接、长期 S3 密钥或公开业务端口。不能把本项目的 HTTP repository 误解为控制面的数据库 repository。
 
@@ -19,7 +19,9 @@
 
 每次外部写入必须取得控制面已持久化、绑定当前任务、步骤、operation 和领取代次的许可。控制面请求重试复用原 claim/prepare/result 身份；MCP 写调用只执行一次。准备响应丢失后查询原意图，不能把查询结果当成新写许可。
 
-失租、许可到期和停止后不开始新写入，在途调用保留明确结果或 unknown。结果回传失败使用安全证据路径恢复，不重新发起 MCP 写入。源码重启、容器重建和数据库恢复均不能把未知操作当成未执行。
+失租、许可到期和停止后不开始新写入，在途调用保留明确结果或 unknown。
+
+写入调用之前的 MCP 连接、实例核对都是只读请求：失败时步骤记为 `failed` + `remote_unavailable`，只有已经发起写入并被明确拒绝才记为 `remote_rejected`。原生图片路由失败（`DescriptionError`）属于预检失败：远端文件与冻结内容不符记为 `baseline_changed`，图片本身不可用记为 `input_changed`。步骤执行中的未知异常按是否已写入归类，并记录异常类型和栈帧位置，不记录异常文本。结果回传失败使用安全证据路径恢复，不重新发起 MCP 写入。源码重启、容器重建和数据库恢复均不能把未知操作当成未执行。
 
 ### 写后证据标准
 

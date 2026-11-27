@@ -4,7 +4,6 @@ from fastapi import APIRouter
 
 from testing_agent.handlers.repository_profile_task import (
     create_repository_profile_task,
-    get_repository_profile_run,
     list_repository_profile_task_runs,
     list_repository_profile_tasks,
     run_repository_profile_task,
@@ -35,7 +34,3 @@ router.get(
     "/repository-profile-tasks/{task_id}/runs",
     response_model=ApiResponse[AiGenerateRunHistoryResponse],
 )(list_repository_profile_task_runs)
-router.get(
-    "/repository-profile-runs/{run_id}",
-    response_model=ApiResponse[RepositoryProfileRunResponse],
-)(get_repository_profile_run)

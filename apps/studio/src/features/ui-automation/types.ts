@@ -3,9 +3,7 @@ export type UiScreenshotPolicy = 'on_failure' | 'after_each_step' | 'never'
 export type UiTestSuite = {
   suiteId?: string
   projectId?: string
-  project_id?: string
   requirementId?: string | null
-  requirement_id?: string | null
   name: string
   description?: string
   headless?: boolean
@@ -15,9 +13,7 @@ export type UiTestSuite = {
   defaultStepTimeoutMs?: number
   screenshotPolicy?: UiScreenshotPolicy
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type UiStepSaveSource = 'text' | 'value' | 'attribute' | 'url'
@@ -74,15 +70,12 @@ export type UiTestCaseStep = {
 export type UiTestCase = {
   caseId?: string
   suiteId?: string
-  suite_id?: string
   name: string
   enabled?: boolean
   orderNo?: number
   stepsJson?: string | UiTestCaseStep[]
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
   invalidatedAt?: string | null
 }
 
@@ -143,9 +136,7 @@ export type UiTestCaseRun = {
     options?: unknown
   }
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type UiTestSuiteRunItem = {
@@ -189,9 +180,7 @@ export type UiTestSuiteRunSummary = {
   variableWrites?: UiRunVariableWrite[]
   snapshot?: unknown
   createdAt?: string
-  created_at?: string
   updatedAt?: string
-  updated_at?: string
 }
 
 export type UiTestSuiteRunReport = UiTestSuiteRunSummary & {

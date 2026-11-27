@@ -76,6 +76,7 @@ const uiStepLocatorRequiredKeywords = new Set([
   'dblclick',
   'input',
   'clear',
+  'press',
   'wait_text',
   'assert_text',
   'assert_visible',
@@ -107,6 +108,7 @@ const uiStepFieldMetaMap: Record<string, UiStepFieldMeta> = {
     locatorHint: 'clear 仅适用于可填写文本的 input、textarea 或 contenteditable 元素。',
   },
   press: {
+    locatorHint: 'press 在定位到的元素上按键，必须先定位接收按键的元素。',
     operationLabel: '按键名',
     operationPlaceholder: '例如：Enter、Control+A',
     operationHint: '填写按键或组合键，例如 Enter、Escape、Tab、Control+A。',

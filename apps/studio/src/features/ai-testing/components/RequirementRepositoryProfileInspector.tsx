@@ -12,12 +12,9 @@ export function RequirementRepositoryProfileInspector({
   showRun?: boolean
 }) {
   const selectedProfileView = workspace.selectedProfileView
-  const frozenCurrent = selectedProfileView?.requirementMaterialCurrent
-  const materialLabel = frozenCurrent
-    ? `候选 ${frozenCurrent.candidateId.slice(0, 8)}`
-    : workspace.profileCandidateMode && selectedProfileView
-      ? '已冻结，采用时核对'
-      : selectedProfileView ? '未记录' : workspace.currentMaterialAvailable ? '当前已采用' : '未记录'
+  const materialLabel = workspace.profileCandidateMode && selectedProfileView
+    ? '已冻结，采用时核对'
+    : selectedProfileView ? '未记录' : workspace.currentMaterialAvailable ? '当前已采用' : '未记录'
 
   return (
     <div className="gc-profile-inspector flex flex-col gap-[18px]">

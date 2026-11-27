@@ -10,6 +10,7 @@ from testing_agent_ai_worker.config.models import (
     NanobotConfig,
     PiConfig,
 )
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
     ExistingTestCases,
@@ -29,8 +30,9 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspace,
     CodeWorkspaceError,
     RepoWorkspace,
-    code_run_root,
 )
+from testing_agent_ai_worker.tasks.git_workspace import task_run_root as code_run_root
+from tests.support.executors import FakeCredentialsFetcher, ScriptedPromptRunner
 
 
 def _task(
@@ -88,25 +90,6 @@ def _task(
     )
 
 
-class _FakeCredentialsFetcher:
-    def __init__(self, *, fail: bool = False) -> None:
-        self.fail = fail
-        self.calls = 0
-
-    def __call__(self, task: Task) -> list[GitlabCredentials]:
-        self.calls += 1
-        if self.fail:
-            raise RuntimeError("凭证接口不可用")
-        return [
-            GitlabCredentials(
-                connection_id="conn-1",
-                base_url="https://gitlab.example.com",
-                access_token="secret-token-1",
-                repository_ids=["repo-1"],
-            )
-        ]
-
-
 class _RecordingPromptRunner:
     def __init__(self, output: Any = None) -> None:
         self.output = output
@@ -143,16 +126,6 @@ class _AsyncPromptRunner:
 
     async def _result(self):
         return self.output
-
-
-class _RepairingPromptRunner:
-    def __init__(self, outputs: list[str]) -> None:
-        self.outputs = outputs
-        self.calls: list[dict[str, Any]] = []
-
-    def __call__(self, **kwargs):
-        self.calls.append(kwargs)
-        return self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
 
 
 class CodeRiskAnalysisExecutorTests(unittest.TestCase):
@@ -203,7 +176,7 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         self,
         *,
         prompt_runner=None,
-        fetcher: _FakeCredentialsFetcher | None = None,
+        fetcher: FakeCredentialsFetcher | None = None,
         workspace_preparer=None,
         context_builder=None,
         credentials_fetcher=None,
@@ -211,7 +184,7 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         return CodeRiskAnalysisExecutor(
             agent_config=self.agent_config,
             code_risk_config=CodeRiskAnalysisConfig(max_diff_chars=100),
-            credentials_fetcher=credentials_fetcher or fetcher or _FakeCredentialsFetcher(),
+            credentials_fetcher=credentials_fetcher or fetcher or FakeCredentialsFetcher(),
             workspace_preparer=workspace_preparer
             or (lambda task, credentials, **kwargs: self.workspace),
             context_builder=context_builder or (lambda task, workspace, **kwargs: self._context()),
@@ -250,7 +223,7 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         self.assertEqual(1, len(runner.calls))
 
     def test_execute_repairs_invalid_report_at_most_twice(self) -> None:
-        runner = _RepairingPromptRunner(
+        runner = ScriptedPromptRunner(
             [
                 "changeOverview: {}\nrisks: []\naffectedCases:\n  - caseId: bad\n    impact: bad\ncoverageGaps: []\n",
                 "changeOverview: {}\nrisks: []\naffectedCases: []\ncoverageGaps: []\n",
@@ -281,7 +254,7 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
     def test_execute_rejects_non_pi_backend(self) -> None:
         executor = CodeRiskAnalysisExecutor(
             agent_config=NanobotConfig(),
-            credentials_fetcher=_FakeCredentialsFetcher(),
+            credentials_fetcher=FakeCredentialsFetcher(),
         )
 
         result = executor.execute(self.task, datetime.now().astimezone(), lambda _p: None)
@@ -291,15 +264,30 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
     def test_execute_fails_when_credentials_unavailable(self) -> None:
         runner = _RecordingPromptRunner()
-        executor = self._executor(prompt_runner=runner, fetcher=_FakeCredentialsFetcher(fail=True))
+        executor = self._executor(
+            prompt_runner=runner,
+            fetcher=FakeCredentialsFetcher(fail=UserFacingError("凭证接口不可用")),
+        )
         progresses = []
 
         result = executor.execute(self.task, datetime.now().astimezone(), progresses.append)
 
         self.assertEqual(TaskStatus.FAILED, result.status)
+        # A failure the platform worded itself is reported as written.
         self.assertIn("凭证接口不可用", result.error_message or "")
         self.assertEqual([], progresses)
         self.assertEqual([], runner.calls)
+
+    def test_execute_does_not_echo_third_party_credential_errors(self) -> None:
+        def fail(task: Task) -> list[GitlabCredentials]:
+            raise ConnectionError("SECRET https://gitlab.example.com/api/v4?private_token=x")
+
+        executor = self._executor(prompt_runner=_RecordingPromptRunner(), fetcher=fail)
+
+        result = executor.execute(self.task, datetime.now().astimezone(), lambda _progress: None)
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertEqual(result.error_message, "GitLab 凭据不可用，请检查个人授权后重试")
 
     def test_execute_reports_workspace_errors(self) -> None:
         def fail_prepare(*_args, **_kwargs):

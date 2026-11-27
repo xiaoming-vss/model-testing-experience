@@ -9,7 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
 
-from testing_agent_ai_worker.agent import apply_environment, migrate_legacy_sessions
+from testing_agent_ai_worker.agent import (
+    apply_environment,
+    migrate_legacy_sessions,
+    resolve_runtime_paths,
+)
+from testing_agent_ai_worker.agent.temp_configs import sweep_task_configs
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import Settings
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -19,19 +24,15 @@ from testing_agent_ai_worker.platform.revision_attachments import (
 )
 from testing_agent_ai_worker.platform.skills import SkillPreparer
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
-from testing_agent_ai_worker.services.result_service import ResultService
-from testing_agent_ai_worker.services.task_service import TaskService
 from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExecutor
 from testing_agent_ai_worker.tasks.case_visualization.executor import CaseVisualizationExecutor
 from testing_agent_ai_worker.tasks.code_risk_analysis.executor import (
     CodeRiskAnalysisExecutor,
 )
-from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
-    sweep_expired_workspaces,
-)
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     FunctionalCaseExecutor,
 )
+from testing_agent_ai_worker.tasks.git_workspace import sweep_expired_workspaces
 from testing_agent_ai_worker.tasks.repository_profile.executor import (
     RepositoryProfileExecutor,
 )
@@ -70,7 +71,7 @@ def build_task_poller(settings: Settings) -> TaskPoller:
         llm_credentials_path_template=settings.platform.task_llm_credentials_path,
         worker_id=settings.worker.worker_id,
     )
-    return TaskPoller(TaskService(task_source))
+    return TaskPoller(task_source)
 
 
 def build_task_runner(
@@ -148,7 +149,7 @@ def build_task_runner(
                 agent_config=settings.agent.active,
             ),
         ),
-        result_service=ResultService(result_sink),
+        result_sink=result_sink,
         lifecycle=WorkerLifecycle(
             poll_interval_seconds=settings.worker.poll_interval_seconds,
             heartbeat_interval_seconds=settings.worker.heartbeat_interval_seconds,
@@ -205,6 +206,7 @@ def run_worker(
     apply_environment(resolved_settings.agent.active)
     migrate_legacy_sessions(resolved_settings.agent.active)
     sweep_expired_workspaces(resolved_settings.agent.active)
+    sweep_task_configs(resolve_runtime_paths(resolved_settings.agent.active).temp_configs_dir)
     resolved_poller = poller or build_task_poller(resolved_settings)
     resolved_task_runner = task_runner or build_task_runner(resolved_settings)
     resolved_logger = logger or logging.getLogger("testing_agent_ai_worker")

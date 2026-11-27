@@ -20,7 +20,7 @@ from testing_agent.handlers.bug_zentao_push import (
     reconcile_bug_attachment,
     reconcile_bug_zentao_push,
 )
-from testing_agent.handlers.integration_bug import get_job, submit_fields, submit_sync
+from testing_agent.handlers.integration_bug import submit_fields, submit_sync
 from testing_agent.schemas.bug import BugActivityResponse, BugOptionsResponse, BugResponse
 from testing_agent.schemas.bug_zentao_pull import (
     ZentaoPullResponse,
@@ -45,9 +45,6 @@ router.post(
     status_code=202,
     response_model=ApiResponse[IntegrationJobSummary],
 )(submit_fields)
-router.get(
-    "/bugs/{bug_id}/zentao-jobs/{job_id}", response_model=ApiResponse[IntegrationJobSummary]
-)(get_job)
 
 router.get(
     "/bugs/{bug_id}/zentao-push/options",

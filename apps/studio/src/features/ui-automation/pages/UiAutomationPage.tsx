@@ -107,7 +107,7 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
               requirementOptions={isRequirementLocked ? undefined : requirementFilterOptions}
               requirementName={scope?.requirementName}
               requirementNameResolver={(suite) => {
-                const requirementId = suite.requirementId ?? suite.requirement_id
+                const requirementId = suite.requirementId
                 return scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '项目级')
               }}
               keyword={keyword}

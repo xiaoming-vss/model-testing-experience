@@ -24,6 +24,7 @@ from testing_agent.services.ai_task_output import (
 )
 
 if TYPE_CHECKING:
+    from testing_agent.domain.generation_import_source import CurrentImportSource
     from testing_agent.services.ai_task_access import CandidateImportContext
 
 
@@ -74,28 +75,15 @@ def apply_generated_case(case: FunctionTestCase, item: dict[str, Any]) -> None:
 
 async def import_function_run(
     service: CandidateImportContext,
-    run_id: str,
+    source: CurrentImportSource,
     confirm_overwrite: bool,
     user_id: str,
     *,
-    artifact_content: str | None = None,
-    allow_reimport: bool = False,
-    approved_source: Any | None = None,
     preview_only: bool = False,
-    locking_reads: bool = False,
 ) -> dict[str, Any]:
-    if approved_source is None:
-        raise ErrBadRequest()
-    run = approved_source
-    if artifact_content is None and (
-        run.status != "success"
-        or run.review_status != "approved"
-        or (run.import_status == "imported" and not allow_reimport)
-    ):
-        raise ErrBadRequest()
-    await service.ensure_requirement_access(user_id, run.requirement_id, action="write")
+    await service.ensure_requirement_access(user_id, source.requirement_id, action="write")
 
-    raw_cases = generated_function_cases(run, artifact_content)
+    raw_cases = generated_function_cases(source.content)
     if not raw_cases:
         raise ErrBadRequest()
     generated_cases = validate_function_candidate_cases(raw_cases)
@@ -110,7 +98,7 @@ async def import_function_run(
 
         if module not in suites_by_module:
             suite = await service.repository.get_function_suite_by_requirement_and_name(
-                run.requirement_id, module
+                source.requirement_id, module
             )
             suites_by_module[module] = suite
             existing_cases = (
@@ -141,77 +129,68 @@ async def import_function_run(
             "requiresConfirmation": bool(conflicts),
             "conflicts": conflicts,
             "importChanges": [],
-            "run": {},
         }
 
-    try:
-        target_ids: list[str] = []
-        changed_by_suite: dict[str, set[str]] = {}
-        max_order_by_suite: dict[str, int] = {}
-        for module, suite in list(suites_by_module.items()):
-            if suite is None:
-                suite = FunctionTestSuite(
-                    suite_id=new_id(),
-                    requirement_id=run.requirement_id,
-                    name=module,
-                    description="",
-                )
-                service.repository.add(suite)
-                suites_by_module[module] = suite
-            target_ids.append(suite.suite_id)
-
-        if locking_reads:
-            # New suites must exist before their cases: the current-read path
-            # no longer issues a query that would otherwise trigger autoflush.
-            await service.repository.flush()
-
-        for item in generated_cases:
-            module = item["module"]
-            suite = suites_by_module[module]
-            if suite is None:
-                raise ErrBadRequest()
-            existing = existing_by_module[module].get(normalized_case_name(item["title"]))
-            if existing is not None:
-                apply_generated_case(existing, item)
-                changed_by_suite.setdefault(suite.suite_id, set()).add(existing.case_id)
-                continue
-
-            max_order = max_order_by_suite.get(suite.suite_id)
-            if max_order is None:
-                max_order = (
-                    max((case.order_no for case in existing_by_module[module].values()), default=0)
-                    if locking_reads
-                    else await service.repository.max_function_case_order_by_suite(suite.suite_id)
-                )
-            max_order += 1
-            max_order_by_suite[suite.suite_id] = max_order
-            new_case = FunctionTestCase(
-                case_id=await pinned_case_id(service.repository, item["case_id"], for_update=True)
-                if locking_reads
-                else await pinned_case_id(service.repository, item["case_id"]),
-                suite_id=suite.suite_id,
-                order_no=max_order,
+    target_ids: list[str] = []
+    changed_by_suite: dict[str, set[str]] = {}
+    max_order_by_suite: dict[str, int] = {}
+    for module, suite in list(suites_by_module.items()):
+        if suite is None:
+            suite = FunctionTestSuite(
+                suite_id=new_id(),
+                requirement_id=source.requirement_id,
+                name=module,
+                description="",
             )
-            apply_generated_case(new_case, item)
-            service.repository.add(new_case)
-            changed_by_suite.setdefault(suite.suite_id, set()).add(new_case.case_id)
+            service.repository.add(suite)
+            suites_by_module[module] = suite
+        target_ids.append(suite.suite_id)
 
+    # New suites must exist before their cases: the current-read path
+    # no longer issues a query that would otherwise trigger autoflush.
+    try:
         await service.repository.flush()
-    except Exception as exc:
-        await service.repository.rollback()
-        # Concurrent inserts may collide during autoflush or commit; translate only the
+    except IntegrityError as exc:
+        # Concurrent inserts may collide during autoflush; translate only the
         # suite business key, preserving unrelated database failures.
-        if isinstance(exc, IntegrityError) and (
-            "uk_function_suite_requirement_name" in str(exc.orig)
-            or "UNIQUE constraint failed: function_test_suites.requirement_id, "
-            "function_test_suites.name"
-            in str(exc.orig)
+        if "uk_function_suite_requirement_name" in str(exc.orig) or (
+            "UNIQUE constraint failed: function_test_suites.requirement_id, "
+            "function_test_suites.name" in str(exc.orig)
         ):
             raise dynamic_error(
                 ErrFunctionTestSuiteNameAlreadyUse,
                 "该需求下的功能测试集名称已被占用，请检查生成结果的模块名称或刷新后重试",
             ) from exc
         raise
+
+    for item in generated_cases:
+        module = item["module"]
+        suite = suites_by_module[module]
+        if suite is None:
+            raise ErrBadRequest()
+        existing = existing_by_module[module].get(normalized_case_name(item["title"]))
+        if existing is not None:
+            apply_generated_case(existing, item)
+            changed_by_suite.setdefault(suite.suite_id, set()).add(existing.case_id)
+            continue
+
+        max_order = max_order_by_suite.get(suite.suite_id)
+        if max_order is None:
+            max_order = max(
+                (case.order_no for case in existing_by_module[module].values()), default=0
+            )
+        max_order += 1
+        max_order_by_suite[suite.suite_id] = max_order
+        new_case = FunctionTestCase(
+            case_id=await pinned_case_id(service.repository, item["case_id"], for_update=True),
+            suite_id=suite.suite_id,
+            order_no=max_order,
+        )
+        apply_generated_case(new_case, item)
+        service.repository.add(new_case)
+        changed_by_suite.setdefault(suite.suite_id, set()).add(new_case.case_id)
+
+    await service.repository.flush()
 
     return {
         "requiresConfirmation": False,

@@ -30,6 +30,8 @@ class ProjectMember(Base):
         comment="用户业务标识",
     )
     role: Mapped[str] = mapped_column(
-        String(16), nullable=False, comment="项目内角色：owner/member/viewer/developer"
+        String(16),
+        nullable=False,
+        comment="项目内角色：member/viewer/developer；项目所有者由 projects.user_id 表达",
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")

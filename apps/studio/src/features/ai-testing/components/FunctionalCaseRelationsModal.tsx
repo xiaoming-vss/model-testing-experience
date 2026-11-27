@@ -1,56 +1,49 @@
-import { ARTIFACT_MODAL_WIDTH } from './artifactModalLayout'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button, Tooltip } from 'antd'
 import { createPortal } from 'react-dom'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
-import { aiTestingApi } from '../api/aiTesting.api'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { FunctionalCaseRelationsViewer } from './FunctionalCaseRelationsViewer'
 import { relationFailed, relationGenerating, relationQueryKey, useFunctionalCaseRelationsRun, type CandidateRelationsSource } from '../hooks/useFunctionalCaseRelationsRun'
 
-/** 用例图谱弹窗：从功能测试「完整用例」的派生节点打开，图谱绑定该运行的 caseRelations。 */
-export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, disabled, chooseConnection, embedded = false, inspectorContainer, inspectorActionContainer, candidate }: {
-  embedded?: boolean
-  inspectorContainer?: HTMLElement | null
-  inspectorActionContainer?: HTMLElement | null
+/** 用例图谱弹窗：从功能测试「完整用例」的派生节点打开，图谱绑定当前采用用例的 caseRelations。 */
+export function FunctionalCaseRelationsModal({ open, onClose, projectId, disabled, chooseConnection, inspectorContainer, inspectorActionContainer, candidate }: {
   open: boolean
   onClose: () => void
-  taskId: string
-  runId?: string
+  projectId: string
   disabled?: boolean
   chooseConnection: () => Promise<string>
-  candidate?: CandidateRelationsSource
+  inspectorContainer?: HTMLElement | null
+  inspectorActionContainer?: HTMLElement | null
+  candidate: CandidateRelationsSource
 }) {
   const client = useQueryClient()
   const pendingRequest = usePendingRequestId()
-  const runQuery = useFunctionalCaseRelationsRun(runId ?? '', open, false, candidate)
-  const generating = relationGenerating(runQuery.data)
-  const failed = relationFailed(runQuery.data)
-  const ready = runQuery.data?.reviewStatus === 'approved' && (runQuery.data.status === 'success' || failed)
-  const sidebarMode = embedded && Boolean(inspectorContainer && inspectorActionContainer)
+  const runQuery = useFunctionalCaseRelationsRun(candidate, open, false)
+  const view = runQuery.data
+  const generating = relationGenerating(view)
+  const failed = relationFailed(view)
+  const ready = Boolean(view)
+  const sidebarMode = Boolean(inspectorContainer && inspectorActionContainer)
   const graph = useMutation({
     mutationFn: async () => {
       const connectionId = await chooseConnection()
-      if (candidate) {
-        const body = { currentToken: candidate.currentToken, connectionId }
-        return generationCandidatesApi.runRelations(candidate.requirementId, { ...body, requestId: pendingRequest.forInput(JSON.stringify(body)) })
-      }
-      return aiTestingApi.generateFunctionalCaseRelationAnalysis(runId as string, connectionId)
+      const body = { currentToken: candidate.currentToken, connectionId }
+      return generationCandidatesApi.runRelations(candidate.requirementId, { ...body, requestId: pendingRequest.forInput(JSON.stringify(body)) })
     },
-    onSuccess: async run => {
+    onSuccess: async () => {
       pendingRequest.clear()
-      if (!candidate) client.setQueryData(['functionalCaseGenerateTaskRun', runId], run)
       message.success('已提交图谱生成')
-      await client.invalidateQueries({ queryKey: relationQueryKey(runId ?? '', candidate) })
+      await client.invalidateQueries({ queryKey: relationQueryKey(candidate) })
     },
     onError: reason => { if (getErrorMessage(reason) !== '已取消操作') message.error(getErrorMessage(reason)) },
   })
   const action = <>
       <Tooltip title={!ready && !generating ? runQuery.isPending ? '正在读取运行状态' : runQuery.error ? getErrorMessage(runQuery.error) : '完整用例采用后才能生成图谱' : undefined}>
-        <span><Button size="small" loading={graph.isPending || generating} disabled={!runId || disabled || !ready || generating}
+        <span><Button size="small" loading={graph.isPending || generating} disabled={disabled || !ready || generating}
           onClick={() => graph.mutate()}>{generating ? '图谱生成中' : failed ? '重新生成图谱' : '生成图谱'}</Button></span>
       </Tooltip>
   </>
@@ -60,12 +53,10 @@ export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, dis
       <div className="gc-modal-actions">{action}</div>
     </section>, inspectorActionContainer,
   ) : null
-  return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={onClose} footer={null}
-    width={ARTIFACT_MODAL_WIDTH} centered mask={{ closable: false }} destroyOnHidden
+  return <><GenerationArtifactFrame hideHeader={sidebarMode} open={open} onCancel={onClose} footer={null}
     className={`ai-relations-modal generation-chain-relations-modal${sidebarMode ? ' gc-relations-inspector' : ''}`} title="用例图谱">
-    {!sidebarMode ? <div className="gc-relations-toolbar flex items-center justify-end gap-3 pb-2.5">{action}</div> : null}
-    {runId ? <div className={`gc-relations-body${sidebarMode ? ' flex min-h-0 flex-1 overflow-hidden' : ' h-[min(76dvh,900px)] min-h-[360px]'}`}>
-      <FunctionalCaseRelationsViewer key={runId} taskId={taskId} runId={runId} embedded={sidebarMode} controlsContainer={inspectorContainer} candidate={candidate} />
-    </div> : null}
+    <div className={`gc-relations-body${sidebarMode ? ' flex min-h-0 flex-1 overflow-hidden' : ' h-[min(76dvh,900px)] min-h-[360px]'}`}>
+      <FunctionalCaseRelationsViewer projectId={projectId} embedded={sidebarMode} controlsContainer={inspectorContainer} candidate={candidate} />
+    </div>
   </GenerationArtifactFrame>{sidebarActions}</>
 }

@@ -69,7 +69,7 @@ uv run --locked mtx-perf-worker --config config/local.toml
 | `[runner].max_duration_seconds` | Worker 兜底执行时长 |
 | `[runner].stop_grace_seconds` | SIGINT 后的优雅停止宽限期 |
 | `[runner].max_data_file_mb` | CSV/JSON 数据文件上限 |
-| `[runner].max_summary_mb` | summary 读取上限 |
+| `[runner].max_summary_mb` | summary 读取上限，默认 5，须与控制面的拒绝上限一致；超限时标记 `summary_missing` 并在 `errorMessage` 说明原因 |
 | `[once].snapshot_file` | 本地运行规格路径，仅 `once` 模式必填 |
 
 ## 控制面 poll 模式
@@ -88,9 +88,11 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 
 - 一次只领取一个任务；空队列等待 `poll_interval_seconds`，处理 SIGTERM/SIGINT 时不领取新任务。
 - 本地租约窗口基于 `time.monotonic`，迟到的心跳不能复活已经过期的租约；租约失效立即停止 k6。
-- 心跳返回 `stopRequested` 后停止 k6：用户停止回传 `canceled`，Worker 关闭回传 `stopped`，租约丢失回传 `stopped`。`once` 模式收到取消或 `KeyboardInterrupt` 时同样终止整个 k6 进程组并等待退出。
+- 心跳返回 `stopRequested` 后停止 k6：用户停止回传 `canceled`，Worker 关闭回传 `stopped`，租约丢失回传 `stopped`。`once` 模式收到取消或 `KeyboardInterrupt` 时同样终止整个 k6 进程组并等待退出。停止原因到结果的映射只在一处定义（`worker/poller.py` 的 `_STOP_RESULTS`）。
+- k6 启动前控制面明确拒绝租约（快照、控制查询、开始上报）时 Worker 不合成结果，由控制面按租约回收结束尝试；同一阶段的其他控制面错误和不符合协议的快照按 `failed/execution_error` 上报，不让一次坏快照中断轮询。
+- 健康文件按「临时文件 + 原子替换」写入，探针读不到半写入内容；轮询退出（含 `once` 模式）时删除文件。
 - 数据文件在写入前校验大小和 SHA-256，文件名拒绝路径分隔符；文件落在运行目录 `inputs/`（0700），文件权限 0600。下载遇到 429/5xx 按 `retry_attempts` 退避重试，其他 4xx 立即失败。
-- 完成结果先写 `result.json` 再上传；上报失败在同一租约窗口内按 0.5s 起指数退避（上限 5s）重试，租约到期后停止并保留 `result.json`，不重新运行 k6。控制面明确拒绝租约（`LeaseLostError`）时立即停止重试。控制面对终态完成事件幂等，重复上报携带同一结果，不产生第二次运行。
+- 完成结果先写 `result.json` 再上传；上报失败在同一租约窗口内按 0.5s 起指数退避（上限 5s）重试，租约到期后停止并保留 `result.json`，不重新运行 k6。控制面明确拒绝租约（`LeaseLostError`）时立即停止重试，日志带状态码，便于区分令牌配置错误和载荷超限。控制面对终态完成事件幂等，重复上报携带同一结果，不产生第二次运行。
 
 完整的领取、租约、停止和幂等语义见 [ADR 0002](adr/0002-control-plane-poll-mode.md)。
 
@@ -116,7 +118,7 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 - `outcome`：`passed`、`threshold_failed`、`inconclusive`、`execution_error`、`stopped`
 - `exitCode`、时间、k6 版本、模板版本、脚本 SHA-256
 - `summary`：从 `summary.json` 提取的指标与阈值结果
-- `flags`：`summary_missing`、`log_truncated`、`remote_write_error`。其中 `remote_write_error` 表示从 k6 输出中观察到 Remote Write 失败；没有该标志不能证明监控已成功接收。
+- `flags`：`summary_missing`、`log_truncated`、`remote_write_error`。其中 `remote_write_error` 表示从 k6 输出中观察到 Remote Write 失败；没有该标志不能证明监控已成功接收。`summary_missing` 也用于无法读取、超过上限或不是 JSON 对象的摘要，此时 `errorMessage` 给出原因。
 - `logTail`：脱敏后的日志尾部
 - `runner`：主机名、CPU 数量和 k6 版本
 

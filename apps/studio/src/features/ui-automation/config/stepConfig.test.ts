@@ -46,6 +46,8 @@ describe('UI 步骤规范', () => {
     expect(requiresUiStepLocator('assert_text')).toBe(true)
     expect(requiresUiStepLocator('assert_url')).toBe(false)
     expect(requiresUiStepLocator('assert_hidden')).toBe(true)
+    // 控制面与 Worker 都要求 press 在定位元素上按键，保存时不能丢掉定位。
+    expect(requiresUiStepLocator('press')).toBe(true)
     expect(usesUiStepOperation('assert_text')).toBe(true)
     expect(usesUiStepOperation('assert_visible')).toBe(true)
     expect(usesUiStepOperation('assert_hidden')).toBe(true)

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from testing_agent_ai_worker.agent import create_agent
 from testing_agent_ai_worker.agent.prompt import (
     API_DESIGNER_JSON_ONLY_INSTRUCTION,
     API_EXTRACTOR_JSON_ONLY_INSTRUCTION,
@@ -16,6 +17,7 @@ from testing_agent_ai_worker.agent.prompt import (
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.skill_names import (
     API_DESIGN_SKILL,
     API_EXTRACT_SKILL,
@@ -38,14 +40,6 @@ from testing_agent_ai_worker.tasks.api_case_generate.generation_batches import (
     generate_cases_batches,
 )
 from testing_agent_ai_worker.tasks.output_repair import generate_validated
-
-
-def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
-
-    from testing_agent_ai_worker.agent import create_agent
-
-    return create_agent(**kwargs)
 
 
 @dataclass(slots=True)
@@ -81,9 +75,9 @@ def _stage_payload(input_text: str) -> dict[str, Any]:
     try:
         payload = json.loads(input_text)
     except (TypeError, ValueError) as exc:
-        raise ValueError("API 设计/生成阶段输入必须是 JSON 对象") from exc
+        raise UserFacingError("API 设计/生成阶段输入必须是 JSON 对象") from exc
     if not isinstance(payload, dict):
-        raise ValueError("API 设计/生成阶段输入必须是 JSON 对象")
+        raise UserFacingError("API 设计/生成阶段输入必须是 JSON 对象")
     return payload
 
 
@@ -119,7 +113,7 @@ async def run_chain(
 ) -> ChainRunResult:
     """执行 API 用例生成的两段 skill 链。"""
 
-    factory = from_config or _default_from_config
+    factory = from_config or create_agent
 
     async with factory(config_path=config_path, workspace=workspace) as bot:
         directory = Path(workspace) / "diagnostics" / "api-output" if workspace else None
@@ -179,11 +173,11 @@ async def run_api_stage(
         if isinstance(current_design, str):
             current_design = parse_design_json(current_design)
         if current_design is not None and not isinstance(current_design, dict):
-            raise ValueError("currentDesign 必须是对象")
+            raise UserFacingError("currentDesign 必须是对象")
         revision_instruction = str(payload.get("revisionInstruction") or "").strip()
         skill = API_DESIGN_SKILL
         instruction = _build_api_designer_instruction(extra_instruction)
-        factory = from_config or _default_from_config
+        factory = from_config or create_agent
         async with factory(config_path=config_path, workspace=workspace) as bot:
             design = await generate_design_batches(
                 extraction=extraction,
@@ -213,7 +207,7 @@ async def run_api_stage(
         current_yaml = str(payload.get("currentYaml") or "")
         skill = API_GENERATE_SKILL
         instruction = _build_api_generator_instruction(extra_instruction)
-        factory = from_config or _default_from_config
+        factory = from_config or create_agent
         async with factory(config_path=config_path, workspace=workspace) as bot:
             return await generate_cases_batches(
                 extraction=extraction,
@@ -240,8 +234,8 @@ async def run_api_stage(
         instruction = _build_api_extractor_instruction(extra_instruction)
         validate = validate_extraction
     else:
-        raise ValueError("不支持的 API 生成阶段")
-    factory = from_config or _default_from_config
+        raise UserFacingError("不支持的 API 生成阶段")
+    factory = from_config or create_agent
     async with factory(config_path=config_path, workspace=workspace) as bot:
         return await generate_validated(
             stage=stage,

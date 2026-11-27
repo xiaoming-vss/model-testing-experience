@@ -6,6 +6,7 @@ from pathlib import Path
 from testing_agent_ai_worker.agent import cleanup_task_configs
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.pi import Pi
+from testing_agent_ai_worker.agent.temp_configs import sweep_task_configs
 from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
 
@@ -50,3 +51,20 @@ class PiConfigTests(unittest.TestCase):
             with task_config_path(agent_config=PiConfig(runtime_root=root), task=task) as name:
                 with self.assertRaisesRegex(ValueError, "credentials"):
                     Pi.from_config(config_path=name, workspace=root)
+
+    def test_startup_sweep_removes_only_leftover_credential_files(self):
+        with tempfile.TemporaryDirectory() as root:
+            root_path = Path(root)
+            stale = [
+                root_path / "pi-task-abc123.json",
+                root_path / "nanobot-task-a-xyz.json",
+            ]
+            unrelated = root_path / "settings.json"
+            for path in (*stale, unrelated):
+                path.write_text("{}", encoding="utf-8")
+
+            sweep_task_configs(root_path)
+
+            for path in stale:
+                self.assertFalse(path.exists(), path)
+            self.assertTrue(unrelated.exists())

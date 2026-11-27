@@ -1,28 +1,15 @@
 import { Alert, Form, Modal } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { aiTestingApi } from '../api/aiTesting.api'
-import {
-  requirementDesignApi,
-  type RequirementDesignKind,
-  type RequirementDesignTask,
-} from '../api/requirementDesign.api'
+import { requirementDesignApi, type RequirementDesignKind } from '../api/requirementDesign.api'
 import { getErrorMessage } from '@/utils/format'
 import { randomId } from '@/shared/utils/crypto'
 import { ApiInterfaceSelector, type ApiSuggestedRepository } from './ApiInterfaceSelector'
-
-const getters = {
-  requirement_analysis: aiTestingApi.getRequirementAnalysisTask,
-  function: aiTestingApi.getFunctionalCaseGenerateTask,
-  api: aiTestingApi.getApiCaseGenerateTask,
-  ui: aiTestingApi.getUiCaseGenerateTask,
-}
 
 export function RequirementDesignConfigurationModal({
   requirementId,
   projectId,
   kind,
-  tasks,
   initialTaskId,
   readOnly = false,
   suggestedRepositories,
@@ -32,7 +19,6 @@ export function RequirementDesignConfigurationModal({
   requirementId: string
   projectId: string
   kind: RequirementDesignKind
-  tasks: RequirementDesignTask[]
   initialTaskId?: string
   readOnly?: boolean
   suggestedRepositories?: ApiSuggestedRepository[]
@@ -40,27 +26,24 @@ export function RequirementDesignConfigurationModal({
   onSaved: (taskId: string) => void
 }) {
   const [requestId] = useState(() => randomId())
-  const [taskId] = useState(initialTaskId || tasks[0]?.taskId || 'new')
+  const [taskId] = useState(initialTaskId || 'new')
   const [createdTaskId, setCreatedTaskId] = useState<string>()
   const [interfaceIds, setInterfaceIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<unknown>()
-  const loadedTaskId = useRef<string | undefined>(undefined)
-  const query = useQuery({
-    queryKey: ['requirementDesignConfiguration', kind, taskId],
-    queryFn: () => getters[kind](taskId),
-    enabled: taskId !== 'new',
+  const loadedInterfaceIds = useRef(false)
+  const overview = useQuery({
+    queryKey: ['requirementDesignOverview', requirementId],
+    queryFn: () => requirementDesignApi.overview(requirementId),
+    enabled: kind === 'api',
   })
   useEffect(() => {
-    if (query.data && loadedTaskId.current !== taskId) {
-      loadedTaskId.current = taskId
-      if ('interfaceIds' in query.data && Array.isArray(query.data.interfaceIds)) {
-        setInterfaceIds(query.data.interfaceIds)
-      } else {
-        setInterfaceIds([])
-      }
-    }
-  }, [query.data, taskId])
+    if (kind !== 'api' || loadedInterfaceIds.current || !overview.data) return
+    loadedInterfaceIds.current = true
+    const task = overview.data.tasks.find(item => item.kind === 'api' && item.taskId === taskId)
+      ?? overview.data.tasks.find(item => item.kind === 'api')
+    setInterfaceIds(task?.interfaceIds ?? [])
+  }, [kind, overview.data, taskId])
   async function save() {
     setSaving(true)
     setError(undefined)
@@ -100,14 +83,14 @@ export function RequirementDesignConfigurationModal({
       width={kind === 'api' ? 'min(960px, calc(100vw - 32px))' : 680}
       okButtonProps={{
         disabled:
-          query.isFetching ||
-          Boolean(query.error) ||
+          overview.isFetching ||
+          Boolean(overview.error) ||
           (kind === 'api' && !interfaceIds.length),
       }}
     >
       <Form layout="vertical">
-        {error || query.error ? (
-          <Alert showIcon type="error" title={getErrorMessage(error ?? query.error)} />
+        {error || overview.error ? (
+          <Alert showIcon type="error" title={getErrorMessage(error ?? overview.error)} />
         ) : null}
         {kind === 'api' ? (
           <Form.Item

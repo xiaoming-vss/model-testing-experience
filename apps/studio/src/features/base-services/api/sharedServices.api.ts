@@ -1,6 +1,6 @@
 import { request, type ListResponse } from '@/shared/api/request'
 
-export type ServiceProvider = 'llm' | 'zentao' | 'gitlab' | 'mcp'
+export type ServiceProvider = 'llm' | 'gitlab' | 'mcp'
 export type SharedService = {
   serviceId: string
   projectId: string
@@ -26,7 +26,7 @@ export type SharedService = {
 }
 export type ServiceConfiguration = { name: string; baseUrl: string; allowHttp?: boolean; insecureSkipVerify?: boolean; modelId?: string; templateId?: 'zentao'; confirmInstanceSwitch?: boolean }
 export type McpTemplate = { templateId: 'zentao'; name: string; type: 'streamableHttp'; authorizationHeader: 'token' }
-export type PersonalAuthorization = { token?: string; apiKey?: string; accessToken?: string; account?: string; password?: string }
+export type PersonalAuthorization = { token?: string; apiKey?: string; accessToken?: string }
 const path = (projectId: string, provider: ServiceProvider, serviceId?: string) =>
   `/v1/projects/${encodeURIComponent(projectId)}/services/${provider}${serviceId ? `/${encodeURIComponent(serviceId)}` : ''}`
 

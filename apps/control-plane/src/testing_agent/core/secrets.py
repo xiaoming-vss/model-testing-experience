@@ -20,11 +20,27 @@ INSECURE_SECRETS = {
 }
 
 MIN_SECRET_LENGTH = 32
+MIN_PASSWORD_LENGTH = 8
+
+
+def is_placeholder(value: str) -> bool:
+    """Tell whether a secret is one of the values committed as an example."""
+    return value.strip().lower() in INSECURE_SECRETS
+
+
+def password_is_insecure(value: str) -> bool:
+    """Too short or a placeholder: the super admin must not be seeded with it.
+
+    The repository scripts read this rule from the file so that every check a
+    deployment goes through refuses the same passwords as the service itself.
+    """
+    password = value.strip()
+    return len(password) < MIN_PASSWORD_LENGTH or is_placeholder(password)
 
 
 def _validate_secret(name: str, value: str) -> None:
     normalized = value.strip()
-    if len(normalized) < MIN_SECRET_LENGTH or normalized.lower() in INSECURE_SECRETS:
+    if len(normalized) < MIN_SECRET_LENGTH or is_placeholder(normalized):
         raise RuntimeError(
             f"{name} 必须配置安全密钥（至少 {MIN_SECRET_LENGTH} 个字符，且不能使用占位值）；"
             "运行 python3 scripts/manage.py upgrade-config 或修改 config/platform.toml"

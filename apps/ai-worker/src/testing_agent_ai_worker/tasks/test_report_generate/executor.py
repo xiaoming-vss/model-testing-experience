@@ -3,29 +3,34 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from datetime import datetime
 
+from testing_agent_ai_worker.agent.base import AgentResult
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_skill_step
+from testing_agent_ai_worker.skill_names import TEST_REPORT_SKILL
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
 
-TEST_REPORT_SKILL_NAME = "advanced-test-report-generator"
+TEST_REPORT_SKILL_NAME = TEST_REPORT_SKILL
 
 
-def _resolve_text_result(result) -> str:
-    if hasattr(result, "__await__"):
-        resolved = asyncio.run(result)
-    else:
-        resolved = result
-    if not isinstance(resolved, str):
-        raise ValueError("test report skill result must be text")
-    return resolved
+def _resolve_report_text(result) -> str:
+    """Bridge sync test doubles and the async skill step; a returned result is complete."""
+
+    resolved = asyncio.run(result) if inspect.isawaitable(result) else result
+    if not isinstance(resolved, AgentResult):
+        raise UserFacingError("测试报告技能没有返回模型结果")
+    if not resolved.content.strip():
+        raise UserFacingError("测试报告内容为空，请重试；持续出现时请检查模型服务配置")
+    return resolved.content
 
 
 class TestReportExecutor(TaskExecutor):
@@ -89,7 +94,7 @@ class TestReportExecutor(TaskExecutor):
         )
 
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-            report_text = _resolve_text_result(
+            report_text = _resolve_report_text(
                 self.skill_runner(
                     input_text=input_text,
                     session_key=self._resolve_report_session_key(task),
@@ -124,12 +129,7 @@ class TestReportExecutor(TaskExecutor):
 
     @staticmethod
     def _resolve_daily_metrics(task: Task) -> dict[str, object]:
-        if task.payload.daily_metrics:
-            return task.payload.daily_metrics
-        daily_metrics = task.payload.metadata.get("dailyMetrics", {})
-        if isinstance(daily_metrics, dict):
-            return daily_metrics
-        return {}
+        return task.payload.daily_metrics
 
     @staticmethod
     def _build_result_summary_json(

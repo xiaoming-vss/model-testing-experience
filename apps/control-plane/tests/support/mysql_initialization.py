@@ -1,4 +1,4 @@
-"""Shared preparation for mysql initialization tests; no collected cases."""
+"""Shared disposable MySQL database setup, sync and async; no collected cases."""
 
 import os
 from datetime import UTC, date, datetime, timedelta
@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from alembic import command
 from support.initial_schema_migration import migration_config
@@ -40,6 +41,56 @@ def _mysql_fixture(revision):
 @pytest.fixture(scope="module")
 def mysql():
     yield from _mysql_fixture("head")
+
+
+def clear_schema(sync_engine):
+    """Delete every row of the disposable database, keeping only the Alembic revision."""
+    with sync_engine.begin() as connection:
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=0")
+        for name in sa.inspect(connection).get_table_names():
+            if name != "alembic_version":
+                quoted = connection.dialect.identifier_preparer.quote(name)
+                connection.exec_driver_sql(f"DELETE FROM {quoted}")
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=1")
+
+
+@pytest.fixture(autouse=True)
+def clean_schema(mysql):
+    """Start every test of the module from the migrated but empty schema.
+
+    Lets tests of one module replay the same seeded rows without sharing state.
+    """
+    clear_schema(mysql)
+    yield
+
+
+@pytest.fixture
+async def sessions(mysql):
+    """Session factory on the disposable database; its engine is disposed after the test."""
+    engine, factory = async_sessions(mysql)
+    yield factory
+    await engine.dispose()
+
+
+def async_sessions(sync_engine, **engine_options):
+    """Async engine and session factory on the same disposable database as sync_engine.
+
+    The caller owns the engine and must dispose it. Keyword arguments configure the engine,
+    for example poolclass=NullPool when sessions are used from more than one event loop.
+    """
+    engine = create_async_engine(sync_engine.url.set(drivername="mysql+asyncmy"), **engine_options)
+    return engine, async_sessionmaker(engine, expire_on_commit=False)
+
+
+def capture_statements(engine):
+    """Return the list that collects the lower-cased SQL text executed on the engine."""
+    statements = []
+
+    def record(_conn, _cursor, sql, _parameters, _context, _executemany):
+        statements.append(sql.lower())
+
+    sa.event.listen(engine.sync_engine, "before_cursor_execute", record)
+    return statements
 
 
 def seed_row(connection, table, overrides=None):

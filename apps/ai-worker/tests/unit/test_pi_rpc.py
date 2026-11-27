@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import patch
 
 from testing_agent_ai_worker.agent.pi import _CHILDREN, Pi, check_runtime
 from testing_agent_ai_worker.config.models import PiConfig
+from testing_agent_ai_worker.core.errors import AgentOutputError
 
 PEER = r"""#!/usr/bin/env python3
 import json,sys,time,os
@@ -134,7 +136,7 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("PATH", child_env)
 
     async def test_truncation_cannot_be_published_as_a_complete_artifact(self):
-        with self.assertRaisesRegex(RuntimeError, "length"):
+        with self.assertRaisesRegex(AgentOutputError, "截断"):
             await self.client().run("length", session_key="run")
 
     async def test_errors_never_expose_provider_details(self):
@@ -170,3 +172,24 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         check_runtime(self.config["executable"])
         with self.assertRaisesRegex(RuntimeError, "unavailable"):
             check_runtime(str(self.root / "missing"))
+
+    def test_startup_version_check_does_not_inherit_parent_secrets(self):
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "TESTING_AGENT_WORKER_TOKEN": "SECRET-MARKER",
+                    "AWS_SECRET_ACCESS_KEY": "SECRET-MARKER",
+                    "PI_ALLOWED_SETTING": "visible",
+                },
+            ),
+            patch("testing_agent_ai_worker.agent.pi.subprocess.run") as run,
+        ):
+            run.return_value = subprocess.CompletedProcess([], 0, stdout="1.3.0\n")
+            check_runtime(self.config["executable"])
+
+        env = run.call_args.kwargs["env"]
+        self.assertNotIn("TESTING_AGENT_WORKER_TOKEN", env)
+        self.assertNotIn("AWS_SECRET_ACCESS_KEY", env)
+        self.assertEqual("visible", env.get("PI_ALLOWED_SETTING"))
+        self.assertIn("PATH", env)

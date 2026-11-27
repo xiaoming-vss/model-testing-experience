@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from integration_test_driver import dispatch_sync, enable
+from integration_test_driver import dispatch_sync
 from sqlalchemy import select
 
 from support.bug_zentao_push_api import setup as setup
@@ -18,12 +18,6 @@ from testing_agent.models.bug import Bug
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.stored_file import StoredFileService
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
-
 
 CONTENT = b"attachment contents\n"
 

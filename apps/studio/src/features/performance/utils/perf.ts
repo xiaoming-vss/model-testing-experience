@@ -1,5 +1,6 @@
 import type { PerfRunOutcome, PerfRunStatus } from '../types'
 import type { PerfHttpMethod } from './perfCaseForm'
+import { formatBytes } from '@/shared/utils/value'
 
 export const PERF_METHOD_COLORS: Record<PerfHttpMethod, string> = {
   GET: 'blue',
@@ -103,9 +104,7 @@ export function formatPerfPercent(value: number | null) {
 }
 
 export function formatPerfFileSize(size: number) {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / 1024 / 1024).toFixed(1)} MB`
+  return formatBytes(size, 1)
 }
 
 export function formatPerfDuration(durationMs: number) {

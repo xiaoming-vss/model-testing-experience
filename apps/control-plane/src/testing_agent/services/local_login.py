@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from testing_agent.core.config import Settings
 from testing_agent.core.enums import AccountStatus, AuthSource
@@ -12,16 +12,17 @@ from testing_agent.core.errors import (
     ErrAccountLocked,
     ErrLdapPending,
     ErrLocalLoginRestricted,
-    ErrTooManyLoginAttempts,
     ErrUnauthorized,
 )
 from testing_agent.core.security import verify_password
+from testing_agent.core.utc import as_utc
 from testing_agent.models.login_rate_limit import LoginRateLimit
 from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.schemas.auth import LoginRequest
 from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.auth_session import issue_session
+from testing_agent.services.login_throttle import LoginThrottle
 
 
 class LocalLoginService:
@@ -34,6 +35,7 @@ class LocalLoginService:
     ) -> None:
         self.users = users
         self.rate_limits = rate_limits
+        self.throttle = LoginThrottle(rate_limits, settings.login_security)
         self.settings = settings
         self.mode = mode
 
@@ -55,7 +57,7 @@ class LocalLoginService:
                 raise ErrLocalLoginRestricted()
             if self.settings.ldap.enabled and not getattr(user, "is_super_admin", False):
                 raise ErrLocalLoginRestricted()
-            locked_until = _aware(getattr(user, "locked_until", None))
+            locked_until = as_utc(getattr(user, "locked_until", None))
             if locked_until is not None and locked_until > now:
                 raise ErrAccountLocked()
             if locked_until is not None:
@@ -71,9 +73,7 @@ class LocalLoginService:
             if user is not None:
                 user.failed_login_count = int(getattr(user, "failed_login_count", 0) or 0) + 1
                 if user.failed_login_count >= self.settings.login_security.max_failures:
-                    user.locked_until = now + timedelta(
-                        minutes=self.settings.login_security.lock_minutes
-                    )
+                    user.locked_until = now + self.throttle.lock_duration
             await self._record_rate_limit_failure(limiter_row, name, client_ip, now)
             await self.users.commit()
             if user is not None and getattr(user, "locked_until", None) is not None:
@@ -91,43 +91,20 @@ class LocalLoginService:
         if self.rate_limits is None or not client_ip:
             return None
         row = await self.rate_limits.get_for_update(username, client_ip)
-        if row is None:
-            return None
-        blocked_until = _aware(row.blocked_until)
-        if blocked_until is not None and blocked_until > now:
-            raise ErrTooManyLoginAttempts()
-        window = timedelta(minutes=self.settings.login_security.rate_limit_window_minutes)
-        window_started_at = _aware(row.window_started_at)
-        if window_started_at is not None and window_started_at + window <= now:
-            await self.rate_limits.delete(row)
-            return None
-        return row
+        return self.throttle.active(row, now)
 
     async def _record_rate_limit_failure(
         self, row: LoginRateLimit | None, username: str, client_ip: str, now: datetime
     ) -> None:
         if self.rate_limits is None or not client_ip:
             return
-        window = timedelta(minutes=self.settings.login_security.rate_limit_window_minutes)
-        if row is None:
-            row = LoginRateLimit(
-                username=username,
-                client_ip=client_ip,
-                attempt_count=0,
-                window_started_at=now,
-                blocked_until=None,
-            )
-            self.rate_limits.add(row)
-        row.attempt_count = int(row.attempt_count or 0) + 1
-        if row.attempt_count >= self.settings.login_security.max_failures:
-            row.blocked_until = now + window
+        self.throttle.record_failure(
+            row,
+            username=username,
+            client_ip=client_ip,
+            auth_method="local",
+            now=now,
+        )
 
     async def _clear_rate_limit(self, row: LoginRateLimit | None) -> None:
-        if row is not None and self.rate_limits is not None:
-            await self.rate_limits.delete(row)
-
-
-def _aware(value: datetime | None) -> datetime | None:
-    if value is None:
-        return None
-    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        await self.throttle.clear(row)

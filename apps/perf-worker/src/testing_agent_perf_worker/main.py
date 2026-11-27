@@ -52,17 +52,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         return 1
     except PerfWorkerError as exc:
-        _mark_failed(health)
         logger.error("perf worker failed: %s", exc)
         return 1
     except KeyboardInterrupt:
-        _mark_failed(health)
         logger.warning("perf worker interrupted")
         return 130
     except Exception:
-        _mark_failed(health)
         logger.exception("perf worker unexpected error")
         return 1
+    finally:
+        # The probe treats a missing file as unhealthy; a dead PID must not linger.
+        if health is not None:
+            health.stop()
 
 
 async def _run_with_health(settings: Settings, spec_path: Path, health: HealthFile) -> RunResult:
@@ -89,15 +90,6 @@ def _healthcheck(config_path: str | None) -> int:
         settings.worker.health_max_age_seconds,
     )
     return 0 if health.healthy() else 1
-
-
-def _mark_failed(health: HealthFile | None) -> None:
-    if health is None:
-        return
-    try:
-        health.progress("failed")
-    except OSError:
-        pass
 
 
 if __name__ == "__main__":

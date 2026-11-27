@@ -43,17 +43,16 @@
 
 | 方法 | 路径 | 行为 |
 | --- | --- | --- |
-| GET | `/v1/bugs/{bugId}/zentao-push` | 查看结果、目标、本人是否具备推送配置；需要时读取 MCP 实例信息，不写入远端 |
+| GET | `/v1/bugs/{bugId}/zentao-push` | 查看结果、目标、本人是否具备推送配置；需要时读取 MCP 实例信息，不写入远端。`activeJob`/`latestJob` 返回该 Bug 进行中及最近一次任务的状态和步骤结果 |
 | GET | `/v1/bugs/{bugId}/zentao-push/options` | 需要项目写权限及本人 Token，核对目标后返回 `target/builds/users`；已关联时另返回 `current` 的真实远端两项值及原编号，不创建远端 Bug |
 | POST | `/v1/bugs/{bugId}/zentao-sync-jobs` | 提交 requestId 和可选 openedBuild/assignedTo/expectedTarget，返回 202；独立 Worker 创建或补传 |
 | POST | `/v1/bugs/{bugId}/zentao-field-update-jobs` | 提交 requestId、指定值和预览的原目标/编号/字段，返回 202；仅修改原 Bug 变化字段 |
-| GET | `/v1/bugs/{bugId}/zentao-jobs/{jobId}` | 查询任务及步骤结果；202 不表示远端成功 |
 | POST | `/v1/bugs/{bugId}/zentao-push/reconcile` | 对待核对结果提交 `{"remoteBugId": 123}`，只读验证后补关联 |
 | POST | `/v1/bugs/{bugId}/zentao-push/attachments/{fileId}/reconcile` | 对待核对附件提交 `{"remoteFileId": 101}`，核验所属 Bug、文件名、大小和内容后恢复关联，不上传 |
 
 创建结果状态：`not_pushed`、`preparing`、`creating`、`succeeded`、`failed`、`unknown`。正文图片另外返回 `descriptionStatus: none/pending/syncing/succeeded/failed/unknown`，与 `attachmentStatus` 一起决定整体同步是否完成。
 GET 的 `ready` 表示本人配置和本地绑定满足条件；实际发起仍校验权限及远端关系。
-新任务提交返回 202，只表示入队；客户端查询 jobStatus 及步骤结果，不能据此判定远端成功。旧同步 POST/PATCH 已删除；同路径 GET 仍用于查询，旧写请求返回 HTTP 405。
+新任务提交返回 202，只表示入队；客户端通过 `zentao-push` GET 的 `activeJob`/`latestJob` 查询 jobStatus 及步骤结果，不能据此判定远端成功。按任务编号查询的 `zentao-jobs/{jobId}` 已删除，请求返回 HTTP 404。旧同步 POST/PATCH 已删除；同路径 GET 仍用于查询，旧写请求返回 HTTP 405。
 
 ## 重复请求与结果不确定
 

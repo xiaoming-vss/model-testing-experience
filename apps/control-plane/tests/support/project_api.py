@@ -2,6 +2,7 @@
 
 import asyncio
 
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects.mysql import LONGTEXT
@@ -20,6 +21,9 @@ def sqlite_longtext(type_, compiler, **kwargs):
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    # Hashing at the default bcrypt cost dominates account setup, and no API test depends on it.
+    gensalt = bcrypt.gensalt
+    monkeypatch.setattr(bcrypt, "gensalt", lambda **options: gensalt(rounds=4, **options))
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'api.db'}")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -102,6 +106,7 @@ def seed_requirement_source(api, requirement_id):
 
     from sqlalchemy import select
 
+    from support.memory_storage import Storage
     from testing_agent.api.deps_common import get_file_service
     from testing_agent.models.project import Project
     from testing_agent.models.requirement import Requirement
@@ -116,22 +121,8 @@ def seed_requirement_source(api, requirement_id):
         api.app.state.test_requirement_objects = objects
     objects[file_id] = content
 
-    class Body:
-        def __init__(self, data):
-            self.data = data
-
-        def iter_chunks(self, chunk_size):
-            yield self.data
-
-        def close(self):
-            pass
-
-    class Storage:
-        def get_object(self, key):
-            return {"Body": Body(objects[key])}
-
     api.app.dependency_overrides[get_file_service] = lambda: SimpleNamespace(
-        settings=SimpleNamespace(bucket="test-bucket"), storage=Storage()
+        settings=SimpleNamespace(bucket="test-bucket"), storage=Storage(objects=objects)
     )
 
     async def provide_source_reference():
@@ -191,11 +182,99 @@ def gitlab_remote(monkeypatch):
     return calls
 
 
-def gitlab_connection(api, headers, pid, name, url="https://gitlab.example"):
-    response = api.post(
-        f"/v1/projects/{pid}/integrations/gitlab/connections",
-        headers=headers,
-        json={"name": name, "baseUrl": url, "accessToken": name + "-token"},
+def _seed_connection(api, headers, **fields):
+    """Insert an owned connection; scenario setup must not depend on a public route."""
+    from datetime import UTC, datetime
+    from uuid import uuid4
+
+    from testing_agent.core.config import get_settings
+    from testing_agent.models.integration_connection import IntegrationConnection
+    from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+
+    profile = api.get("/v1/user", headers=headers)
+    assert profile.status_code == 200, profile.text
+    cipher = IntegrationCredentialCipher(get_settings().integration_key)
+    provider = fields["provider"]
+    connection_id = f"{provider}-{uuid4().hex}"
+    connection = IntegrationConnection(
+        connection_id=connection_id,
+        user_id=profile.json()["data"]["userId"],
+        status="active",
+        last_auth_at=datetime.now(UTC),
+        last_auth_error="",
+        account="",
+        **{
+            **fields,
+            "access_token": cipher.encrypt(fields["access_token"])
+            if fields["access_token"]
+            else "",
+            "secret_json": {
+                key: cipher.encrypt(value) for key, value in fields["secret_json"].items()
+            },
+        },
     )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
+
+    async def insert():
+        async with api.app.state.test_sessions() as session:
+            session.add(connection)
+            await session.commit()
+
+    asyncio.run(insert())
+    return connection_id
+
+
+def seed_llm_connection(
+    api,
+    headers,
+    *,
+    project_id="",
+    name="llm",
+    base_url="https://llm.example/v1",
+    api_key="fixture-secret",
+    model_id="model",
+):
+    return _seed_connection(
+        api,
+        headers,
+        provider="llm",
+        project_id=project_id,
+        name=name,
+        base_url=base_url,
+        auth_type="api_key",
+        secret_json={"apiKey": api_key},
+        access_token="",
+        extra_json={"modelId": model_id},
+    )
+
+
+def delete_connection(api, connection_id):
+    """Remove a seeded connection without going through a removed HTTP route."""
+    from sqlalchemy import delete
+
+    from testing_agent.models.integration_connection import IntegrationConnection
+
+    async def remove():
+        async with api.app.state.test_sessions() as session:
+            await session.execute(
+                delete(IntegrationConnection).where(
+                    IntegrationConnection.connection_id == connection_id
+                )
+            )
+            await session.commit()
+
+    asyncio.run(remove())
+
+
+def gitlab_connection(api, headers, pid, name, url="https://gitlab.example"):
+    return _seed_connection(
+        api,
+        headers,
+        provider="gitlab",
+        project_id=pid,
+        name=name,
+        base_url=url,
+        auth_type="personal_access_token",
+        secret_json={},
+        access_token=name + "-token",
+        extra_json={"allowHttp": False, "insecureSkipVerify": False},
+    )

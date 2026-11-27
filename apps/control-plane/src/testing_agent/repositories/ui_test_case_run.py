@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import load_only
 
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
@@ -11,6 +12,35 @@ from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun, UiTestSuiteRunItem
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import BaseRepository
+
+UI_SUITE_RUN_SUMMARY_COLUMNS = (
+    UiTestSuiteRun.suite_run_id,
+    UiTestSuiteRun.suite_id,
+    UiTestSuiteRun.environment_id,
+    UiTestSuiteRun.environment_name,
+    UiTestSuiteRun.project_id,
+    UiTestSuiteRun.requirement_id,
+    UiTestSuiteRun.requirement_name,
+    UiTestSuiteRun.sprint_id,
+    UiTestSuiteRun.sprint_name,
+    UiTestSuiteRun.trigger_user_id,
+    UiTestSuiteRun.trigger_type,
+    UiTestSuiteRun.status,
+    UiTestSuiteRun.total_count,
+    UiTestSuiteRun.success_count,
+    UiTestSuiteRun.failed_count,
+    UiTestSuiteRun.error_count,
+    UiTestSuiteRun.skipped_count,
+    UiTestSuiteRun.trace_path,
+    UiTestSuiteRun.used_variables_json,
+    UiTestSuiteRun.variable_writes_json,
+    UiTestSuiteRun.error_message,
+    UiTestSuiteRun.started_at,
+    UiTestSuiteRun.finished_at,
+    UiTestSuiteRun.duration_ms,
+    UiTestSuiteRun.created_at,
+    UiTestSuiteRun.updated_at,
+)
 
 
 class UiTestCaseRunRepository(BaseRepository):
@@ -74,6 +104,7 @@ class UiTestCaseRunRepository(BaseRepository):
             (
                 await self.session.scalars(
                     select(UiTestSuiteRun)
+                    .options(load_only(*UI_SUITE_RUN_SUMMARY_COLUMNS))
                     .where(criteria)
                     .order_by(UiTestSuiteRun.created_at.desc(), UiTestSuiteRun.id.desc())
                     .offset((page - 1) * page_size)

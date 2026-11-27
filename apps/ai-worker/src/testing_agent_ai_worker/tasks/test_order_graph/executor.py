@@ -9,19 +9,30 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
+from testing_agent_ai_worker.agent.base import AgentResult
 from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.agent.prompt import TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION
+from testing_agent_ai_worker.agent.skill_step import run_skill_step
 from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.core.errors import (
+    safe_execution_error,
+    safe_traceback,
+    safe_validation_summary,
+)
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_skill_step
+from testing_agent_ai_worker.skill_names import TEST_ORDER_GRAPH_SKILL
 from testing_agent_ai_worker.tasks.functional_case_generate.summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.test_order_graph.rounds import (
     GRAPH_BATCH_SIZE,
@@ -42,10 +53,12 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 TEST_ORDER_GRAPH_TASK_TYPE = "test_order_graph"
 # 与控制端 layout 的单阶段同名，进度和产物因此落在同一个阶段上。
 GRAPH_STAGE = "generate"
-TEST_ORDER_GRAPH_SKILL_NAME = "update-test-case-graph"
+TEST_ORDER_GRAPH_SKILL_NAME = TEST_ORDER_GRAPH_SKILL
 # 一轮内的调用次数上限：1 次生成 + 2 次带错误反馈的重试，仍失败则该轮失败。
 ROUND_ATTEMPTS = 3
 GRAPH_INPUT_LISTS = ("requirements", "cases", "case_requirement_links")
+
+LOGGER = logging.getLogger("testing_agent_ai_worker")
 
 
 class GraphInputError(ValueError):
@@ -75,11 +88,10 @@ def _default_skill_dir_checker(workspace: Path, skill_name: str) -> bool:
 
 
 def _resolve_skill_result(result: Any) -> str:
-    """兼容同步假实现和真实异步 nanobot 调用。"""
+    """兼容同步假实现和真实异步技能调用；适配器返回的结果一定是完整回答。"""
 
-    if hasattr(result, "__await__"):
-        return str(asyncio.run(result))
-    return str(result)
+    resolved = asyncio.run(result) if inspect.isawaitable(result) else result
+    return resolved.content if isinstance(resolved, AgentResult) else str(resolved)
 
 
 class TestOrderGraphExecutor(TaskExecutor):
@@ -218,11 +230,21 @@ class TestOrderGraphExecutor(TaskExecutor):
                     )
                 )
             except Exception as exc:  # 调用失败同样按轮重试
-                errors = [f"调用失败：{exc}"]
+                # 只有代码里写好的文案可以回显；第三方异常文本只留在日志的类型和栈帧里。
+                LOGGER.warning(
+                    "graph round call failed: round=%s error_type=%s\n%s",
+                    index,
+                    type(exc).__name__,
+                    safe_traceback(exc),
+                )
+                errors = [f"调用失败：{safe_execution_error(exc)}"]
                 continue
             try:
                 return parse_graph_text(raw, allowed_case_ids), attempt, None
-            except Exception as exc:  # 结构不合法时带上原因重试
+            except ValidationError as exc:
+                # 结构不合法时带上位置和规则重试，不回显模型输出本身。
+                errors = [f"ValidationError: {safe_validation_summary(exc)}"]
+            except Exception as exc:
                 errors = [f"{type(exc).__name__}: {exc}"]
         return empty_graph(), ROUND_ATTEMPTS, "图谱生成失败：" + "；".join(errors)
 

@@ -5,6 +5,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { RequirementDesignConfigurationModal } from './RequirementDesignConfigurationModal'
+import { requirementDesignApi } from '../api/requirementDesign.api'
+
+vi.mock('../api/requirementDesign.api', async importOriginal => {
+  const actual = await importOriginal<typeof import('../api/requirementDesign.api')>()
+  return { ...actual, requirementDesignApi: { ...actual.requirementDesignApi, overview: vi.fn() } }
+})
 
 vi.mock('@/features/interface-library/api/interfaceLibrary.api', () => ({
   interfaceLibraryApi: {
@@ -48,7 +54,6 @@ function mount(kind: 'ui' | 'api', onSaved = vi.fn(), initialTaskId?: string) {
           requirementId="req"
           projectId="project-1"
           kind={kind}
-          tasks={[]}
           initialTaskId={initialTaskId}
           onClose={vi.fn()}
           onSaved={onSaved}
@@ -60,6 +65,10 @@ function mount(kind: 'ui' | 'api', onSaved = vi.fn(), initialTaskId?: string) {
 }
 
 beforeEach(() => {
+  vi.mocked(requirementDesignApi.overview).mockResolvedValue({
+    tasks: [],
+    runCounts: { requirement_analysis: 0, function: 0, api: 0, ui: 0 },
+  })
   vi.mocked(
     interfaceLibraryApi.getRequirementSoftwareRepositories,
   ).mockResolvedValue(listResponse([]))
@@ -134,15 +143,18 @@ it('未选择接口时禁用保存', async () => {
 })
 
 it('已有任务回显已选接口', async () => {
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-    response({
+  vi.mocked(requirementDesignApi.overview).mockResolvedValue({
+    tasks: [{
       taskId: 'api-task',
-      interfaceIds: ['interface-1'],
-      interfaceCount: 1,
+      kind: 'api',
       name: '任务',
-      instruction: '',
-    }),
-  )
+      sourceType: 'interface_library',
+      hasSource: true,
+      sourceFilename: '',
+      interfaceIds: ['interface-1'],
+    }],
+    runCounts: { requirement_analysis: 0, function: 0, api: 1, ui: 0 },
+  })
   mount('api', vi.fn(), 'api-task')
   expect(await screen.findByText('POST /orders · 订单服务')).toBeInTheDocument()
 })

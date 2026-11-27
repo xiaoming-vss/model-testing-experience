@@ -250,7 +250,7 @@ async def test_requirement_removes_owned_generation_tasks(db):
     assert await count(db, m.Requirement) == 0
 
 
-async def test_requirement_with_running_execution_blocks_deletion(db):
+async def test_requirement_with_active_stage_attempt_blocks_deletion(db):
     req = await db.scalar(select(m.Requirement))
     await add(
         db,
@@ -266,15 +266,19 @@ async def test_requirement_with_running_execution_blocks_deletion(db):
             source_content="",
         ),
     )
+    await add(db, m.AiGenerationStage(id="stage", task_id="task", stage="case_names"))
     await add(
         db,
         m.AiExecution(
             execution_id="execution",
             task_id="task",
             requested_by="u",
-            workflow_status="running",
         ),
     )
+    await db.commit()
+
+    stage = await db.scalar(select(m.AiGenerationStage))
+    stage.active_attempt_id = "attempt"
     await db.commit()
 
     with pytest.raises(AppError) as blocked:
@@ -282,8 +286,8 @@ async def test_requirement_with_running_execution_blocks_deletion(db):
     assert blocked.value.code == 3106
 
     await db.rollback()
-    execution = await db.scalar(select(m.AiExecution))
-    execution.workflow_status = "success"
+    stage = await db.scalar(select(m.AiGenerationStage))
+    stage.active_attempt_id = None
     req = await db.scalar(select(m.Requirement))
     await db.commit()
 

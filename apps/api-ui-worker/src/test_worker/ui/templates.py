@@ -5,13 +5,12 @@ UI 步骤字段模板渲染。
 
 from __future__ import annotations
 
-import random
 import re
 import string
-import uuid
 from dataclasses import dataclass, field as dataclass_field
-from datetime import datetime
 from urllib.parse import quote as quote_url
+
+from test_worker.template_functions import evaluate_function, is_function
 
 _TOKEN = re.compile(r"\{\{(.*?)\}\}")
 _CSS_IDENT_SAFE = frozenset(string.ascii_letters + string.digits + "_-")
@@ -46,7 +45,7 @@ def referenced_names(*templates: str | None) -> list[str]:
             continue
         for match in _TOKEN.finditer(template):
             expression = match.group(1).strip()
-            if not expression or expression.startswith("$"):
+            if not expression or is_function(expression):
                 continue
             name, _ = _split_expression(expression)
             if name not in names:
@@ -58,8 +57,8 @@ def _replace(match: re.Match, variables: dict[str, str], context: RenderContext)
     expression = match.group(1).strip()
     if not expression:
         raise ValueError("变量引用不能为空")
-    if expression.startswith("$"):
-        return _builtin(expression, context.builtins)
+    if is_function(expression):
+        return evaluate_function(expression, context.builtins)
 
     name, modifier = _split_expression(expression)
     value = _value_for(name, variables)
@@ -180,68 +179,3 @@ def _open_quote(value: str, position: int) -> str:
         elif character == quote:
             quote = ""
     return quote
-
-
-def _builtin(expression: str, cache: dict[str, str]) -> str:
-    if expression not in cache:
-        cache[expression] = _evaluate_function(expression)
-    return cache[expression]
-
-
-def _evaluate_function(expr: str) -> str:
-    parts = _parse_function_args(expr)
-    if not parts:
-        return f"{{{{{expr}}}}}"
-
-    fn_name = parts[0]
-    args = parts[1:]
-
-    if fn_name == "$timestamp":
-        return str(int(datetime.now().timestamp()))
-    if fn_name == "$timestamp_ms":
-        return str(int(datetime.now().timestamp() * 1000))
-    if fn_name == "$uuid":
-        return str(uuid.uuid4())
-    if fn_name == "$randomInt":
-        min_val = int(args[0]) if len(args) > 0 else 0
-        max_val = int(args[1]) if len(args) > 1 else 9999
-        return _random_int(min_val, max_val)
-    if fn_name == "$randomString":
-        length = int(args[0]) if len(args) > 0 else 8
-        return _random_string(length)
-    if fn_name == "$date":
-        layout = args[0] if len(args) > 0 else "2006-01-02"
-        return _format_date_by_go_layout(datetime.now(), layout)
-    return f"{{{{{expr}}}}}"
-
-
-def _parse_function_args(raw: str) -> list[str]:
-    pattern = r'"[^"]*"|\'[^\']*\'|\S+'
-    matches = re.findall(pattern, raw)
-    return [match.strip("\"'") for match in matches]
-
-
-def _random_int(min_val: int, max_val: int) -> str:
-    lower = min(min_val, max_val)
-    upper = max(min_val, max_val)
-    return str(random.randint(lower, upper))
-
-
-def _random_string(length: int) -> str:
-    alphabet = string.ascii_letters + string.digits
-    return "".join(random.choices(alphabet, k=max(length, 1)))[:length]
-
-
-def _format_date_by_go_layout(date: datetime, layout: str) -> str:
-    replacements = [
-        ("2006", str(date.year)),
-        ("01", str(date.month).zfill(2)),
-        ("02", str(date.day).zfill(2)),
-        ("15", str(date.hour).zfill(2)),
-        ("04", str(date.minute).zfill(2)),
-        ("05", str(date.second).zfill(2)),
-    ]
-    result = layout
-    for token, value in replacements:
-        result = result.replace(token, value)
-    return result

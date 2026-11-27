@@ -6,11 +6,7 @@ from typing import Any
 
 from ..contracts.types import UiStepDefinition, UiStepRunResult
 from ..core import logger
-from ..control_plane.client import ControlPlaneRequestError, ExecutionLeaseLost
-
-# Progress also carries artifact tickets. A validation failure there (400/422)
-# must not be mistaken for a lost lease and silently abandon the whole run.
-LEASE_LOST_STATUSES = {401, 403, 404, 409, 410}
+from ..control_plane.client import raise_if_lease_lost
 
 
 async def report_steps(
@@ -22,7 +18,7 @@ async def report_steps(
     order: int = 0,
     started_at: str = "",
 ) -> None:
-    if client is None or not hasattr(client, "report_ui_steps"):
+    if client is None:
         return
     steps = [asdict(step) for step in completed]
     if current is not None:
@@ -38,11 +34,9 @@ async def report_steps(
     try:
         await asyncio.to_thread(client.report_ui_steps, task_id, item_id, steps)
     except Exception as error:
-        if (
-            isinstance(error, ControlPlaneRequestError)
-            and error.status_code in LEASE_LOST_STATUSES
-        ):
-            raise ExecutionLeaseLost("执行租约已失效") from None
+        # Progress also carries artifact tickets: a 400/422 is a payload problem and
+        # must not abandon the run, so only the control plane's lease rejection does.
+        raise_if_lease_lost(error)
         # Progress must never re-execute or fail the step. The final callback
         # still reports all results and validates artifact references.
         logger.warn(

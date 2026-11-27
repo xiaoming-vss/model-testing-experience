@@ -37,8 +37,9 @@ def validate_missing(step: dict) -> set[str]:
             "sleep",
         }:
             raise ValueError(
-                f"{prefix}: operationValue is milliseconds, not a business expected value; "
-                "supply a wait duration and implement the business assertion separately"
+                f"{prefix}: operationValue for {step['keyword']} is milliseconds, not a "
+                "business expected value. Supply the wait duration; implement the intended "
+                "business assertion in its own step. Do not clear a known timeout to pass validation."
             )
         for field in fields:
             if field not in step or step[field] is not None:

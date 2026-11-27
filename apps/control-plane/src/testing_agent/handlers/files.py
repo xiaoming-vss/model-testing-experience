@@ -42,11 +42,3 @@ async def download(
         success_payload(await service.download(user_id, file_id)),
         headers={"Cache-Control": "no-store"},
     )
-
-
-async def metadata(
-    file_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: StoredFileService = Depends(get_file_service),
-):
-    return success_payload(await service.metadata(user_id, file_id))

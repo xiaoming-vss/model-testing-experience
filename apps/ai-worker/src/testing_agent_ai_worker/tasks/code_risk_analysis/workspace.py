@@ -27,9 +27,9 @@ from testing_agent_ai_worker.tasks.git_workspace import (
     GitRunner,
     SubprocessGitRunner,
     checkout_head,
+    cleanup_task_run_root,
     clone_repository,
-    retain_failed_workspace,
-    sweep_expired_workspaces,
+    prepare_task_run_root,
 )
 from testing_agent_ai_worker.tasks.git_workspace import (
     GitWorkspaceError as CodeWorkspaceError,
@@ -45,9 +45,6 @@ from testing_agent_ai_worker.tasks.git_workspace import (
 )
 from testing_agent_ai_worker.tasks.git_workspace import (
     resolve_credential as _resolve_credential,
-)
-from testing_agent_ai_worker.tasks.git_workspace import (
-    task_run_root as code_run_root,
 )
 
 DIFF_HEADER = re.compile(r"^diff --git a/(.*?) b/(.*?)$", re.MULTILINE)
@@ -116,13 +113,9 @@ def prepare_code_workspace(
     if len(task.bindings) > config.max_repos:
         raise CodeWorkspaceError(f"仓库数量超过上限（{config.max_repos}）")
 
-    run_root = code_run_root(agent_config, task)
-    sweep_expired_workspaces(agent_config, now=now)
-    if run_root.exists():
-        shutil.rmtree(run_root, ignore_errors=True)
+    run_root = prepare_task_run_root(agent_config, task, now=now)
     code_root = run_root / "code"
     code_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    (run_root / ".active").write_text("1", encoding="utf-8")
 
     git = runner or SubprocessGitRunner()
     repos: list[RepoWorkspace] = []
@@ -160,10 +153,11 @@ def cleanup_code_workspace(
 ) -> None:
     """Delete successful runs and retain failed ones for debugging."""
 
-    if success:
-        shutil.rmtree(workspace.run_root, ignore_errors=True)
-        return
-    retain_failed_workspace(workspace.run_root, config.workspace_retention_hours)
+    cleanup_task_run_root(
+        workspace.run_root,
+        success=success,
+        retention_hours=config.workspace_retention_hours,
+    )
 
 
 def _prepare_repository(

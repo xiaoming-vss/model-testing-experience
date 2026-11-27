@@ -6,8 +6,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_execution import AiExecution
@@ -71,14 +75,8 @@ async def test_concurrent_code_risk_launch_creates_one_run(mysql, monkeypatch): 
     monkeypatch.setattr(
         "testing_agent.services.ai_run_launcher.require_personal_connection", AsyncMock()
     )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    statements = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, sql, _p, _x, _m: statements.append(sql.lower()),
-    )
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
 
     async def dispatch():
         async with sessions() as session:
@@ -149,8 +147,7 @@ async def test_code_risk_same_request_replays_after_concurrent_dispatch(mysql, m
     authorization_check = AsyncMock(return_value="user")
     monkeypatch.setattr(authorization, "authorize_worker_actor", authorization_check)
     snapshot = AsyncMock(return_value={"requirementMaterialCurrent": {"candidateId": "current"}})
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     arrived = 0
     snapshots_ready = asyncio.Event()
 
@@ -271,8 +268,7 @@ async def test_distinct_risks_dispatch_in_parallel_without_queue_gap_deadlock(
         return await original(*args, **kwargs)
 
     monkeypatch.setattr(auxiliary_execution, "dispatch_auxiliary_execution", simultaneous)
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     identifiers = [
         "shared-parallel-request",
         "shared-parallel-request" if same_request else "other-parallel-request",

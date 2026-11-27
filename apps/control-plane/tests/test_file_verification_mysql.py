@@ -8,18 +8,18 @@ from datetime import timedelta
 
 import pytest
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.mysql_initialization import async_sessions, seed_row
 from support.mysql_initialization import mysql as mysql
-from support.mysql_initialization import seed_row
 
 from testing_agent.core.errors import AppError
 from testing_agent.core.object_storage import ObjectStorageSettings
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.project import Project
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.models.user import User
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 @pytest.mark.asyncio
@@ -41,11 +41,10 @@ async def test_mysql_verification_releases_locks_and_serializes_duplicate_claims
                 "bucket": "disposable-test",
                 "object_key": "sample/sample.txt",
                 "staging_key": "sample/upload",
-                "expires_at": utcnow() + timedelta(hours=1),
+                "expires_at": naive_utcnow() + timedelta(hours=1),
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     started = asyncio.Event()
     release = threading.Event()
     loop = asyncio.get_running_loop()
@@ -120,7 +119,7 @@ async def test_mysql_skill_publication_and_cleanup_do_not_hold_scope_or_file_loc
                 "bucket": "isolated-d3b",
                 "object_key": "private/SKILL.md",
                 "staging_key": "",
-                "expires_at": utcnow() + timedelta(hours=1),
+                "expires_at": naive_utcnow() + timedelta(hours=1),
             },
         )
         expired = seed_row(
@@ -135,11 +134,10 @@ async def test_mysql_skill_publication_and_cleanup_do_not_hold_scope_or_file_loc
                 "bucket": "isolated-d3b",
                 "object_key": "private/old.txt",
                 "staging_key": "",
-                "expires_at": utcnow() - timedelta(hours=1),
+                "expires_at": naive_utcnow() - timedelta(hours=1),
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     started, release = asyncio.Event(), threading.Event()
     loop = asyncio.get_running_loop()
     settings = ObjectStorageSettings(
@@ -244,13 +242,12 @@ async def test_mysql_late_skill_copy_cannot_replace_a_concurrent_publication(mys
                     "bucket": "isolated-skill-race",
                     "object_key": f"private/{index}/SKILL.md",
                     "staging_key": "",
-                    "expires_at": utcnow() + timedelta(hours=1),
+                    "expires_at": naive_utcnow() + timedelta(hours=1),
                 },
             )
             for index in range(2)
         ]
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     started, release = asyncio.Event(), threading.Event()
     loop = asyncio.get_running_loop()
     calls = []

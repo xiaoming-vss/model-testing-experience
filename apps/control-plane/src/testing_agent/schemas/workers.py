@@ -8,7 +8,6 @@ from pydantic.alias_generators import to_camel
 
 from testing_agent.schemas.common import StrictRequest
 from testing_agent.schemas.generation_candidates import FrozenCandidateInput
-from testing_agent.schemas.project_skill_space import ProjectSkillSpaceResponse
 
 
 def parse_json_object(value: Any) -> dict[str, Any] | None:
@@ -97,17 +96,6 @@ class WorkerTaskAckResponse(BaseModel):
 class WorkerItemAckResponse(WorkerTaskAckResponse):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     item_id: str = Field()
-
-
-class WorkerProjectSkillResponse(ProjectSkillSpaceResponse):
-    pass
-
-
-class WorkerProjectSkillsResponse(BaseModel):
-    project_id: str = Field()
-    skills: list[WorkerProjectSkillResponse]
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class WorkerLlmCredentialsResponse(BaseModel):

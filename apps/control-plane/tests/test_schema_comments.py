@@ -11,6 +11,11 @@ GENERIC_COMMENTS = {"名称", "标题", "数据", "状态", "描述", "类型"}
 # Add (table, column) with a reason only when the owning table already supplies
 # the missing business scope; prefer a specific comment instead.
 GENERIC_EXCEPTIONS: set[tuple[str, str]] = set()
+ENUM_COLUMN = re.compile(
+    r"(?:^|_)(?:status|state|kind|type|format|mode|role|severity|priority|purpose|source|decision|disposition|action|stage)$"
+)
+# Not closed value sets: MIME types and HTTP status codes.
+NON_ENUM_COLUMNS = {("stored_files", "content_type"), ("api_interfaces", "response_status")}
 
 
 def test_model_descriptions_are_complete():
@@ -30,9 +35,11 @@ def test_model_descriptions_are_specific():
                 assert comment not in GENERIC_COMMENTS, (
                     f"{table.name}.{column.name} comment is too generic: {comment}"
                 )
-            if column.name == "status":
-                assert "：" in comment and "/" in comment, (
-                    f"{table.name}.status must state its allowed values"
+            if (table.name, column.name) not in NON_ENUM_COLUMNS and ENUM_COLUMN.search(
+                column.name
+            ):
+                assert "：" in comment and comment.split("：", 1)[1].strip(), (
+                    f"{table.name}.{column.name} must state its allowed values"
                 )
 
 

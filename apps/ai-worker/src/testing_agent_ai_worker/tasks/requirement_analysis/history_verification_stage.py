@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from testing_agent_ai_worker.core.errors import UserFacingError
 from testing_agent_ai_worker.historical_test_case_artifacts import (
     VERIFICATION_RUN_RESULT,
     full_case_batch,
@@ -17,7 +18,10 @@ from testing_agent_ai_worker.historical_test_case_artifacts import (
 )
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.platform.revision_attachments import (
+    load_revision_images,
+    revision_image_paths,
+)
 from testing_agent_ai_worker.skill_names import HISTORICAL_TEST_CASE_SKILL
 from testing_agent_ai_worker.tasks.requirement_analysis.history_stage import (
     read_history_model_output,
@@ -35,13 +39,13 @@ def execute_history_verification_stage(
     attachment_downloader: Any = None,
 ) -> TaskResult:
     if not task.checkpoint_enabled or not task.session_key:
-        raise ValueError("历史用例核验需要独立阶段尝试")
+        raise UserFacingError("历史用例核验需要独立阶段尝试")
     source = validate_verification_run_input(task.payload.source_content)
     if source["requirementId"] != task.requirement_id:
-        raise ValueError("历史用例核验快照不属于当前需求")
+        raise UserFacingError("历史用例核验快照不属于当前需求")
     config = json.loads(task.config_json or "{}")
     if not isinstance(config, dict):
-        raise ValueError("configJson 必须是对象")
+        raise UserFacingError("configJson 必须是对象")
     revision = config.get("revisionInstruction")
     prior = {}
     if revision:
@@ -49,15 +53,13 @@ def execute_history_verification_stage(
             config.get("historicalTestCaseVerification"), source
         )
         prior = {item["firstPass"]["batchId"]: item for item in previous["batches"]}
-    attachments = parse_revision_attachments(config)
-    media = []
-    if attachments:
-        if attachment_downloader is None:
-            raise ValueError("未配置继续优化图片下载器")
-        images = attachment_downloader.download(
-            task_id=task.task_id, workspace=workspace, attachments=attachments
-        )
-        media = [image["sourcePath"] for image in images]
+    images = load_revision_images(
+        task_id=task.task_id,
+        workspace=workspace,
+        config=config,
+        downloader=attachment_downloader,
+    )
+    media = revision_image_paths(images)
 
     def run_pass(batch: dict[str, Any], pass_name: str) -> dict[str, Any]:
         instructions = [task.payload.extra_instruction, "正式响应只返回本阶段完整 JSON 对象。"]
@@ -83,8 +85,10 @@ def execute_history_verification_stage(
             return validate_verification_batch_output(
                 read_history_model_output(response, "历史用例核验"), batch
             )
+        except UserFacingError:
+            raise
         except ValueError as exc:
-            raise ValueError("历史用例核验批次结果未通过结构或引用校验") from exc
+            raise UserFacingError("历史用例核验批次结果未通过结构或引用校验") from exc
 
     def report(completed: int) -> None:
         progress_callback(

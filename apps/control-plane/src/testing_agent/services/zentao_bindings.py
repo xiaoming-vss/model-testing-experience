@@ -21,12 +21,16 @@ from testing_agent.core.errors import (
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.binding_support import LocalBindingAccess, commit_binding, dump_binding
-from testing_agent.services.integration_connection import IntegrationConnectionService, item_value
+from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
 from testing_agent.services.zentao_mcp import ZentaoMcpAccess
 from testing_agent.services.zentao_mcp_selection import binding_service_id, inherited_mcp_service_id
-from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
+from testing_agent.services.zentao_resource import (
+    item_value,
+    parse_zentao_remote_id,
+    truncate_error,
+)
 
 ZENTAO_REMOTE_TYPE_DEFAULTS = {"project": "project", "sprint": "execution", "requirement": "story"}
 
@@ -102,35 +106,27 @@ class ZentaoBindings:
         requested_parent = str(body.get("remoteParentId") or "")
         if requested_parent and requested_parent != parent.remote_resource_id:
             raise ErrResourceBindingInvalid()
-        found = False
-        page = 1
-        while True:
-            if resource_type == "sprint":
-                result = await self.zentao_resource_client.list_project_executions(
-                    connection, parent.remote_resource_id, page=page, page_size=100
-                )
-            else:
-                # Stories are returned as a complete list, without pagination parameters.
-                result = await self.zentao_resource_client.list_execution_stories(
-                    connection, parent.remote_resource_id
-                )
-            items = result.get("items") or []
-            if any(
-                str(item_value(item, "id")) == remote_id
-                and not item_value(item, "deleted", default=False)
+        result = (
+            await self.zentao_resource_client.list_all_project_executions(
+                connection, parent.remote_resource_id
+            )
+            if resource_type == "sprint"
+            # Stories are returned as a complete list, without pagination parameters.
+            else await self.zentao_resource_client.list_execution_stories(
+                connection, parent.remote_resource_id
+            )
+        )
+        items = result.get("items") or []
+        matched = next(
+            (
+                item
                 for item in items
-            ):
-                matched = next(item for item in items if str(item_value(item, "id")) == remote_id)
-                found = True
-                break
-            if (
-                resource_type != "sprint"
-                or not items
-                or page * 100 >= int(result.get("total") or len(items))
-            ):
-                break
-            page += 1
-        if not found:
+                if str(item_value(item, "id")) == remote_id
+                and not item_value(item, "deleted", default=False)
+            ),
+            None,
+        )
+        if matched is None:
             raise ErrResourceBindingInvalid()
         body = {**body, "remoteResourceId": remote_id, "remoteParentId": parent.remote_resource_id}
         binding = ResourceBinding(
@@ -343,33 +339,23 @@ class ZentaoBindings:
                 raise ErrResourceBindingInvalid() from exc
             if binding.remote_parent_id and binding.remote_parent_id != parent_id:
                 raise ErrResourceBindingInvalid()
-            page = 1
-            while True:
-                if binding.local_resource_type == "sprint":
-                    result = await self.zentao_resource_client.list_project_executions(
-                        connection, parent_id, page=page, page_size=100
-                    )
-                else:
-                    result = await self.zentao_resource_client.list_execution_stories(
-                        connection, parent_id
-                    )
-                items = result.get("items") or []
-                if any(
-                    str(item_value(item, "id")) == remote_id
-                    and not item_value(item, "deleted", default=False)
+            result = (
+                await self.zentao_resource_client.list_all_project_executions(connection, parent_id)
+                if binding.local_resource_type == "sprint"
+                else await self.zentao_resource_client.list_execution_stories(connection, parent_id)
+            )
+            items = result.get("items") or []
+            remote = next(
+                (
+                    item
                     for item in items
-                ):
-                    remote = next(
-                        item for item in items if str(item_value(item, "id")) == remote_id
-                    )
-                    break
-                if (
-                    binding.local_resource_type != "sprint"
-                    or not items
-                    or page * 100 >= int(result.get("total") or len(items))
-                ):
-                    raise ErrResourceBindingInvalid()
-                page += 1
+                    if str(item_value(item, "id")) == remote_id
+                    and not item_value(item, "deleted", default=False)
+                ),
+                None,
+            )
+            if remote is None:
+                raise ErrResourceBindingInvalid()
             binding.remote_parent_id = parent_id
         if binding.remote_resource_id != remote_id:
             from testing_agent.services.integration_lifecycle import change_target

@@ -17,6 +17,7 @@ from testing_agent.services.bug_zentao_fields import BugZentaoFieldsService, upd
 from testing_agent.services.bug_zentao_options import build_options, user_options
 from testing_agent.services.integration_transaction import local_transaction
 from testing_agent.services.mcp_client import McpCallError, McpClient
+from testing_agent.services.personal_credentials import has_mcp_token
 from testing_agent.services.service_instance import instance_key
 from testing_agent.services.shared_service import SharedServiceService
 from testing_agent.services.zentao_mcp_identity import validate_identity
@@ -159,7 +160,7 @@ class BugZentaoPushService:
         own = await self.catalog.own_connection(service, user_id)
         if own is not None and lock:
             await self.session.refresh(own, with_for_update=True)
-        if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
+        if not has_mcp_token(own):
             raise AppError(400, "请先在基础服务保存本人的禅道 MCP Token", 400)
         target = {
             "mcpServiceId": service.service_id,

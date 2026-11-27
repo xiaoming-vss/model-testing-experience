@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import load_only
 
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.project import Project
@@ -27,41 +28,33 @@ class PerfCaseRepository(ResourceRepository):
             select(PerfCase).where(PerfCase.project_id == project_id, PerfCase.name == name)
         )
 
-    async def list_by_project(
-        self, project_id: str, *, invalidated: bool | None = None
-    ) -> list[PerfCase]:
-        conditions = [PerfCase.project_id == project_id]
-        if invalidated is True:
-            conditions.append(PerfCase.invalidated_at.is_not(None))
-        elif invalidated is False:
-            conditions.append(PerfCase.invalidated_at.is_(None))
+    async def list_by_suite(self, suite_id: str) -> list[PerfCase]:
         return list(
             (
                 await self.session.scalars(
                     select(PerfCase)
-                    .where(*conditions)
-                    .order_by(PerfCase.created_at.desc(), PerfCase.id.desc())
-                )
-            ).all()
-        )
-
-    async def list_by_suite(
-        self, suite_id: str, *, invalidated: bool | None = None
-    ) -> list[PerfCase]:
-        conditions = [PerfCase.suite_id == suite_id]
-        if invalidated is True:
-            conditions.append(PerfCase.invalidated_at.is_not(None))
-        elif invalidated is False:
-            conditions.append(PerfCase.invalidated_at.is_(None))
-        return list(
-            (
-                await self.session.scalars(
-                    select(PerfCase)
-                    .where(*conditions)
+                    .where(PerfCase.suite_id == suite_id)
                     .order_by(PerfCase.order_no.asc(), PerfCase.created_at.asc(), PerfCase.id.asc())
                 )
             ).all()
         )
+
+    async def list_by_suites(self, suite_ids: Sequence[str]) -> dict[str, list[PerfCase]]:
+        """Load only the YAML needed to aggregate suite summaries, in one query."""
+        if not suite_ids:
+            return {}
+        rows = (
+            await self.session.scalars(
+                select(PerfCase)
+                .options(load_only(PerfCase.case_id, PerfCase.suite_id, PerfCase.yaml))
+                .where(PerfCase.suite_id.in_(suite_ids))
+                .order_by(PerfCase.suite_id, PerfCase.order_no.asc(), PerfCase.id.asc())
+            )
+        ).all()
+        grouped: dict[str, list[PerfCase]] = {suite_id: [] for suite_id in suite_ids}
+        for row in rows:
+            grouped.setdefault(row.suite_id or "", []).append(row)
+        return grouped
 
     async def list_project_cases_by_ids(
         self, project_id: str, case_ids: Sequence[str]

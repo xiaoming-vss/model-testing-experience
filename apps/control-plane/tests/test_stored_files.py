@@ -14,6 +14,7 @@ from support.stored_files import (
 )
 
 from testing_agent.core.errors import AppError
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.bug import Bug
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.stored_file import StoredFile
@@ -21,7 +22,6 @@ from testing_agent.models.user import User
 from testing_agent.repositories.bug import BugRepository
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.bug import BugService
-from testing_agent.services.stored_file import utcnow
 
 
 @pytest.mark.asyncio
@@ -118,11 +118,11 @@ async def test_cleanup_retains_attached_history_and_expires_temporary(files):
     row, _ = await upload(files)
     await files.complete("owner", row.file_id)
     await files.attach("owner", row.file_id, "p", "requirement", "r", purpose="requirement")
-    row.expires_at = utcnow() - timedelta(hours=1)
+    row.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     temporary, _ = await upload(files, b"old")
     temp_id = temporary.file_id
-    temporary.expires_at = utcnow() - timedelta(hours=1)
+    temporary.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     result = await files.cleanup()
     assert result == {"deleted": 1, "failed": 0}
@@ -139,7 +139,7 @@ async def test_cleanup_retains_attached_history_and_expires_temporary(files):
 @pytest.mark.asyncio
 async def test_expired_upload_and_type_mismatch(files):
     row, _ = await upload(files)
-    row.expires_at = utcnow() - timedelta(hours=1)
+    row.expires_at = naive_utcnow() - timedelta(hours=1)
     await files.session.commit()
     with pytest.raises(AppError, match="过期"):
         await files.complete("owner", row.file_id)
@@ -395,14 +395,14 @@ async def test_removed_bug_image_remains_readable_from_history_after_cleanup(fil
     await files.attach("owner", row.file_id, "p", "bug", "bug", purpose="attachment")
     await files.session.commit()
     bugs = BugService(BugRepository(files.session), files)
-    await bugs.update("member", "bug", {"description_html": "<p>已修复</p>"})
-    result = await bugs.update("member", "bug", {"removed_attachment_file_ids": [row.file_id]})
+    await bugs.update("member", "bug", {"descriptionHtml": "<p>已修复</p>"})
+    result = await bugs.update("member", "bug", {"removedAttachmentFileIds": [row.file_id]})
     assert result["attachments"] == []
     # The full old HTML is retained and its stable file ID must still resolve.
     history = await bugs.repository.list_activities("bug")
     assert history[0].detail_json["changes"][0]["from"] == original
     assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
-    row.expires_at = utcnow() - timedelta(days=1)
+    row.expires_at = naive_utcnow() - timedelta(days=1)
     await files.session.commit()
     await files.cleanup()
     assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
@@ -411,7 +411,7 @@ async def test_removed_bug_image_remains_readable_from_history_after_cleanup(fil
         == content
     )
     # Another authorized editor can restore the archived image without re-uploading it.
-    restored = await bugs.update("member", "bug", {"description_html": original})
+    restored = await bugs.update("member", "bug", {"descriptionHtml": original})
     assert [item["fileId"] for item in restored["attachments"]] == [row.file_id]
 
 
@@ -422,7 +422,7 @@ async def test_cleanup_protects_legacy_deleting_bug_evidence(files):
     files.session.add(Bug(bug_id="bug", project_id="p", bug_no=1, title="bug", found_sprint_id="s"))
     await files.attach("owner", row.file_id, "p", "bug", "bug", purpose="attachment")
     row.status = "deleting"
-    row.expires_at = utcnow() - timedelta(days=1)
+    row.expires_at = naive_utcnow() - timedelta(days=1)
     await files.session.commit()
     await files.cleanup()
     assert (await files.download("viewer", row.file_id))["filename"] == "a.txt"

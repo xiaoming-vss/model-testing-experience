@@ -23,14 +23,13 @@ from testing_agent_ai_worker.tasks.git_workspace import (
     GitWorkspaceError,
     SubprocessGitRunner,
     checkout_head,
+    cleanup_task_run_root,
     clone_repository,
     fetch_commits,
     git_env,
+    prepare_task_run_root,
     repo_directory_name,
     resolve_credential,
-    retain_failed_workspace,
-    sweep_expired_workspaces,
-    task_run_root,
 )
 
 LOGGER = logging.getLogger("testing_agent_ai_worker")
@@ -111,13 +110,9 @@ def prepare_profile_workspace(
     if len(task.bindings) > config.max_repos:
         raise ProfileWorkspaceError(f"仓库数量超过上限（{config.max_repos}）")
 
-    run_root = task_run_root(agent_config, task)
-    sweep_expired_workspaces(agent_config, now=now)
-    if run_root.exists():
-        shutil.rmtree(run_root, ignore_errors=True)
+    run_root = prepare_task_run_root(agent_config, task, now=now)
     code_root = run_root / "code"
     code_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    (run_root / ".active").write_text("1", encoding="utf-8")
 
     git = runner or SubprocessGitRunner()
     repositories: list[ProfileRepoWorkspace] = []
@@ -200,10 +195,11 @@ def cleanup_profile_workspace(
     success: bool,
     config: RepositoryProfileConfig,
 ) -> None:
-    if success:
-        shutil.rmtree(workspace.run_root, ignore_errors=True)
-        return
-    retain_failed_workspace(workspace.run_root, config.workspace_retention_hours)
+    cleanup_task_run_root(
+        workspace.run_root,
+        success=success,
+        retention_hours=config.workspace_retention_hours,
+    )
 
 
 def _top_level_entries(repo_path: Path, limit: int = 200) -> list[str]:

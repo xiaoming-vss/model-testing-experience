@@ -76,12 +76,12 @@ class FunctionCasePushOperation(Base):
     status: Mapped[str] = mapped_column(
         String(20),
         comment=(
-            "功能用例推送操作状态：prepared/succeeded/failed/unknown；"
-            "prepared 已获一次写许可，重试不再授予"
+            "功能用例推送操作状态：prepared/succeeded/failed/unknown；prepared 已获一次写许"
+            "可，重试不再授予"
         ),
     )
     action: Mapped[str] = mapped_column(
-        String(20), comment="create/update；历史同名需显式选择绑定或新建"
+        String(20), comment="功能用例推送动作：create/update；历史同名需显式选择绑定或新建"
     )
     target_json: Mapped[dict[str, Any]] = mapped_column(
         JSON, comment="写入前冻结的远端目标和已绑定编号"

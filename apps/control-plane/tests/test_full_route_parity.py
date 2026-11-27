@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from support.openapi_schema import openapi_schema
+from support.openapi_schema import route_set
 
 
 def go_path(path: str) -> str:
@@ -29,14 +29,6 @@ def go_path(path: str) -> str:
     for snake, camel in replacements.items():
         path = path.replace("{" + snake + "}", "{" + camel + "}")
     return path
-
-
-def route_set():
-    result = set()
-    for path, methods in openapi_schema()["paths"].items():
-        for method in methods:
-            result.add((method.upper(), path))
-    return result
 
 
 def test_missing_go_routes_are_exposed():
@@ -71,48 +63,8 @@ def test_missing_go_routes_are_exposed():
         ("DELETE", "/v1/ui-test-cases/{case_id}"),
         ("POST", "/v1/function-test-suites/{suite_id}/cases/import"),
         ("POST", "/v1/function-test-suites/{suite_id}/zentao/testcases/import"),
-        ("GET", "/v1/integrations/zentao/connections"),
-        ("GET", "/v1/integrations/zentao/connections/{connection_id}"),
-        ("PATCH", "/v1/integrations/zentao/connections/{connection_id}"),
-        ("DELETE", "/v1/integrations/zentao/connections/{connection_id}"),
-        ("POST", "/v1/integrations/zentao/connections/{connection_id}/reauth"),
-        ("GET", "/v1/integrations/llm/connections"),
-        ("POST", "/v1/integrations/llm/connections"),
-        ("GET", "/v1/integrations/llm/connections/{connection_id}"),
-        ("PATCH", "/v1/integrations/llm/connections/{connection_id}"),
-        ("DELETE", "/v1/integrations/llm/connections/{connection_id}"),
         ("GET", "/v1/projects/{project_id}/integrations/zentao/connections"),
-        ("POST", "/v1/projects/{project_id}/integrations/zentao/connections"),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}",
-        ),
-        (
-            "PATCH",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}",
-        ),
-        (
-            "DELETE",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}",
-        ),
-        (
-            "POST",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/reauth",
-        ),
         ("GET", "/v1/projects/{project_id}/integrations/llm/connections"),
-        ("POST", "/v1/projects/{project_id}/integrations/llm/connections"),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/llm/connections/{connection_id}",
-        ),
-        (
-            "PATCH",
-            "/v1/projects/{project_id}/integrations/llm/connections/{connection_id}",
-        ),
-        (
-            "DELETE",
-            "/v1/projects/{project_id}/integrations/llm/connections/{connection_id}",
-        ),
         ("POST", "/v1/projects/{project_id}/bindings"),
         ("GET", "/v1/projects/{project_id}/bindings"),
         ("DELETE", "/v1/projects/{project_id}/bindings/{binding_id}"),
@@ -129,10 +81,6 @@ def test_missing_go_routes_are_exposed():
         ("POST", "/v1/projects/{project_id}/skills"),
         ("DELETE", "/v1/projects/{project_id}/skills/{skill_space_id}"),
         ("GET", "/v1/projects/{project_id}/skills/{skill_space_id}/download"),
-        ("GET", "/v1/api-case-generate-tasks/{task_id}"),
-        ("GET", "/v1/function-case-generate-tasks/{task_id}"),
-        ("GET", "/v1/function-case-generate-task-runs/{run_id}"),
-        ("POST", "/v1/function-case-generate-task-runs/{run_id}/relation-analysis"),
         ("GET", "/v1/requirement-analysis-tasks/{task_id}"),
         ("POST", "/v1/projects/{project_id}/test-report-generate-runs"),
         ("GET", "/v1/projects/{project_id}/test-report-generate-runs"),
@@ -156,6 +104,11 @@ def test_missing_go_routes_are_exposed():
     }
     assert not {("GET", go_path(path)) for path in retired_discovery} & routes
     retired_legacy_task_routes = {
+        ("GET", "/v1/api-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/function-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/ui-case-generate-tasks/{task_id}"),
+        ("GET", "/v1/function-case-generate-task-runs/{run_id}"),
+        ("POST", "/v1/function-case-generate-task-runs/{run_id}/relation-analysis"),
         ("GET", "/v1/projects/{project_id}/api-case-generate-tasks"),
         ("POST", "/v1/projects/{project_id}/api-case-generate-tasks"),
         ("PATCH", "/v1/api-case-generate-tasks/{task_id}"),

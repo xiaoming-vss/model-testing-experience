@@ -25,13 +25,12 @@ from testing_agent_ai_worker.tasks.git_workspace import (
     GitWorkspaceError,
     SubprocessGitRunner,
     checkout_head,
+    cleanup_task_run_root,
     clone_repository,
     fetch_commits,
     git_env,
+    prepare_task_run_root,
     resolve_credential,
-    retain_failed_workspace,
-    sweep_expired_workspaces,
-    task_run_root,
 )
 
 SOURCE_KIND_REPOSITORY = "repository"
@@ -115,13 +114,8 @@ def prepare_repository_source(
     if credential is None:
         raise RepositorySourceError(f"仓库 {binding.repository_id} 未匹配到 GitLab 凭据")
 
-    run_root = task_run_root(agent_config, task)
-    sweep_expired_workspaces(agent_config, now=now)
-    if run_root.exists():
-        shutil.rmtree(run_root, ignore_errors=True)
+    run_root = prepare_task_run_root(agent_config, task, now=now)
     source_root = run_root / "source"
-    run_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    (run_root / ".active").write_text("1", encoding="utf-8")
 
     git = runner or SubprocessGitRunner()
     auth_root = Path(tempfile.mkdtemp(prefix=".git-auth-", dir=run_root))
@@ -159,10 +153,11 @@ def cleanup_repository_source(
 ) -> None:
     """成功删除工作区;失败保留诊断窗口。"""
 
-    if success:
-        shutil.rmtree(source.run_root, ignore_errors=True)
-        return
-    retain_failed_workspace(source.run_root, config.workspace_retention_hours)
+    cleanup_task_run_root(
+        source.run_root,
+        success=success,
+        retention_hours=config.workspace_retention_hours,
+    )
 
 
 def build_credentials_fetcher(

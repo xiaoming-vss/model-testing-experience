@@ -8,7 +8,8 @@ from typing import Any
 from sqlalchemy import select
 
 from testing_agent.core.errors import ErrForbidden
-from testing_agent.domain.integration_execution import digest, utc
+from testing_agent.core.utc import as_utc
+from testing_agent.domain.integration_execution import digest
 from testing_agent.domain.integration_execution import require as require
 from testing_agent.domain.rich_text import extract_file_ids
 from testing_agent.models.bug import Bug
@@ -23,6 +24,7 @@ from testing_agent.services.bug_zentao_attachment import BugZentaoAttachmentServ
 from testing_agent.services.bug_zentao_description import source_hash
 from testing_agent.services.bug_zentao_fields import equal, update_status
 from testing_agent.services.bug_zentao_push import PRIORITY, SEVERITY, STALE_AFTER
+from testing_agent.services.personal_credentials import has_mcp_token
 from testing_agent.services.service_instance import instance_key
 from testing_agent.services.zentao_mcp_selection import binding_service_id, select_mcp_service
 
@@ -127,7 +129,7 @@ class IntegrationBugContext:
         own = await self.pushes.catalog.own_connection(service, actor)
         if own is not None and lock:
             await self.session.refresh(own, with_for_update=True)
-        if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
+        if not has_mcp_token(own):
             raise ErrForbidden()
         project_bindings = [
             b for b in await self.bindings(bug, lock=lock) if b["kind"] == "project"
@@ -212,7 +214,7 @@ class IntegrationBugContext:
     async def retryable_attachment(self, record: BugZentaoAttachment | None) -> bool:
         if record is None or record.status == "failed":
             return True
-        if record.status != "pending" or utc(record.updated_at) >= self.clock() - STALE_AFTER:
+        if record.status != "pending" or as_utc(record.updated_at) >= self.clock() - STALE_AFTER:
             return False
         if not record.operation_id:
             return True
@@ -229,7 +231,7 @@ class IntegrationBugContext:
     async def build_sync(self, actor, bug_id, request_id, request: BugZentaoPushRequest):
         bug, row = await self.entities(actor, bug_id)
         if row and row.status != "succeeded":
-            stale_preflight = row.status == "preparing" and utc(row.updated_at) < (
+            stale_preflight = row.status == "preparing" and as_utc(row.updated_at) < (
                 self.clock() - STALE_AFTER
             )
             require(
@@ -280,7 +282,7 @@ class IntegrationBugContext:
             previous_status == "preparing"
             and row is not None
             and row.description_updated_at is not None
-            and utc(row.description_updated_at) < self.clock() - STALE_AFTER
+            and as_utc(row.description_updated_at) < self.clock() - STALE_AFTER
         )
         require(
             previous_status not in {"preparing", "syncing"} or stale_preparation,

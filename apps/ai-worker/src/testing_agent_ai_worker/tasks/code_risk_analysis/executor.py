@@ -17,7 +17,7 @@ from testing_agent_ai_worker.config.models import (
     CodeRiskAnalysisConfig,
     PiConfig,
 )
-from testing_agent_ai_worker.core.errors import safe_traceback
+from testing_agent_ai_worker.core.errors import SafeMessageError, UserFacingError, safe_traceback
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
@@ -35,9 +35,13 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspace,
     CodeWorkspaceError,
     cleanup_code_workspace,
-    code_run_root,
     prepare_code_workspace,
+)
+from testing_agent_ai_worker.tasks.git_workspace import (
     retain_failed_workspace,
+)
+from testing_agent_ai_worker.tasks.git_workspace import (
+    task_run_root as code_run_root,
 )
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
@@ -50,7 +54,7 @@ def _platform_credentials_fetcher(client: PlatformHttpClient):
     def _fetch(task: Task) -> list[GitlabCredentials]:
         url = task.gitlab_credentials_url
         if not url:
-            raise RuntimeError("快照缺少 gitlabCredentialsUrl")
+            raise UserFacingError("快照缺少 gitlabCredentialsUrl")
         payload = client.get(url)
         return parse_gitlab_credentials(payload)
 
@@ -101,8 +105,11 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
             return self._failed_result(task, started_at, "worker 未配置 GitLab 凭据获取")
         try:
             credentials = self.credentials_fetcher(task)
-        except Exception as exc:
-            return self._failed_result(task, started_at, f"GitLab 凭据不可用: {exc}")
+        except SafeMessageError as exc:
+            return self._failed_result(task, started_at, str(exc))
+        except Exception:
+            # Third-party exception text may carry request details; report fixed wording.
+            return self._failed_result(task, started_at, "GitLab 凭据不可用，请检查个人授权后重试")
 
         run_root = code_run_root(self.agent_config, task)
         progress_callback(
@@ -221,7 +228,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         except Exception as exc:
-            if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError)):
+            if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError, SafeMessageError)):
                 LOGGER.warning(
                     "code risk context failed: task_id=%s attempt_id=%s error_type=%s",
                     task.task_id,
@@ -268,7 +275,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
-        if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError)):
+        if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError, SafeMessageError)):
             return str(exc)
         return "代码上下文准备或模型调用失败"
 

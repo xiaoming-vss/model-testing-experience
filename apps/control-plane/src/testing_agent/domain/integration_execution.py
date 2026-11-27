@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -60,11 +59,6 @@ def same_result(kind: str, left: dict[str, Any], right: dict[str, Any]) -> bool:
     ):
         return False
     return set(builds[0]) == set(builds[1]) and left["assignedTo"] == right["assignedTo"]
-
-
-def utc(value: datetime) -> datetime:
-    # MySQL/SQLite return naive DateTime values even when timezone=True.
-    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def aggregate(statuses: list[str], *, canceled: bool = False) -> JobStatus:

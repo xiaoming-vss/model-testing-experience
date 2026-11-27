@@ -9,13 +9,14 @@ from support.stored_files import files as files
 from support.stored_files import upload
 
 from testing_agent.core.errors import AppError
+from testing_agent.core.utc import naive_utcnow
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.project import Project
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
 from testing_agent.services.file_verification import FileVerificationWorkflow
 from testing_agent.services.skill_storage import SkillPublisher
-from testing_agent.services.stored_file import StoredFileService, utcnow
+from testing_agent.services.stored_file import StoredFileService
 
 
 async def body(files, content):
@@ -109,7 +110,7 @@ async def test_uncertain_copy_retains_tombstone_and_does_not_change_current_skil
         select(FileVerification).where(FileVerification.state == "abandoned")
     )
     assert operation is not None and operation.settled_at is None
-    operation.gc_after = utcnow() - timedelta(seconds=1)
+    operation.gc_after = naive_utcnow() - timedelta(seconds=1)
     await files.session.commit()
     await FileVerificationWorkflow(files.session, files.settings, files.storage).collect()
     assert (
@@ -156,7 +157,7 @@ async def test_cancelled_skill_copy_is_fenced_and_late_object_remains_reclaimabl
         operation = await files.session.scalar(
             select(FileVerification).where(FileVerification.state == "running")
         )
-        operation.deadline = operation.gc_after = utcnow() - timedelta(seconds=1)
+        operation.deadline = operation.gc_after = naive_utcnow() - timedelta(seconds=1)
         await files.session.commit()
         collector = FileVerificationWorkflow(files.session, files.settings, files.storage)
         await collector.collect()
@@ -169,7 +170,7 @@ async def test_cancelled_skill_copy_is_fenced_and_late_object_remains_reclaimabl
             ]
             == 3
         )
-        operation.gc_after = utcnow() - timedelta(seconds=1)
+        operation.gc_after = naive_utcnow() - timedelta(seconds=1)
         await files.session.commit()
         await collector.collect()
         with pytest.raises(files.storage.client.exceptions.ClientError):

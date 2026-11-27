@@ -6,6 +6,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from support.code_risk_analysis import FakeRequirementRepository
 from support.requirement_versions import material_artifact
 
 from testing_agent.core.errors import AppError
@@ -105,14 +106,6 @@ class FakeTaskRepository:
 
     async def get_requirement(self, requirement_id: str):
         return self.requirement
-
-
-class FakeRequirementRepository:
-    def __init__(self, bindings: list):
-        self.bindings = bindings
-
-    async def list_for_requirement_with_repository(self, requirement_id: str):
-        return self.bindings
 
 
 class FakeIntegrationConnectionService:

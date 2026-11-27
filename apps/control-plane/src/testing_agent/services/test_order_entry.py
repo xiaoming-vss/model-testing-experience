@@ -27,7 +27,7 @@ from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.repositories.test_order_entry import FUNCTION_CASE_TYPE, TestOrderEntryRepository
 from testing_agent.repositories.test_order_reads import STATUSES, TestOrderReadRepository
 from testing_agent.schemas.test_order import TestOrderEntryResponse, TestOrderEntrySummary
-from testing_agent.services.common import dump, list_payload
+from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.test_order import TestOrderService
@@ -122,14 +122,22 @@ class TestOrderEntryService:
         if entry.assignee_user_id and entry.assignee_user_id != user_id and role != "owner":
             raise ErrTestOrderEntryAssigneeLocked()
 
-        for field in ("actual_results", "failure_reason", "block_reason", "zentao_bug_id"):
-            value = body.get(field)
-            if value is not None:
-                setattr(entry, field, str(value).strip())
+        patch = dict(body)
+        if "status" in patch and patch["status"] is None:
+            raise ErrBadRequest()
+        text_fields = {
+            "actualResults": "actual_results",
+            "failureReason": "failure_reason",
+            "blockReason": "block_reason",
+            "zentaoBugId": "zentao_bug_id",
+        }
+        for field in text_fields:
+            if isinstance(patch.get(field), str):
+                patch[field] = patch[field].strip()
+        apply_patch(entry, patch, set(text_fields.values()))
 
-        status = body.get("status")
-        if status is not None:
-            status = str(status).strip()
+        if "status" in patch:
+            status = str(patch["status"]).strip()
             if status not in TestOrderEntryStatus.values():
                 raise ErrBadRequest()
             entry.status = status

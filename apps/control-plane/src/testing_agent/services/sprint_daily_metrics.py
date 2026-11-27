@@ -87,11 +87,9 @@ class SprintDailyMetricsService:
         self,
         repository: SprintDailyMetricsRepository,
         integration_connection_service: Any | None = None,
-        zentao_resource_client: Any | None = None,
     ):
         self.repository = repository
         self.integration_connection_service = integration_connection_service
-        self.zentao_resource_client = zentao_resource_client
 
     async def get_accessible_sprint(
         self, user_id: str, sprint_id: str, *, action: ProjectAction = "read"
@@ -161,7 +159,7 @@ class SprintDailyMetricsService:
 
     async def collect_scheduled(self, sprint_id: str, now: datetime, due: datetime) -> bool:
         """Internal local-only collection; no actor credentials or remote integrations."""
-        from testing_agent.services.sprint import as_utc
+        from testing_agent.core.utc import as_utc
 
         sprint = await self.repository.lock_sprint(sprint_id)
         if sprint is None or not (as_utc(sprint.start_time) <= now < as_utc(sprint.end_time)):

@@ -1,41 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@/services/api'
-import type { FunctionalCaseGenerateTaskRun } from '../types'
+import { getRunPollingInterval } from '@/domain/runs/polling'
+import { isRunInProgress } from '@/domain/runs/status'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
+import type { CandidateRelationsView } from '../api/generationCandidates.contract'
 
 export type CandidateRelationsSource = { requirementId: string; currentToken: string }
 
-export function relationQueryKey(runId: string, candidate?: CandidateRelationsSource) {
-  return candidate ? ['candidateRelations', candidate.requirementId, candidate.currentToken] : ['functionalCaseGenerateTaskRun', runId]
+export function relationQueryKey(candidate: CandidateRelationsSource) {
+  return ['candidateRelations', candidate.requirementId, candidate.currentToken]
 }
 
-export function relationGenerating(run?: FunctionalCaseGenerateTaskRun) {
-  return run?.currentStage === 'relation_analysis' && ['pending', 'queued', 'claimed', 'running'].includes(run.status ?? '')
+const failedStatuses = ['failed', 'error', 'canceled']
+
+export function relationGenerating(view?: Pick<CandidateRelationsView, 'status'>) {
+  return isRunInProgress(view?.status)
 }
 
-export function relationFailed(run?: FunctionalCaseGenerateTaskRun) {
-  return run?.currentStage === 'relation_analysis' && ['failed', 'error', 'canceled'].includes(run.status ?? '')
+export function relationFailed(view?: Pick<CandidateRelationsView, 'status'>) {
+  return failedStatuses.includes(view?.status ?? '')
 }
 
-export function useFunctionalCaseRelationsRun(runId: string, enabled = true, poll = true, candidate?: CandidateRelationsSource) {
+export function useFunctionalCaseRelationsRun(
+  candidate: CandidateRelationsSource,
+  enabled = true,
+  poll = true,
+) {
   return useQuery({
-    queryKey: relationQueryKey(runId, candidate),
-    queryFn: async (): Promise<FunctionalCaseGenerateTaskRun> => {
-      if (!candidate) return api.getFunctionalCaseGenerateTaskRun(runId)
-      const value = await generationCandidatesApi.relations(candidate.requirementId, candidate.currentToken)
-      return {
-        runId: value.sourceAttemptId ?? value.candidateId,
-        requirementId: candidate.requirementId,
-        status: value.status === 'not_started' ? 'success' : value.status,
-        currentStage: value.status === 'not_started' || value.status === 'success' ? 'completed' : 'relation_analysis',
-        errorMessage: value.errorMessage,
-        resultYaml: value.resultYaml,
-        configJson: value.caseRelations ? { caseRelations: value.caseRelations } : {},
-        reviewStatus: 'approved', importStatus: 'pending', importedTargets: [], importedAt: null,
-      }
-    },
-    enabled: enabled && Boolean(runId),
-    refetchInterval: query => poll && relationGenerating(query.state.data) ? (candidate ? 5000 : 1500) : false,
-    refetchIntervalInBackground: true,
+    queryKey: relationQueryKey(candidate),
+    queryFn: () => generationCandidatesApi.relations(candidate.requirementId, candidate.currentToken),
+    enabled: enabled && Boolean(candidate.currentToken),
+    refetchInterval: query =>
+      poll && relationGenerating(query.state.data) ? getRunPollingInterval('running') : false,
   })
 }

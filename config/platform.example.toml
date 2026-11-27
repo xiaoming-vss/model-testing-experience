@@ -42,18 +42,22 @@ root_password = "GENERATE"
 
 # 控制面配置的唯一来源；地址、令牌和存储路径由 shared 统一生成。
 # 每个控制面进程最多 pool_size + max_overflow 条数据库连接。
+# env、http 与 test_run_notifications.redis_url 在 configure 时一律由 shared 和运行模式重写，
+# 下面保留的值只是占位，修改后不生效。
 [control_plane]
+# docker 模式为 "production"，本地模式为 "local"。
 env = "local"
 
 [control_plane.http]
+# docker 模式固定 0.0.0.0:9000；本地模式取 shared.local_host 与 shared.control_plane_port。
 host = "127.0.0.1"
 port = 9000
 
 [control_plane.test_run_notifications]
+# 取 shared.redis.url；留空时使用内置 Redis（docker 模式为 redis:6379，本地为 127.0.0.1:redis_port）。
 redis_url = ""
 
 [control_plane.data.db.user]
-driver = "mysql"
 pool_size = 20
 max_overflow = 10
 
@@ -145,6 +149,9 @@ traceable_review_concurrency = 4
 traceable_review_global_concurrency = 4
 poll_interval_seconds = 5
 
+[api_ui_worker.worker]
+poll_interval_ms = 3000
+
 [api_ui_worker.ui]
 trace_enabled = true
 
@@ -185,4 +192,3 @@ addressing_style = "path"
 signature_seconds = 900
 temporary_hours = 24
 max_bytes = 104857600
-# LDAP 认证仅在管理员页面配置，存储于数据库。

@@ -1,3 +1,4 @@
+import ast
 import unittest
 from pathlib import Path
 
@@ -55,6 +56,11 @@ class WorkerConventionTests(unittest.TestCase):
             "--healthcheck",
             source("apps/integration-worker/src/testing_agent_integration_worker/main.py"),
         )
+        self.assertIn("def stop(self) -> None:", perf)
+        self.assertIn("unlink", perf)
+        perf_io = source("apps/perf-worker/src/testing_agent_perf_worker/core/io.py")
+        self.assertIn("os.replace", perf_io)
+        self.assertNotIn("O_TRUNC", perf_io)
 
     def test_all_workers_use_monotonic_lease_windows(self):
         paths = (
@@ -140,7 +146,73 @@ class WorkerConventionTests(unittest.TestCase):
             "apps/integration-worker/src/testing_agent_integration_worker/services/step_execution.py"
         )
         self.assertIn('error_code="lease_lost"', integration)
-        self.assertIn('status = "unknown" if uncertain else "failed"', integration)
+        # A failure after the write began may have been applied, so it is never "failed".
+        self.assertIn('status, outcome = "unknown", RemoteResult(error_code="remote_uncertain")', integration)
+        self.assertIn('status = "unknown" if wrote else "failed"', integration)
+
+
+class WorkerContractTests(unittest.TestCase):
+    """Values that independently packaged projects must agree on, read from their sources."""
+
+    def test_perf_summary_limit_is_the_same_in_the_worker_and_the_control_plane(self):
+        import tomllib
+
+        worker = ast.parse(source("apps/perf-worker/src/testing_agent_perf_worker/core/config.py"))
+        default_mb = _int_product(_assignment(worker, "max_summary_mb").keywords[0].value)
+        self.assertEqual(_assignment(worker, "max_summary_mb").keywords[0].arg, "default")
+        control = ast.parse(source("apps/control-plane/src/testing_agent/services/perf_worker.py"))
+        control_bytes = _int_product(_assignment(control, "_MAX_SUMMARY_BYTES"))
+        example = tomllib.loads(source("config/platform.example.toml"))
+
+        # A larger worker limit only produced a result the control plane rejects.
+        self.assertEqual(default_mb * 1024 * 1024, control_bytes)
+        self.assertEqual(example["perf_worker"]["runner"]["max_summary_mb"], default_mb)
+
+    def test_every_worker_treats_the_control_plane_lease_loss_status_as_lost(self):
+        # The control plane answers 409 when a worker's execution is no longer valid, so
+        # that a 400 can always mean "the request was sent wrong" (ADR 0032).
+        control = source("apps/control-plane/src/testing_agent/core/errors.py")
+        self.assertRegex(
+            control, r"ErrWorkerLeaseLost = AppError\(409, [^\n]*HTTPStatus\.CONFLICT\)"
+        )
+
+        rejection_sets = {
+            "api-ui-worker/src/test_worker/control_plane/client.py": (
+                "LEASE_LOST_STATUSES = frozenset({401, 403, 404, 409, 410})"
+            ),
+            "perf-worker/src/testing_agent_perf_worker/control_plane/client.py": (
+                "_LEASE_REJECTION_STATUSES = {400, 401, 403, 404, 409, 422}"
+            ),
+            "integration-worker/src/testing_agent_integration_worker/services/step_execution.py": (
+                "{403, 404, 409}"
+            ),
+            "integration-worker/src/testing_agent_integration_worker/services/bug_sync.py": (
+                "{403, 404, 409}"
+            ),
+        }
+        for path, literal in rejection_sets.items():
+            self.assertIn(literal, source(f"apps/{path}"), path)
+
+
+def _assignment(tree: ast.Module, name: str) -> ast.expr:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
+        if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            return node.value
+    raise AssertionError(f"{name} is not defined")
+
+
+def _int_product(node: ast.expr) -> int:
+    if isinstance(node, ast.Constant) and isinstance(node.value, int):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        return _int_product(node.left) * _int_product(node.right)
+    raise AssertionError(f"not an integer product: {ast.dump(node)}")
 
 
 if __name__ == "__main__":

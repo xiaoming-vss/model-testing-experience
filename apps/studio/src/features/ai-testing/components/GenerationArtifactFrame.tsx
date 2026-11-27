@@ -1,18 +1,27 @@
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Button, Modal, type ModalProps } from 'antd'
+import { Button } from 'antd'
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 
+type ArtifactFrameProps = {
+  open?: boolean
+  title?: ReactNode
+  className?: string
+  children?: ReactNode
+  footer?: ReactNode
+  hideHeader?: boolean
+  onCancel?: () => void
+}
+
 /** 保留产物标题栏插槽与滚动结构，在画布内阅读时不遮挡或锁定右侧栏。 */
-export function GenerationArtifactFrame({ embedded, hideHeader, ...props }: Omit<ModalProps, 'onCancel' | 'footer'> & { embedded?: boolean; hideHeader?: boolean; onCancel?: () => void; footer?: ReactNode }) {
+export function GenerationArtifactFrame({ hideHeader, ...props }: ArtifactFrameProps) {
   const titleId = useId()
   const frame = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (!embedded || !props.open) return
+    if (!props.open) return
     const previous = document.activeElement as HTMLElement | null
     frame.current?.focus()
     return () => { if (previous?.isConnected) previous.focus() }
-  }, [embedded, props.open])
-  if (!embedded) return <Modal {...props} />
+  }, [props.open])
   if (!props.open) return null
   return <section ref={frame} tabIndex={-1} role="dialog" aria-modal={false} aria-labelledby={titleId}
     className={`ant-modal gc-embedded-artifact ${props.className ?? ''}`}>

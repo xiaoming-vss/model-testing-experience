@@ -16,30 +16,30 @@ const { Text, Title } = Typography
 export type BindingDepth = 'project' | 'execution' | 'story'
 
 function getBindingId(binding: ZentaoBinding) {
-  return binding.bindingId ?? binding.binding_id ?? ''
+  return binding.bindingId ?? ''
 }
 
 
 
 function getBindingRemoteResourceId(binding?: ZentaoBinding) {
-  return binding?.remoteResourceId ?? binding?.remote_resource_id ?? ''
+  return binding?.remoteResourceId ?? ''
 }
 
 function getBindingRemoteName(binding?: ZentaoBinding) {
-  return binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot ?? ''
+  return binding?.remoteNameSnapshot ?? ''
 }
 
 function getBindingBoundAt(binding?: ZentaoBinding) {
-  return binding?.boundAt ?? binding?.bound_at ?? binding?.createdAt ?? binding?.created_at
+  return binding?.boundAt ?? binding?.createdAt
 }
 
 function getRemoteOptionId(item: ZentaoRemoteOption) {
-  const value = item.id ?? item.remoteResourceId ?? item.remote_resource_id ?? item.code
+  const value = item.id ?? item.remoteResourceId ?? item.code
   return value === undefined || value === null ? '' : String(value)
 }
 
 function getRemoteOptionName(item: ZentaoRemoteOption) {
-  const value = item.name ?? item.title ?? item.remoteNameSnapshot ?? item.remote_name_snapshot ?? item.code ?? getRemoteOptionId(item)
+  const value = item.name ?? item.title ?? item.remoteNameSnapshot ?? item.code ?? getRemoteOptionId(item)
   return value === undefined || value === null ? '-' : String(value)
 }
 
