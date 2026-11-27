@@ -24,7 +24,7 @@ async def test_revision_file_ownership_uses_attempts_and_execution(mysql):  # no
         execution = seed_row(
             connection,
             AiExecution.__table__,
-            {"task_id": task["task_id"], "workflow_status": "failed"},
+            {"task_id": task["task_id"]},
         )
         first = seed_row(
             connection,

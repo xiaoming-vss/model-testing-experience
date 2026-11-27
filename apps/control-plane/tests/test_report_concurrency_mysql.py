@@ -45,7 +45,6 @@ async def test_concurrent_report_dispatch_creates_only_one_run(mysql, monkeypatc
                 repository=repository,
                 sprint_daily_metrics_service=SimpleNamespace(get=metrics),
                 ensure_project_access=AsyncMock(),
-                owned_run=AsyncMock(),
             )
             try:
                 return await workflow.run_test_report(sprint["project_id"], body, "user")

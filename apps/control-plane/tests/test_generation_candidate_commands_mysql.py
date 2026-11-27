@@ -179,7 +179,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                 connection,
                 candidate,
                 {
-                    "candidate_id": f"command-{value}",
+                    "candidate_id": f"deletion-{value}",
                     "chain_id": chain["chain_id"],
                     "stage_id": stage["id"],
                     "candidate_token": f"token-{value}",
@@ -195,7 +195,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                 "stage_id": stage["id"],
                 "chain_id": chain["chain_id"],
                 "stage": "case_names",
-                "source_candidate_id": "command-current",
+                "source_candidate_id": "deletion-current",
                 "content_token": "slot-token",
             },
         )
@@ -219,7 +219,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     requirement["requirement_id"],
                     "function",
                     "case_names",
-                    "command-delete",
+                    "deletion-delete",
                     body,
                     project["user_id"],
                 )
@@ -241,7 +241,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(receipt)
-                .where(receipt.c.candidate_id == "command-delete")
+                .where(receipt.c.candidate_id == "deletion-delete")
             )
             == 1
         )
@@ -249,7 +249,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(candidate)
-                .where(candidate.c.candidate_id == "command-delete")
+                .where(candidate.c.candidate_id == "deletion-delete")
             )
             == 0
         )
@@ -259,7 +259,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     tables["ai_generation_stage_contents"].c.stage_id == stage["id"]
                 )
             )
-            == "command-current"
+            == "deletion-current"
         )
 
 
