@@ -160,6 +160,18 @@
       "targets": [
         "apps/control-plane/default-skills/mtx-map-functional-cases-to-ui-scenarios/scripts/execution_profile.py"
       ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-generate-ui-test-case/references/execution-profile.json",
+      "targets": [
+        "apps/control-plane/default-skills/mtx-map-functional-cases-to-ui-scenarios/references/execution-profile.json"
+      ]
+    },
+    {
+      "canonical": "apps/control-plane/default-skills/mtx-generate-ui-test-case/references/execution-profile.md",
+      "targets": [
+        "apps/control-plane/default-skills/mtx-map-functional-cases-to-ui-scenarios/references/execution-profile.md"
+      ]
     }
   ]
 }
