@@ -9,10 +9,12 @@ import { isRailOverlayViewport } from '@/shared/utils/viewport'
 import { isJsonText } from '../utils/functionalOutput'
 import {
   buildGeneratedCasesModel,
+  readGeneratedCaseHistory,
   type GeneratedCaseEntry,
   type GeneratedCasesModel,
 } from '../utils/generatedCasesModel'
 import type { GeneratedCasesSelection } from '../utils/generatedCasesGraph'
+import { GeneratedCaseHistory } from './GeneratedCaseHistory'
 import { GeneratedCasesGraph, type GeneratedCasesGraphHandle } from './GeneratedCasesGraph'
 import workbenchStyles from '../styles/traceable-points.module.css'
 import artifactStyles from '../styles/artifact-cases.module.css'
@@ -44,6 +46,19 @@ function scenesOfModule(module: GeneratedCasesModel['modules'][number]) {
   return module.scenes.map(scene => scene.id)
 }
 
+function GeneratedCasesFallback({ content, history }: {
+  content: string
+  history: ReturnType<typeof readGeneratedCaseHistory>
+}) {
+  if (history) return <div className="min-h-0 flex-1 overflow-y-auto bg-app-surface p-4">
+    <p className="mb-3 text-sm text-app-surface-text">本轮没有新生成的用例</p>
+    <GeneratedCaseHistory findings={history} />
+  </div>
+  return <div className="flex min-h-0 flex-1 items-center justify-center bg-app-surface p-6">
+    {isJsonText(content) ? <JsonEditor value={content} readOnly foldable minHeight={0} /> : <Empty description="用例格式无效，请重新生成" />}
+  </div>
+}
+
 export function GeneratedCasesReviewView({
   content,
   onChange,
@@ -53,6 +68,7 @@ export function GeneratedCasesReviewView({
   onCaseSelect,
 }: Props) {
   const model = useMemo(() => buildGeneratedCasesModel(content), [content])
+  const history = useMemo(() => readGeneratedCaseHistory(content), [content])
   const [selection, setSelection] = useState<GeneratedCasesSelection>({ kind: 'overview' })
   const [expandedScenes, setExpandedScenes] = useState<Set<string>>(() => new Set())
   const [collapsedModules, setCollapsedModules] = useState<Set<string>>(() => new Set())
@@ -225,11 +241,7 @@ export function GeneratedCasesReviewView({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [railOpen])
 
-  if (!model) {
-    return <div className="flex min-h-0 flex-1 items-center justify-center bg-app-surface p-6">
-      {isJsonText(content) ? <JsonEditor value={content} readOnly foldable minHeight={0} /> : <Empty description="用例格式无效，请重新生成" />}
-    </div>
-  }
+  if (!model) return <GeneratedCasesFallback content={content} history={history} />
 
   const sceneCount = model.modules.reduce((sum, module) => sum + module.scenes.length, 0)
   const railTitle = PAGE_LABEL
@@ -273,6 +285,7 @@ export function GeneratedCasesReviewView({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          {history ? <GeneratedCaseHistory findings={history} /> : null}
           <div className={RAIL_LIST}>{model.modules.map(module => {
               const collapsed = collapsedModules.has(module.id)
               return <div key={module.id}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGeneratedCasesModel } from './generatedCasesModel'
+import { buildGeneratedCasesModel, hasOnlyGeneratedCaseHistory, readGeneratedCaseHistory } from './generatedCasesModel'
 
 const content = JSON.stringify({
   cases: [
@@ -26,5 +26,20 @@ describe('generatedCasesModel', () => {
     expect(buildGeneratedCasesModel('')).toBeNull()
     expect(buildGeneratedCasesModel('{}')).toBeNull()
     expect(buildGeneratedCasesModel(JSON.stringify({ cases: [] }))).toBeNull()
+  })
+
+  it('读取产物里的历史用例结论，没有时返回 null', () => {
+    const findings = [{ caseId: 'old-1', decision: 'reuse' }]
+    expect(readGeneratedCaseHistory(JSON.stringify({ cases: [], historicalCaseFindings: findings }))).toEqual(findings)
+    expect(readGeneratedCaseHistory(content)).toBeNull()
+    expect(readGeneratedCaseHistory('not json')).toBeNull()
+  })
+
+  it('只有历史结论、没有新用例的完整用例产物不提供导入', () => {
+    expect(hasOnlyGeneratedCaseHistory(JSON.stringify({ cases: [], historicalCaseFindings: [] }))).toBe(true)
+    expect(hasOnlyGeneratedCaseHistory(JSON.stringify({ cases: [{ case_id: 'case-a' }], historicalCaseFindings: [] }))).toBe(false)
+    expect(hasOnlyGeneratedCaseHistory(content)).toBe(false)
+    expect(hasOnlyGeneratedCaseHistory('')).toBe(false)
+    expect(hasOnlyGeneratedCaseHistory(undefined)).toBe(false)
   })
 })

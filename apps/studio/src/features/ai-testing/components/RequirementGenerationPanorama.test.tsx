@@ -404,6 +404,24 @@ it('UI 测试分组与功能测试使用相同大小', async () => {
   expect(ui.style.height).toBe(functionalGroup.style.height)
 })
 
+it('以可选依赖虚线连接历史用例核验与完整用例', async () => {
+  const analysis = { ...emptyChain('requirement_analysis', '需求分析'), configured: true, stages: [
+    { stage: 'historical_requirement_relations', label: '历史需求关联', order: 0, state: 'approved', upstreamStages: [] },
+    { stage: 'historical_test_case_verification', label: '历史用例核验', order: 1, state: 'not_started', upstreamStages: ['historical_requirement_relations'] },
+  ] } satisfies GenerationChain
+  const functional = { ...emptyChain('function', '功能测试'), configured: true, stages: [
+    { stage: 'case_names', label: '测试点', order: 0, state: 'approved', upstreamStages: [] },
+    { stage: 'detailed_cases', label: '完整用例', order: 1, state: 'not_started', upstreamStages: ['case_names'] },
+  ] } satisfies GenerationChain
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [analysis, functional] })
+  mount()
+  const edge = await screen.findByLabelText('历史用例核验到完整用例的可选输入')
+  expect(document.querySelector('[data-id="function:detailed_cases"] [data-handleid="history-input"]')).toHaveClass('react-flow__handle-left')
+  expect(edge.querySelector('.gc-flow-edge-track')).toHaveStyle({ strokeDasharray: '6 4' })
+  expect(edge.querySelector('.gc-flow-edge-stream')).toBeNull()
+  expect(document.querySelector('[data-testid="rf__edge-function:1"]')).not.toBeNull()
+})
+
 it('单击 API 首阶段后从候选工作区发起生成', async () => {
   const apiChain = { ...emptyChain('api', 'API 测试'), configured: true, candidateMode: true, taskId: 'api-task' }
   apiChain.stages[0] = { ...apiChain.stages[0], stage: 'interface_extract', label: '接口配置提取' }

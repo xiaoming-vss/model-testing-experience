@@ -14,10 +14,7 @@ import { getErrorMessage, formatCompactTime } from '@/utils/format'
 import { generationCandidatesApi } from '../api/generationCandidates.api'
 import { useRevisionAttachments } from '../hooks/useRevisionAttachments'
 import { useGenerationStageLabels } from '../hooks/useRequirementGenerationChain'
-import type {
-  AdoptionCheck, CandidateAdoptBody, CandidateChainKind, CandidateRunBody,
-  CandidateSourceSelection, CandidateSummary, CurrentImportPreview, CurrentSourceSelection,
-} from '../api/generationCandidates.contract'
+import type { AdoptionCheck, CandidateAdoptBody, CandidateChainKind, CandidateRunBody, CandidateSourceSelection, CandidateSummary, CurrentImportPreview, CurrentSourceSelection } from '../api/generationCandidates.contract'
 import type { GenerationChainStage, UiGenerationRunInputs, UiGenerationSourceCheck } from '../api/generationChain.api'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { CandidateStageActions } from './CandidateStageActions'
@@ -40,6 +37,7 @@ import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 import { buildRevisionTemplate, createQuestionRevisionDraft, getRevisionQuestions, revisionInstructionText } from '../utils/functionalRevision'
 import { formatJsonArtifact } from '../utils/artifactFormat'
 import { stageContentStats } from '../utils/stageContentStats'
+import { hasOnlyGeneratedCaseHistory } from '../utils/generatedCasesModel'
 import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
 import chainStyles from '../styles/generation-chain.module.css'
 import canvasStyles from '../styles/generation-canvas.module.css'
@@ -590,7 +588,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
     />
     {check && !check.canAdopt ? <Alert showIcon type="warning" title="还不能采用" description={<ul>{check.blockingSources.map(item => <li key={`${item.chainKind}:${item.stage}`}>{stageLabel(item.stage)}：内容或来源已变化，请刷新后重试</li>)}</ul>} /> : null}
   </section> : null
-  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt)
+  const canImportCurrent = Boolean(access.can('execute') && finalStage && selectedIsCurrent && current.data?.candidateId && !current.data.invalidatedAt && !(stage.stage === 'detailed_cases' && hasOnlyGeneratedCaseHistory(current.data.content)))
   const importTargetText = kind === 'function' ? '按模块归入功能测试集' : '导入到所选正式目标'
   const importDock = canImportCurrent ? <section className="gc-candidate-dock" aria-label="导入正式用例">
     <div className="gc-candidate-dock-head">

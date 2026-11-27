@@ -20,6 +20,10 @@ from support.ui_generation_fixtures import FIXTURES as UI_FIXTURES
 from support.ui_generation_fixtures import read as ui_fixture
 
 from testing_agent.api.deps_common import get_file_service
+from testing_agent.domain.historical_test_case_artifacts import (
+    VERIFICATION_RUN_RESULT,
+    verification_run_header,
+)
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -680,6 +684,16 @@ def frozen_source(workflow, run):
     return run_in_app(workflow, load)
 
 
+def attempt_snapshot(workflow, result):
+    """Frozen input snapshot of the attempt behind a chain run's ``result``."""
+
+    async def load(session):
+        attempt = await session.get(AiGenerationAttempt, result["attemptId"])
+        return attempt.input_snapshot_json
+
+    return run_in_app(workflow, load)
+
+
 def worker_snapshot(workflow, run):
     """What the worker receives for a UI surface run."""
 
@@ -803,6 +817,100 @@ def test_adopted_candidates_expose_their_material_and_sources(workflow):
         ("requirement_analysis", "extracting_text", branch.material["candidateId"], False),
         ("function", "requirement_analysis", branch.analysis["candidateId"], True),
         ("function", "case_names", branch.points["candidateId"], True),
+    }
+
+
+def test_complete_cases_freeze_the_adopted_history_verification(workflow):
+    """ADR 0038: the adopted history verification is a direct upstream of the complete cases."""
+    branch = trial_points(workflow)
+    adopt(workflow, branch.material, "requirement_analysis", "extracting_text")
+
+    relation_req, relation_run = launch(
+        workflow, "requirement_analysis", "historical_requirement_relations"
+    )
+    history_source = json.loads(attempt_snapshot(workflow, relation_run)["source"]["sourceContent"])
+    relation = complete(
+        workflow,
+        "requirement_analysis",
+        "historical_requirement_relations",
+        relation_req,
+        relation_run,
+        {
+            "schemaVersion": "0.1",
+            "artifactType": "historical_requirement_relation_analysis",
+            "requirementId": workflow.rid,
+            "materialSnapshotId": history_source["currentRequirement"]["materialSnapshotId"],
+            "relations": [],
+            "openQuestions": [],
+        },
+    )
+    adopt(workflow, relation, "requirement_analysis", "historical_requirement_relations")
+
+    history_req, history_run = launch(
+        workflow, "requirement_analysis", "historical_test_case_verification"
+    )
+    history_input = json.loads(attempt_snapshot(workflow, history_run)["source"]["sourceContent"])
+    history_result = {
+        **verification_run_header(VERIFICATION_RUN_RESULT, history_input),
+        "batches": [],
+    }
+    verification = complete(
+        workflow,
+        "requirement_analysis",
+        "historical_test_case_verification",
+        history_req,
+        history_run,
+        history_result,
+    )
+    adopt(workflow, verification, "requirement_analysis", "historical_test_case_verification")
+
+    cases_req, cases_run = launch(
+        workflow,
+        "function",
+        "detailed_cases",
+        [
+            source(branch.analysis, "function", "requirement_analysis"),
+            source(branch.points, "function", "case_names"),
+        ],
+    )
+    planning = attempt_snapshot(workflow, cases_run)["config"]["historyCasePlanning"]
+    assert planning["verification"] == history_result
+    assert json.loads(planning["input"]) == history_input
+
+    # Planning is frozen, so the artifact names its historical findings even when none is reused.
+    cases = complete(
+        workflow,
+        "function",
+        "detailed_cases",
+        cases_req,
+        cases_run,
+        {**yaml_module.safe_load(CASES_YAML), "historicalCaseFindings": []},
+    )
+    adopt(workflow, branch.analysis, "function", "requirement_analysis")
+    adopt(workflow, branch.points, "function", "case_names")
+    adopt(workflow, cases, "function", "detailed_cases")
+
+    leaf = read(workflow, f"{workflow.bases['function']}/stages/detailed_cases/current")
+    assert leaf["sourceAttemptId"] == cases["currentAttemptId"]
+    assert {
+        (item["chainKind"], item["stage"], item["candidateId"], item["direct"])
+        for item in leaf["basisSources"]
+    } == {
+        ("requirement_analysis", "extracting_text", branch.material["candidateId"], False),
+        ("function", "requirement_analysis", branch.analysis["candidateId"], True),
+        ("function", "case_names", branch.points["candidateId"], True),
+        (
+            "requirement_analysis",
+            "historical_requirement_relations",
+            relation["candidateId"],
+            False,
+        ),
+        (
+            "requirement_analysis",
+            "historical_test_case_verification",
+            verification["candidateId"],
+            True,
+        ),
     }
 
 

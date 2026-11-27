@@ -10,7 +10,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from testing_agent.domain.generation_chain import kind_for_stage, upstream_stages
+from testing_agent.domain.generation_chain import (
+    kind_for_stage,
+    optional_upstream_stages,
+    upstream_stages,
+)
 from testing_agent.domain.generation_content_hash import generation_content_hash
 from testing_agent.domain.generation_source_closure import (
     RootKey,
@@ -194,6 +198,12 @@ def reconstruct_source_closure(
         required = frozenset(
             (kind_for_stage(name), name)
             for name in upstream_stages(record.chain_kind, record.stage)
+        )
+        optional = optional_upstream_stages(record.chain_kind, record.stage)
+        required = required.union(
+            (item.chain_kind, item.stage)
+            for item in manifest.selected_sources
+            if item.stage in optional and item.chain_kind == kind_for_stage(item.stage)
         )
         input_closure = resolve_source_closure(
             requirement_id=requirement_id,

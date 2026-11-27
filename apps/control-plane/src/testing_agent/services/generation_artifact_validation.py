@@ -127,6 +127,42 @@ def _frozen_inputs(source_snapshot: dict) -> tuple[dict, dict]:
     return source_snapshot, {}
 
 
+def _validate_detailed_history(content: str, history: dict) -> None:
+    result = _strict_json_object(content)
+    if not isinstance(result.get("cases"), list) or not isinstance(
+        result.get("historicalCaseFindings"), list
+    ):
+        raise ErrBadRequest()
+    verified = validate_verification_run_output(history["verification"], history["input"])
+    expected: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for batch in verified["batches"]:
+        effective: dict[str, dict[str, Any]] = {}
+        for round_result in (batch["firstPass"], batch["fullCasePass"]):
+            if round_result:
+                effective.update((item["caseId"], item) for item in round_result["caseFindings"])
+        first = batch["firstPass"]
+        for case_id, finding in effective.items():
+            if finding["decision"] in {"reuse", "modify", "invalidate"}:
+                expected[(first["batchId"], first["impactId"], case_id)] = finding
+    for item in result["historicalCaseFindings"]:
+        if not isinstance(item, dict) or not isinstance(item.get("pointRefs"), list):
+            raise ErrBadRequest()
+        batch_id = item.get("batchId")
+        impact_id = item.get("impactId")
+        case_key = item.get("caseId")
+        if (
+            not isinstance(batch_id, str)
+            or not isinstance(impact_id, str)
+            or not isinstance(case_key, str)
+        ):
+            raise ErrBadRequest()
+        origin = expected.pop((batch_id, impact_id, case_key), None)
+        if origin is None or any(item.get(field) != value for field, value in origin.items()):
+            raise dynamic_error(ErrBadRequest, "历史用例结论与冻结的核验结果不一致")
+    if expected:
+        raise dynamic_error(ErrBadRequest, "完整用例产物缺少冻结的历史用例结论")
+
+
 async def validate_generation_artifact(
     repository: AiGenerateTaskRepository,
     kind: DesignKind,
@@ -208,7 +244,11 @@ async def validate_generation_artifact(
         return json.dumps(value, ensure_ascii=False), "json"
     if kind == "function" and stage == "detailed_cases":
         cases = generated_function_cases(content)
-        if not cases:
+        _, config = _frozen_inputs(source_snapshot)
+        history = config.get("historyCasePlanning")
+        if isinstance(history, dict):
+            _validate_detailed_history(content, history)
+        elif not cases:
             raise ErrBadRequest()
         validate_function_candidate_cases(cases)
         return content, "yaml"

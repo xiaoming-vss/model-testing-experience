@@ -14,7 +14,13 @@ from typing import Literal, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.domain.generation_chain import kind_for_stage, stage_names, upstream_stages
+from testing_agent.domain.generation_chain import (
+    HISTORICAL_TEST_STAGE,
+    kind_for_stage,
+    optional_upstream_stages,
+    stage_names,
+    upstream_stages,
+)
 from testing_agent.domain.generation_source_closure import (
     RootKey,
     RootSnapshot,
@@ -52,6 +58,7 @@ class SelectedContent:
     stage: str
     content: str
     format: str
+    frozen_material: str | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +86,9 @@ async def resolve_run_sources(
         raise SourceClosureError("source_unknown") from exc
     required: frozenset[StageKey] = frozenset(
         (kind_for_stage(name), name) for name in upstream_stages(kind, stage)
+    )
+    optional: frozenset[StageKey] = frozenset(
+        (kind_for_stage(name), name) for name in optional_upstream_stages(kind, stage)
     )
     requested: dict[StageKey, SourceSelection] = {
         (item.chain_kind, item.stage): item for item in request.source_selections
@@ -151,12 +161,13 @@ async def resolve_run_sources(
                 raise SourceClosureError("concurrent_change")
         else:
             requested[required_key] = required_current
-    if request.generation_mode == "trial" and set(requested) != required:
+    allowed = required | optional
+    if request.generation_mode == "trial" and not required <= requested.keys() <= allowed:
         raise SourceClosureError("source_unknown")
     selected: list[ResolvedCandidateSelection] = []
     modes: dict[StageKey, Literal["current", "candidate"]] = {}
     current_checks: list[tuple[str, str, str, str]] = []
-    for key in sorted(required):
+    for key in sorted(allowed):
         chain_kind, source_stage = key
         scope = await candidate_stage_scope(
             session,
@@ -164,10 +175,12 @@ async def resolve_run_sources(
             kind=cast(DesignKind, chain_kind),
             stage=source_stage,
         )
+        choice = requested.get(key)
+        if scope is None and key in optional and choice is None:
+            continue
         if scope is None:
             raise SourceClosureError("pending_upstream")
         chain_id, stage_id, _ = scope
-        choice = requested.get(key)
         mode: Literal["current", "candidate"] = choice.source_kind if choice else "current"
         modes[key] = mode
         if mode == "candidate":
@@ -204,6 +217,8 @@ async def resolve_run_sources(
                 )
             )
         ).one_or_none()
+        if row is None and key in optional and choice is None:
+            continue
         if row is None:
             raise SourceClosureError("pending_upstream")
         if choice and choice.expected_current_token != row[0]:
@@ -217,7 +232,7 @@ async def resolve_run_sources(
         session,
         requirement_id=requirement_id,
         selections=tuple(selected),
-        required_stages=required,
+        required_stages=frozenset((item.chain_kind, item.stage) for item in selected),
         current_root_hashes=current_root_hashes,
         direct_roots=direct_roots,
     )
@@ -282,6 +297,11 @@ async def resolve_run_sources(
                 item.stage,
                 candidates[item.candidate_id].content,
                 candidates[item.candidate_id].format,
+                (
+                    _frozen_material(candidates[item.candidate_id])
+                    if item.stage == HISTORICAL_TEST_STAGE
+                    else None
+                ),
             )
             for item in selected
         ),
@@ -295,3 +315,10 @@ async def resolve_run_sources(
             for node in closure.stages
         ),
     )
+
+
+def _frozen_material(candidate: AiGenerationCandidate) -> str | None:
+    frozen = candidate.source_snapshot_json or {}
+    source = frozen.get("source")
+    content = source.get("sourceContent") if isinstance(source, dict) else None
+    return content if isinstance(content, str) and content else None

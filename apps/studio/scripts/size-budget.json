@@ -24,10 +24,10 @@
     },
     "src/features/ai-testing/components/CandidateStageWorkspace.tsx": {
       "maxLinesPerFunction": 613,
-      "maxLines": 684
+      "maxLines": 682
     },
     "src/features/ai-testing/components/GeneratedCasesReviewView.tsx": {
-      "maxLinesPerFunction": 280
+      "maxLinesPerFunction": 278
     },
     "src/features/ai-testing/components/LlmConnectionSelectModal.tsx": {
       "maxLinesPerFunction": 167

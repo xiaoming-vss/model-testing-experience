@@ -134,6 +134,7 @@ class GeneratedCase(Contract):
     # Accepted so a model that echoes an ID is not repaired, but never kept: identity is
     # issued by `case_ids.assign_case_ids` after validation.
     case_id: str | None = Field(default=None, exclude=True)
+    generationTargetId: Text | None = Field(default=None, exclude_if=lambda value: value is None)
     case_module: Text
     case_title: Text
     case_type: Literal[
@@ -184,6 +185,17 @@ class RemovedCase(Contract):
 
     caseId: Text
     reason: Text
+
+
+class CasePlanningGroup(Contract):
+    pointIds: Annotated[list[Text], Field(min_length=1)]
+    module: Text
+    findingId: Text | None
+    reason: Text
+
+
+class CasePlanningOutput(Contract):
+    groups: list[CasePlanningGroup]
 
 
 class DetailedCasesOutput(Contract):
@@ -302,5 +314,6 @@ CONTRACTS = {
     "requirement_analysis": TestScopeAnalysisOutput,
     "traceable_case_audit": TraceableReview,
     "detailed_cases": DetailedCasesOutput,
+    "case_planning": CasePlanningOutput,
     "relation_analysis": RelationAnalysisOutput,
 }

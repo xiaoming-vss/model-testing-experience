@@ -70,6 +70,24 @@ function selectionOf() {
 afterEach(cleanup)
 
 describe('GeneratedCasesReviewView', () => {
+  it('零条新用例时仍展示历史用例及其三类结论', () => {
+    render(<GeneratedCasesReviewView content={JSON.stringify({
+      cases: [],
+      historicalCaseFindings: [
+        { caseId: 'case-a', decision: 'reuse', title: '旧用例甲', pointRefs: [{ pointId: 'P1' }] },
+        { caseId: 'case-b', decision: 'modify', title: '旧用例乙', modificationHint: '调整数量上限' },
+        { caseId: 'case-c', decision: 'invalidate', title: '旧用例丙', reason: '旧规则已取消' },
+      ],
+    })} />)
+    expect(screen.getByText('本轮没有新生成的用例')).toBeInTheDocument()
+    const history = screen.getByRole('region', { name: '历史用例结论' })
+    expect(within(history).getByText('可复用')).toBeInTheDocument()
+    expect(within(history).getByText('需修改')).toBeInTheDocument()
+    expect(within(history).getByText('建议失效')).toBeInTheDocument()
+    expect(within(history).getByText('关联测试点 P1')).toBeInTheDocument()
+    expect(within(history).getByText('调整数量上限')).toBeInTheDocument()
+  })
+
   it('渲染用例索引与总览，画布内提供展开、适应画布和保存图谱', async () => {
     render(<GeneratedCasesReviewView content={content} />)
     expect(screen.getByRole('heading', { name: '完整用例图谱' })).toHaveClass('sr-only')

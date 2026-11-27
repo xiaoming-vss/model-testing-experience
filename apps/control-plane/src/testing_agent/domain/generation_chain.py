@@ -128,6 +128,10 @@ def upstream_stages(kind: str, stage: str) -> tuple[str, ...]:
     return STAGE_UPSTREAMS.get(stage, ())
 
 
+def optional_upstream_stages(kind: str, stage: str) -> tuple[str, ...]:
+    return (HISTORICAL_TEST_STAGE,) if (kind, stage) == ("function", "detailed_cases") else ()
+
+
 def artifact_is_json(stage: str, artifact_format: str | None = None) -> bool:
     if artifact_format:
         return artifact_format == "json"

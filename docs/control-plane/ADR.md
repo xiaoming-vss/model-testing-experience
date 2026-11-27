@@ -48,3 +48,4 @@
 - [0035 退役旧连接管理路由与禅道 REST 通道](adr/0035-retire-legacy-connection-routes-and-zentao-rest-channel.md)
 - [0036 禅道反向拉取应用同时校验两端摘要](adr/0036-zentao-pull-apply-checks-both-digests.md)
 - [0037 已拒绝候选可以删除](adr/0037-rejected-candidate-deletion.md)
+- [0038 完整用例生成前归并测试点和核对历史覆盖](adr/0038-plan-complete-cases-with-history.md)

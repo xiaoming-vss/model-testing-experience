@@ -1,6 +1,7 @@
 """Fetch only the default skills needed by this execution into an isolated workspace."""
 
 import hashlib
+import json
 import shutil
 import tempfile
 from pathlib import Path
@@ -15,6 +16,7 @@ from testing_agent_ai_worker.skill_names import (
     API_DESIGN_SKILL,
     API_EXTRACT_SKILL,
     API_GENERATE_SKILL,
+    CASE_PLANNING_SKILL,
     CASE_RELATIONS_SKILL,
     CASE_VISUALIZATION_SKILL,
     CODE_RISK_SKILL,
@@ -95,6 +97,14 @@ def required_skills(task):
             return [name]
         if task.checkpoint_enabled:
             name = stages.get(task.current_stage)
+            if name == DETAILED_CASES_SKILL and task.config_json:
+                config = json.loads(task.config_json)
+                if (
+                    isinstance(config, dict)
+                    and config.get("historyCasePlanning")
+                    and not config.get("revisionInstruction")
+                ):
+                    return [CASE_PLANNING_SKILL, name]
             return [name] if name else []
         names = list(stages.values())
         return names[:3]  # Non-checkpoint functional generation has no relation-analysis step.

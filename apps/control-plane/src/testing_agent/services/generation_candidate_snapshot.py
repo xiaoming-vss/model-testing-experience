@@ -6,8 +6,11 @@ from typing import Any
 
 from testing_agent.domain.generation_chain import (
     HISTORICAL_STAGES,
+    HISTORICAL_TEST_STAGE,
     STAGE_CONFIG_FIELDS,
     artifact_value,
+    kind_for_stage,
+    optional_upstream_stages,
     stage_names,
 )
 from testing_agent.domain.generation_root_fingerprints import (
@@ -75,7 +78,12 @@ def build_candidate_input_snapshot(
     }
     if request.generation_mode == "trial":
         supplied = {(item.chain_kind, item.stage): item for item in request.source_selections}
-        if set(supplied) != set(frozen_selections):
+        optional = {(kind_for_stage(name), name) for name in optional_upstream_stages(kind, stage)}
+        automatic = frozen_selections.keys() - supplied.keys()
+        if supplied.keys() - frozen_selections.keys() or any(
+            key not in optional or frozen_selections[key].source_kind != "current"
+            for key in automatic
+        ):
             raise SourceClosureError("source_conflict")
         for key, choice in supplied.items():
             frozen = frozen_selections[key]
@@ -93,7 +101,7 @@ def build_candidate_input_snapshot(
     config = deepcopy(normalize_config_json(request.config_json))
     if set(config) & (
         set(STAGE_CONFIG_FIELDS.values())
-        | {"resultYaml", "revisionInstruction", "revisionAttachments"}
+        | {"resultYaml", "revisionInstruction", "revisionAttachments", "historyCasePlanning"}
     ):
         raise SourceClosureError("source_conflict")
     source["instruction"] = request.instruction or ""
@@ -146,6 +154,14 @@ def build_candidate_input_snapshot(
             config[STAGE_CONFIG_FIELDS[item.stage]] = artifact_value(
                 item.stage, item.content, item.format
             )
+    history = selected.get(("requirement_analysis", HISTORICAL_TEST_STAGE))
+    if kind == "function" and stage == "detailed_cases" and history is not None:
+        if not history.frozen_material:
+            raise SourceClosureError("source_unknown")
+        config["historyCasePlanning"] = {
+            "verification": artifact_value(history.stage, history.content, history.format),
+            "input": history.frozen_material,
+        }
     analysis = selected.get(("function", "requirement_analysis"))
     if kind == "function" and analysis is not None:
         try:

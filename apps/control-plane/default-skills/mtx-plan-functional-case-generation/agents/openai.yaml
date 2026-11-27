@@ -1,0 +1,3 @@
+interface:
+  display_name: "完整用例生成规划"
+  short_description: "合并功能测试点和历史补测点并匹配本轮已核验的正式用例"
