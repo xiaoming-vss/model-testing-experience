@@ -3,6 +3,7 @@
 import asyncio
 from uuid import uuid4
 
+import pytest
 import sqlalchemy as sa
 from support.generation import generation_services
 from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
@@ -139,8 +140,11 @@ def test_concurrent_rejection_replays_one_receipt(mysql):  # noqa: F811
         )
 
 
-def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
+@pytest.mark.parametrize("disposition", ["available", "rejected"])
+def test_concurrent_deletion_replays_one_receipt(mysql, disposition):  # noqa: F811
     tables = Base.metadata.tables
+    # This module keeps no autouse schema reset, so each parametrization seeds its own ids.
+    current_id, target_id = f"deletion-{disposition}-current", f"deletion-{disposition}-delete"
     with mysql.begin() as connection:
         project = seed_row(connection, tables["projects"])
         sprint = seed_row(connection, tables["sprints"], {"project_id": project["project_id"]})
@@ -172,16 +176,19 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             },
         )
         candidate = tables["ai_generation_candidates"]
-        for value in ("current", "delete"):
+        for candidate_id, token, state in (
+            (current_id, "token-current", "available"),
+            (target_id, "token-delete", disposition),
+        ):
             seed_row(
                 connection,
                 candidate,
                 {
-                    "candidate_id": f"deletion-{value}",
+                    "candidate_id": candidate_id,
                     "chain_id": chain["chain_id"],
                     "stage_id": stage["id"],
-                    "candidate_token": f"token-{value}",
-                    "disposition": "available",
+                    "candidate_token": token,
+                    "disposition": state,
                     "generation_mode": "current",
                     "created_by": project["user_id"],
                 },
@@ -193,7 +200,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                 "stage_id": stage["id"],
                 "chain_id": chain["chain_id"],
                 "stage": "case_names",
-                "source_candidate_id": "deletion-current",
+                "source_candidate_id": current_id,
                 "content_token": "slot-token",
             },
         )
@@ -216,7 +223,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     requirement["requirement_id"],
                     "function",
                     "case_names",
-                    "deletion-delete",
+                    target_id,
                     body,
                     project["user_id"],
                 )
@@ -238,7 +245,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(receipt)
-                .where(receipt.c.candidate_id == "deletion-delete")
+                .where(receipt.c.candidate_id == target_id)
             )
             == 1
         )
@@ -246,7 +253,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
             connection.scalar(
                 sa.select(sa.func.count())
                 .select_from(candidate)
-                .where(candidate.c.candidate_id == "deletion-delete")
+                .where(candidate.c.candidate_id == target_id)
             )
             == 0
         )
@@ -256,7 +263,7 @@ def test_concurrent_deletion_replays_one_receipt(mysql):  # noqa: F811
                     tables["ai_generation_stage_contents"].c.stage_id == stage["id"]
                 )
             )
-            == "deletion-current"
+            == current_id
         )
 
 

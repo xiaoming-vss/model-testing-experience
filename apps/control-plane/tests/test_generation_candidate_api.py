@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+import pytest
 import sqlalchemy as sa
 from support.project_api import account, api, project  # noqa: F401
 
@@ -295,7 +296,8 @@ def test_candidate_rejection_is_scoped_idempotent_and_preserves_current(api):  #
     assert saved[0].result_candidate_token == result["candidateToken"]
 
 
-def test_candidate_deletion_removes_row_and_keeps_derived_candidates(api):  # noqa: F811
+@pytest.mark.parametrize("reject_first", [False, True], ids=["available", "rejected"])
+def test_candidate_deletion_removes_row_and_keeps_derived_candidates(api, reject_first):  # noqa: F811
     user, owner = account(api, "candidate-deleter")
     pid = project(api, owner)
     _, viewer = account(api, "candidate-delete-reader")
@@ -315,6 +317,19 @@ def test_candidate_deletion_removes_row_and_keeps_derived_candidates(api):  # no
         "requestId": str(uuid4()),
         "comment": "删除",
     }
+    if reject_first:
+        rejection = api.post(
+            base + "/b/disposition",
+            headers=owner,
+            json={
+                "action": "reject",
+                "expectedCandidateToken": "token-b",
+                "requestId": str(uuid4()),
+            },
+        )
+        assert rejection.status_code == 200, rejection.text
+        assert api.post(base + "/b/disposition", headers=owner, json=body).status_code == 400
+        body["expectedCandidateToken"] = rejection.json()["data"]["candidateToken"]
     assert api.post(base + "/b/disposition", headers=viewer, json=body).status_code == 403
     assert (
         api.post(
@@ -376,8 +391,11 @@ def test_candidate_deletion_removes_row_and_keeps_derived_candidates(api):  # no
     assert deleted is None
     assert derived is not None and derived.derived_from_candidate_id is None
     assert attempt is not None and attempt.invalidated_reason == CANDIDATE_DELETED_REASON
-    assert len(receipts) == 1
-    assert receipts[0].decision == "deleted" and receipts[0].result_candidate_token is None
+    by_decision = {receipt.decision: receipt for receipt in receipts}
+    assert len(receipts) == (2 if reject_first else 1)
+    if reject_first:
+        assert by_decision["rejected"].result_candidate_token == body["expectedCandidateToken"]
+    assert by_decision["deleted"].result_candidate_token is None
     assert rows[0].invalidated_reason == CANDIDATE_DELETED_REASON
     assert pending == 0
 

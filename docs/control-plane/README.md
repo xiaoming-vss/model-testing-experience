@@ -255,6 +255,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 - [阶段采用是独立指针](adr/0025-independent-stage-adoption.md)：采用和导入只校验内容自身的冻结来源，上游换采用不影响下游。
 - [API/UI 测试集归项目所有](adr/0027-project-owned-api-ui-test-suites.md)：需求改为可选关联，运行冻结项目、需求与迭代快照，CI 只凭测试集运行。
 - [删除候选是物理删除](adr/0031-candidate-removal-is-physical-delete.md)：丢弃改为直接删除候选，派生候选保留但清除派生指针。
+- [已拒绝候选可以删除](adr/0037-rejected-candidate-deletion.md)：已拒绝的非当前候选也可以物理删除，用于清理累积的已拒绝版本。
 
 ## 文件存储验收与恢复
 

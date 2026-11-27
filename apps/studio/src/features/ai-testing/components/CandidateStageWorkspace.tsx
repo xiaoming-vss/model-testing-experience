@@ -579,7 +579,7 @@ export function CandidateStageWorkspace({ requirementId, projectId, kind, stage,
   const canContinue = Boolean(candidate && access.can('review') && access.can('execute') && CONTINUATION_STAGES.has(stage.stage) && candidate.disposition === 'available' && !candidate.isCurrent)
   const canEdit = Boolean(candidate && access.can('write') && candidate.currentAttemptId)
   const canRevise = Boolean(candidate && access.can('execute') && candidate.disposition === 'available' && candidate.currentAttemptId)
-  const canDispose = Boolean(candidate && access.can('write') && candidate.disposition === 'available' && !candidate.isCurrent)
+  const canDispose = Boolean(candidate && access.can('write') && !candidate.isCurrent)
   const candidateActions = candidate ? <section className="gc-candidate-dock" aria-label="阶段操作">
     <CandidateStageActions
       candidate={candidate}

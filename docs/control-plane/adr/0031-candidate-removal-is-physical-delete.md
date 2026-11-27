@@ -3,7 +3,7 @@
 - 状态：已接受
 - 日期：2026-11-26
 - 取代：[生成候选实施规格](../../records/2026-11-20-generation-candidates-spec.md) 中“丢弃保留快照供审计”的相关描述，以及 [ADR 0025](0025-independent-stage-adoption.md) 后果中“候选被拒绝/丢弃/缺失”的“丢弃”；[ADR 0024](0024-generation-candidates-current.md) 决策 10 的“不自动删除、不设保留期”继续有效，仅新增手动删除语义
-- 被取代：—
+- 被取代：决策 2 中的候选状态限制自 2026-11-27 起由 [ADR 0037](0037-rejected-candidate-deletion.md) 取代
 - 关联：[生成链现状](../generation-chain.md)、[数据库结构](../database-schema.md)、[ADR 0024](0024-generation-candidates-current.md)、[ADR 0025](0025-independent-stage-adoption.md)
 
 ## 背景

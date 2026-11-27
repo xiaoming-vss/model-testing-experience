@@ -384,6 +384,26 @@ it('deletes a candidate and returns to the adopted content', async () => {
   expect(await screen.findByDisplayValue('current body')).toBeInTheDocument()
 })
 
+it('deletes a rejected candidate with its post-rejection token and offers no rejection', async () => {
+  const rejected = { ...candidate, disposition: 'rejected' as const, candidateToken: 'token-after-rejection' }
+  vi.mocked(generationCandidatesApi.current).mockResolvedValue(current)
+  vi.mocked(generationCandidatesApi.list).mockResolvedValue({ items: [rejected], total: 1, page: 1, pageSize: 20 })
+  vi.mocked(generationCandidatesApi.detail).mockResolvedValue({ ...rejected, content: 'candidate body', format: 'text' })
+  vi.mocked(generationCandidatesApi.dispose).mockResolvedValue({ requestId: 'request', candidateId: 'candidate-b', candidateToken: null, disposition: 'deleted' })
+  render(<QueryClientProvider client={createClient()}><CandidateStageWorkspace requirementId="req" projectId="project" kind="requirement_analysis" stage={stage} open inspectorContainer={workspaceInspector} inspectorActionContainer={workspaceInspector} onClose={() => {}} chooseConnection={async () => ({ connectionId: 'llm', instruction: '' })} /></QueryClientProvider>)
+  fireEvent.click(await screen.findByRole('button', { name: /候选 candidat/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /更多操作/ }))
+  expect(await screen.findByRole('menuitem', { name: '删除候选' })).toBeInTheDocument()
+  expect(screen.queryByRole('menuitem', { name: '拒绝候选' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('menuitem', { name: '删除候选' }))
+  fireEvent.click(await screen.findByRole('button', { name: /确\s*定|OK/ }))
+  await waitFor(() => expect(generationCandidatesApi.dispose).toHaveBeenCalledWith(
+    'req', 'requirement_analysis', 'extracting_text', 'candidate-b',
+    expect.objectContaining({ action: 'delete', expectedCandidateToken: 'token-after-rejection' }),
+  ))
+  expect(await screen.findByDisplayValue('current body')).toBeInTheDocument()
+})
+
 it('submits revision of the selected candidate with its uploaded images', async () => {
   setup()
   vi.mocked(generationCandidatesApi.revise).mockResolvedValue({ requestId: 'r', attemptId: 'next', replayed: false })

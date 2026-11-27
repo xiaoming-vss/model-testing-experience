@@ -305,7 +305,7 @@ async def delete_candidate_if_unchanged(
     candidate_id: str,
     expected_candidate_token: str,
 ) -> bool:
-    """Physically delete one available candidate, unless it is current.
+    """Physically delete one available or rejected candidate, unless it is current.
 
     Derived candidates are kept and lose only their provenance pointer. The
     attempt that produced the candidate is marked as invalidated so run history
@@ -319,7 +319,7 @@ async def delete_candidate_if_unchanged(
             AiGenerationCandidate.chain_id == chain_id,
             AiGenerationCandidate.stage_id == stage_id,
             AiGenerationCandidate.candidate_token == expected_candidate_token,
-            AiGenerationCandidate.disposition == "available",
+            AiGenerationCandidate.disposition.in_(("available", "rejected")),
         )
         .with_for_update()
         .execution_options(populate_existing=True)

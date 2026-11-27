@@ -27,7 +27,9 @@ export function CandidateStageActions({
   candidate, continueLabel, canAdopt, canContinue, canEdit, canRevise, canDispose,
   loading, editing, revisionOpen, revisionDirty, currentActive, onAdopt, onEdit, onSave, onCancelEdit, onRevise, onDispose,
 }: Props) {
-  const disposeItems: MenuProps['items'] = canDispose ? [{ key: 'reject', label: '拒绝候选' }, { key: 'delete', label: '删除候选', danger: true }] : []
+  const disposeItems: MenuProps['items'] = canDispose
+    ? [...(candidate.disposition === 'available' ? [{ key: 'reject', label: '拒绝候选' }] : []), { key: 'delete', label: '删除候选', danger: true }]
+    : []
   const menuItems: MenuProps['items'] = [
     ...(canContinue ? [{ key: 'continue', label: continueLabel, disabled: loading || revisionOpen || revisionDirty || !candidate.currentAttemptId }] : []),
     ...(disposeItems.length ? [{ type: 'divider' as const }, ...disposeItems] : []),

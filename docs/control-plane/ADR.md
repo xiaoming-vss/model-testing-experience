@@ -47,3 +47,4 @@
 - [0034 退役独立多阶段执行](adr/0034-retire-independent-multistage-execution.md)
 - [0035 退役旧连接管理路由与禅道 REST 通道](adr/0035-retire-legacy-connection-routes-and-zentao-rest-channel.md)
 - [0036 禅道反向拉取应用同时校验两端摘要](adr/0036-zentao-pull-apply-checks-both-digests.md)
+- [0037 已拒绝候选可以删除](adr/0037-rejected-candidate-deletion.md)

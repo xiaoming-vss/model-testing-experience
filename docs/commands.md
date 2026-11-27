@@ -69,6 +69,7 @@ scripts/build_images.sh control-plane studio
 | 仅静态检查 | `uv run --locked --extra dev python scripts/check.py --static-only` | — |
 | 全量测试（串行） | `uv run --locked --extra dev pytest -q` | 全量约 28 分钟；本仓库约定不与其它 pytest 并发执行 |
 | 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
+| 候选处置回归 | `uv run --locked --extra dev pytest tests/test_generation_candidate_api.py tests/test_hard_deletion.py -q` | 覆盖拒绝，以及删除未拒绝和已拒绝的候选 |
 | 元素库回归 | `uv run --locked --extra dev pytest tests/test_ui_element_library.py -q` | 校验项目权限、分组、定位模板与版本冲突 |
 | 默认技能自带测试 | `for skill in default-skills/*/; do (cd "$skill" && python3 -m unittest discover -s tests -t tests); done` | 在 `apps/control-plane/` 下执行；每个技能独立进程，避免同名脚本模块冲突 |
 | Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
