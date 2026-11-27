@@ -54,7 +54,9 @@ class UiElement(Base):
     )
     name: Mapped[str] = mapped_column(String(120), comment="元素显示名称")
     scope: Mapped[str] = mapped_column(String(255), comment="元素所在容器或可用的页面状态")
-    locator_type: Mapped[str] = mapped_column(String(20), comment="UI 执行器定位方式")
+    locator_type: Mapped[str] = mapped_column(
+        String(20), comment="UI 执行器定位方式：css/xpath/text/placeholder/label/test_id/role"
+    )
     locator_value: Mapped[str] = mapped_column(Text, comment="固定的定位值或含命名参数的定位模板")
     parameters_json: Mapped[list[dict[str, str]]] = mapped_column(
         JSON, comment="定位参数定义数组；每项含 name 和 description，固定定位为空数组"

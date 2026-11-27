@@ -2076,7 +2076,7 @@ def upgrade() -> None:
             "scope", sa.String(length=255), nullable=False, comment="元素所在容器或可用的页面状态"
         ),
         sa.Column(
-            "locator_type", sa.String(length=20), nullable=False, comment="UI 执行器定位方式"
+            "locator_type", sa.String(length=20), nullable=False, comment="UI 执行器定位方式：css/xpath/text/placeholder/label/test_id/role"
         ),
         sa.Column(
             "locator_value", sa.Text(), nullable=False, comment="固定的定位值或含命名参数的定位模板"
