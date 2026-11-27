@@ -1,12 +1,9 @@
 import json
-import sys
 import unittest
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "src"))
 
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.skills import required_skills

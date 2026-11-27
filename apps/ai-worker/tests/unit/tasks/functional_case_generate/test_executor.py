@@ -1,16 +1,8 @@
 import json
-import sys
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 import testing_agent_ai_worker.tasks.functional_case_generate.executor as executor_module
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
@@ -22,6 +14,7 @@ from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import FunctionalChainRunResult
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
 
 
 class FunctionalCaseExecutorTests(unittest.TestCase):

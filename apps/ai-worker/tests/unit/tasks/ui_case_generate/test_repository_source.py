@@ -1,20 +1,13 @@
 import json
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import PiConfig, Settings, UiGenerationConfig
 from testing_agent_ai_worker.models.task import (
-    GitlabCredentials,
     RepositoryBinding,
     Task,
     TaskPayload,
@@ -27,6 +20,8 @@ from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
     cleanup_repository_source,
     prepare_repository_source,
 )
+from tests.support.git import FakeGitRunner
+from tests.support.git import credentials as git_credentials
 
 COMMIT = "a" * 40
 TOKEN = "secret-token-1"
@@ -82,36 +77,16 @@ def _task(
     )
 
 
-def _credentials(token: str = TOKEN) -> list[GitlabCredentials]:
-    return [
-        GitlabCredentials(
-            connection_id="conn-1",
-            base_url="https://gitlab.example.com",
-            access_token=token,
-            repository_ids=["repo-1"],
-        )
-    ]
+class _FakeGitRunner(FakeGitRunner):
+    """Git stand-in that also knows which commits a fetch made available."""
 
-
-class _FakeGitRunner:
     def __init__(self, *, head: str = COMMIT, files: dict[str, str] | None = None) -> None:
-        self.calls: list[dict] = []
-        self.head = head
-        self.files = files or {"src/App.tsx": "export const App = () => null\n"}
+        super().__init__(
+            head=head, files=files or {"src/App.tsx": "export const App = () => null\n"}
+        )
         self.available_commits: set[str] = set()
 
-    def run(self, args, *, cwd=None, env=None, timeout=300.0):
-        self.calls.append(
-            {"args": list(args), "cwd": cwd, "env": dict(env or {}), "timeout": timeout}
-        )
-        if args[0] == "clone":
-            repo = Path(args[-1])
-            (repo / ".git" / "objects").mkdir(parents=True, exist_ok=True)
-            for name, content in self.files.items():
-                target = repo / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(content, encoding="utf-8")
-            return ""
+    def answer(self, args) -> str:
         if args[0] == "cat-file":
             commit = args[-1].removesuffix("^{commit}")
             if commit in self.available_commits:
@@ -120,12 +95,11 @@ class _FakeGitRunner:
         if args[0] == "fetch" and args[-1] not in {"origin"} and not args[-1].startswith("+"):
             self.available_commits.add(args[-1])
             return ""
-        if args[0] == "rev-parse":
-            return f"{self.head}\n"
-        return ""
+        return super().answer(args)
 
-    def all_args(self) -> str:
-        return "\n".join(" ".join(call["args"]) for call in self.calls)
+    def materialize(self, repo: Path) -> None:
+        super().materialize(repo)
+        (repo / ".git" / "objects").mkdir(parents=True, exist_ok=True)
 
 
 class RepositorySourceTests(unittest.TestCase):
@@ -138,7 +112,7 @@ class RepositorySourceTests(unittest.TestCase):
     def _prepare(self, task: Task, *, runner=None, credentials=None, config=None):
         return prepare_repository_source(
             task,
-            _credentials() if credentials is None else credentials,
+            git_credentials() if credentials is None else credentials,
             agent_config=self.agent_config,
             config=config or self.config,
             runner=runner or _FakeGitRunner(),
@@ -303,7 +277,7 @@ class RepositorySourceTests(unittest.TestCase):
         ):
             source = prepare_repository_source(
                 task,
-                _credentials(),
+                git_credentials(),
                 agent_config=self.agent_config,
                 config=self.config,
             )

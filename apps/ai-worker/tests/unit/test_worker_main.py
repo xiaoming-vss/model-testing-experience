@@ -2,7 +2,6 @@ import io
 import logging
 import os
 import socket
-import sys
 import tempfile
 import threading
 import time
@@ -10,13 +9,6 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
-
-RUNTIME_ROOT = str(Path(tempfile.gettempdir()) / "pi-runtime")
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import (
@@ -34,6 +26,10 @@ from testing_agent_ai_worker.main import build_task_runner, main, run_poll_once,
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
+
+RUNTIME_ROOT = str(Path(tempfile.gettempdir()) / "pi-runtime")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class _FakePoller:

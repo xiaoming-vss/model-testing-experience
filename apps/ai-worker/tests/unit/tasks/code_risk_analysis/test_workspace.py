@@ -9,7 +9,6 @@ from unittest.mock import patch
 from testing_agent_ai_worker.config.models import CodeRiskAnalysisConfig, PiConfig
 from testing_agent_ai_worker.models.task import (
     ExistingTestCases,
-    GitlabCredentials,
     RepositoryBinding,
     RequirementInput,
     Task,
@@ -25,6 +24,7 @@ from testing_agent_ai_worker.tasks.git_workspace import (
     retain_failed_workspace,
     sweep_expired_workspaces,
 )
+from tests.support.git import FakeGitRunner, credentials
 
 DIFF_TEXT = """\
 diff --git a/src/login.py b/src/login.py
@@ -74,35 +74,6 @@ def _task(bindings=None) -> Task:
     )
 
 
-def _credentials(token: str = "secret-token-1") -> list[GitlabCredentials]:
-    return [
-        GitlabCredentials(
-            connection_id="conn-1",
-            base_url="https://gitlab.example.com",
-            access_token=token,
-            repository_ids=["repo-1"],
-        )
-    ]
-
-
-class _FakeGitRunner:
-    def __init__(self) -> None:
-        self.calls: list[dict] = []
-
-    def run(self, args, *, cwd=None, env=None, timeout=300.0):
-        self.calls.append(
-            {"args": list(args), "cwd": cwd, "env": dict(env or {}), "timeout": timeout}
-        )
-        if args[0] == "rev-parse":
-            return "head-sha\n"
-        if "diff" in args:
-            return DIFF_TEXT
-        return ""
-
-    def all_args(self) -> str:
-        return "\n".join(" ".join(call["args"]) for call in self.calls)
-
-
 class CodeWorkspaceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -112,11 +83,11 @@ class CodeWorkspaceTests(unittest.TestCase):
         self.task = _task()
 
     def test_prepare_clones_pinned_commits_and_builds_filtered_diff(self) -> None:
-        runner = _FakeGitRunner()
+        runner = FakeGitRunner(diff=DIFF_TEXT)
 
         workspace = prepare_code_workspace(
             self.task,
-            _credentials(),
+            credentials(),
             agent_config=self.agent_config,
             config=self.config,
             runner=runner,
@@ -154,11 +125,11 @@ class CodeWorkspaceTests(unittest.TestCase):
         self.assertEqual([], list(workspace.run_root.glob(".git-auth-*")))
 
     def test_prepare_checks_out_head_and_verifies_it(self) -> None:
-        runner = _FakeGitRunner()
+        runner = FakeGitRunner(diff=DIFF_TEXT)
 
         prepare_code_workspace(
             self.task,
-            _credentials(),
+            credentials(),
             agent_config=self.agent_config,
             config=self.config,
             runner=runner,
@@ -168,19 +139,13 @@ class CodeWorkspaceTests(unittest.TestCase):
         self.assertEqual(["checkout", "--detach", "head-sha"], checkout["args"])
 
     def test_prepare_rejects_head_mismatch(self) -> None:
-        class MismatchRunner(_FakeGitRunner):
-            def run(self, args, *, cwd=None, env=None, timeout=300.0):
-                if args[0] == "rev-parse":
-                    return "other-sha\n"
-                return super().run(args, cwd=cwd, env=env, timeout=timeout)
-
         with self.assertRaisesRegex(CodeWorkspaceError, "HEAD .* 不一致"):
             prepare_code_workspace(
                 self.task,
-                _credentials(),
+                credentials(),
                 agent_config=self.agent_config,
                 config=self.config,
-                runner=MismatchRunner(),
+                runner=FakeGitRunner(diff=DIFF_TEXT, head="other-sha"),
             )
 
     def test_prepare_requires_matching_credentials(self) -> None:
@@ -190,27 +155,27 @@ class CodeWorkspaceTests(unittest.TestCase):
                 [],
                 agent_config=self.agent_config,
                 config=self.config,
-                runner=_FakeGitRunner(),
+                runner=FakeGitRunner(diff=DIFF_TEXT),
             )
 
     def test_prepare_rejects_non_http_clone_url(self) -> None:
         with self.assertRaisesRegex(CodeWorkspaceError, "HTTP\\(S\\)"):
             prepare_code_workspace(
                 _task([_binding(instanceUrl="", cloneUrl="file:///tmp/repo")]),
-                _credentials(),
+                credentials(),
                 agent_config=self.agent_config,
                 config=self.config,
-                runner=_FakeGitRunner(),
+                runner=FakeGitRunner(diff=DIFF_TEXT),
             )
 
     def test_prepare_rejects_clone_url_from_another_instance(self) -> None:
         with self.assertRaisesRegex(CodeWorkspaceError, "实例不一致"):
             prepare_code_workspace(
                 _task([_binding(cloneUrl="https://other.example/team/repo-one.git")]),
-                _credentials(),
+                credentials(),
                 agent_config=self.agent_config,
                 config=self.config,
-                runner=_FakeGitRunner(),
+                runner=FakeGitRunner(diff=DIFF_TEXT),
             )
 
     def test_prepare_rejects_missing_pinned_commits_or_clone_url(self) -> None:
@@ -223,10 +188,10 @@ class CodeWorkspaceTests(unittest.TestCase):
                 with self.assertRaisesRegex(CodeWorkspaceError, message):
                     prepare_code_workspace(
                         _task([binding]),
-                        _credentials(),
+                        credentials(),
                         agent_config=self.agent_config,
                         config=self.config,
-                        runner=_FakeGitRunner(),
+                        runner=FakeGitRunner(diff=DIFF_TEXT),
                     )
 
     def test_prepare_rejects_repository_count_over_limit(self) -> None:
@@ -234,17 +199,17 @@ class CodeWorkspaceTests(unittest.TestCase):
         with self.assertRaisesRegex(CodeWorkspaceError, "仓库数量超过上限"):
             prepare_code_workspace(
                 task,
-                _credentials(),
+                credentials(),
                 agent_config=self.agent_config,
                 config=CodeRiskAnalysisConfig(max_repos=1),
-                runner=_FakeGitRunner(),
+                runner=FakeGitRunner(diff=DIFF_TEXT),
             )
 
     def test_cleanup_deletes_success_and_retains_failure(self) -> None:
-        runner = _FakeGitRunner()
+        runner = FakeGitRunner(diff=DIFF_TEXT)
         workspace = prepare_code_workspace(
             self.task,
-            _credentials(),
+            credentials(),
             agent_config=self.agent_config,
             config=self.config,
             runner=runner,
@@ -322,7 +287,7 @@ class CodeWorkspaceTests(unittest.TestCase):
         ):
             workspace = prepare_code_workspace(
                 _task([binding]),
-                _credentials(),
+                credentials(),
                 agent_config=self.agent_config,
                 config=self.config,
             )

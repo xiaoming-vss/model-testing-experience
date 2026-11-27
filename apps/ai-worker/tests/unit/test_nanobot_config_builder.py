@@ -1,15 +1,9 @@
 import json
-import sys
 import tempfile
 import unittest
 from contextlib import chdir
 from pathlib import Path
 from unittest.mock import patch
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 
 import testing_agent_ai_worker.agent.nanobot as config_builder_module
 from testing_agent_ai_worker.agent.config_builder import task_config_path

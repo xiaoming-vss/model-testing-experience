@@ -4,14 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from testing_agent_ai_worker.cli.agent_demo import main, run_cli_demo
-
-
-class _Printer:
-    def __init__(self) -> None:
-        self.lines: list[str] = []
-
-    def __call__(self, value: str) -> None:
-        self.lines.append(value)
+from tests.support.cli import LinePrinter
 
 
 class PiDemoCliTests(unittest.IsolatedAsyncioTestCase):
@@ -19,7 +12,7 @@ class PiDemoCliTests(unittest.IsolatedAsyncioTestCase):
         root = self.enterContext(tempfile.TemporaryDirectory())
         config_path = str(Path(root) / "config.json")
         workspace = str(Path(root) / "workspace")
-        printer = _Printer()
+        printer = LinePrinter()
         captured: dict[str, str | None] = {}
 
         async def fake_runner(

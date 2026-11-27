@@ -1,20 +1,13 @@
 import json
-import sys
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
-    GitlabCredentials,
     RepositoryBinding,
     Task,
     TaskPayload,
@@ -25,6 +18,7 @@ from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
     RepositorySource,
     RepositorySourceError,
 )
+from tests.support.git import credentials
 from tests.unit.tasks.ui_case_generate.test_executor import VALID_YAML
 
 COMMIT = "a" * 40
@@ -82,17 +76,6 @@ def _task(*, metadata: dict | None = None, three_stage: bool = False) -> Task:
     return task
 
 
-def _credentials(token: str = TOKEN) -> list[GitlabCredentials]:
-    return [
-        GitlabCredentials(
-            connection_id="conn-1",
-            base_url="https://gitlab.example.com",
-            access_token=token,
-            repository_ids=["repo-1"],
-        )
-    ]
-
-
 class _RecordingPreparer:
     def __init__(self, run_root: Path, *, error: str = "") -> None:
         self.run_root = run_root
@@ -124,7 +107,7 @@ class UiCaseSourceDispatchTests(unittest.TestCase):
             executor = UiCaseExecutor(
                 agent_config=agent_config,
                 repository_source_preparer=_RecordingPreparer(run_root, error="仓库 clone 失败"),
-                credentials_fetcher=Mock(return_value=_credentials()),
+                credentials_fetcher=Mock(return_value=credentials()),
                 skill_runner=lambda **kwargs: VALID_YAML,
             )
 
@@ -166,7 +149,7 @@ class UiCaseSourceDispatchTests(unittest.TestCase):
             executor = UiCaseExecutor(
                 agent_config=agent_config,
                 repository_source_preparer=_RecordingPreparer(run_root),
-                credentials_fetcher=Mock(return_value=_credentials()),
+                credentials_fetcher=Mock(return_value=credentials()),
                 skill_runner=lambda **kwargs: json.dumps(surface, ensure_ascii=False),
             )
 

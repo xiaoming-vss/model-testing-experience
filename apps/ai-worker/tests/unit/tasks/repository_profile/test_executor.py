@@ -9,7 +9,6 @@ from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import NanobotConfig, PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
-    GitlabCredentials,
     LlmCredentials,
     RepositoryBinding,
     RequirementInput,
@@ -24,6 +23,7 @@ from testing_agent_ai_worker.tasks.repository_profile.workspace import (
     ProfileRepoWorkspace,
     ProfileWorkspace,
 )
+from tests.support.executors import FakeCredentialsFetcher, ScriptedPromptRunner
 
 VALID_PROFILE = {
     "repositories": [
@@ -82,25 +82,6 @@ def _task(*, task_type: str = "repository_profile") -> Task:
     )
 
 
-class _FakeCredentialsFetcher:
-    def __init__(self, *, fail: bool = False) -> None:
-        self.fail = fail
-        self.calls = 0
-
-    def __call__(self, task: Task) -> list[GitlabCredentials]:
-        self.calls += 1
-        if self.fail:
-            raise RuntimeError("credential endpoint down")
-        return [
-            GitlabCredentials(
-                connection_id="conn-1",
-                base_url="https://gitlab.example.com",
-                access_token="secret-token",
-                repository_ids=["repo-1"],
-            )
-        ]
-
-
 class _PromptRunner:
     def __init__(self, output: str | None = None, *, fail: bool = False) -> None:
         self.output = output if output is not None else json.dumps(VALID_PROFILE)
@@ -115,16 +96,6 @@ class _PromptRunner:
         if self.fail:
             raise RuntimeError("model failed")
         return self.output
-
-
-class _RepairingPromptRunner:
-    def __init__(self, outputs: list[str]) -> None:
-        self.outputs = outputs
-        self.calls: list[dict[str, Any]] = []
-
-    def __call__(self, **kwargs):
-        self.calls.append(kwargs)
-        return self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
 
 
 class RepositoryProfileExecutorTests(unittest.TestCase):
@@ -157,10 +128,10 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
             unavailable=[],
         )
 
-    def _executor(self, runner: _PromptRunner, credentials: _FakeCredentialsFetcher | None = None):
+    def _executor(self, runner: _PromptRunner, credentials: FakeCredentialsFetcher | None = None):
         return RepositoryProfileExecutor(
             agent_config=self.agent_config,
-            credentials_fetcher=credentials or _FakeCredentialsFetcher(),
+            credentials_fetcher=credentials or FakeCredentialsFetcher(access_token="secret-token"),
             workspace_preparer=lambda *args, **kwargs: self.workspace,
             prompt_runner=runner,
         )
@@ -195,7 +166,7 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
         self.assertTrue((self.run_root / ".retain-until").exists())
 
     def test_contract_failure_is_repaired_at_most_twice(self) -> None:
-        runner = _RepairingPromptRunner(
+        runner = ScriptedPromptRunner(
             [
                 '{"repositories": [], "overallSummary": "无"}',
                 json.dumps(VALID_PROFILE),
@@ -216,7 +187,7 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
     def test_non_pi_backend_fails(self) -> None:
         executor = RepositoryProfileExecutor(
             agent_config=NanobotConfig(),
-            credentials_fetcher=_FakeCredentialsFetcher(),
+            credentials_fetcher=FakeCredentialsFetcher(access_token="secret-token"),
             workspace_preparer=lambda *args, **kwargs: self.workspace,
         )
         result = executor.execute(_task(), datetime.now().astimezone(), lambda _item: None)
@@ -236,7 +207,7 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
         task = _task()
         task.bindings[0].profile_error = "无权限"
         task.bindings[0].clone_url = ""
-        credentials = _FakeCredentialsFetcher()
+        credentials = FakeCredentialsFetcher(access_token="secret-token")
         result = self._executor(_PromptRunner(), credentials).execute(
             task, datetime.now().astimezone(), lambda _item: None
         )
@@ -245,9 +216,12 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
         self.assertEqual(0, credentials.calls)
 
     def test_credentials_failure_is_reported(self) -> None:
-        result = self._executor(_PromptRunner(), _FakeCredentialsFetcher(fail=True)).execute(
-            _task(), datetime.now().astimezone(), lambda _item: None
-        )
+        result = self._executor(
+            _PromptRunner(),
+            FakeCredentialsFetcher(
+                fail=RuntimeError("credential endpoint down"), access_token="secret-token"
+            ),
+        ).execute(_task(), datetime.now().astimezone(), lambda _item: None)
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("GitLab 凭据不可用", result.error_message or "")
 

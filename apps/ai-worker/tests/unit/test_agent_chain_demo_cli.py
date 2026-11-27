@@ -4,22 +4,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 import testing_agent_ai_worker.cli.agent_chain_demo as chain_demo_module
 from testing_agent_ai_worker.cli.agent_chain_demo import main, run_chain_demo
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult
-
-
-class _Printer:
-    def __init__(self) -> None:
-        self.lines: list[str] = []
-
-    def __call__(self, value: str) -> None:
-        self.lines.append(value)
+from tests.support.cli import LinePrinter
 
 
 class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
@@ -66,7 +54,7 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             )
             config_path = str(Path(temp_dir) / "config.json")
             workspace = str(Path(temp_dir) / "workspace")
-            printer = _Printer()
+            printer = LinePrinter()
             captured: dict[str, str | None] = {}
 
             async def fake_chain_runner(
