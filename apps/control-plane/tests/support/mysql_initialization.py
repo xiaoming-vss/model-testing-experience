@@ -43,6 +43,35 @@ def mysql():
     yield from _mysql_fixture("head")
 
 
+def clear_schema(sync_engine):
+    """Delete every row of the disposable database, keeping only the Alembic revision."""
+    with sync_engine.begin() as connection:
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=0")
+        for name in sa.inspect(connection).get_table_names():
+            if name != "alembic_version":
+                quoted = connection.dialect.identifier_preparer.quote(name)
+                connection.exec_driver_sql(f"DELETE FROM {quoted}")
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=1")
+
+
+@pytest.fixture(autouse=True)
+def clean_schema(mysql):
+    """Start every test of the module from the migrated but empty schema.
+
+    Lets tests of one module replay the same seeded rows without sharing state.
+    """
+    clear_schema(mysql)
+    yield
+
+
+@pytest.fixture
+async def sessions(mysql):
+    """Session factory on the disposable database; its engine is disposed after the test."""
+    engine, factory = async_sessions(mysql)
+    yield factory
+    await engine.dispose()
+
+
 def async_sessions(sync_engine, **engine_options):
     """Async engine and session factory on the same disposable database as sync_engine.
 

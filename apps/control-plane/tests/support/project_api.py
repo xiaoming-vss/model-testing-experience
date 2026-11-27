@@ -2,6 +2,7 @@
 
 import asyncio
 
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects.mysql import LONGTEXT
@@ -20,6 +21,9 @@ def sqlite_longtext(type_, compiler, **kwargs):
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    # Hashing at the default bcrypt cost dominates account setup, and no API test depends on it.
+    gensalt = bcrypt.gensalt
+    monkeypatch.setattr(bcrypt, "gensalt", lambda **options: gensalt(rounds=4, **options))
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'api.db'}")
     sessions = async_sessionmaker(engine, expire_on_commit=False)
 

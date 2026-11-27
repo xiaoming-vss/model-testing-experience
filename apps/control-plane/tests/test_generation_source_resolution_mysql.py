@@ -6,7 +6,10 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from support.generation_candidate_graph import ROOT, SOURCE_SNAPSHOT, fixture_graph
-from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
+from support.mysql_initialization import clean_schema as clean_schema
+from support.mysql_initialization import mysql as mysql
+from support.mysql_initialization import seed_row
+from support.mysql_initialization import sessions as sessions
 
 from testing_agent.domain.generation_source_closure import SourceClosureError
 from testing_agent.models import AiGenerationCandidate, Base
@@ -21,7 +24,9 @@ from testing_agent.services.generation_source_resolution import (
 )
 
 
-def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypatch):  # noqa: F811
+@pytest.fixture
+def graph_options(mysql):
+    """Seed the graph of fixture_graph() under requirement ``req``; return source lock options."""
     tables = Base.metadata.tables
     graph = fixture_graph()
     with mysql.begin() as connection:
@@ -115,7 +120,7 @@ def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypat
         )
         for key in ("a", "p")
     )
-    options = dict(
+    return dict(
         requirement_id="req",
         selections=selections,
         required_stages=frozenset(
@@ -124,132 +129,148 @@ def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypat
         current_root_hashes={ROOT.key: ROOT.content_hash},
     )
 
-    async def exercise():
-        engine, factory = async_sessions(mysql)
-        discovered = asyncio.Event()
-        original = resolution._project
 
-        def signal(candidate, chain, stage):
-            result = original(candidate, chain, stage)
-            if candidate.candidate_id == "m":
-                discovered.set()
-            return result
-
-        try:
-            async with factory() as session:
-                closure = await lock_candidate_source_closure(session, **options)
-                assert len(closure.stages) == 3
-                await session.rollback()
-            monkeypatch.setattr(resolution, "_project", signal)
-            async with factory() as editor, factory() as reader:
-                await editor.scalar(
-                    sa.select(AiGenerationCandidate)
-                    .where(AiGenerationCandidate.candidate_id == "m")
-                    .with_for_update()
-                )
-                reading = asyncio.create_task(lock_candidate_source_closure(reader, **options))
-                await asyncio.wait_for(discovered.wait(), timeout=10)
-                await editor.execute(
-                    sa.update(AiGenerationCandidate)
-                    .where(AiGenerationCandidate.candidate_id == "m")
-                    .values(candidate_token="changed-token")
-                )
-                await editor.commit()
-                with pytest.raises(SourceClosureError, match="concurrent_change"):
-                    await asyncio.wait_for(reading, timeout=10)
-                await reader.rollback()
-        finally:
-            await engine.dispose()
-
-    asyncio.run(exercise())
-    with mysql.connect() as connection:
-        candidate = tables["ai_generation_candidates"]
-        rows = connection.execute(sa.select(candidate.c.candidate_id, candidate.c.frozen_at)).all()
-        assert len(rows) == 3 and all(row.frozen_at is None for row in rows)
-
-    async def test_current_slot_race():
-        engine, factory = async_sessions(mysql)
-        loaded = asyncio.Event()
-        original = selection.lock_candidate_source_closure
-
-        async def signal(*args, **kwargs):
-            result = await original(*args, **kwargs)
-            loaded.set()
-            return result
-
-        monkeypatch.setattr(selection, "lock_candidate_source_closure", signal)
-        try:
-            async with factory() as editor, factory() as reader:
-                await editor.scalar(
-                    sa.select(AiGenerationStageContent)
-                    .where(AiGenerationStageContent.source_candidate_id == "a")
-                    .with_for_update()
-                )
-                reading = asyncio.create_task(
-                    selection.resolve_run_sources(
-                        reader,
-                        requirement_id="req",
-                        kind="function",
-                        stage="detailed_cases",
-                        request=CandidateRunRequest(connection_id="connection"),
-                        current_root_hashes={ROOT.key: ROOT.content_hash},
-                    )
-                )
-                await asyncio.wait_for(loaded.wait(), timeout=10)
-                await editor.execute(
-                    sa.update(AiGenerationStageContent)
-                    .where(AiGenerationStageContent.source_candidate_id == "a")
-                    .values(content_token="changed-token")
-                )
-                await editor.commit()
-                with pytest.raises(SourceClosureError, match="concurrent_change"):
-                    await asyncio.wait_for(reading, timeout=10)
-                await reader.rollback()
-        finally:
-            await engine.dispose()
-
-    asyncio.run(test_current_slot_race())
-
-    with mysql.begin() as connection:
-        connection.execute(
-            sa.update(tables["ai_generation_candidates"])
-            .where(tables["ai_generation_candidates"].c.candidate_id == "a")
+async def commit_changes_earlier_locks_left(sessions):
+    """Apply what a rejected candidate race and slot race each leave committed by the editor."""
+    async with sessions() as session:
+        await session.execute(
+            sa.update(AiGenerationCandidate)
+            .where(AiGenerationCandidate.candidate_id == "m")
+            .values(candidate_token="changed-token")
+        )
+        await session.execute(
+            sa.update(AiGenerationStageContent)
+            .where(AiGenerationStageContent.source_candidate_id == "a")
+            .values(content_token="changed-token")
+        )
+        await session.execute(
+            sa.update(AiGenerationCandidate)
+            .where(AiGenerationCandidate.candidate_id == "a")
             .values(current_attempt_id="attempt-a")
         )
+        await session.commit()
 
-    async def test_adoption_race():
-        engine, factory = async_sessions(mysql)
 
-        async def run():
-            async with factory() as session:
-                try:
-                    token = await adopt_verified_candidate(
-                        session,
-                        requirement_id="req",
-                        kind="function",
-                        stage="requirement_analysis",
-                        request=CandidateAdoptRequest(
-                            action="adopt",
-                            candidate_id="a",
-                            expected_candidate_token="token-a",
-                            expected_attempt_id="attempt-a",
-                            expected_current_token="changed-token",
-                            request_id=uuid4(),
-                        ),
-                        actor_id="u",
-                        current_root_hashes={ROOT.key: ROOT.content_hash},
-                    )
-                    await session.commit()
-                    return token
-                except SourceClosureError as exc:
-                    await session.rollback()
-                    return exc.reason
+async def test_closure_covers_every_stage_of_the_selected_graph(graph_options, sessions):
+    async with sessions() as session:
+        closure = await lock_candidate_source_closure(session, **graph_options)
+        stages = len(closure.stages)
+        await session.rollback()
 
-        try:
-            results = await asyncio.gather(run(), run())
-            assert results.count("concurrent_change") == 1
-            assert len([item for item in results if item != "concurrent_change"]) == 1
-        finally:
-            await engine.dispose()
+    assert stages == 3
 
-    asyncio.run(test_adoption_race())
+
+async def test_source_changed_between_discovery_and_lock_is_rejected(
+    graph_options, sessions, monkeypatch
+):
+    discovered = asyncio.Event()
+    original = resolution._project
+
+    def signal(candidate, chain, stage):
+        result = original(candidate, chain, stage)
+        if candidate.candidate_id == "m":
+            discovered.set()
+        return result
+
+    monkeypatch.setattr(resolution, "_project", signal)
+    async with sessions() as editor, sessions() as reader:
+        await editor.scalar(
+            sa.select(AiGenerationCandidate)
+            .where(AiGenerationCandidate.candidate_id == "m")
+            .with_for_update()
+        )
+        reading = asyncio.create_task(lock_candidate_source_closure(reader, **graph_options))
+        await asyncio.wait_for(discovered.wait(), timeout=10)
+        await editor.execute(
+            sa.update(AiGenerationCandidate)
+            .where(AiGenerationCandidate.candidate_id == "m")
+            .values(candidate_token="changed-token")
+        )
+        await editor.commit()
+
+        with pytest.raises(SourceClosureError, match="concurrent_change"):
+            await asyncio.wait_for(reading, timeout=10)
+        await reader.rollback()
+
+    async with sessions() as session:
+        rows = (
+            await session.execute(
+                sa.select(AiGenerationCandidate.candidate_id, AiGenerationCandidate.frozen_at)
+            )
+        ).all()
+    assert len(rows) == 3 and all(row.frozen_at is None for row in rows)
+
+
+async def test_current_slot_changed_during_resolution_is_rejected(
+    graph_options, sessions, monkeypatch
+):
+    loaded = asyncio.Event()
+    original = selection.lock_candidate_source_closure
+
+    async def signal(*args, **kwargs):
+        result = await original(*args, **kwargs)
+        loaded.set()
+        return result
+
+    monkeypatch.setattr(selection, "lock_candidate_source_closure", signal)
+    async with sessions() as editor, sessions() as reader:
+        await editor.scalar(
+            sa.select(AiGenerationStageContent)
+            .where(AiGenerationStageContent.source_candidate_id == "a")
+            .with_for_update()
+        )
+        reading = asyncio.create_task(
+            selection.resolve_run_sources(
+                reader,
+                requirement_id="req",
+                kind="function",
+                stage="detailed_cases",
+                request=CandidateRunRequest(connection_id="connection"),
+                current_root_hashes={ROOT.key: ROOT.content_hash},
+            )
+        )
+        await asyncio.wait_for(loaded.wait(), timeout=10)
+        await editor.execute(
+            sa.update(AiGenerationStageContent)
+            .where(AiGenerationStageContent.source_candidate_id == "a")
+            .values(content_token="changed-token")
+        )
+        await editor.commit()
+
+        with pytest.raises(SourceClosureError, match="concurrent_change"):
+            await asyncio.wait_for(reading, timeout=10)
+        await reader.rollback()
+
+
+async def test_concurrent_adoption_of_a_changed_slot_succeeds_exactly_once(graph_options, sessions):
+    await commit_changes_earlier_locks_left(sessions)
+
+    async def run():
+        async with sessions() as session:
+            try:
+                token = await adopt_verified_candidate(
+                    session,
+                    requirement_id="req",
+                    kind="function",
+                    stage="requirement_analysis",
+                    request=CandidateAdoptRequest(
+                        action="adopt",
+                        candidate_id="a",
+                        expected_candidate_token="token-a",
+                        expected_attempt_id="attempt-a",
+                        expected_current_token="changed-token",
+                        request_id=uuid4(),
+                    ),
+                    actor_id="u",
+                    current_root_hashes={ROOT.key: ROOT.content_hash},
+                )
+                await session.commit()
+                return token
+            except SourceClosureError as exc:
+                await session.rollback()
+                return exc.reason
+
+    results = await asyncio.gather(run(), run())
+
+    assert results.count("concurrent_change") == 1
+    assert len([item for item in results if item != "concurrent_change"]) == 1
