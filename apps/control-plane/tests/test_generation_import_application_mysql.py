@@ -11,6 +11,7 @@ import pytest
 import sqlalchemy as sa
 from support import generation_candidate_graph as graph_fixture
 from support.generation import generation_services
+from support.memory_storage import Storage
 from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
@@ -30,23 +31,6 @@ OUTPUT = (
     "cases:\n  - module: module\n    title: existing\n"
     "    steps: login\n    expected_results: success\n"
 )
-
-
-class Storage:
-    def __init__(self):
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield DOCUMENT
-
-    def close(self):
-        pass
 
 
 def test_application_rechecks_authorization_and_replays_on_mysql(mysql, monkeypatch):  # noqa: F811
@@ -198,7 +182,7 @@ def test_application_rechecks_authorization_and_replays_on_mysql(mysql, monkeypa
 
     async def exercise():
         engine, factory = async_sessions(mysql)
-        storage = Storage()
+        storage = Storage(DOCUMENT)
         files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
 
         def application(session):

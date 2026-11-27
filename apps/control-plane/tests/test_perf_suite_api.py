@@ -1,74 +1,17 @@
 import asyncio
-from dataclasses import replace
 
 from sqlalchemy import func, select
+from support.perf_api import (
+    PERF_YAML,
+    environment,
+    monitoring_connection,
+    worker_headers,
+    worker_settings,
+)
 from support.project_api import account, project
 from support.project_api import api as api  # noqa: F401
 
-from testing_agent.core.config import get_settings
 from testing_agent.models.worker_task import WorkerTask
-
-_PERF_YAML = """
-specVersion: "1.0"
-case:
-  name: ping
-  steps:
-    - name: ping
-      method: GET
-      path: /ping
-      checks:
-        - type: status
-          op: eq
-          value: 200
-  load:
-    model: vus
-    vus: 1
-    duration: "1s"
-  acceptance:
-    source: user_confirmed
-    confirmed: true
-    criteria:
-      http_req_failed: ["rate<0.01"]
-"""
-
-_WORKER_HEADERS = {"X-Worker-Token": "perf-worker-token"}
-
-
-def _settings(api):
-    settings = replace(
-        get_settings(),
-        integration_key="test-integration-key",
-        perf_worker_key="perf-worker-token",
-    )
-    api.app.dependency_overrides[get_settings] = lambda: settings
-    return settings
-
-
-def _environment(api, headers, project_id, name="perf-env"):
-    response = api.post(
-        f"/v1/projects/{project_id}/api-environments",
-        headers=headers,
-        json={
-            "name": name,
-            "kind": "perf",
-            "baseUrl": "http://127.0.0.1:18080",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["environmentId"]
-
-
-def _connection(api, headers, project_id, name="prom"):
-    response = api.post(
-        f"/v1/projects/{project_id}/monitoring-connections",
-        headers=headers,
-        json={
-            "name": name,
-            "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["connectionId"]
 
 
 def _suite(api, headers, project_id, name="suite"):
@@ -85,7 +28,7 @@ def _case(api, headers, project_id, suite_id, name="case-a"):
     response = api.post(
         f"/v1/projects/{project_id}/perf-cases",
         headers=headers,
-        json={"name": name, "yaml": _PERF_YAML, "suiteId": suite_id},
+        json={"name": name, "yaml": PERF_YAML, "suiteId": suite_id},
     )
     assert response.status_code == 200, response.text
     return response.json()["data"]
@@ -121,7 +64,7 @@ def _run_suite(api, headers, suite_id, environment_id, connection_id):
 def _claim(api, worker_id="worker-suite"):
     response = api.post(
         "/internal/perf-worker/tasks/claim",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": worker_id},
     )
     if response.status_code == 204:
@@ -133,7 +76,7 @@ def _claim(api, worker_id="worker-suite"):
 def _start(api, task_id, worker_id="worker-suite"):
     response = api.post(
         f"/internal/perf-worker/tasks/{task_id}/started",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": worker_id, "startedAt": "2026-11-17T10:00:00Z"},
     )
     assert response.status_code == 204, response.text
@@ -142,7 +85,7 @@ def _start(api, task_id, worker_id="worker-suite"):
 def _complete(api, task_id, run_id, *, status="completed", worker_id="worker-suite"):
     response = api.post(
         f"/internal/perf-worker/tasks/{task_id}/completed",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={
             "workerId": worker_id,
             "runId": run_id,
@@ -180,11 +123,11 @@ def _pending_tasks(api, run_ids):
 
 
 def _setup(api, prefix):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, prefix)
     project_id = project(api, headers, f"{prefix}-project")
-    environment_id = _environment(api, headers, project_id)
-    connection_id = _connection(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
+    connection_id = monitoring_connection(api, headers, project_id)
     suite = _suite(api, headers, project_id, f"{prefix}-suite")
     first = _case(api, headers, project_id, suite["suiteId"], "case-a")
     second = _case(api, headers, project_id, suite["suiteId"], "case-b")
@@ -192,7 +135,7 @@ def _setup(api, prefix):
 
 
 def test_perf_suite_crud(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "suite-owner")
     project_id = project(api, headers, "suite-project")
     suite = _suite(api, headers, project_id)
@@ -213,7 +156,7 @@ def test_perf_suite_crud(api):
 
 
 def test_suite_detail_reports_invalidated_cases(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "suite-invalidated")
     project_id = project(api, headers, "suite-invalidated-project")
     suite = _suite(api, headers, project_id)
@@ -277,7 +220,7 @@ def test_perf_suite_runs_cases_serially(api):
     assert first_task["runId"] == child_ids[0]
     snapshot = api.get(
         f"/internal/perf-worker/tasks/{first_task['taskId']}/snapshot",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         params={"workerId": "worker-suite"},
     )
     assert snapshot.status_code == 200, snapshot.text
@@ -360,7 +303,7 @@ def test_perf_suite_stop_skips_remaining_cases(api):
 
     heartbeat = api.post(
         f"/internal/perf-worker/tasks/{first_task['taskId']}/heartbeat",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": "worker-suite"},
     )
     assert heartbeat.status_code == 200, heartbeat.text
@@ -427,7 +370,7 @@ def test_stopping_an_unstarted_child_run_stops_the_running_one(api):
 
     heartbeat = api.post(
         f"/internal/perf-worker/tasks/{first_task['taskId']}/heartbeat",
-        headers=_WORKER_HEADERS,
+        headers=worker_headers(),
         json={"workerId": "worker-suite"},
     )
     assert heartbeat.status_code == 200, heartbeat.text
@@ -540,7 +483,7 @@ def test_perf_run_list_filters_trigger_type(api):
 
 
 def test_project_deletion_requires_removing_perf_suites(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "suite-project-delete")
     project_id = project(api, headers, "suite-project-delete-project")
     suite = _suite(api, headers, project_id, "delete-blocker-suite")

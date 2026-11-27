@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from support.openapi_schema import openapi_schema
+from support.openapi_schema import route_set
 
 
 def go_path(path: str) -> str:
@@ -29,14 +29,6 @@ def go_path(path: str) -> str:
     for snake, camel in replacements.items():
         path = path.replace("{" + snake + "}", "{" + camel + "}")
     return path
-
-
-def route_set():
-    result = set()
-    for path, methods in openapi_schema()["paths"].items():
-        for method in methods:
-            result.add((method.upper(), path))
-    return result
 
 
 def test_missing_go_routes_are_exposed():

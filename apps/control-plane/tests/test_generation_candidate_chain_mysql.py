@@ -7,7 +7,12 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
-from support.requirement_versions import material_artifact, points_artifact, scope_artifact
+from support.requirement_versions import (
+    candidate_selection,
+    material_artifact,
+    points_artifact,
+    scope_artifact,
+)
 
 from testing_agent.domain.generation_root_fingerprints import fingerprint_root_input
 from testing_agent.domain.generation_source_closure import SourceClosureError
@@ -150,16 +155,6 @@ def test_generate_trial_branch_and_adopt_independently(mysql):  # noqa: F811
                     assert candidate is not None
                     return candidate
 
-            def choose(candidate, kind, stage):
-                return SourceSelection(
-                    chain_kind=kind,
-                    stage=stage,
-                    source_kind="candidate",
-                    candidate_id=candidate.candidate_id,
-                    snapshot_id=candidate.snapshot_id,
-                    expected_candidate_token=candidate.candidate_token,
-                )
-
             material = await generate(
                 "requirement_analysis", "extracting_text", document_source, (), material_artifact()
             )
@@ -167,14 +162,14 @@ def test_generate_trial_branch_and_adopt_independently(mysql):  # noqa: F811
                 "function",
                 "requirement_analysis",
                 function_source,
-                (choose(material, "requirement_analysis", "extracting_text"),),
+                (candidate_selection(material, "requirement_analysis", "extracting_text"),),
                 scope_artifact(),
             )
             points = await generate(
                 "function",
                 "case_names",
                 function_source,
-                (choose(analysis, "function", "requirement_analysis"),),
+                (candidate_selection(analysis, "function", "requirement_analysis"),),
                 points_artifact(),
             )
             final = await generate(
@@ -182,8 +177,8 @@ def test_generate_trial_branch_and_adopt_independently(mysql):  # noqa: F811
                 "detailed_cases",
                 function_source,
                 (
-                    choose(analysis, "function", "requirement_analysis"),
-                    choose(points, "function", "case_names"),
+                    candidate_selection(analysis, "function", "requirement_analysis"),
+                    candidate_selection(points, "function", "case_names"),
                 ),
                 "case output",
                 "text",

@@ -6,10 +6,10 @@ import json
 
 import httpx
 import pytest
-from integration_test_driver import enable
 from sqlalchemy import select
 from support.bug_api import create_bug
 from support.bug_zentao_push_api import INSTANCE
+from support.bug_zentao_push_api import migration_mode as migration_mode
 from support.function_case_library import make_requirement, make_sprint
 from support.project_api import account, project
 from support.project_api import api as api
@@ -22,11 +22,6 @@ from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.services.mcp_client import McpClient
 from testing_agent.services.service_instance import instance_key
 from testing_agent.services.stored_file import StoredFileService
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
 
 
 def remote_bug(number, **overrides):

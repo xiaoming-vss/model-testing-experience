@@ -102,6 +102,7 @@ def seed_requirement_source(api, requirement_id):
 
     from sqlalchemy import select
 
+    from support.memory_storage import Storage
     from testing_agent.api.deps_common import get_file_service
     from testing_agent.models.project import Project
     from testing_agent.models.requirement import Requirement
@@ -116,22 +117,8 @@ def seed_requirement_source(api, requirement_id):
         api.app.state.test_requirement_objects = objects
     objects[file_id] = content
 
-    class Body:
-        def __init__(self, data):
-            self.data = data
-
-        def iter_chunks(self, chunk_size):
-            yield self.data
-
-        def close(self):
-            pass
-
-    class Storage:
-        def get_object(self, key):
-            return {"Body": Body(objects[key])}
-
     api.app.dependency_overrides[get_file_service] = lambda: SimpleNamespace(
-        settings=SimpleNamespace(bucket="test-bucket"), storage=Storage()
+        settings=SimpleNamespace(bucket="test-bucket"), storage=Storage(objects=objects)
     )
 
     async def provide_source_reference():

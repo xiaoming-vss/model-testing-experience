@@ -1,16 +1,8 @@
-from support.openapi_schema import openapi_schema
-
-
-def openapi_route_set():
-    result = set()
-    for path, methods in openapi_schema()["paths"].items():
-        for method in methods:
-            result.add((method.upper(), path))
-    return result
+from support.openapi_schema import route_set
 
 
 def test_run_routes_match_go_contract_subset():
-    routes = openapi_route_set()
+    routes = route_set()
 
     expected = {
         ("POST", "/v1/api-cases/{caseId}/run"),

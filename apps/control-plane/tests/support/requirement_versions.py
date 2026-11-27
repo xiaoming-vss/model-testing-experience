@@ -6,6 +6,8 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from testing_agent.schemas.generation_candidates import SourceSelection
+
 ARTIFACT_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures/requirement_artifacts"
 
 
@@ -148,3 +150,15 @@ def adopt_material(
     )
     assert adopted.status_code == 200, adopted.text
     return candidate["candidateId"]
+
+
+def candidate_selection(candidate, kind: str, stage: str) -> SourceSelection:
+    """Select a candidate as the source of a stage run."""
+    return SourceSelection(
+        chain_kind=kind,
+        stage=stage,
+        source_kind="candidate",
+        candidate_id=candidate.candidate_id,
+        snapshot_id=candidate.snapshot_id,
+        expected_candidate_token=candidate.candidate_token,
+    )

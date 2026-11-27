@@ -5,9 +5,9 @@ import json
 
 import httpx
 import pytest
-from integration_test_driver import enable
 from sqlalchemy import select
 from support.bug_zentao_push_api import INSTANCE
+from support.bug_zentao_push_api import migration_mode as migration_mode
 from support.function_case_library import make_sprint
 from support.project_api import account, project
 from support.project_api import api as api
@@ -18,11 +18,6 @@ from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.services.mcp_client import McpClient
 from testing_agent.services.service_instance import instance_key
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
 
 
 def remote_detail(number=50, **overrides):

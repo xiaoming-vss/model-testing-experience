@@ -1,7 +1,6 @@
 """Real MySQL authorization, preparation and concurrent adoption boundaries."""
 
 import asyncio
-import threading
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from types import SimpleNamespace
@@ -11,6 +10,7 @@ import pytest
 import sqlalchemy as sa
 from support import generation_candidate_graph as graph_fixture
 from support.generation import generation_services
+from support.memory_storage import Storage
 from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
@@ -27,32 +27,6 @@ from testing_agent.schemas.generation_candidates import CandidateAdoptRequest, C
 from testing_agent.services.generation_adoption_application import CandidateAdoptionApplication
 
 DOCUMENT = b"verified document"
-
-
-class Body:
-    def iter_chunks(self, chunk_size):
-        yield DOCUMENT
-
-    def close(self):
-        pass
-
-
-class Storage:
-    def __init__(self):
-        self.calls = 0
-        self.block = False
-        self.fail = False
-        self.entered = threading.Event()
-        self.release = threading.Event()
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        if self.block:
-            self.entered.set()
-            if not self.release.wait(10):
-                raise RuntimeError("test storage timed out")
-        return {"Body": Body()}
 
 
 def test_adoption_application_rechecks_document_and_serializes_retries(mysql, monkeypatch):  # noqa: F811
@@ -180,7 +154,7 @@ def test_adoption_application_rechecks_document_and_serializes_retries(mysql, mo
 
     async def exercise():
         engine, factory = async_sessions(mysql)
-        storage = Storage()
+        storage = Storage(DOCUMENT)
         files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
         request = CandidateAdoptRequest(
             action="adopt",

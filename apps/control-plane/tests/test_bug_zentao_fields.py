@@ -6,15 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
-from integration_test_driver import dispatch_fields, dispatch_sync, enable
+from integration_test_driver import dispatch_fields, dispatch_sync
+from support.bug_zentao_push_api import migration_mode as migration_mode
 from support.bug_zentao_push_api import setup as setup
 from support.project_api import account
 from support.project_api import api as api
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
 
 
 @pytest.fixture

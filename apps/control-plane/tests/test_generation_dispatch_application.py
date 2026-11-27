@@ -12,7 +12,13 @@ from support.ai_execution import db as db  # noqa: F401
 from support.database_read_paths import database  # noqa: F401
 from support.generation import generation_services
 from support.generation_source_seed import seed_graph
-from support.requirement_versions import material_artifact, points_artifact, scope_artifact
+from support.memory_storage import Storage
+from support.requirement_versions import (
+    candidate_selection,
+    material_artifact,
+    points_artifact,
+    scope_artifact,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.api_interface import path_key
@@ -36,7 +42,6 @@ from testing_agent.schemas.generation_candidates import (
     CandidateAdoptRequest,
     CandidateRunRequest,
     CurrentImportRequest,
-    SourceSelection,
 )
 from testing_agent.services.generation_adoption_application import CandidateAdoptionApplication
 from testing_agent.services.generation_candidate_relation_source import (
@@ -57,24 +62,6 @@ from testing_agent.services.requirement_material_source import (
 )
 from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 from testing_agent.services.stage_storage.worker_events import validate_relation_output
-
-
-class Storage:
-    def __init__(self, data):
-        self.data = data
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield self.data
-
-    def close(self):
-        pass
 
 
 def configure_document(sync):
@@ -123,17 +110,6 @@ def add_slots(sync):
             )
         )
     sync.commit()
-
-
-def selection(candidate, kind, stage):
-    return SourceSelection(
-        chain_kind=kind,
-        stage=stage,
-        source_kind="candidate",
-        candidate_id=candidate.candidate_id,
-        snapshot_id=candidate.snapshot_id,
-        expected_candidate_token=candidate.candidate_token,
-    )
 
 
 async def test_material_to_function_trial_and_stepwise_adoption(database):  # noqa: F811
@@ -215,7 +191,7 @@ async def test_material_to_function_trial_and_stepwise_adoption(database):  # no
     analysis_req, analysis_run = await launch(
         "function",
         "requirement_analysis",
-        [selection(material, "requirement_analysis", "extracting_text")],
+        [candidate_selection(material, "requirement_analysis", "extracting_text")],
     )
     analysis_input = (
         sync.query(AiGenerationAttempt)
@@ -227,15 +203,17 @@ async def test_material_to_function_trial_and_stepwise_adoption(database):  # no
     assert len(analysis_input["candidateInput"]["selectedSources"]) == 1
     analysis = await complete("stage-a", analysis_req, analysis_run, scope_artifact())
     points_req, points_run = await launch(
-        "function", "case_names", [selection(analysis, "function", "requirement_analysis")]
+        "function",
+        "case_names",
+        [candidate_selection(analysis, "function", "requirement_analysis")],
     )
     points = await complete("stage-p", points_req, points_run, points_artifact())
     cases_req, cases_run = await launch(
         "function",
         "detailed_cases",
         [
-            selection(analysis, "function", "requirement_analysis"),
-            selection(points, "function", "case_names"),
+            candidate_selection(analysis, "function", "requirement_analysis"),
+            candidate_selection(points, "function", "case_names"),
         ],
     )
     cases = await complete(
@@ -350,8 +328,8 @@ async def test_material_to_function_trial_and_stepwise_adoption(database):  # no
         "function",
         "detailed_cases",
         [
-            selection(analysis, "function", "requirement_analysis"),
-            selection(points, "function", "case_names"),
+            candidate_selection(analysis, "function", "requirement_analysis"),
+            candidate_selection(points, "function", "case_names"),
         ],
     )
     other_cases = await complete(
@@ -781,7 +759,7 @@ async def test_api_generation_projects_only_locked_interfaces(database):  # noqa
         connection_id="llm",
         request_id=uuid4(),
         generation_mode="trial",
-        source_selections=[selection(first, "api", "interface_extract")],
+        source_selections=[candidate_selection(first, "api", "interface_extract")],
     )
     design_run = await app.run(
         requirement_id="req", kind="api", stage="api_design", request=design_request, actor_id="u"
@@ -814,8 +792,8 @@ async def test_api_generation_projects_only_locked_interfaces(database):  # noqa
         request_id=uuid4(),
         generation_mode="trial",
         source_selections=[
-            selection(second, "api", "interface_extract"),
-            selection(design, "api", "api_design"),
+            candidate_selection(second, "api", "interface_extract"),
+            candidate_selection(design, "api", "api_design"),
         ],
     )
     with pytest.raises(AppError) as blocked:
@@ -827,8 +805,8 @@ async def test_api_generation_projects_only_locked_interfaces(database):  # noqa
         update={
             "request_id": uuid4(),
             "source_selections": [
-                selection(first, "api", "interface_extract"),
-                selection(design, "api", "api_design"),
+                candidate_selection(first, "api", "interface_extract"),
+                candidate_selection(design, "api", "api_design"),
             ],
         }
     )

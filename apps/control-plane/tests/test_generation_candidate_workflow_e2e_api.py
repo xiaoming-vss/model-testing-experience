@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 import yaml as yaml_module
+from support.memory_storage import Storage
 from support.order_api import make_order
 from support.project_api import account, api, project, requirement  # noqa: F401
 from support.requirement_versions import material_artifact, points_artifact, scope_artifact
@@ -45,21 +46,6 @@ from testing_agent.services.stage_storage.payload import worker_payloads
 from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 from testing_agent.services.ui_generation_contracts import validate_ui_output
 from testing_agent.services.ui_generation_source import UiGenerationSourceService
-
-
-class Storage:
-    def __init__(self, content):
-        self.content = content
-
-    def get_object(self, key):
-        assert key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield self.content
-
-    def close(self):
-        pass
 
 
 def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F811
@@ -345,7 +331,7 @@ def test_http_candidate_trial_adoption_and_import(api, monkeypatch):  # noqa: F8
             requirement_row.document_hash = sha256(content).hexdigest()
             file_row.sha256, file_row.size = sha256(content).hexdigest(), len(content)
             await session.commit()
-        files.storage.content = content
+        files.storage.data = content
 
     asyncio.run(replace_document(b"changed requirement"))
     stale_source_revision = api.post(

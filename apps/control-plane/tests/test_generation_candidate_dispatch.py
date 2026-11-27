@@ -5,6 +5,7 @@ from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db  # noqa: F401
 from support.database_read_paths import database  # noqa: F401
 from support.generation_source_seed import seed_graph
+from support.requirement_versions import candidate_selection
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.generation_candidates import AiGenerationCandidate
@@ -208,7 +209,7 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
     from testing_agent.models.ai_generation_stage import AiGenerationStage
     from testing_agent.models.generation_candidates import AiGenerationStageContent
     from testing_agent.models.worker_task import WorkerTask
-    from testing_agent.schemas.generation_candidates import CandidateRunRequest, SourceSelection
+    from testing_agent.schemas.generation_candidates import CandidateRunRequest
     from testing_agent.services.generation_candidate_dispatch import dispatch_candidate_stage
     from testing_agent.services.stage_storage.worker import StageWorkerTransitions
 
@@ -270,16 +271,6 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
             sync.query(AiGenerationCandidate).filter_by(origin_attempt_id=result.attempt.id).one()
         )
 
-    def choose(candidate, kind, stage):
-        return SourceSelection(
-            chain_kind=kind,
-            stage=stage,
-            source_kind="candidate",
-            candidate_id=candidate.candidate_id,
-            snapshot_id=candidate.snapshot_id,
-            expected_candidate_token=candidate.candidate_token,
-        )
-
     material_run, material_request = await dispatch(
         material_task, "requirement_analysis", "extracting_text", document_source
     )
@@ -289,7 +280,7 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
         "function",
         "requirement_analysis",
         function_source,
-        (choose(material, "requirement_analysis", "extracting_text"),),
+        (candidate_selection(material, "requirement_analysis", "extracting_text"),),
     )
     assert (
         json.loads(analysis_run.attempt.input_snapshot_json["source"]["sourceContent"])
@@ -300,7 +291,7 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
         connection_id="llm",
         request_id=uuid4(),
         generation_mode="trial",
-        source_selections=[choose(analysis, "function", "requirement_analysis")],
+        source_selections=[candidate_selection(analysis, "function", "requirement_analysis")],
     )
     with pytest.raises(SourceClosureError, match="source_conflict"):
         await dispatch_candidate_stage(
@@ -339,7 +330,7 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
         "function",
         "case_names",
         function_source,
-        (choose(analysis, "function", "requirement_analysis"),),
+        (candidate_selection(analysis, "function", "requirement_analysis"),),
     )
     assert (
         points_run.attempt.input_snapshot_json["config"]["requirementAnalysis"] == scope_artifact()
@@ -351,8 +342,8 @@ async def test_candidate_chain_can_trial_each_stage_without_adopting(database): 
         "detailed_cases",
         function_source,
         (
-            choose(analysis, "function", "requirement_analysis"),
-            choose(points, "function", "case_names"),
+            candidate_selection(analysis, "function", "requirement_analysis"),
+            candidate_selection(points, "function", "case_names"),
         ),
     )
     config = final.attempt.input_snapshot_json["config"]

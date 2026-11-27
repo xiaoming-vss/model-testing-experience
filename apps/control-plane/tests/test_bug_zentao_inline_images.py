@@ -15,10 +15,8 @@ from support.bug_zentao_inline_images import (
 from support.bug_zentao_inline_images import (
     inline as inline,
 )
-from support.bug_zentao_inline_images import (
-    migration_mode as migration_mode,
-)
 from support.bug_zentao_push_api import change
+from support.bug_zentao_push_api import migration_mode as migration_mode
 from support.bug_zentao_push_api import setup as setup
 from support.project_api import api as api
 

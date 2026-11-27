@@ -3,18 +3,14 @@
 import asyncio
 
 import pytest
-from integration_test_driver import dispatch_sync, enable
+from integration_test_driver import dispatch_sync
 from sqlalchemy import select
+from support.bug_zentao_push_api import migration_mode as migration_mode
 from support.bug_zentao_push_api import setup as setup
 from support.project_api import account
 from support.project_api import api as api
 
 from testing_agent.models.bug_zentao_push import BugZentaoPush
-
-
-@pytest.fixture(autouse=True)
-def migration_mode(api):
-    enable(api)
 
 
 def test_options_filter_build_scope_users_and_sensitive_fields(api, setup):

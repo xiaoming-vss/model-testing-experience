@@ -1,59 +1,11 @@
 import asyncio
-from dataclasses import replace
 
 from sqlalchemy import select
+from support.perf_api import PERF_YAML, environment, worker_headers, worker_settings
 from support.project_api import account, project
 from support.project_api import api as api
 
-from testing_agent.core.config import get_settings
 from testing_agent.models.worker_task import WorkerTask
-
-_PERF_YAML = """
-specVersion: "1.0"
-case:
-  name: ping
-  steps:
-    - name: ping
-      method: GET
-      path: /ping
-      checks:
-        - type: status
-          op: eq
-          value: 200
-  load:
-    model: vus
-    vus: 1
-    duration: "1s"
-  acceptance:
-    source: user_confirmed
-    confirmed: true
-    criteria:
-      http_req_failed: ["rate<0.01"]
-"""
-
-
-def _settings(api):
-    settings = replace(
-        get_settings(),
-        integration_key="test-integration-key",
-        perf_worker_key="perf-worker-token",
-    )
-    api.app.dependency_overrides[get_settings] = lambda: settings
-    return settings
-
-
-def _environment(api, headers, project_id):
-    response = api.post(
-        f"/v1/projects/{project_id}/api-environments",
-        headers=headers,
-        json={
-            "name": "perf-env",
-            "kind": "perf",
-            "baseUrl": "http://127.0.0.1:18080",
-        },
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["environmentId"]
 
 
 def _connection(api, headers, project_id):
@@ -81,21 +33,17 @@ def _case(api, headers, project_id):
     response = api.post(
         f"/v1/projects/{project_id}/perf-cases",
         headers=headers,
-        json={"name": "ping-case", "yaml": _PERF_YAML},
+        json={"name": "ping-case", "yaml": PERF_YAML},
     )
     assert response.status_code == 200, response.text
     return response.json()["data"]
 
 
-def _worker_headers():
-    return {"X-Worker-Token": "perf-worker-token"}
-
-
 def test_perf_run_claim_execute_and_complete(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "perf-owner")
     project_id = project(api, headers, "perf-project")
-    environment_id = _environment(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
     connection_id = _connection(api, headers, project_id)
     case = _case(api, headers, project_id)
 
@@ -124,7 +72,7 @@ def test_perf_run_claim_execute_and_complete(api):
 
     claim = api.post(
         "/internal/perf-worker/tasks/claim",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-1"},
     )
     assert claim.status_code == 200, claim.text
@@ -135,7 +83,7 @@ def test_perf_run_claim_execute_and_complete(api):
 
     snapshot = api.get(
         f"/internal/perf-worker/tasks/{task_id}/snapshot",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         params={"workerId": "worker-1"},
     )
     assert snapshot.status_code == 200, snapshot.text
@@ -147,14 +95,14 @@ def test_perf_run_claim_execute_and_complete(api):
 
     started = api.post(
         f"/internal/perf-worker/tasks/{task_id}/started",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-1", "startedAt": "2026-11-16T10:00:00Z"},
     )
     assert started.status_code == 204, started.text
 
     heartbeat = api.post(
         f"/internal/perf-worker/tasks/{task_id}/heartbeat",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-1"},
     )
     assert heartbeat.status_code == 200, heartbeat.text
@@ -163,7 +111,7 @@ def test_perf_run_claim_execute_and_complete(api):
 
     completed = api.post(
         f"/internal/perf-worker/tasks/{task_id}/completed",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={
             "workerId": "worker-1",
             "runId": run_id,
@@ -188,7 +136,7 @@ def test_perf_run_claim_execute_and_complete(api):
 
     duplicate = api.post(
         f"/internal/perf-worker/tasks/{task_id}/completed",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-1", "status": "failed", "outcome": "execution_error"},
     )
     assert duplicate.status_code == 200, duplicate.text
@@ -204,7 +152,7 @@ def test_perf_run_claim_execute_and_complete(api):
 
 
 def test_perf_worker_requires_its_own_token(api):
-    _settings(api)
+    worker_settings(api)
 
     missing = api.post(
         "/internal/perf-worker/tasks/claim",
@@ -221,10 +169,10 @@ def test_perf_worker_requires_its_own_token(api):
 
 
 def test_stop_wins_over_late_completion(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "perf-stop-owner")
     project_id = project(api, headers, "perf-stop-project")
-    environment_id = _environment(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
     connection_id = _connection(api, headers, project_id)
     case = _case(api, headers, project_id)
     run = api.post(
@@ -238,13 +186,13 @@ def test_stop_wins_over_late_completion(api):
     run_id = run["runId"]
     claim = api.post(
         "/internal/perf-worker/tasks/claim",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-stop"},
     ).json()
     task_id = claim["taskId"]
     api.post(
         f"/internal/perf-worker/tasks/{task_id}/started",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-stop", "startedAt": "2026-11-16T10:00:00Z"},
     )
 
@@ -254,7 +202,7 @@ def test_stop_wins_over_late_completion(api):
 
     heartbeat = api.post(
         f"/internal/perf-worker/tasks/{task_id}/heartbeat",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={"workerId": "worker-stop"},
     )
     assert heartbeat.status_code == 200, heartbeat.text
@@ -262,7 +210,7 @@ def test_stop_wins_over_late_completion(api):
 
     completed = api.post(
         f"/internal/perf-worker/tasks/{task_id}/completed",
-        headers=_worker_headers(),
+        headers=worker_headers(),
         json={
             "workerId": "worker-stop",
             "status": "completed",
@@ -289,10 +237,10 @@ def test_stop_wins_over_late_completion(api):
 
 
 def test_perf_run_freezes_monitoring_snapshot_after_connection_changes(api):
-    _settings(api)
+    worker_settings(api)
     _, headers = account(api, "perf-snapshot-owner")
     project_id = project(api, headers, "perf-snapshot-project")
-    environment_id = _environment(api, headers, project_id)
+    environment_id = environment(api, headers, project_id)
     connection_id = _connection(api, headers, project_id)
 
     updated = api.patch(

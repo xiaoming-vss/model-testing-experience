@@ -12,6 +12,7 @@ from support.ai_execution import db as db  # noqa: F401
 from support.database_read_paths import database  # noqa: F401
 from support.generation import generation_services
 from support.generation_import_seed import seed_import_graph
+from support.memory_storage import Storage
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.generation_content_hash import generation_content_hash
@@ -36,31 +37,6 @@ OUTPUT = """cases:
     steps: login
     expected_results: success
 """
-
-
-class Body:
-    def __init__(self, data):
-        self.data = data
-
-    def iter_chunks(self, chunk_size):
-        yield self.data
-
-    def close(self):
-        pass
-
-
-class Storage:
-    def __init__(self, data):
-        self.data = data
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        if self.fail:
-            raise RuntimeError("object should not be read on replay")
-        assert key == "document"
-        return {"Body": Body(self.data)}
 
 
 def setup(sync, monkeypatch):

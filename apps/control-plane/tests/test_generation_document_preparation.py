@@ -8,6 +8,7 @@ import pytest
 from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db  # noqa: F401
 from support.database_read_paths import database  # noqa: F401
+from support.memory_storage import Storage
 
 from testing_agent.domain.generation_root_fingerprints import IncompleteRootInput
 from testing_agent.models.requirement import Requirement
@@ -17,31 +18,6 @@ from testing_agent.services.generation_document_preparation import (
     lock_prepared_requirement_root,
     prepare_requirement_document,
 )
-
-
-class Body:
-    def __init__(self, data):
-        self.data = data
-        self.closed = False
-
-    def iter_chunks(self, chunk_size):
-        yield self.data[:chunk_size]
-        if len(self.data) > chunk_size:
-            yield self.data[chunk_size:]
-
-    def close(self):
-        self.closed = True
-
-
-class Storage:
-    def __init__(self, objects):
-        self.objects = objects
-        self.opened = []
-
-    def get_object(self, key):
-        body = Body(self.objects[key])
-        self.opened.append((key, body))
-        return {"Body": body}
 
 
 def seed(sync, file_id, data, *, purpose, filename, resource_id="req"):
@@ -78,7 +54,7 @@ def prepare_fixture(sync):
     seed(sync, "image", image, purpose="attachment", filename="image.png")
     seed(sync, "unused", b"unused", purpose="attachment", filename="unused.png")
     sync.commit()
-    storage = Storage({"document": html, "image": image})
+    storage = Storage(objects={"document": html, "image": image}, chunked=True)
     return SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
 
 

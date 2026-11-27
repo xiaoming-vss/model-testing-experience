@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from support.generation import generation_services
+from support.memory_storage import Storage
 from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
@@ -51,23 +52,6 @@ from testing_agent.services.ui_generation_source import ResolvedUiSource
 
 DATA = b"requirement document"
 IMAGE = b"verified image bytes"
-
-
-class Storage:
-    def __init__(self):
-        self.calls = 0
-        self.fail = False
-
-    def get_object(self, key):
-        self.calls += 1
-        assert not self.fail and key == "document"
-        return {"Body": self}
-
-    def iter_chunks(self, chunk_size):
-        yield DATA
-
-    def close(self):
-        pass
 
 
 def test_generation_application_replays_concurrent_dispatch(mysql):  # noqa: F811
@@ -182,7 +166,7 @@ def test_generation_application_replays_concurrent_dispatch(mysql):  # noqa: F81
 
     async def exercise():
         engine, factory = async_sessions(mysql)
-        storage = Storage()
+        storage = Storage(DATA)
         files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
         request = CandidateRunRequest(connection_id="llm", request_id=uuid4())
 
