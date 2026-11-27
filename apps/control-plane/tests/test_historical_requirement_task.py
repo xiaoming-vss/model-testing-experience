@@ -7,9 +7,8 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
-from support.mysql_initialization import mysql  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql  # noqa: F401
 from support.project_api import (  # noqa: F401
     account,
     api,
@@ -53,8 +52,7 @@ def history_api(api, request, monkeypatch):  # noqa: F811
                 )
             )
     # TestClient and the fixture helpers invoke the async session from different loops.
-    engine = create_async_engine(database.url.set(drivername="mysql+asyncmy"), poolclass=NullPool)
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(database, poolclass=NullPool)
 
     async def session():
         async with sessions() as value:

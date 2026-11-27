@@ -9,8 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.models import (
@@ -90,8 +89,7 @@ def service(session):
 async def test_concurrent_dispatch_and_completion_delete(mysql, monkeypatch, race):  # noqa: F811
     mocks(monkeypatch)
     order, entry, actor = seeded(mysql)
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
 
     async def dispatch(req):
         async with sessions() as session:

@@ -6,9 +6,8 @@ from uuid import uuid4
 
 import pytest_asyncio
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.integration_jobs import claim, submission
-from support.mysql_initialization import mysql  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql  # noqa: F401
 
 from testing_agent.domain.integration_execution import digest
 from testing_agent.models.integration_job import (
@@ -25,8 +24,7 @@ from testing_agent.services.integration_transaction import local_transaction
 
 @pytest_asyncio.fixture
 async def queue(mysql):  # noqa: F811
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     prefix = uuid4().hex
 
     async def authorize(job):
@@ -234,8 +232,7 @@ async def test_authorization_reads_current_role_even_after_repeatable_read_snaps
     prefix = uuid4().hex
     owner, member = prefix + "-owner", prefix + "-member"
     cipher = IntegrationCredentialCipher("isolated-authorization-mysql")
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as session:
             session.add_all(
@@ -324,8 +321,7 @@ async def test_readonly_recovery_rejects_current_demotion_despite_a_stale_snapsh
 
     prefix = uuid4().hex
     owner, member = prefix + "-owner", prefix + "-member"
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as session:
             session.add_all(

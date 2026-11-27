@@ -5,8 +5,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -39,15 +43,10 @@ async def test_legacy_ai_queue_is_rejected_without_mutation(mysql, monkeypatch):
                 "worker_id": "",
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    statements = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, sql, _p, _x, _m: statements.append(sql.lower()),
-    )
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             service = WorkerTaskService(WorkerTaskRepository(session))
             with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试") as exc:
                 await service.claim("ai", WorkerClaimRequest(worker_id="worker"))

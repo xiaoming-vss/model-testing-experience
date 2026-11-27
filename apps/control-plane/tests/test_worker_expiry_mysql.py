@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.mysql_initialization import async_sessions
 from support.mysql_initialization import mysql as mysql
 
 from testing_agent.models.worker_task import WorkerTask
@@ -31,8 +31,7 @@ async def test_expiry_skips_competing_sweeper_and_does_not_block_heartbeats(mysq
                 for i in range(211)
             ],
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as first, sessions() as second:
             left = await WorkerTaskRepository(first).expired_tasks("api")
@@ -75,8 +74,7 @@ async def test_renewed_candidate_is_rechecked_under_lock(mysql):
                 lease_expires_at=now - timedelta(minutes=1),
             )
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     try:
         async with sessions() as reader:
             original = reader.scalars

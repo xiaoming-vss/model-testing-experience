@@ -6,8 +6,7 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
 from testing_agent.domain.generation_root_fingerprints import fingerprint_root_input
@@ -103,8 +102,7 @@ def test_generate_trial_branch_and_adopt_independently(mysql):  # noqa: F811
     }
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
 
             async def generate(kind, stage, source, selections, output, output_format="json"):

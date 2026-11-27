@@ -77,7 +77,7 @@ scripts/build_images.sh control-plane studio
 
 真实 MySQL、对象存储和并发锁行为需要单独验收：
 
-- `CONTROL_PLANE_TEST_DATABASE_URL`：指向可丢弃的 MySQL 测试库后运行对应专项。
+- `CONTROL_PLANE_TEST_DATABASE_URL`：指向可丢弃的 MySQL 测试库后运行对应专项。库名必须以 `_test` 结尾且为空；账号还需要创建数据库的权限，候选切换专项会另建一个临时库。
 - `CONTROL_PLANE_STORAGE_LIVE`：启用真实对象存储验收后运行对应专项。
 - 这两类用例共享一次性数据库或存储，`apps/control-plane/scripts/check.py` 会自动退回单进程。
 

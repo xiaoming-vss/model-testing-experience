@@ -10,9 +10,8 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
 from testing_agent.core.errors import AppError
@@ -182,8 +181,7 @@ def test_generation_application_replays_concurrent_dispatch(mysql):  # noqa: F81
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         storage = Storage()
         files = SimpleNamespace(settings=SimpleNamespace(bucket="bucket"), storage=storage)
         request = CandidateRunRequest(connection_id="llm", request_id=uuid4())

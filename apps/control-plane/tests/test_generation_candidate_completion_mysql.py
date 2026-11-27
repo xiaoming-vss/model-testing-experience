@@ -5,9 +5,8 @@ from copy import deepcopy
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation_candidate_graph import SOURCE_SNAPSHOT, fixture_graph
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.generation_root_fingerprints import fingerprint_root_input
@@ -69,8 +68,7 @@ def test_concurrent_completion_does_not_duplicate_candidate(mysql):  # noqa: F81
     }
 
     async def run():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
             async with factory() as session:
                 attempt = await DirectStageStorage(session).prepare(

@@ -2,8 +2,8 @@
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import _mysql_fixture, seed_row
+from support.mysql_initialization import async_sessions, seed_row
+from support.mysql_initialization import mysql as mysql
 
 from testing_agent.domain.test_order_query import EntryQuery
 from testing_agent.models.function_test_case import FunctionTestCase
@@ -13,11 +13,6 @@ from testing_agent.models.test_order import TestOrder as Order
 from testing_agent.models.test_order_entry import TestOrderEntry as Entry
 from testing_agent.repositories.test_order import TestOrderRepository as OrderRepository
 from testing_agent.repositories.test_order_reads import TestOrderReadRepository as EntryRepository
-
-
-@pytest.fixture(scope="module")
-def mysql():
-    yield from _mysql_fixture("head")
 
 
 @pytest.mark.asyncio
@@ -63,9 +58,9 @@ async def test_mysql_backfill_and_read_windows(mysql):
                 for i in range(30)
             ],
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
+    engine, sessions = async_sessions(mysql)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             reader = EntryRepository(session)
             first = await reader.page(order["order_id"], "actor", EntryQuery())
             assert first["total"] == 30 and first["mineCount"] == 15

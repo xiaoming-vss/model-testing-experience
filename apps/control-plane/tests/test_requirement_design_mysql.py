@@ -5,9 +5,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
-from support.mysql_initialization import mysql  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql  # noqa: F401
 
 from testing_agent.domain.api_interface import path_key
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
@@ -29,8 +28,7 @@ from testing_agent.services.generation_dispatch_application import CandidateDisp
 
 
 async def test_concurrent_default_configuration_and_same_request_run(mysql):  # noqa: F811
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     uid, pid, sid, rid, llm, repository_id, interface_id = [str(uuid4()) for _ in range(7)]
     request_id = uuid4()
     try:
@@ -166,8 +164,7 @@ async def test_member_revoked_after_initial_read_cannot_save_configuration(mysql
     from testing_agent.core.errors import AppError
     from testing_agent.models.project_member import ProjectMember
 
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    engine, sessions = async_sessions(mysql)
     owner, actor, pid, sid, rid = [str(uuid4()) for _ in range(5)]
     try:
         async with sessions() as session:

@@ -4,8 +4,7 @@ import asyncio
 from types import SimpleNamespace
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.models import Base
 from testing_agent.models.generation_candidates import AiGenerationStageContent
@@ -89,8 +88,7 @@ def test_document_update_rotates_mysql_current_token(mysql):  # noqa: F811
             return SimpleNamespace(file_id=file_id, filename="new.docx", sha256="new-hash")
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
             async with factory() as session:
                 service = RequirementService(

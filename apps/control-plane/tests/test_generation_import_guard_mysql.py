@@ -6,10 +6,9 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
 from support.generation_candidate_graph import ROOT, SOURCE_SNAPSHOT, fixture_graph, make_record
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.domain.generation_content_hash import generation_content_hash
 from testing_agent.domain.generation_source_closure import SourceClosureError
@@ -179,8 +178,7 @@ def test_preview_detects_changed_source_and_locks_formal_targets(mysql, monkeypa
         )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         common = dict(
             requirement_id="req",
             kind="function",

@@ -4,9 +4,8 @@ import asyncio
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.domain.generation_import_source import CurrentImportSource
@@ -60,8 +59,7 @@ def test_old_transaction_snapshot_cannot_hide_new_conflicts_or_cases(mysql):  # 
 """
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         try:
             async with factory() as reader, factory() as writer:
                 await reader.scalar(sa.select(sa.func.count()).select_from(ApiCase))

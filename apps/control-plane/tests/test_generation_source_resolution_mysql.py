@@ -5,9 +5,8 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation_candidate_graph import ROOT, SOURCE_SNAPSHOT, fixture_graph
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import async_sessions, mysql, seed_row  # noqa: F401
 
 from testing_agent.domain.generation_source_closure import SourceClosureError
 from testing_agent.models import AiGenerationCandidate, Base
@@ -126,8 +125,7 @@ def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypat
     )
 
     async def exercise():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         discovered = asyncio.Event()
         original = resolution._project
 
@@ -170,8 +168,7 @@ def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypat
         assert len(rows) == 3 and all(row.frozen_at is None for row in rows)
 
     async def test_current_slot_race():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
         loaded = asyncio.Event()
         original = selection.lock_candidate_source_closure
 
@@ -221,8 +218,7 @@ def test_source_changes_between_discovery_and_lock_are_rejected(mysql, monkeypat
         )
 
     async def test_adoption_race():
-        engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-        factory = async_sessionmaker(engine, expire_on_commit=False)
+        engine, factory = async_sessions(mysql)
 
         async def run():
             async with factory() as session:

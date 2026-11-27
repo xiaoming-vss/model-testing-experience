@@ -4,8 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_execution import AiExecution
@@ -64,15 +68,10 @@ async def test_revision_file_ownership_uses_attempts_and_execution(mysql):  # no
                 "input_snapshot_json": {"config": {"revisionAttachments": [{"fileId": "forged"}]}},
             },
         )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sql = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, s, _p, _x, _m: sql.append(s.lower()),
-    )
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
 
             def file(resource_id, file_id, project_id=task["project_id"]):
                 return SimpleNamespace(
@@ -98,7 +97,7 @@ async def test_revision_file_ownership_uses_attempts_and_execution(mysql):  # no
                 with pytest.raises(AppError) as rejected:
                     await require_file_resource(session, row)
                 assert rejected.value.http_code == 404
-            assert not any("ai_generate_task_runs" in statement for statement in sql)
+            assert not any("ai_generate_task_runs" in statement for statement in statements)
     finally:
         await engine.dispose()
         with mysql.begin() as connection:

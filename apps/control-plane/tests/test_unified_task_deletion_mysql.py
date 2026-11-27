@@ -1,8 +1,12 @@
 """Task deletion preserves formal assets and their documented provenance behavior."""
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import (  # noqa: F401
+    async_sessions,
+    capture_statements,
+    mysql,
+    seed_row,
+)
 
 from testing_agent.models.ai_execution import AiExecution
 from testing_agent.models.ai_generate_import import AiGenerateImport, AiGenerateImportRequest
@@ -71,15 +75,10 @@ async def test_delete_task_preserves_formal_assets_and_provenance_semantics(mysq
                     "status": "success",
                 },
             )
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sql = []
-    sa.event.listen(
-        engine.sync_engine,
-        "before_cursor_execute",
-        lambda _c, _u, s, _p, _x, _m: sql.append(s.lower()),
-    )
+    engine, sessions = async_sessions(mysql)
+    statements = capture_statements(engine)
     try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+        async with sessions() as session:
             obj = await session.scalar(
                 sa.select(AiGenerateTask).where(AiGenerateTask.task_id == task["task_id"])
             )
@@ -117,7 +116,7 @@ async def test_delete_task_preserves_formal_assets_and_provenance_semantics(mysq
                 )
                 is not None
             )
-            assert not any("ai_generate_task_runs" in statement for statement in sql)
+            assert not any("ai_generate_task_runs" in statement for statement in statements)
     finally:
         await engine.dispose()
         with mysql.begin() as connection:

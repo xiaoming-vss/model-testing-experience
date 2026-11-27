@@ -1,4 +1,4 @@
-"""Shared preparation for mysql initialization tests; no collected cases."""
+"""Shared disposable MySQL database setup, sync and async; no collected cases."""
 
 import os
 from datetime import UTC, date, datetime, timedelta
@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from alembic import command
 from support.initial_schema_migration import migration_config
@@ -40,6 +41,27 @@ def _mysql_fixture(revision):
 @pytest.fixture(scope="module")
 def mysql():
     yield from _mysql_fixture("head")
+
+
+def async_sessions(sync_engine, **engine_options):
+    """Async engine and session factory on the same disposable database as sync_engine.
+
+    The caller owns the engine and must dispose it. Keyword arguments configure the engine,
+    for example poolclass=NullPool when sessions are used from more than one event loop.
+    """
+    engine = create_async_engine(sync_engine.url.set(drivername="mysql+asyncmy"), **engine_options)
+    return engine, async_sessionmaker(engine, expire_on_commit=False)
+
+
+def capture_statements(engine):
+    """Return the list that collects the lower-cased SQL text executed on the engine."""
+    statements = []
+
+    def record(_conn, _cursor, sql, _parameters, _context, _executemany):
+        statements.append(sql.lower())
+
+    sa.event.listen(engine.sync_engine, "before_cursor_execute", record)
+    return statements
 
 
 def seed_row(connection, table, overrides=None):
