@@ -3,11 +3,13 @@ import hashlib
 import json
 import os
 import socket
+import sqlite3
 import subprocess
 import sys
 import threading
 import time
 import urllib.request
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from uuid import uuid4
@@ -229,6 +231,29 @@ async def stop_worker(process, log):
         log.close()
 
 
+async def job_summary(tmp_path, job_id):
+    """The control-plane's view of an integration job, read from the fixture database.
+
+    The control-plane dropped the per-job status route as an uncalled endpoint (Studio reads
+    ``activeJob``/``latestJob`` from the ``zentao-push`` status instead), so the cross-process
+    tests read the stored job row. The result keeps the fields the tests read from the submit
+    endpoint's answer: ``jobId``, ``jobStatus`` and ``result.steps``.
+    """
+
+    def read():
+        with closing(sqlite3.connect(tmp_path / "cp.db", timeout=10)) as db:
+            return db.execute(
+                "SELECT status, result_json FROM integration_jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+
+    status, result = await asyncio.to_thread(read)
+    return {
+        "jobId": job_id,
+        "jobStatus": status,
+        "result": {"steps": json.loads(result or "{}").get("steps", {})},
+    }
+
+
 async def run_to_terminal(cp, tmp_path, *, upload_delay=0, fields=None, replicas=1, job_id=None):
     url, headers = cp
     async with httpx.AsyncClient(base_url=url) as client:
@@ -249,11 +274,7 @@ async def run_to_terminal(cp, tmp_path, *, upload_delay=0, fields=None, replicas
                         if process.poll() is not None:
                             log.seek(0)
                             pytest.fail("Independent Worker exited: " + log.read())
-                    response = await client.get(
-                        f"/v1/bugs/bug/zentao-jobs/{job_id}", headers=headers
-                    )
-                    assert response.status_code == 200, response.text
-                    result = response.json()["data"]
+                    result = await job_summary(tmp_path, job_id)
                     if result["jobStatus"] not in {"queued", "claimed", "running"}:
                         return result
                     await asyncio.sleep(0.05)
@@ -368,9 +389,7 @@ async def test_sigterm_drains_inflight_upload_and_restart_does_not_repeat_it(cp,
             assert check.returncode == 0
             process.terminate()
             assert await asyncio.to_thread(process.wait, timeout=15) == 0
-            result = (
-                await client.get(f"/v1/bugs/bug/zentao-jobs/{job_id}", headers=headers)
-            ).json()["data"]
+            result = await job_summary(tmp_path, job_id)
             assert result["result"]["steps"] == {
                 "create_bug": "succeeded",
                 "upload_attachment:image": "succeeded",
@@ -410,12 +429,7 @@ async def test_crash_outbox_replay_acknowledges_a_manually_recovered_original_fa
             process.kill()
             await asyncio.to_thread(process.wait, timeout=3)
             async with asyncio.timeout(20):
-                while True:
-                    response = await client.get(
-                        f"/v1/bugs/bug/zentao-jobs/{job_id}", headers=headers
-                    )
-                    if response.json()["data"]["jobStatus"] == "unknown":
-                        break
+                while (await job_summary(tmp_path, job_id))["jobStatus"] != "unknown":
                     await asyncio.sleep(0.1)
         finally:
             await stop_worker(process, log)
@@ -430,8 +444,7 @@ async def test_crash_outbox_replay_acknowledges_a_manually_recovered_original_fa
                 while json.loads(journal.read_text()):
                     await asyncio.sleep(0.05)
             assert remote[0].writes == ["post_bugs"]
-            response = await client.get(f"/v1/bugs/bug/zentao-jobs/{job_id}", headers=headers)
-            assert response.json()["data"]["jobStatus"] == "partial"
+            assert (await job_summary(tmp_path, job_id))["jobStatus"] == "partial"
         finally:
             await stop_worker(process, log)
     resumed = await run_to_terminal(cp, tmp_path)
