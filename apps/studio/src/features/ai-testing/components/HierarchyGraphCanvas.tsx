@@ -1,4 +1,5 @@
 import { Background, BaseEdge, MiniMap, ReactFlow, useReactFlow, useStore, type EdgeProps } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import type { ReactNode, RefObject } from 'react'
