@@ -429,7 +429,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 - 存量 CSS 冻结，只减不增；改到哪个页面就迁哪个页面，迁完删除原 CSS 文件，不做“先留着”的兼容层。
 - Tailwind 已通过 `@tailwindcss/vite` 接入；新增样式按上文的 utility / CSS Modules 顺序选择，不得新增页面级全局 CSS。
 
-接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, reset, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；`antd/dist/reset.css` 用 `layer(reset)` 导入，reset 位于 antd 之后、utilities 之前，既保留旧页面 reset 压过组件库默认字重的行为，又允许 utility 覆盖 reset。初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
+接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, reset, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；`antd/dist/reset.css` 用 `layer(reset)` 导入，reset 位于 antd 之后、utilities 之前，既保留旧页面 reset 压过组件库默认字重的行为，又允许 utility 覆盖 reset。初期不引入或只作用域化引入 preflight，因此裸 `<button>` 会保留浏览器 UA 的 `ButtonFace` 底色（Chrome 深色为 `#6b6b6b` 亮灰块）：自绘按钮必须显式声明 `bg-transparent`，只在激活态给背景，参考 `CaseLibrarySidebar` 与 `ElementGroupSidebar` 的导航行。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
 
 度量以声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体为准，不以行数判断，避免压缩/展开格式造成的误判。
 

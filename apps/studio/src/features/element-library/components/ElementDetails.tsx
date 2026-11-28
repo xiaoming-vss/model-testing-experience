@@ -1,12 +1,21 @@
-import { Alert, Badge, Button, Input, Popconfirm, Typography } from 'antd'
+import { Alert, Button, Input, Popconfirm, Typography } from 'antd'
 import { useState } from 'react'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { cx } from '@/shared/utils/cx'
 import { renderLocatorSample } from '../utils/locatorTemplate'
-import styles from '../styles/element-library.module.css'
 import type { ElementDetail, VerificationStatus } from '../types'
 
+const locatorClass = 'block rounded-[var(--srf-radius-control)] border border-[var(--app-request-field-border)] bg-[var(--app-request-field-bg)] px-2.5 py-2 font-mono text-[12px] leading-[1.65] text-[var(--srf-text)] [overflow-wrap:anywhere]'
+const sampleClass = 'grid gap-1.5 rounded-[var(--srf-radius-control)] bg-[var(--srf-hover)] p-2'
+
+/** 验证状态胶囊：与用例库的类型标签同一套 tone 皮肤，状态带文字不只靠颜色。 */
 export function VerificationBadge({ status }: { status: VerificationStatus }) {
-  return <Badge status={status === 'verified' ? 'success' : 'warning'} text={status === 'verified' ? '已验证' : '待验证'} />
+  return (
+    <span className={cx('tp-tone-tag', status === 'verified' ? 'tone-green' : 'tone-amber')}>
+      <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-current" />
+      {status === 'verified' ? '已验证' : '待验证'}
+    </span>
+  )
 }
 
 export function ElementDetails({ item, groupName, canWrite, deleting, onEdit, onDelete }: {
@@ -44,13 +53,15 @@ export function ElementDetails({ item, groupName, canWrite, deleting, onEdit, on
       <div className="flex items-center justify-between gap-1 text-xs">
         <strong>{parameterized ? '定位模板' : '定位'}</strong><code>{item.locatorType}</code>
       </div>
-      <code className={styles.locator}>{item.locatorValue.split(/(\{\{.*?\}\})/g).map((part, index) =>
-        part.startsWith('{{') ? <mark className={styles.parameter} key={index}>{part}</mark> : part,
+      <code className={locatorClass}>{item.locatorValue.split(/(\{\{.*?\}\})/g).map((part, index) =>
+        part.startsWith('{{')
+          ? <mark className="rounded-[3px] bg-[var(--srf-accent-soft)] text-[var(--srf-accent)]" key={index}>{part}</mark>
+          : part,
       )}</code>
     </div>
     {parameterized && <section className="flex flex-col gap-2" aria-label="模板参数">
       <strong className="text-xs">模板参数</strong>
-      {item.parameters.map(({ name, description }) => <label key={name} className={styles.sample}>
+      {item.parameters.map(({ name, description }) => <label key={name} className={sampleClass}>
         <span className="flex flex-wrap items-center gap-2 text-xs [overflow-wrap:anywhere]">
           <code className="font-semibold">{name}</code>{description && <Typography.Text type="secondary">{description}</Typography.Text>}
         </span>
@@ -62,7 +73,7 @@ export function ElementDetails({ item, groupName, canWrite, deleting, onEdit, on
       </label>)}
       {missing && <Alert type="warning" title="请填写模板参数的样例值" />}
       {resolved !== null && <div className="grid gap-1.5" aria-live="polite">
-        <strong className="text-xs">解析结果</strong><code className={styles.locator}>{resolved}</code>
+        <strong className="text-xs">解析结果</strong><code className={locatorClass}>{resolved}</code>
       </div>}
     </section>}
     {(canWrite || parameterized) && <div className="flex flex-wrap gap-2 border-t border-[var(--app-surface-border)] pt-3">

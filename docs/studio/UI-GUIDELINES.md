@@ -173,7 +173,13 @@ Bug 列表。项目选择、页面内迭代筛选与个人设置保留。Bug 中
 
 ## 元素库
 
-资产库菜单在「接口库」和「软件仓库」之间显示「元素库」。元素列表用 `ListSurface`、`ListPagination` 和 `tp-list-table`，保留 16px 正文内收和 1px 横向分隔。桌面正文在同一板面内显示分组目录、列表和当前元素详情，窄屏以选择器切换分组并通过抽屉查看详情。编辑抽屉展示由定位模板识别出的命名参数，详情中的「解析样例」只在本地替换输入。实现位于 `features/element-library`，颜色使用共享主题 token。数据契约见[元素库接口](../control-plane/ui-element-library.md)。
+资产库菜单在「接口库」和「软件仓库」之间显示「元素库」。2026-11-28 按用户选型改为与用例库同一套版面语法：元素库是「目录 + 列表」的复合布局，不套用单一内容外框——外置工具栏条一条，下方左侧分组卡片（`--app-sidebar-width` 256px）与右侧列表卡片并列，间距 12px，两张卡片各自 12px 圆角、`--srf-card` 表面和细描边（`.tp-board` 只提供纵向排布与间隔，不再追加 `tp-list-panel`）。1180px 及以下两张卡片上下排列，分组卡片限高 420px 并在内部滚动。
+
+- 左栏「页面分组」：标题 + 页面分组数量徽标；条目固定为「全部元素」「公共元素」，其后「页面」小标题列出页面分组。条目单行显示图标、名称和计数，路由模板只进 `title`，不占第二行；选中行使用 `--srf-accent-soft` 底、`--srf-accent-border` 描边和 600 字重计数徽标。底部操作条（`--srf-hover` 底、上分隔线）左侧为「新建分组」，右侧为删除分组，仅页面分组可用，分组内仍有元素时禁用，并在提示里说明原因。
+- 右栏：快速过滤条显示当前分组名称与路由标签、验证状态胶囊（全部 / 已验证 / 待验证，`tp-chip`）和筛选后的总数；筛选只保留「当前范围 + 状态 + 关键词」，状态胶囊不回显各档数量，避免与查询总数冲突。表格列为元素名称（22px 图标容器 + 名称 + 参数标签）、分组 / 作用范围（选中具体分组时只显示作用范围）、定位（等宽大写标签 CSS / XPATH / TEST_ID…）、验证状态（`tp-tone-tag` 绿色 / 琥珀色带文字）和操作（编辑、删除，28px 图标按钮）。表头、48px 行高、1px 行分隔和 16px 内收沿用 `tp-list-table` 与 `list-table.css`，底部分页复用 `ListPagination`。
+- 详情统一走右侧抽屉（440px），桌面不再并排第三栏；行点击和名称按钮打开同一个抽屉。抽屉展示名称、验证状态、所属分组、作用范围、定位模板、模板参数与版本，模板参数样例只在本地替换。定位值不在列表契约的 `UiElementSummary` 里，因此列表的定位列只显示定位方式，定位值和更新时间只出现在抽屉中。
+- 写操作：工具栏最右为刷新（操作组首位）与「新建元素」；行内编辑先按元素 ID 取详情再打开编辑抽屉，删除走行内确认；新建与编辑仍使用 `ElementEditorDrawer`，分组创建仍使用原弹窗。
+- 实现：`pages/ElementLibraryPage.tsx`（页面与工具栏）、`components/ElementGroupSidebar.tsx`、`components/ElementListCard.tsx`、`components/elementListColumns.tsx`、`components/elementLibraryClasses.ts`、`components/ElementDetails.tsx`；回归 `ElementLibraryPage.test.tsx`。颜色只消费共享主题 token，数据契约见[元素库接口](../control-plane/ui-element-library.md)。
 
 ## 性能测试集工作台
 

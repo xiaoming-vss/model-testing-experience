@@ -65,6 +65,9 @@ export const workbenchTabsCompactClass = `${workbenchTabsBaseClass} p-3`
 /** AI Skill 库沿用 12px 上、16px 下的内距。 */
 export const workbenchTabsAiClass = `${workbenchTabsBaseClass} px-[var(--app-page-gutter)] pt-3 pb-4`
 
+/** 操作列列头：宽度与按钮组一致并居中，页面对齐方式不另写一串。 */
+export const actionsColumnTitleClass = 'tp-actions-col-title inline-block text-center'
+
 /** 列表滚动承载层：滚动与表面色；flex/min-height 由各页面按结构声明。 */
 export const tableScrollClass = 'overflow-auto bg-[var(--app-surface)]'
 

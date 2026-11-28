@@ -10,6 +10,8 @@ import type { ElementDetail, ElementDraft, VerificationStatus } from '../types'
 export const all = { key: 'all', name: '全部元素', route: '' }
 export const common = { key: 'common', name: '公共元素', route: '' }
 
+export type ElementWorkspaceModel = ReturnType<typeof useElementWorkspace>
+
 export function useElementWorkspace(repositoryId: string) {
   const [group, setGroup] = useState(all.key)
   const [keyword, setKeyword] = useState('')
@@ -76,7 +78,7 @@ export function useElementWorkspace(repositoryId: string) {
     },
   })
   const deleteElement = useMutation({
-    mutationFn: (item: ElementDetail) => elementLibraryApi.deleteElement(item.elementId, item.version),
+    mutationFn: (item: Pick<ElementDetail, 'elementId' | 'version'>) => elementLibraryApi.deleteElement(item.elementId, item.version),
     onSuccess: () => {
       setSelected('')
       void refresh()
@@ -109,10 +111,21 @@ export function useElementWorkspace(repositoryId: string) {
     setEditor(item ?? 'new')
   }
 
+  /** 列表行只有摘要，编辑前先取详情（定位值和参数不在列表契约里）。 */
+  async function openEditorById(elementId: string) {
+    try {
+      const detail = await elementLibraryApi.getElement(elementId)
+      cache.setQueryData([...root, 'detail', elementId], detail)
+      openEditor(detail)
+    } catch (error) {
+      void message.error(getErrorMessage(error))
+    }
+  }
+
   return {
     activeGroup, clearFilters, createGroup, current, deleteElement, deleteGroup,
     detail, editor, entries, group, groupModal, groups, groupsQuery, keyword, list, listEnabled,
-    openEditor, page, pageGroups, pageSize, refresh, saveElement, searchReset, selectGroup,
+    openEditor, openEditorById, page, pageGroups, pageSize, refresh, saveElement, searchReset, selectGroup,
     selected, setEditor, setGroupModal, setKeyword, setPage, setPageSize, setSelected, setStatus, status,
   }
 }
