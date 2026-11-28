@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.worker_context import WorkerExecutionContext
@@ -16,6 +17,32 @@ from testing_agent.models.ui_test_suite_run import UiTestSuiteRunItem
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import BaseRepository
 from testing_agent.repositories.worker_context import read_worker_context
+
+
+def expiry_candidate_ids(domain: str, now: datetime) -> Select[Any]:
+    """Expired worker IDs in sweep order, bounded to 500 candidates.
+
+    FORCE INDEX keeps discovery on the domain lease index: without it MySQL can
+    scan the domain/task unique key and sort the whole domain before the limit.
+    """
+    query = (
+        select(WorkerTask.id)
+        .where(
+            WorkerTask.domain == domain,
+            WorkerTask.status.in_(["claimed", "running", "stopping"]),
+            WorkerTask.lease_expires_at <= now,
+        )
+        .with_hint(WorkerTask, "FORCE INDEX (idx_worker_domain_lease)", dialect_name="mysql")
+    )
+    if domain == "ai":
+        # Retired or orphaned entries must not fill the bounded discovery window
+        # and starve live attempts. Cutover inventory reports the old records.
+        query = query.where(
+            select(AiGenerationAttempt.id)
+            .where(AiGenerationAttempt.id == WorkerTask.run_id)
+            .exists()
+        )
+    return query.order_by(WorkerTask.lease_expires_at, WorkerTask.id).limit(500)
 
 
 class WorkerTaskRepository(BaseRepository):
@@ -36,22 +63,7 @@ class WorkerTaskRepository(BaseRepository):
         now = datetime.now(UTC)
         # Discover without range locks, then lock exact primary keys. This allows heartbeats
         # and other sweepers to update neighboring lease-index entries under MySQL RR.
-        candidates_query = select(WorkerTask.id).where(
-            WorkerTask.domain == domain,
-            WorkerTask.status.in_(["claimed", "running", "stopping"]),
-            WorkerTask.lease_expires_at <= now,
-        )
-        if domain == "ai":
-            # Retired or orphaned entries must not fill the bounded discovery window
-            # and starve live attempts. Cutover inventory reports the old records.
-            candidates_query = candidates_query.where(
-                select(AiGenerationAttempt.id)
-                .where(AiGenerationAttempt.id == WorkerTask.run_id)
-                .exists()
-            )
-        identifiers = await self.session.scalars(
-            candidates_query.order_by(WorkerTask.lease_expires_at, WorkerTask.id).limit(500)
-        )
+        identifiers = await self.session.scalars(expiry_candidate_ids(domain, now))
         candidates = list(identifiers)
         tasks: list[WorkerTask] = []
         offset = 0

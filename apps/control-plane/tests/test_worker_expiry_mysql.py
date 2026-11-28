@@ -4,12 +4,12 @@ import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import update
 from support.mysql_initialization import async_sessions
 from support.mysql_initialization import mysql as mysql
 
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.repositories.worker_task import WorkerTaskRepository
+from testing_agent.repositories.worker_task import WorkerTaskRepository, expiry_candidate_ids
 
 
 async def test_expiry_skips_competing_sweeper_and_does_not_block_heartbeats(mysql):
@@ -123,16 +123,7 @@ def test_expiry_discovery_uses_compound_lease_index(mysql):
                 for i in range(5000)
             ],
         )
-        query = (
-            select(WorkerTask.id)
-            .where(
-                WorkerTask.domain == "api",
-                WorkerTask.status.in_(["claimed", "running"]),
-                WorkerTask.lease_expires_at <= now,
-            )
-            .order_by(WorkerTask.lease_expires_at, WorkerTask.id)
-            .limit(500)
-        )
+        query = expiry_candidate_ids("api", now)
         compiled = str(query.compile(dialect=mysql.dialect, compile_kwargs={"literal_binds": True}))
         plan = json.loads(
             connection.exec_driver_sql("EXPLAIN FORMAT=JSON " + compiled).scalar_one()
