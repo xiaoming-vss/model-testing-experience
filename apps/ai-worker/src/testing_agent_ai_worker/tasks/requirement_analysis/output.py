@@ -28,9 +28,7 @@ def build_review_summary(artifact: dict) -> dict[str, int | str]:
     return {
         "reviewStatus": str(artifact.get("reviewStatus") or ""),
         "issueCount": len(issues),
-        "blockerCount": sum(
-            1 for issue in issues if issue.get("severity") == "blocker"
-        ),
+        "blockerCount": sum(1 for issue in issues if issue.get("severity") == "blocker"),
         "majorCount": sum(1 for issue in issues if issue.get("severity") == "major"),
         "minorCount": sum(1 for issue in issues if issue.get("severity") == "minor"),
     }

@@ -29,9 +29,7 @@ def read_artifact_response(raw: Any, *, kind: str, output_path: Path) -> Any:
         return raw
     if not receipt_valid:
         raise ValueError(
-            "产物文件回执不合法；本阶段仅支持固定 "
-            + (filename or "产物文件")
-            + " 回执"
+            "产物文件回执不合法；本阶段仅支持固定 " + (filename or "产物文件") + " 回执"
         )
     if (
         output_path.is_symlink()

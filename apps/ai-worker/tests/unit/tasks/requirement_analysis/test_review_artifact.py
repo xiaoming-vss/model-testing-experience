@@ -8,14 +8,15 @@ from testing_agent_ai_worker.requirement_artifacts import validate_artifact
 APP = Path(__file__).resolve().parents[4]
 ROOT = Path(__file__).resolve().parents[6]
 FIXTURES = APP / "tests/fixtures/requirement_review"
-WORKER_SCHEMA = APP / "src/testing_agent_ai_worker/requirement_schemas/requirement-review.schema.json"
+WORKER_SCHEMA = (
+    APP / "src/testing_agent_ai_worker/requirement_schemas/requirement-review.schema.json"
+)
 CONTROL_PLANE_SCHEMA = (
     ROOT
     / "apps/control-plane/src/testing_agent/domain/requirement_schemas/requirement-review.schema.json"
 )
 SKILL_SCHEMA = (
-    ROOT
-    / "apps/control-plane/default-skills/mtx-review-requirement/references/output.schema.json"
+    ROOT / "apps/control-plane/default-skills/mtx-review-requirement/references/output.schema.json"
 )
 CONTROL_PLANE_VALIDATOR = (
     ROOT / "apps/control-plane/src/testing_agent/domain/requirement_artifacts.py"

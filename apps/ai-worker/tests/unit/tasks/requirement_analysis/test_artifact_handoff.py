@@ -18,8 +18,7 @@ FIXTURE = (
 RECEIPT = {"artifactFile": "document-extraction.json"}
 REVIEW_RECEIPT = {"artifactFile": "requirement-review.json"}
 REVIEW_FIXTURE = (
-    Path(__file__).resolve().parents[4]
-    / "tests/fixtures/requirement_review/passed.example.json"
+    Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_review/passed.example.json"
 )
 
 
@@ -42,9 +41,7 @@ class ArtifactHandoffTests(unittest.TestCase):
             path.write_text(raw)
             for receipt in [REVIEW_RECEIPT, json.dumps(REVIEW_RECEIPT)]:
                 self.assertEqual(
-                    read_artifact_response(
-                        receipt, kind="requirement_review", output_path=path
-                    ),
+                    read_artifact_response(receipt, kind="requirement_review", output_path=path),
                     raw,
                 )
 
