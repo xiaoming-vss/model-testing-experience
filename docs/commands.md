@@ -65,9 +65,11 @@ scripts/build_images.sh control-plane studio
 | 用途 | 命令 | 前置条件 |
 | --- | --- | --- |
 | 安装依赖 | `uv sync --locked --extra dev` | 锁文件未变更 |
-| 静态检查 + 全量测试 | `uv run --locked --extra dev python scripts/check.py` | 默认使用 SQLite；真实 MySQL/存储用例按环境变量启用后自动退回单进程 |
+| 静态检查 + 全量测试 | `uv run --locked --extra dev python scripts/check.py` | 默认使用 SQLite；并行时实测约 2 分钟；真实 MySQL/存储用例按环境变量启用后自动退回单进程 |
+| 静态检查 + 快速门禁 | `uv run --locked --extra dev python scripts/check.py --fast` | 跳过 `mysql`/`live` 层；配置真实 MySQL/存储时仍保持并行；不能替代交付前的全量测试 |
 | 仅静态检查 | `uv run --locked --extra dev python scripts/check.py --static-only` | — |
 | 全量测试（串行） | `uv run --locked --extra dev pytest -q` | 全量约 28 分钟；本仓库约定不与其它 pytest 并发执行 |
+| 快速门禁（跳过真实 MySQL/存储） | `uv run --locked --extra dev pytest -q -m "not mysql and not live" -n auto --dist loadfile` | 实测约 2 分钟；分层规则见 `apps/control-plane/tests/conftest.py`；不能替代交付前的全量测试 |
 | 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
 | 候选处置回归 | `uv run --locked --extra dev pytest tests/test_generation_candidate_api.py tests/test_hard_deletion.py -q` | 覆盖拒绝，以及删除未拒绝和已拒绝的候选 |
 | 元素库回归 | `uv run --locked --extra dev pytest tests/test_ui_element_library.py -q` | 校验项目权限、分组、定位模板与版本冲突 |

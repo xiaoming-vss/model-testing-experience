@@ -13,10 +13,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LIVE_TEST_ENVIRONMENTS = ("CONTROL_PLANE_TEST_DATABASE_URL", "CONTROL_PLANE_STORAGE_LIVE")
 
 
-def pytest_command(tests: list[str] | None) -> list[str]:
-    """Parallelize the full suite unless a live resource forces single-process execution."""
+def pytest_command(tests: list[str] | None, fast: bool) -> list[str]:
+    """Parallelize the suite unless a live resource forces single-process execution."""
     command = ["pytest", *(tests or ["tests"]), "-q", "-rs"]
-    if tests is None and not any(os.environ.get(name) for name in LIVE_TEST_ENVIRONMENTS):
+    if tests is None and fast:
+        command[1:1] = ["-m", "not mysql and not live"]
+    live_resources = any(os.environ.get(name) for name in LIVE_TEST_ENVIRONMENTS)
+    if tests is None and (fast or not live_resources):
         command[1:1] = ["-n", "auto", "--dist", "loadfile"]
     return command
 
@@ -25,6 +28,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--static-only", action="store_true")
+    group.add_argument(
+        "--fast", action="store_true", help="Skip layers needing MySQL or live storage"
+    )
     group.add_argument("--tests", nargs="+", metavar="PATH", help="Run selected tests after checks")
     args = parser.parse_args()
     commands = [
@@ -33,7 +39,7 @@ def main() -> int:
         ["mypy", "--python-version", "3.12", "--check-untyped-defs", "src/testing_agent"],
     ]
     if not args.static_only:
-        commands.append(pytest_command(args.tests))
+        commands.append(pytest_command(args.tests, args.fast))
     for command in commands:
         print("Running:", " ".join(command), flush=True)
         result = subprocess.run([sys.executable, "-m", *command], cwd=PROJECT_ROOT, check=False)

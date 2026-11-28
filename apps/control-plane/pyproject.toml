@@ -59,6 +59,15 @@ module-root = "src"
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "--strict-markers"
+markers = [
+    "mysql: requires CONTROL_PLANE_TEST_DATABASE_URL pointing at a disposable MySQL database",
+    "live: requires CONTROL_PLANE_STORAGE_LIVE and a real object store",
+    "api: drives the HTTP boundary through create_app and SQLite",
+    "contract: pins worker or HTTP protocol shapes",
+    "arch: enforces module layering rules",
+    "unit: domain and application behavior with in-memory collaborators",
+]
 
 [tool.ruff]
 line-length = 100
