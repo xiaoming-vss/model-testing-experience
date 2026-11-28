@@ -28,7 +28,9 @@ from ..core.errors import (
     LeaseLostError,
 )
 
-_LEASE_REJECTION_STATUSES = {400, 401, 403, 404, 409, 422}
+# Statuses that mean the control plane ended this attempt. A malformed request
+# (400/422) is a protocol error, not a lease decision.
+_LEASE_REJECTION_STATUSES = {401, 403, 404, 409}
 
 
 class ControlPlaneClient:

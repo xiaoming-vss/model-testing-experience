@@ -44,6 +44,9 @@ from ..worker.lease import ExecutionWindow
 logger = logging.getLogger("testing_agent_perf_worker")
 
 _MIB = 1024 * 1024
+# Permanent request errors: retrying cannot make the payload valid, and they do
+# not mean the worker lost the lease.
+_PROTOCOL_ERROR_STATUSES = {400, 422}
 
 
 class StopReason(StrEnum):
@@ -264,6 +267,13 @@ class PerfPoller:
                     )
             except (DataFileError, SpecError, CompileError, ExecutionError) as exc:
                 preflight_error = str(exc)
+            except LeaseLostError:
+                # The attempt is gone while downloading frozen inputs; reporting
+                # anything would be rejected by the same lease state.
+                self._request_stop(StopReason.LEASE_LOST, force=True)
+                return
+            except ControlPlaneError as exc:
+                preflight_error = f"准备运行输入失败: {exc}"
             if not preflight_error and not self.stop_event.is_set() and window.active():
                 self.health.progress("running")
                 if compiled is None:
@@ -404,6 +414,15 @@ class PerfPoller:
                 )
                 return
             except ControlPlaneError as exc:
+                if exc.status_code in _PROTOCOL_ERROR_STATUSES:
+                    # The payload itself is invalid; retrying until the lease
+                    # expires would only delay the next task. result.json stays.
+                    logger.error(
+                        "completion rejected as invalid task_id=%s status=%s",
+                        claim.task_id,
+                        exc.status_code,
+                    )
+                    return
                 logger.warning(
                     "completion failed task_id=%s status=%s attempt=%s",
                     claim.task_id,

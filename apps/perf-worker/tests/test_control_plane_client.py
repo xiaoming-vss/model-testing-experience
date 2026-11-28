@@ -10,7 +10,11 @@ from pydantic import SecretStr
 from testing_agent_perf_worker.contracts.worker import DataFileRef
 from testing_agent_perf_worker.control_plane.client import ControlPlaneClient
 from testing_agent_perf_worker.core.config import Settings
-from testing_agent_perf_worker.core.errors import DataFileError, LeaseLostError
+from testing_agent_perf_worker.core.errors import (
+    ControlPlaneError,
+    DataFileError,
+    LeaseLostError,
+)
 
 
 def _settings(tmp_path: Path) -> Settings:
@@ -168,9 +172,9 @@ async def test_download_data_file_retries_retryable_status(tmp_path: Path, statu
     assert destination.read_bytes() == content
 
 
-@pytest.mark.parametrize("status", [400, 403, 404, 409, 422])
+@pytest.mark.parametrize("status", [401, 403, 404, 409])
 @pytest.mark.asyncio
-async def test_download_data_file_fails_fast_on_client_error(tmp_path: Path, status: int):
+async def test_download_data_file_fails_fast_on_lease_rejection(tmp_path: Path, status: int):
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -196,5 +200,39 @@ async def test_download_data_file_fails_fast_on_client_error(tmp_path: Path, sta
     finally:
         await client.close()
 
+    assert calls == 1
+    assert "private-body" not in str(exc.value)
+
+
+@pytest.mark.parametrize("status", [400, 422])
+@pytest.mark.asyncio
+async def test_download_data_file_fails_fast_on_protocol_error(tmp_path: Path, status: int):
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(status, text="private-body")
+
+    client = ControlPlaneClient(_settings(tmp_path), transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(ControlPlaneError) as exc:
+            await client.download_data_file(
+                "task-1",
+                DataFileRef(
+                    file_id="file-1",
+                    filename="users.csv",
+                    size=6,
+                    sha256="a" * 64,
+                ),
+                "worker-1",
+                tmp_path / "users.csv",
+                max_bytes=1024,
+            )
+    finally:
+        await client.close()
+
+    assert not isinstance(exc.value, LeaseLostError)
+    assert exc.value.status_code == status
     assert calls == 1
     assert "private-body" not in str(exc.value)

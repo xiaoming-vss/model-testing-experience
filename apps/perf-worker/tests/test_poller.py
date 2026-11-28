@@ -240,6 +240,58 @@ async def test_data_file_failure_is_reported_without_running_k6(
 
 
 @pytest.mark.asyncio
+async def test_data_file_lease_rejection_stops_without_reporting(tmp_path: Path):
+    file = DataFileRef(
+        file_id="file-1",
+        filename="users.csv",
+        size=6,
+        sha256="a" * 64,
+    )
+    client = FakeClient(
+        snapshot=_snapshot(data_files=[file]),
+        download_error=LeaseLostError("控制面已拒绝当前执行租约", 403),
+    )
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    await poller._execute(_CLAIM)
+
+    assert client.completions == []
+    assert poller.stop_reason is StopReason.LEASE_LOST
+
+
+@pytest.mark.asyncio
+async def test_data_file_protocol_error_is_reported_without_running_k6(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    class ForbiddenRunner:
+        def __init__(self, settings: Any) -> None:
+            self.settings = settings
+
+        async def run(self, *_args: Any, **_kwargs: Any) -> K6Execution:
+            raise AssertionError("k6 must not run after a preflight failure")
+
+    monkeypatch.setattr(poller_module, "K6Runner", ForbiddenRunner)
+    file = DataFileRef(
+        file_id="file-1",
+        filename="users.csv",
+        size=6,
+        sha256="a" * 64,
+    )
+    client = FakeClient(
+        snapshot=_snapshot(data_files=[file]),
+        download_error=ControlPlaneError("控制面请求失败", 422),
+    )
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+
+    await poller._execute(_CLAIM)
+
+    payload = client.completions[0]
+    assert payload["status"] == "failed"
+    assert payload["outcome"] == "execution_error"
+    assert "准备运行输入失败" in payload["errorMessage"]
+
+
+@pytest.mark.asyncio
 async def test_control_stop_before_execution_reports_canceled(tmp_path: Path):
     client = FakeClient(control=ControlResponse(stop_requested=True))
     poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
@@ -367,6 +419,43 @@ async def test_completion_stops_at_lease_deadline_and_keeps_result(tmp_path: Pat
     assert client.attempts < 5
     saved = json.loads(workspace.result_path.read_text(encoding="utf-8"))
     assert saved["status"] == "stopped"
+
+
+@pytest.mark.asyncio
+async def test_completion_protocol_error_is_not_retried_and_keeps_result(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    class InvalidClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts = 0
+
+        async def complete(self, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+            self.attempts += 1
+            raise ControlPlaneError("控制面请求失败", 422)
+
+    client = InvalidClient()
+    poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
+    workspace = Workspace.create(tmp_path / "workspaces", "run-001")
+    window = ExecutionWindow.start(60, 5)
+    result = poller_module._special_result(
+        "run-001",
+        RunStatus.FAILED,
+        RunOutcome.EXECUTION_ERROR,
+        datetime.now(UTC).isoformat(),
+        "执行失败",
+    )
+
+    with caplog.at_level(logging.ERROR, logger="testing_agent_perf_worker"):
+        await poller._report(_CLAIM, result, workspace, window)
+
+    assert client.attempts == 1
+    assert any(
+        record.getMessage() == "completion rejected as invalid task_id=task-1 status=422"
+        for record in caplog.records
+    )
+    saved = json.loads(workspace.result_path.read_text(encoding="utf-8"))
+    assert saved["status"] == "failed"
 
 
 @pytest.mark.asyncio
@@ -572,7 +661,7 @@ async def test_rejected_claim_and_completion_log_their_status_code(
 
         async def complete(self, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             self.completions.append(payload)
-            raise LeaseLostError("控制面已拒绝当前执行租约", 400)
+            raise ControlPlaneError("控制面请求失败", 400)
 
     client = RejectingClient()
     poller = PerfPoller(_settings(tmp_path), client=client)  # type: ignore[arg-type]
@@ -584,5 +673,8 @@ async def test_rejected_claim_and_completion_log_their_status_code(
 
     messages = [record.getMessage() for record in caplog.records]
     # A misconfigured token or an oversized payload must be tellable apart in the log.
-    assert any(message == "completion rejected task_id=task-1 status=400" for message in messages)
+    assert any(
+        message == "completion rejected as invalid task_id=task-1 status=400"
+        for message in messages
+    )
     assert sum(message == "claim rejected status=401" for message in messages) == 2
