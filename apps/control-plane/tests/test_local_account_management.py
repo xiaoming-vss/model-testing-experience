@@ -255,6 +255,43 @@ def test_login_lockout_after_repeated_failures(api):  # noqa: F811
     )
 
 
+def test_failed_login_after_the_window_resets_the_same_row(api):  # noqa: F811
+    """An expired window must reuse the stored row; a second insert breaks the unique key."""
+    account(api, "windowed")
+    assert (
+        api.post("/v1/login", json={"name": "windowed", "password": "wrong-password"}).status_code
+        == 401
+    )
+
+    async def expire_window():
+        from testing_agent.models.login_rate_limit import LoginRateLimit
+
+        async with api.app.state.test_sessions() as session:
+            limiter = await session.scalar(
+                select(LoginRateLimit).where(LoginRateLimit.username == "windowed")
+            )
+            assert limiter is not None
+            limiter.window_started_at = datetime.now(UTC) - timedelta(minutes=20)
+            await session.commit()
+
+    asyncio.run(expire_window())
+    again = api.post("/v1/login", json={"name": "windowed", "password": "wrong-password"})
+    assert again.status_code == 401, again.text
+
+    async def read_rows():
+        from testing_agent.models.login_rate_limit import LoginRateLimit
+
+        async with api.app.state.test_sessions() as session:
+            return list(
+                await session.scalars(
+                    select(LoginRateLimit).where(LoginRateLimit.username == "windowed")
+                )
+            )
+
+    rows = asyncio.run(read_rows())
+    assert len(rows) == 1 and rows[0].attempt_count == 1
+
+
 def test_admin_can_backfill_email(api):  # noqa: F811
     _, admin = super_admin(api)
     user, _ = account(api, "legacy")

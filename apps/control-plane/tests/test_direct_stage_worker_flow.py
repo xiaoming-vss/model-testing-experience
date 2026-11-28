@@ -380,3 +380,58 @@ async def test_worker_authorization_revocation_fails_only_its_current_attempt(db
     assert await service._claim_task("ai", queue, WorkerClaimRequest(worker_id="node")) is None
     assert queue.status == "failed" and attempt.status == "failed"
     assert stage.active_attempt_id is None and attempt.status == "failed"
+
+
+async def test_final_stage_validation_reads_the_frozen_planning_config(db, monkeypatch):  # noqa: F811
+    """The Worker never sees planning config; completion must read the frozen one."""
+
+    from testing_agent.models.worker_task import WorkerTask
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services.stage_storage import worker_events
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+
+    stage, storage = setup_stage(db)
+    stage.stage = "detailed_cases"
+    frozen = {"historyCasePlanning": {"verification": "{}", "input": "{}"}}
+    attempt = await storage.prepare(
+        stage.id,
+        worker_task_id="worker-plan",
+        requested_by="u",
+        input_snapshot={"source": {}, "config": frozen},
+    )
+    queue = WorkerTask(
+        domain="ai",
+        task_id="worker-plan",
+        task_type="functional_case_generate",
+        run_id=attempt.id,
+        worker_id="node",
+        status="running",
+    )
+    await StageWorkerTransitions(AsyncSessionAdapter(db)).started(
+        stage.id, attempt.id, queue.task_id
+    )
+    seen: dict = {}
+
+    async def validate(_repository, _kind, _stage, content, source_snapshot):
+        seen.update(source_snapshot)
+        return content, "yaml"
+
+    monkeypatch.setattr(worker_events, "validate_generation_artifact", validate)
+    await worker_events.apply_stage_completion(
+        AsyncSessionAdapter(db),
+        queue,
+        stage_id=stage.id,
+        attempt_id=attempt.id,
+        kind="function",
+        stage="detailed_cases",
+        source={},
+        frozen_config=frozen,
+        body=WorkerTaskEventRequest(
+            worker_id="node",
+            task_id=queue.task_id,
+            run_id=attempt.id,
+            status="success",
+            result_yaml='{"cases": [], "historicalCaseFindings": []}',
+        ),
+    )
+    assert seen["config"] == frozen

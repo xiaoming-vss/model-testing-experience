@@ -95,8 +95,8 @@ async def test_worker_event_uses_frozen_analysis_for_reference_validation() -> N
     material, scope = sources()
     source = {"sourceContent": json.dumps(material)}
     config = {"caseNames": artifact(), "requirementAnalysis": scope}
-    content, _ = await _artifact(None, "function", "case_names", source, config, None)
+    content, _ = await _artifact(None, "function", "case_names", source, config, config, None)
     assert json.loads(content)["testPoints"][0]["id"] == "P1"
     scope["testObjects"] = []
     with pytest.raises(AppError):
-        await _artifact(None, "function", "case_names", source, config, None)
+        await _artifact(None, "function", "case_names", source, config, config, None)

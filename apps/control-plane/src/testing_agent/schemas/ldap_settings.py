@@ -6,8 +6,13 @@ from testing_agent.core.ldap_config import LdapSettings
 
 
 class LdapConfigInput(LdapSettings):
-    """Admin input uses the runtime structure and adds a write-only secret field."""
+    """Admin input uses the runtime structure and adds a write-only secret field.
 
+    A blank password means "keep the saved secret"; the service merges the stored
+    value and validates the merged configuration.
+    """
+
+    require_bind_password: ClassVar[bool] = False
     bind_password: SecretStr | None = None  # type: ignore[assignment]
 
     def configuration(self) -> dict:

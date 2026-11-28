@@ -12,9 +12,31 @@
       "items": {
         "$ref": "#/$defs/case"
       }
+    },
+    "removedCases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/removedCase"
+      }
     }
   },
   "$defs": {
+    "removedCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "reason"
+      ],
+      "properties": {
+        "caseId": {
+          "$ref": "#/$defs/text"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
     "text": {
       "type": "string",
       "minLength": 1,

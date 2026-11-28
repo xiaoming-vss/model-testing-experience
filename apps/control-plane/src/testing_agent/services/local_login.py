@@ -91,7 +91,10 @@ class LocalLoginService:
         if self.rate_limits is None or not client_ip:
             return None
         row = await self.rate_limits.get_for_update(username, client_ip)
-        return self.throttle.active(row, now)
+        # Keep the stored row even when its window expired: the failure path resets
+        # that row, and inserting a second row violates the identity unique key.
+        self.throttle.active(row, now)
+        return row
 
     async def _record_rate_limit_failure(
         self, row: LoginRateLimit | None, username: str, client_ip: str, now: datetime

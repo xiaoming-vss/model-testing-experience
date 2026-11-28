@@ -32,7 +32,7 @@ description: 根据已审核的需求材料、测试范围风险分析和可追�
 
 ## 输出分支
 
-**正常完成**：只返回一个 JSON 对象，顶层只有 `cases`。普通生成每条恰好七字段，按 [模板](assets/output-template.json) 输出 `case_module`、`case_title`、`case_type`、`priority`、`precondition`、`test_steps`、`expected_results`。有「本批生成目标」时，每条另填 `generationTargetId`，逐字使用清单中的目标 ID，模块用该目标的 `module`，每个目标至少有一条用例。字段结构见 [schema](references/output.schema.json)；分类与优先级见 [字段规则](references/field-mapping.md)。内容用中文，产品术语保留原文。三个数组各自从 `1. ` 连续编号，无前置条件用空数组；步骤与预期等长、同号对应。数据放入前置或步骤，必要恢复放入末尾步骤及对应预期。
+**正常完成**：只返回一个 JSON 对象，顶层只有 `cases`；继续优化确实要删除当前用例时，另在顶层 `removedCases` 逐条声明 `caseId` 与原因，未声明的当前用例必须保留。普通生成每条恰好七字段，按 [模板](assets/output-template.json) 输出 `case_module`、`case_title`、`case_type`、`priority`、`precondition`、`test_steps`、`expected_results`。有「本批生成目标」时，每条另填 `generationTargetId`，逐字使用清单中的目标 ID，模块用该目标的 `module`，每个目标至少有一条用例。字段结构见 [schema](references/output.schema.json)；分类与优先级见 [字段规则](references/field-mapping.md)。内容用中文，产品术语保留原文。三个数组各自从 `1. ` 连续编号，无前置条件用空数组；步骤与预期等长、同号对应。数据放入前置或步骤，必要恢复放入末尾步骤及对应预期。
 
 **需要澄清**：必需输入、业务判据缺失，或测试点混合独立目标且无法在原目标内展开时，响应从 `CLARIFICATION_REQUIRED:` 原样开始，后接受影响测试点名称、缺口及需上游处理的事项。集中合并同源问题，不附部分 `cases`，不把待确认答案塞入正式用例。只有执行资源未落实时照常生成准备、步骤和预期。判别示例见 [判据与准备](references/evidence-and-readiness.md) 及 [场景拆分](references/scenario-case-splitting.md)。
 

@@ -89,6 +89,7 @@ async def _artifact(
     stage: str,
     source: dict[str, Any],
     config: dict[str, Any],
+    frozen_config: dict[str, Any],
     result: str | None,
 ) -> tuple[str, str]:
     if is_final_stage(kind, stage):
@@ -97,8 +98,10 @@ async def _artifact(
         field = STAGE_CONFIG_FIELDS.get(stage)
         value = config.get(field) if field else None
         content = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else ""
+    # Validate against the frozen snapshot, never the Worker-supplied config: the
+    # Worker cannot know server-injected fields such as historyCasePlanning.
     validation_source = (
-        {"source": source, "config": config} if kind in {"function", "api"} else source
+        {"source": source, "config": frozen_config} if kind in {"function", "api"} else source
     )
     return await validate_generation_artifact(
         AiGenerateTaskRepository(session), kind, stage, content, validation_source
@@ -217,7 +220,9 @@ async def apply_stage_progress(
             raise ErrBadRequest()
         # 只有等待审核的进展会落产物，需要核对上游输入；running 心跳不读取 config。
         supplied = _check_inputs(stage, frozen_config, body.config_json)
-        content, output_format = await _artifact(session, kind, stage, source, supplied, None)
+        content, output_format = await _artifact(
+            session, kind, stage, source, supplied, frozen_config, None
+        )
         await transitions.completed(
             stage_id,
             attempt_id,
@@ -288,7 +293,13 @@ async def apply_stage_completion(
         else:
             supplied = _check_inputs(stage, frozen_config, body.config_json)
             content, output_format = await _artifact(
-                session, kind, stage, source, supplied, body.result_yaml or body.output_yaml
+                session,
+                kind,
+                stage,
+                source,
+                supplied,
+                frozen_config,
+                body.result_yaml or body.output_yaml,
             )
             await transitions.completed(
                 stage_id,

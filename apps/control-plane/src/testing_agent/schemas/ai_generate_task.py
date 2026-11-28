@@ -9,25 +9,6 @@ from pydantic.alias_generators import to_camel
 from testing_agent.core.enums import RunStatus
 
 
-class AiGenerateTaskRunRequest(BaseModel):
-    stage: str | None = None
-    current_stage: str | None = None
-    function_case_ids: list[str] | None = Field(default=None)
-    connection_id: str | None = Field(default=None)
-    llm_connection_id: str | None = Field(default=None)
-    trigger_type: str | None = Field(default=None)
-    checkpoint_enabled: bool | None = Field(default=None)
-    config_json: Any | None = Field(default=None)
-    result_yaml: str | None = Field(default=None)
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="forbid",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
 class CodeRiskAnalysisTaskRequest(BaseModel):
     name: str | None = None
     requirement_id: str | None = Field(default=None)

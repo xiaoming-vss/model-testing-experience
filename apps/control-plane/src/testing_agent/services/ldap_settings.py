@@ -147,7 +147,8 @@ class LdapSettingsService:
         await self._authorize(actor_id)
         config = await self._candidate({**values, "enabled": False}, clear_password)
         try:
-            config = config.model_copy(update={"enabled": True})
+            # Re-validate as enabled; model_copy would skip the required-field checks.
+            config = LdapSettings(**{**config.model_dump(), "enabled": True})
         except ValueError:
             raise AppError(1030, "连接检查需要地址、查询账号密码、搜索范围和访问组", 400) from None
         await self.runtime.rollback()  # No DB locks/transactions during external IO.

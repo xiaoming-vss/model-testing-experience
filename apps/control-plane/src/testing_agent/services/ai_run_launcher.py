@@ -49,7 +49,6 @@ class GenerationRunLauncher:
         *,
         repository: AiGenerateTaskRepository,
         access: RunLaunchAccess,
-        execution: object | None = None,
         sprint_daily_metrics_service: SprintDailyMetricsService | None = None,
         code_risk_analysis_service: CodeRiskAnalysisService | None = None,
         repository_profile_service: RepositoryProfileService | None = None,

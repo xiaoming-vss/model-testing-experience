@@ -134,7 +134,7 @@ def test_project_patch_keeps_omitted_field_and_rejects_null(api):
 
 @pytest.mark.parametrize(
     "model_name",
-    ["AiGenerateTaskRunRequest", "CodeRiskAnalysisRunRequest", "RepositoryProfileRunRequest"],
+    ["CodeRiskAnalysisRunRequest", "RepositoryProfileRunRequest"],
 )
 @pytest.mark.parametrize(
     "field", ["requirementMaterialVersionId", "requirementUnderstandingVersionId"]

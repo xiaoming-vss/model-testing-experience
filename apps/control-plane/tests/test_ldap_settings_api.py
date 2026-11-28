@@ -53,3 +53,32 @@ def test_connection_test_is_readonly_and_uses_draft(api):  # noqa: F811
     assert response.status_code == 200, response.text
     current = api.get("/v1/admin/ldap", headers=headers).json()["data"]
     assert current["source"] == "database" and not current["config"]["enabled"]
+
+
+def test_blank_bind_password_keeps_the_saved_secret(api):  # noqa: F811
+    """The admin form submits a blank password to keep the stored one."""
+    _, headers = super_admin(api)
+    body = {**config(), "bind_password": "only-in-test-request-secret"}
+    version = api.get("/v1/admin/ldap", headers=headers).json()["data"]["generation"]
+    saved = api.put("/v1/admin/ldap", headers=headers, json={"generation": version, "config": body})
+    assert saved.status_code == 200, saved.text
+    version = saved.json()["data"]["generation"]
+    blank = {**config(), "bind_password": ""}
+    kept = api.put("/v1/admin/ldap", headers=headers, json={"generation": version, "config": blank})
+    assert kept.status_code == 200, kept.text
+    assert kept.json()["data"]["passwordConfigured"]
+
+    with patch("testing_agent.services.ldap_settings.LdapDirectory") as directory:
+        directory.return_value.check_connection = AsyncMock()
+        tested = api.post("/v1/admin/ldap/test", headers=headers, json={"config": blank})
+    assert tested.status_code == 200, tested.text
+
+
+def test_enabling_without_any_password_is_rejected_by_the_service(api):  # noqa: F811
+    _, headers = super_admin(api)
+    body = {**config(), "bind_password": ""}
+    version = api.get("/v1/admin/ldap", headers=headers).json()["data"]["generation"]
+    rejected = api.put(
+        "/v1/admin/ldap", headers=headers, json={"generation": version, "config": body}
+    )
+    assert rejected.status_code == 400, rejected.text
