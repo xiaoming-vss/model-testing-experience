@@ -37,6 +37,7 @@
 
 ### control-plane
 
+- [2026-11-26 本地开发库元素库补表](../control-plane/records/2026-11-26-ui-element-library-local-db-sync.md)
 - [2026-11-20 生成链候选改造契约与盘点基础](../control-plane/records/2026-11-20-generation-candidate-foundation.md)
 - [2026-11-20 本地开发库性能运行迭代字段升级](../control-plane/records/2026-11-20-perf-run-local-db-upgrade.md)
 - [2026-11-14 测试单单用例执行可视化规格](../control-plane/records/2026-11-14-test-order-case-visualization-spec.md)
@@ -59,6 +60,7 @@
 ### ai-worker
 
 - [2026-11-14 用例可视化技能独立试跑记录](../ai-worker/records/2026-11-14-case-visualization-skill-trial.md)
+- [2026-11-26 完整用例历史覆盖验证](../ai-worker/records/2026-11-26-complete-case-history-planning-validation.md)
 
 ## 维护规则
 

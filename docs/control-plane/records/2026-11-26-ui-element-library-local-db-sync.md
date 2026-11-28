@@ -1,6 +1,9 @@
 # 本地开发库元素库补表
 
 - 日期：2026-11-26
+- 状态：历史证据
+- 负责人：control-plane maintainers
+- 来源：本地开发库的元素库加载失败复现与定向补表，内容为当时操作记录
 - 范围：本地 MySQL 开发库 `mtx_candidate_20261121`
 - 关联：[元素库接口](../ui-element-library.md)、[预发布单一基线](../adr/0014-pre-release-single-baseline.md)
 

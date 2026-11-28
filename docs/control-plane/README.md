@@ -175,7 +175,6 @@ env = "local"                     # local 时开启 uvicorn reload
 [security.worker]                 # key，Worker 调用内部接口的令牌
 [data.db.user]                    # 连接池、dsn
 [storage.s3]                      # 对象存储连接与签名参数
-[integrations.zentao_service]     # base_url
 ```
 
 ## 命令

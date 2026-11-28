@@ -1,7 +1,10 @@
 # 完整用例历史覆盖验证
 
-- 验证日期：2026-11-26
-- 设计记录：[控制面 ADR 0038](../../control-plane/adr/0038-plan-complete-cases-with-history.md)
+- 日期：2026-11-26；归档日期：2026-11-27
+- 状态：已实施并验证
+- 负责人：AI Worker maintainers
+- 来源：完整用例历史覆盖改造的真实模型回放、自动化与浏览器验证，2026-11-27 随分支合并归档，内容未改写
+- 关联：[控制面 ADR 0038](../../control-plane/adr/0038-plan-complete-cases-with-history.md)
 
 ## 真实模型回放
 

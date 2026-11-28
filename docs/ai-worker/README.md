@@ -10,7 +10,7 @@
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：默认技能按任务从控制面技能库获取并校验；轮询无锁并行，收到 SIGTERM 立即退出。
 
-历史验收：[用例可视化技能独立试跑记录](records/2026-11-14-case-visualization-skill-trial.md)。
+历史验收：[用例可视化技能独立试跑记录](records/2026-11-14-case-visualization-skill-trial.md)、[完整用例历史覆盖验证](records/2026-11-26-complete-case-history-planning-validation.md)。
 
 ## 运行时与依赖
 

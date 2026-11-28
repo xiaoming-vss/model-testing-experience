@@ -11,5 +11,6 @@
 
 ## 记录列表
 
+- [2026-11-26 本地开发库元素库补表](2026-11-26-ui-element-library-local-db-sync.md)
 - [2026-11-14 测试单单用例执行可视化规格](2026-11-14-test-order-case-visualization-spec.md)
 - [2026-10-04 Bug 附件、正文图片与状态同步可行性分析](2026-10-04-bug-zentao-sync-feasibility.md)

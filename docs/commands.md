@@ -71,7 +71,7 @@ scripts/build_images.sh control-plane studio
 | 定向测试 | `uv run --locked --extra dev pytest tests/<相关测试文件>.py -q` | 按[控制面开发规则](control-plane/development-rules.md#验证与交付)选择入口 |
 | 候选处置回归 | `uv run --locked --extra dev pytest tests/test_generation_candidate_api.py tests/test_hard_deletion.py -q` | 覆盖拒绝，以及删除未拒绝和已拒绝的候选 |
 | 元素库回归 | `uv run --locked --extra dev pytest tests/test_ui_element_library.py -q` | 校验项目权限、分组、定位模板与版本冲突 |
-| 默认技能自带测试 | `for skill in default-skills/*/; do (cd "$skill" && python3 -m unittest discover -s tests -t tests); done` | 在 `apps/control-plane/` 下执行；每个技能独立进程，避免同名脚本模块冲突 |
+| 默认技能自带测试 | `for skill in default-skills/*/; do [ -d "$skill/tests" ] || continue; (cd "$skill" && python3 -m unittest discover -s tests -t tests); done` | 在 `apps/control-plane/` 下执行；只运行带 `tests/` 的技能，每个技能独立进程，避免同名脚本模块冲突；根测试 `tests.test_default_skills` 覆盖同一入口 |
 | Ruff 检查 | `uv run --locked --extra dev ruff check <修改的源码及测试路径>` | — |
 | Ruff 格式检查 | `uv run --locked --extra dev ruff format --check <修改的源码及测试路径>` | — |
 | mypy | `uv run --locked --extra dev mypy --python-version 3.12 --check-untyped-defs <修改的业务模块路径>` | — |

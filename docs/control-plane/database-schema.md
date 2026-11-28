@@ -99,6 +99,6 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 预发布单基线包含 `requirement_generation_chains`、`ai_generation_candidates`、`ai_generation_stage_contents` 和 `ai_generation_review_receipts`，用于多候选和唯一当前内容。候选以 `(stage_id, origin_attempt_id)` 防止同一尝试重复入池，当前内容以阶段及 `(chain_id, stage)` 保证唯一，并保留空槽令牌；`source_candidate_id` 是阶段本地采用指针，采用和导入只校验该内容自身的冻结来源闭包，不要求上游阶段当前指针一致。材料、功能、API、UI 和画像候选的公开读取、派发、采用及清空入口已接入。
 
-`ai_generate_import_requests` 和 `ai_generate_imports` 是新导入方案的请求幂等记录及自包含目标回执。回执保存导入正文、所选上游产物、来源身份和摘要，不依赖来源候选、尝试或旧版本的外键；每个请求和正式目标的组合最多一条回执。来源审计快照不复制运行凭据、签名地址或原始提示词，但完整上游产物和导入正文仍属于项目业务数据，必须按项目权限保护。独立任务导入及其历史读取使用新回执。用户已确认不迁移旧生成历史，正式功能、API 和 UI 测试用例必须保留；本轮不连接或修改业务数据库。详情见[阶段记录](records/2026-11-20-generation-candidate-foundation.md)。
+`ai_generate_import_requests` 和 `ai_generate_imports` 是新导入方案的请求幂等记录及自包含目标回执。回执保存导入正文、所选上游产物、来源身份和摘要，不依赖来源候选、尝试或旧版本的外键；每个请求和正式目标的组合最多一条回执。来源审计快照不复制运行凭据、签名地址或原始提示词，但完整上游产物和导入正文仍属于项目业务数据，必须按项目权限保护。用户已确认不迁移旧生成历史，正式功能、API 和 UI 测试用例必须保留；本轮不连接或修改业务数据库。详情见[阶段记录](records/2026-11-20-generation-candidate-foundation.md)。
 
 阶段尝试不保存 `progress_json` 或 `remediation`；阶段不保存可推导的执行状态和审核副本。公开 AI 接口的 `runId` 是执行 ID，AI Worker 队列和回传的标识是 `attemptId`。执行身份与阶段模型的完整决策见 [ADR 0010](adr/0010-unified-ai-execution.md)，历史删除规则见[生成链文档](generation-chain.md#历史与删除)。
