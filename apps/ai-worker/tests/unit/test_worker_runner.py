@@ -199,6 +199,47 @@ class _SlowAnswerHeartbeatSink(_RecordingSink):
         )
 
 
+class _SlowAnswerStartSink(_RecordingSink):
+    def __init__(self, delay: float) -> None:
+        super().__init__()
+        self.delay = delay
+
+    def mark_started(
+        self,
+        task_id: str,
+        attempt_id: str,
+        started_at_iso: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> None:
+        time.sleep(self.delay)
+        super().mark_started(task_id, attempt_id, started_at_iso, timeout_seconds=timeout_seconds)
+
+
+class _SlowAnswerProgressSink(_RecordingSink):
+    def __init__(self, delay: float) -> None:
+        super().__init__()
+        self.delay = delay
+
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
+        time.sleep(self.delay)
+        super().submit_progress(progress, timeout_seconds=timeout_seconds)
+
+
+class _SlowProgressHangingHeartbeatSink(_HangingHeartbeatSink):
+    def __init__(self, delay: float) -> None:
+        super().__init__()
+        self.delay = delay
+
+    def submit_progress(
+        self, progress: TaskProgress, *, timeout_seconds: float | None = None
+    ) -> None:
+        time.sleep(self.delay)
+        super().submit_progress(progress, timeout_seconds=timeout_seconds)
+
+
 class _SuccessfulExecutor(TaskExecutor):
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
         progress_callback(
@@ -676,11 +717,9 @@ class WorkerRunnerTests(unittest.TestCase):
 
     def test_a_heartbeat_answer_that_outlives_its_window_does_not_revive_the_lease(self) -> None:
         # Sent at 0.2s into a one-second lease and answered at 1.7s: the window it
-        # was meant to extend has already passed.
+        # was meant to extend has already passed. No progress renews it meanwhile.
         sink = _SlowAnswerHeartbeatSink(delay=1.5)
-        runner = self._lease_runner(
-            sink, _LeaseCheckExecutor(timeout_seconds=4), interval=0.2, max_failures=100
-        )
+        runner = self._lease_runner(sink, _SleepingExecutor(2.0), interval=0.2, max_failures=100)
 
         with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
             result = runner.process_task(self._make_task())
@@ -688,6 +727,46 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertEqual([], sink.result_calls)
         self.assertIn("late_heartbeat", "\n".join(logs.output))
+
+    def test_a_started_answer_that_outlives_its_window_does_not_start_execution(self) -> None:
+        # Sent at 0s into a one-second lease and answered at 1.5s.
+        sink = _SlowAnswerStartSink(delay=1.5)
+        runner = self._lease_runner(sink, _SuccessfulExecutor(), max_failures=100)
+
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.heartbeat_calls)
+        self.assertEqual([], sink.progress_calls)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("late_start", "\n".join(logs.output))
+
+    def test_a_progress_answer_that_outlives_the_window_stops_at_that_checkpoint(self) -> None:
+        # Heartbeats are held so only the progress call can renew the lease.
+        sink = _SlowProgressHangingHeartbeatSink(delay=1.5)
+        runner = self._lease_runner(sink, _SuccessfulExecutor(), max_failures=100)
+
+        try:
+            with self.assertLogs("testing_agent_ai_worker.worker.runner", level="WARNING") as logs:
+                result = runner.process_task(self._make_task())
+        finally:
+            sink.release.set()
+
+        self.assertIsNone(result)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn("late_progress", "\n".join(logs.output))
+
+    def test_a_stale_progress_answer_does_not_end_a_window_renewed_by_heartbeat(self) -> None:
+        # The progress call was sent before the last heartbeat; its late answer
+        # must not shorten the newer window.
+        sink = _SlowAnswerProgressSink(delay=1.5)
+        runner = self._lease_runner(sink, _SuccessfulExecutor(), interval=0.2, max_failures=100)
+
+        result = runner.process_task(self._make_task())
+
+        self.assertIsNotNone(result)
+        self.assertEqual([result], sink.result_calls)
 
     def test_result_submission_failure_is_preserved_and_recovered(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

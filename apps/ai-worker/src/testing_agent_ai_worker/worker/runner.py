@@ -60,6 +60,10 @@ class _LeaseState:
         with self._lock:
             if self._lost:
                 return
+            if renewed_at < self._renewed_monotonic:
+                # A newer renewal already moved the window; this older answer
+                # must not shorten it or declare the lease lost.
+                return
             elapsed = self._clock() - renewed_at
             if elapsed >= self.lease_seconds:
                 # The answer outlived the window it was meant to extend.
@@ -203,6 +207,9 @@ class WorkerRunner:
             else:
                 # Progress extends the platform lease for every AI queue path.
                 lease_state.record_success(requested_at)
+                if lease_state.lost:
+                    _lose_lease(task, lease_lost_event, lease_state, "late_progress")
+                    raise LeaseLostError("任务租约已失效") from None
 
         # 凭证缺失属于执行前失败，直接回传 failed，不进入 started/heartbeat。
         if task.credential_error:
@@ -228,21 +235,27 @@ class WorkerRunner:
                 timeout_seconds=lease_state.remaining_seconds() / 2,
             )
             lease_state.record_success(requested_at)
-            heartbeat_thread = threading.Thread(
-                target=self._heartbeat_loop,
-                args=(task, stop_event, lease_lost_event, lease_state),
-                daemon=True,
-            )
-            heartbeat_thread.start()
-
-            try:
-                result = self.executor.execute(
-                    task,
-                    started_at,
-                    submit_progress,
-                )
-            except LeaseLostError:
+            if lease_state.lost:
+                # started was accepted after the window it was meant to extend:
+                # never start work the control plane may already have reclaimed.
+                _lose_lease(task, lease_lost_event, lease_state, "late_start")
                 result = None
+            else:
+                heartbeat_thread = threading.Thread(
+                    target=self._heartbeat_loop,
+                    args=(task, stop_event, lease_lost_event, lease_state),
+                    daemon=True,
+                )
+                heartbeat_thread.start()
+
+                try:
+                    result = self.executor.execute(
+                        task,
+                        started_at,
+                        submit_progress,
+                    )
+                except LeaseLostError:
+                    result = None
         except Exception as exc:
             if lease_rejected(exc):
                 # The attempt was stopped or reclaimed before anything ran.
